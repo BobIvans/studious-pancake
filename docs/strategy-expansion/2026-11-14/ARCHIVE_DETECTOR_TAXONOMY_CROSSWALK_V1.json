@@ -1,0 +1,1457 @@
+{
+  "schema": "studious-pancake.archive-detector-taxonomy-crosswalk.v1",
+  "source_snapshot": "2026-11-14",
+  "source_archives": [
+    "STUDIOUS_PANCAKE_MAXIMUM_DIRECT_DATA_GRAPH_RND_V3_2026-10-08.zip:data_v3/anomaly_taxonomy_v3.json",
+    "STUDIOUS_PANCAKE_ECONOMIC_WORLD_GRAPH_V4_2026-10-08.zip:data/detector_templates.json",
+    "STUDIOUS_PANCAKE_MAXIMUM_DIRECT_DATA_GRAPH_RND_V3_2026-10-08.zip:new_data/research_route_families.json",
+    "STUDIOUS_PANCAKE_FLASHLOAN_DEEP_PAIR_RESEARCH_V6_2026-10-08.zip:data/v6_route_families_read_only.json",
+    "STUDIOUS_PANCAKE_FLASHLOAN_DEEP_PAIR_RESEARCH_V6_2026-10-08.zip:data/v6_conditional_protocol_hyperedges.json",
+    "STUDIOUS_PANCAKE_FLASHLOAN_DEEP_PAIR_RESEARCH_V6_2026-10-08.zip:data/v6_flash_funding_eligibility_matrix.json"
+  ],
+  "archive_counts": {
+    "v3_anomaly_classes": 64,
+    "v4_detector_templates": 25,
+    "v3_research_route_families": 19,
+    "v6_read_only_route_families": 36,
+    "v6_conditional_hyperedges": 12,
+    "v6_flash_funding_primitive_families": 4
+  },
+  "v3_anomaly_taxonomy": [
+    {
+      "id": "DIRECT_VS_SYNTHETIC",
+      "category": "MARKET_TOPOLOGY_STRATEGY",
+      "canonical_owner": "src/strategy/relation_generators; src/strategy/arbitrage_graph.py; src/strategy/multihop_solver.py; src/economics/non_monotonic_sizing.py",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "EXISTING_OR_EXTEND_FAMILY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "MULTIVENUE",
+      "category": "MARKET_TOPOLOGY_STRATEGY",
+      "canonical_owner": "src/strategy/relation_generators; src/strategy/arbitrage_graph.py; src/strategy/multihop_solver.py; src/economics/non_monotonic_sizing.py",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "EXISTING_OR_EXTEND_FAMILY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "CLOB_VS_AMM",
+      "category": "MARKET_TOPOLOGY_STRATEGY",
+      "canonical_owner": "src/strategy/relation_generators; src/strategy/arbitrage_graph.py; src/strategy/multihop_solver.py; src/economics/non_monotonic_sizing.py",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "EXISTING_OR_EXTEND_FAMILY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "V3_V4_POOL",
+      "category": "MARKET_TOPOLOGY_STRATEGY",
+      "canonical_owner": "src/strategy/relation_generators; src/strategy/arbitrage_graph.py; src/strategy/multihop_solver.py; src/economics/non_monotonic_sizing.py",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "EXISTING_OR_EXTEND_FAMILY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "SPLIT_FLOW_OPTIMUM",
+      "category": "MARKET_TOPOLOGY_STRATEGY",
+      "canonical_owner": "src/strategy/relation_generators; src/strategy/arbitrage_graph.py; src/strategy/multihop_solver.py; src/economics/non_monotonic_sizing.py",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "EXISTING_OR_EXTEND_FAMILY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "ROUTER_TOPOLOGY_FLIP",
+      "category": "MARKET_TOPOLOGY_STRATEGY",
+      "canonical_owner": "src/strategy/relation_generators; src/strategy/arbitrage_graph.py; src/strategy/multihop_solver.py; src/economics/non_monotonic_sizing.py",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "EXISTING_OR_EXTEND_FAMILY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "CLMM_TICK_BOUNDARY",
+      "category": "VENUE_STATE_AND_EXACT_QUOTE_GUARD",
+      "canonical_owner": "src/direct_venue; native Raydium/Meteora decoders; R13-K; PR118",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "CROSS_CUTTING_GUARD",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "DLMM_BIN_BOUNDARY",
+      "category": "VENUE_STATE_AND_EXACT_QUOTE_GUARD",
+      "canonical_owner": "src/direct_venue; native Raydium/Meteora decoders; R13-K; PR118",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "CROSS_CUTTING_GUARD",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "DYNAMIC_FEE_REGIME",
+      "category": "VENUE_STATE_AND_EXACT_QUOTE_GUARD",
+      "canonical_owner": "src/direct_venue; native Raydium/Meteora decoders; R13-K; PR118",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "CROSS_CUTTING_GUARD",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "FEE_TIER_CROSSOVER",
+      "category": "VENUE_STATE_AND_EXACT_QUOTE_GUARD",
+      "canonical_owner": "src/direct_venue; native Raydium/Meteora decoders; R13-K; PR118",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "CROSS_CUTTING_GUARD",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "V4_HOOK_DEPENDENT_FEE",
+      "category": "VENUE_STATE_AND_EXACT_QUOTE_GUARD",
+      "canonical_owner": "src/direct_venue; native Raydium/Meteora decoders; R13-K; PR118",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "CROSS_CUTTING_GUARD",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "PANCAKE_INFINITY_LBAMM",
+      "category": "VENUE_STATE_AND_EXACT_QUOTE_GUARD",
+      "canonical_owner": "src/direct_venue; native Raydium/Meteora decoders; R13-K; PR118",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "CROSS_CUTTING_GUARD",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "FLASH_CAPACITY_REGIME",
+      "category": "CAPITAL_AND_REPAYMENT_GUARD",
+      "canonical_owner": "src/economics/flash_capital_graph; providers; R02/R03",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "CROSS_CUTTING_GUARD",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "FLASH_ROUNDING",
+      "category": "CAPITAL_AND_REPAYMENT_GUARD",
+      "canonical_owner": "src/economics/flash_capital_graph; providers; R02/R03",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "CROSS_CUTTING_GUARD",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "FLASH_BALANCE_REGIME",
+      "category": "CAPITAL_AND_REPAYMENT_GUARD",
+      "canonical_owner": "src/economics/flash_capital_graph; providers; R02/R03",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "CROSS_CUTTING_GUARD",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "LST_PROTOCOL_RATE",
+      "category": "CONDITIONAL_RIGHTS_AND_CLAIMS",
+      "canonical_owner": "src/strategy_evolution/rights_lifecycle.py; primary_market.py; stake_queue.py; economic graph hyperedges",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "EXISTING_OR_EXTEND_FAMILY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "LRT_RATE",
+      "category": "CONDITIONAL_RIGHTS_AND_CLAIMS",
+      "canonical_owner": "src/strategy_evolution/rights_lifecycle.py; primary_market.py; stake_queue.py; economic graph hyperedges",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "EXISTING_OR_EXTEND_FAMILY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "VAULT_SHARE_NAV",
+      "category": "CONDITIONAL_RIGHTS_AND_CLAIMS",
+      "canonical_owner": "src/strategy_evolution/rights_lifecycle.py; primary_market.py; stake_queue.py; economic graph hyperedges",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "EXISTING_OR_EXTEND_FAMILY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "ERC4626_SHARE_RATE",
+      "category": "CONDITIONAL_RIGHTS_AND_CLAIMS",
+      "canonical_owner": "src/strategy_evolution/rights_lifecycle.py; primary_market.py; stake_queue.py; economic graph hyperedges",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "EXISTING_OR_EXTEND_FAMILY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "PENDLE_PT_MATURITY",
+      "category": "CONDITIONAL_RIGHTS_AND_CLAIMS",
+      "canonical_owner": "src/strategy_evolution/rights_lifecycle.py; primary_market.py; stake_queue.py; economic graph hyperedges",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "EXISTING_OR_EXTEND_FAMILY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "PENDLE_PT_YT_PARITY",
+      "category": "CONDITIONAL_RIGHTS_AND_CLAIMS",
+      "canonical_owner": "src/strategy_evolution/rights_lifecycle.py; primary_market.py; stake_queue.py; economic graph hyperedges",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "EXISTING_OR_EXTEND_FAMILY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "YIELD_REDEMPTION_QUEUE",
+      "category": "CONDITIONAL_RIGHTS_AND_CLAIMS",
+      "canonical_owner": "src/strategy_evolution/rights_lifecycle.py; primary_market.py; stake_queue.py; economic graph hyperedges",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "EXISTING_OR_EXTEND_FAMILY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "PT_TERM_STRUCTURE",
+      "category": "CONDITIONAL_RIGHTS_AND_CLAIMS",
+      "canonical_owner": "src/strategy_evolution/rights_lifecycle.py; primary_market.py; stake_queue.py; economic graph hyperedges",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "EXISTING_OR_EXTEND_FAMILY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "PT_YT_STRIP_PARITY",
+      "category": "CONDITIONAL_RIGHTS_AND_CLAIMS",
+      "canonical_owner": "src/strategy_evolution/rights_lifecycle.py; primary_market.py; stake_queue.py; economic graph hyperedges",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "EXISTING_OR_EXTEND_FAMILY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "PT_MATURITY_WINDOW",
+      "category": "CONDITIONAL_RIGHTS_AND_CLAIMS",
+      "canonical_owner": "src/strategy_evolution/rights_lifecycle.py; primary_market.py; stake_queue.py; economic graph hyperedges",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "EXISTING_OR_EXTEND_FAMILY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "ERC4626_WITHDRAW_LIMIT",
+      "category": "CONDITIONAL_RIGHTS_AND_CLAIMS",
+      "canonical_owner": "src/strategy_evolution/rights_lifecycle.py; primary_market.py; stake_queue.py; economic graph hyperedges",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "EXISTING_OR_EXTEND_FAMILY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "MORPHO_VAULT_IN_KIND_EXIT",
+      "category": "CONDITIONAL_RIGHTS_AND_CLAIMS",
+      "canonical_owner": "src/strategy_evolution/rights_lifecycle.py; primary_market.py; stake_queue.py; economic graph hyperedges",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "EXISTING_OR_EXTEND_FAMILY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "STABLE_REDEEM_PERMISSION",
+      "category": "CONDITIONAL_RIGHTS_AND_CLAIMS",
+      "canonical_owner": "src/strategy_evolution/rights_lifecycle.py; primary_market.py; stake_queue.py; economic graph hyperedges",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "EXISTING_OR_EXTEND_FAMILY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "FOREX_STABLE_RATE",
+      "category": "REFERENCE_OR_INVENTORY_SIGNAL_ONLY",
+      "canonical_owner": "src/research/correlation_ledger; src/research_economic_graph; strategy_evolution; inventory research",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "SIGNAL_OR_REBALANCE_ONLY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "GOLD_REFERENCE",
+      "category": "REFERENCE_OR_INVENTORY_SIGNAL_ONLY",
+      "canonical_owner": "src/research/correlation_ledger; src/research_economic_graph; strategy_evolution; inventory research",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "SIGNAL_OR_REBALANCE_ONLY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "BTC_WRAPPER_PARITY",
+      "category": "REFERENCE_OR_INVENTORY_SIGNAL_ONLY",
+      "canonical_owner": "src/research/correlation_ledger; src/research_economic_graph; strategy_evolution; inventory research",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "SIGNAL_OR_REBALANCE_ONLY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "STABLE_ISSUER_PARITY",
+      "category": "REFERENCE_OR_INVENTORY_SIGNAL_ONLY",
+      "canonical_owner": "src/research/correlation_ledger; src/research_economic_graph; strategy_evolution; inventory research",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "SIGNAL_OR_REBALANCE_ONLY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "RWA_TOKEN_PRICE",
+      "category": "REFERENCE_OR_INVENTORY_SIGNAL_ONLY",
+      "canonical_owner": "src/research/correlation_ledger; src/research_economic_graph; strategy_evolution; inventory research",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "SIGNAL_OR_REBALANCE_ONLY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "CCTP_BURN_MINT_FLOW",
+      "category": "REFERENCE_OR_INVENTORY_SIGNAL_ONLY",
+      "canonical_owner": "src/research/correlation_ledger; src/research_economic_graph; strategy_evolution; inventory research",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "SIGNAL_OR_REBALANCE_ONLY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "USDT0_OFT_FLOW",
+      "category": "REFERENCE_OR_INVENTORY_SIGNAL_ONLY",
+      "canonical_owner": "src/research/correlation_ledger; src/research_economic_graph; strategy_evolution; inventory research",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "SIGNAL_OR_REBALANCE_ONLY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "BRIDGE_LIQUIDITY_STRESS",
+      "category": "REFERENCE_OR_INVENTORY_SIGNAL_ONLY",
+      "canonical_owner": "src/research/correlation_ledger; src/research_economic_graph; strategy_evolution; inventory research",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "SIGNAL_OR_REBALANCE_ONLY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "CEX_REFERENCE_LEADLAG",
+      "category": "REFERENCE_OR_INVENTORY_SIGNAL_ONLY",
+      "canonical_owner": "src/research/correlation_ledger; src/research_economic_graph; strategy_evolution; inventory research",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "SIGNAL_OR_REBALANCE_ONLY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "ORACLE_LAG",
+      "category": "REFERENCE_OR_INVENTORY_SIGNAL_ONLY",
+      "canonical_owner": "src/research/correlation_ledger; src/research_economic_graph; strategy_evolution; inventory research",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "SIGNAL_OR_REBALANCE_ONLY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "FUNDING_BASIS",
+      "category": "REFERENCE_OR_INVENTORY_SIGNAL_ONLY",
+      "canonical_owner": "src/research/correlation_ledger; src/research_economic_graph; strategy_evolution; inventory research",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "SIGNAL_OR_REBALANCE_ONLY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "BORROW_CARRY",
+      "category": "REFERENCE_OR_INVENTORY_SIGNAL_ONLY",
+      "canonical_owner": "src/research/correlation_ledger; src/research_economic_graph; strategy_evolution; inventory research",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "SIGNAL_OR_REBALANCE_ONLY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "CCTP_FLOW_HEAT_TRIGGER",
+      "category": "REFERENCE_OR_INVENTORY_SIGNAL_ONLY",
+      "canonical_owner": "src/research/correlation_ledger; src/research_economic_graph; strategy_evolution; inventory research",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "SIGNAL_OR_REBALANCE_ONLY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "USDT0_FLOW_HEAT_TRIGGER",
+      "category": "REFERENCE_OR_INVENTORY_SIGNAL_ONLY",
+      "canonical_owner": "src/research/correlation_ledger; src/research_economic_graph; strategy_evolution; inventory research",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "SIGNAL_OR_REBALANCE_ONLY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "MENTO_FX_MARKET_HOURS",
+      "category": "REFERENCE_OR_INVENTORY_SIGNAL_ONLY",
+      "canonical_owner": "src/research/correlation_ledger; src/research_economic_graph; strategy_evolution; inventory research",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "SIGNAL_OR_REBALANCE_ONLY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "RWA_CORPORATE_ACTION",
+      "category": "REFERENCE_OR_INVENTORY_SIGNAL_ONLY",
+      "canonical_owner": "src/research/correlation_ledger; src/research_economic_graph; strategy_evolution; inventory research",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "SIGNAL_OR_REBALANCE_ONLY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "NATIVE_VS_BRIDGED",
+      "category": "IDENTITY_AND_TOKEN_SAFETY_GUARD",
+      "canonical_owner": "AssetResolver; token-program/extension decoders; admission firewall/compiler",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "CROSS_CUTTING_GUARD",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "TOKEN_2022_EXTENSIONS",
+      "category": "IDENTITY_AND_TOKEN_SAFETY_GUARD",
+      "canonical_owner": "AssetResolver; token-program/extension decoders; admission firewall/compiler",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "CROSS_CUTTING_GUARD",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "TOKEN_RESTRICTIONS",
+      "category": "IDENTITY_AND_TOKEN_SAFETY_GUARD",
+      "canonical_owner": "AssetResolver; token-program/extension decoders; admission firewall/compiler",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "CROSS_CUTTING_GUARD",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "SOLANA_TOKEN_2022_EXTENSION",
+      "category": "IDENTITY_AND_TOKEN_SAFETY_GUARD",
+      "canonical_owner": "AssetResolver; token-program/extension decoders; admission firewall/compiler",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "CROSS_CUTTING_GUARD",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "SUI_CHECKPOINT_COIN_TYPE",
+      "category": "IDENTITY_AND_TOKEN_SAFETY_GUARD",
+      "canonical_owner": "AssetResolver; token-program/extension decoders; admission firewall/compiler",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "CROSS_CUTTING_GUARD",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "SHARED_LIQUIDITY_ALIAS",
+      "category": "SOURCE_AND_RESOURCE_INTEGRITY_GUARD",
+      "canonical_owner": "provider governance; R13-K; CorrelationLedger; market streams/journal",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "CROSS_CUTTING_GUARD",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "QUOTE_FRESHNESS_DRIFT",
+      "category": "SOURCE_AND_RESOURCE_INTEGRITY_GUARD",
+      "canonical_owner": "provider governance; R13-K; CorrelationLedger; market streams/journal",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "CROSS_CUTTING_GUARD",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "PROVIDER_SCHEMA_DRIFT",
+      "category": "SOURCE_AND_RESOURCE_INTEGRITY_GUARD",
+      "canonical_owner": "provider governance; R13-K; CorrelationLedger; market streams/journal",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "CROSS_CUTTING_GUARD",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "INDEXER_VOLUME_DEPTH_CONFLICT",
+      "category": "SOURCE_AND_RESOURCE_INTEGRITY_GUARD",
+      "canonical_owner": "provider governance; R13-K; CorrelationLedger; market streams/journal",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "CROSS_CUTTING_GUARD",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "ORACLE_CONTRACT_VERSION_CHANGE",
+      "category": "SOURCE_AND_RESOURCE_INTEGRITY_GUARD",
+      "canonical_owner": "provider governance; R13-K; CorrelationLedger; market streams/journal",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "CROSS_CUTTING_GUARD",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "PENDLE_ROUTER_ALIAS",
+      "category": "SOURCE_AND_RESOURCE_INTEGRITY_GUARD",
+      "canonical_owner": "provider governance; R13-K; CorrelationLedger; market streams/journal",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "CROSS_CUTTING_GUARD",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "BALANCER_RATE_PROVIDER_DRIFT",
+      "category": "SOURCE_AND_RESOURCE_INTEGRITY_GUARD",
+      "canonical_owner": "provider governance; R13-K; CorrelationLedger; market streams/journal",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "CROSS_CUTTING_GUARD",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "MARKET_CREATION_EVENT",
+      "category": "MARKET_LIFECYCLE_DISCOVERY_SIGNAL",
+      "canonical_owner": "Dynamic Universe; discovery ingestors; Pump/DBC/Meteora lifecycle owners",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "EXISTING_OR_EXTEND_FAMILY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "POOL_MIGRATION",
+      "category": "MARKET_LIFECYCLE_DISCOVERY_SIGNAL",
+      "canonical_owner": "Dynamic Universe; discovery ingestors; Pump/DBC/Meteora lifecycle owners",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "EXISTING_OR_EXTEND_FAMILY",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "AMOUNT_SPECIFIC_REVERT",
+      "category": "SETTLEMENT_AND_FILL_CONSTRAINT",
+      "canonical_owner": "orderbook providers; Sui PTB/DeepBook; TON radar; execution semantics",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "CROSS_CUTTING_GUARD",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "SUI_OBJECT_CONTENTION",
+      "category": "SETTLEMENT_AND_FILL_CONSTRAINT",
+      "canonical_owner": "orderbook providers; Sui PTB/DeepBook; TON radar; execution semantics",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "CROSS_CUTTING_GUARD",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "TON_ASYNC_TRACE",
+      "category": "SETTLEMENT_AND_FILL_CONSTRAINT",
+      "canonical_owner": "orderbook providers; Sui PTB/DeepBook; TON radar; execution semantics",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "CROSS_CUTTING_GUARD",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "ORDERBOOK_QUEUE_DEPTH",
+      "category": "SETTLEMENT_AND_FILL_CONSTRAINT",
+      "canonical_owner": "orderbook providers; Sui PTB/DeepBook; TON radar; execution semantics",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "CROSS_CUTTING_GUARD",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "PHOENIX_ORDERBOOK_VERSION",
+      "category": "SETTLEMENT_AND_FILL_CONSTRAINT",
+      "canonical_owner": "orderbook providers; Sui PTB/DeepBook; TON radar; execution semantics",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "CROSS_CUTTING_GUARD",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    },
+    {
+      "id": "NONMONOTONIC_SIZE_ISLAND",
+      "category": "EXECUTION_COST_AND_RISK_CONTROL",
+      "canonical_owner": "PR118 economics; exact simulation; blockspace cost owners",
+      "source_status": "ARCHIVE_DISCOVERY_ONLY",
+      "disposition": "CROSS_CUTTING_GUARD",
+      "evidence_rule": "No identity/state/quote/capacity or execution promotion from the anomaly label itself."
+    }
+  ],
+  "v4_detector_templates": [
+    {
+      "detector_id": "issuer_parity",
+      "family": "ISSUER_REDEMPTION",
+      "category": "CONDITIONAL_RIGHTS_AND_CLAIMS",
+      "confidence": "HYPOTHESIS",
+      "execution_permission": "NONE",
+      "negative_examples_required": true
+    },
+    {
+      "detector_id": "lst_ratio",
+      "family": "LST_RATE_VS_MARKET",
+      "category": "CONDITIONAL_RIGHTS_AND_CLAIMS",
+      "confidence": "HYPOTHESIS",
+      "execution_permission": "NONE",
+      "negative_examples_required": true
+    },
+    {
+      "detector_id": "yield_curve",
+      "family": "MATURITY_SHAPE",
+      "category": "CONDITIONAL_RIGHTS_AND_CLAIMS",
+      "confidence": "HYPOTHESIS",
+      "execution_permission": "NONE",
+      "negative_examples_required": true
+    },
+    {
+      "detector_id": "vault_nav",
+      "family": "VAULT_NAV_BASIS",
+      "category": "CONDITIONAL_RIGHTS_AND_CLAIMS",
+      "confidence": "HYPOTHESIS",
+      "execution_permission": "NONE",
+      "negative_examples_required": true
+    },
+    {
+      "detector_id": "rwa_equity",
+      "family": "RWA_SESSION_MULTIPLIER",
+      "category": "REFERENCE_OR_INVENTORY_SIGNAL_ONLY",
+      "confidence": "HYPOTHESIS",
+      "execution_permission": "NONE",
+      "negative_examples_required": true
+    },
+    {
+      "detector_id": "fx_basis",
+      "family": "FOREX_STABLE",
+      "category": "REFERENCE_OR_INVENTORY_SIGNAL_ONLY",
+      "confidence": "HYPOTHESIS",
+      "execution_permission": "NONE",
+      "negative_examples_required": true
+    },
+    {
+      "detector_id": "gold_basis",
+      "family": "TOKEN_GOLD_REFERENCE",
+      "category": "REFERENCE_OR_INVENTORY_SIGNAL_ONLY",
+      "confidence": "HYPOTHESIS",
+      "execution_permission": "NONE",
+      "negative_examples_required": true
+    },
+    {
+      "detector_id": "btc_wrapper",
+      "family": "BTC_REPRESENTATION_BASIS",
+      "category": "REFERENCE_OR_INVENTORY_SIGNAL_ONLY",
+      "confidence": "HYPOTHESIS",
+      "execution_permission": "NONE",
+      "negative_examples_required": true
+    },
+    {
+      "detector_id": "direct_synthetic",
+      "family": "DIRECT_VS_SYNTHETIC",
+      "category": "MARKET_TOPOLOGY_STRATEGY",
+      "confidence": "HYPOTHESIS",
+      "execution_permission": "NONE",
+      "negative_examples_required": true
+    },
+    {
+      "detector_id": "flash_capacity",
+      "family": "FLASH_CAPACITY_SHOCK",
+      "category": "CAPITAL_AND_REPAYMENT_GUARD",
+      "confidence": "HYPOTHESIS",
+      "execution_permission": "NONE",
+      "negative_examples_required": true
+    },
+    {
+      "detector_id": "clmm_ticks",
+      "family": "CLMM_TICK_CROSSING",
+      "category": "VENUE_STATE_AND_EXACT_QUOTE_GUARD",
+      "confidence": "HYPOTHESIS",
+      "execution_permission": "NONE",
+      "negative_examples_required": true
+    },
+    {
+      "detector_id": "clob_amm",
+      "family": "CLOB_VS_AMM_DEPTH",
+      "category": "MARKET_TOPOLOGY_STRATEGY",
+      "confidence": "HYPOTHESIS",
+      "execution_permission": "NONE",
+      "negative_examples_required": true
+    },
+    {
+      "detector_id": "usdt0_flow",
+      "family": "INTERCHAIN_STABLE_INFLOW",
+      "category": "REFERENCE_OR_INVENTORY_SIGNAL_ONLY",
+      "confidence": "HYPOTHESIS",
+      "execution_permission": "NONE",
+      "negative_examples_required": true
+    },
+    {
+      "detector_id": "cctp_flow",
+      "family": "CCTP_LOCAL_BASIS",
+      "category": "REFERENCE_OR_INVENTORY_SIGNAL_ONLY",
+      "confidence": "HYPOTHESIS",
+      "execution_permission": "NONE",
+      "negative_examples_required": true
+    },
+    {
+      "detector_id": "perp_funding",
+      "family": "SPOT_PERP_IMBALANCE",
+      "category": "REFERENCE_OR_INVENTORY_SIGNAL_ONLY",
+      "confidence": "HYPOTHESIS",
+      "execution_permission": "NONE",
+      "negative_examples_required": true
+    },
+    {
+      "detector_id": "oracle_change",
+      "family": "ORACLE_CHANGE_POINT",
+      "category": "SOURCE_AND_RESOURCE_INTEGRITY_GUARD",
+      "confidence": "HYPOTHESIS",
+      "execution_permission": "NONE",
+      "negative_examples_required": true
+    },
+    {
+      "detector_id": "pool_lifecycle",
+      "family": "POOL_MIGRATION",
+      "category": "MARKET_LIFECYCLE_DISCOVERY_SIGNAL",
+      "confidence": "HYPOTHESIS",
+      "execution_permission": "NONE",
+      "negative_examples_required": true
+    },
+    {
+      "detector_id": "inclusion_risk",
+      "family": "TX_INCLUSION_CONDITIONS",
+      "category": "EXECUTION_COST_AND_RISK_CONTROL",
+      "confidence": "HYPOTHESIS",
+      "execution_permission": "NONE",
+      "negative_examples_required": true
+    },
+    {
+      "detector_id": "security_events",
+      "family": "TOKEN_PAUSE_BLACKLIST",
+      "category": "IDENTITY_AND_TOKEN_SAFETY_GUARD",
+      "confidence": "HYPOTHESIS",
+      "execution_permission": "NONE",
+      "negative_examples_required": true
+    },
+    {
+      "detector_id": "depeg_regime",
+      "family": "DEPEG_ISSUER_RISK",
+      "category": "CONDITIONAL_RIGHTS_AND_CLAIMS",
+      "confidence": "HYPOTHESIS",
+      "execution_permission": "NONE",
+      "negative_examples_required": true
+    },
+    {
+      "detector_id": "conditional_branch",
+      "family": "AMM_HOOK_BEHAVIOR",
+      "category": "VENUE_STATE_AND_EXACT_QUOTE_GUARD",
+      "confidence": "HYPOTHESIS",
+      "execution_permission": "NONE",
+      "negative_examples_required": true
+    },
+    {
+      "detector_id": "cross_domain_regime",
+      "family": "CROSS_CHAIN_RESERVE_SHOCK",
+      "category": "REFERENCE_OR_INVENTORY_SIGNAL_ONLY",
+      "confidence": "HYPOTHESIS",
+      "execution_permission": "NONE",
+      "negative_examples_required": true
+    },
+    {
+      "detector_id": "gas_regime",
+      "family": "NET_MARGIN_THRESHOLDS",
+      "category": "EXECUTION_COST_AND_RISK_CONTROL",
+      "confidence": "HYPOTHESIS",
+      "execution_permission": "NONE",
+      "negative_examples_required": true
+    },
+    {
+      "detector_id": "provider_alias",
+      "family": "SHARED_LIQUIDITY_PROVENANCE",
+      "category": "SOURCE_AND_RESOURCE_INTEGRITY_GUARD",
+      "confidence": "HYPOTHESIS",
+      "execution_permission": "NONE",
+      "negative_examples_required": true
+    },
+    {
+      "detector_id": "stressed_liquidity",
+      "family": "WITHDRAWAL_QUEUE_STRESS",
+      "category": "CONDITIONAL_RIGHTS_AND_CLAIMS",
+      "confidence": "HYPOTHESIS",
+      "execution_permission": "NONE",
+      "negative_examples_required": true
+    }
+  ],
+  "v3_research_route_families": [
+    {
+      "id": "USD_STABLE_TRIANGLE",
+      "classification": "DISCOVERY_ONLY",
+      "strict_exec_proof": false
+    },
+    {
+      "id": "CURRENCY_FX",
+      "classification": "DISCOVERY_ONLY",
+      "strict_exec_proof": false
+    },
+    {
+      "id": "BTC_WRAPPER_TRIANGLE",
+      "classification": "DISCOVERY_ONLY",
+      "strict_exec_proof": false
+    },
+    {
+      "id": "ETH_LST_NAV",
+      "classification": "DISCOVERY_ONLY",
+      "strict_exec_proof": false
+    },
+    {
+      "id": "HYPE_LST_NAV",
+      "classification": "DISCOVERY_ONLY",
+      "strict_exec_proof": false
+    },
+    {
+      "id": "SUI_LST_RELATIVE",
+      "classification": "DISCOVERY_ONLY",
+      "strict_exec_proof": false
+    },
+    {
+      "id": "SOL_LST_RELATIVE",
+      "classification": "DISCOVERY_ONLY",
+      "strict_exec_proof": false
+    },
+    {
+      "id": "USDT0_LOCAL_FLOW",
+      "classification": "DISCOVERY_ONLY",
+      "strict_exec_proof": false
+    },
+    {
+      "id": "RON_CHAIN_RWA",
+      "classification": "DISCOVERY_ONLY",
+      "strict_exec_proof": false
+    },
+    {
+      "id": "MONAD_MENTO_FX",
+      "classification": "DISCOVERY_ONLY",
+      "strict_exec_proof": false
+    },
+    {
+      "id": "PT_MATURITY_PAIR",
+      "classification": "DISCOVERY_ONLY",
+      "strict_exec_proof": false
+    },
+    {
+      "id": "PLASMA_YIELD",
+      "classification": "DISCOVERY_ONLY",
+      "strict_exec_proof": false
+    },
+    {
+      "id": "X_LAYER_STABLE",
+      "classification": "DISCOVERY_ONLY",
+      "strict_exec_proof": false
+    },
+    {
+      "id": "INK_BTC",
+      "classification": "DISCOVERY_ONLY",
+      "strict_exec_proof": false
+    },
+    {
+      "id": "ARC_BTC",
+      "classification": "DISCOVERY_ONLY",
+      "strict_exec_proof": false
+    },
+    {
+      "id": "TON_LST_DATA",
+      "classification": "DISCOVERY_ONLY",
+      "strict_exec_proof": false
+    },
+    {
+      "id": "COSMOS_SQS",
+      "classification": "DISCOVERY_ONLY",
+      "strict_exec_proof": false
+    },
+    {
+      "id": "BALANCER_VAULT",
+      "classification": "DISCOVERY_ONLY",
+      "strict_exec_proof": false
+    },
+    {
+      "id": "CETUS_DEEPBOOK",
+      "classification": "DISCOVERY_ONLY",
+      "strict_exec_proof": false
+    }
+  ],
+  "v6_route_families": [
+    {
+      "id": "V6-R001",
+      "chain": "Sui",
+      "relation_family": "SUI_AUSD_USDC",
+      "route_evidence_grade": "OFFICIAL_SDK_TOPOLOGY",
+      "execution_class": "LOCAL_COMPOSITION_CANDIDATE",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R002",
+      "chain": "Sui",
+      "relation_family": "WAL_CLOB",
+      "route_evidence_grade": "OFFICIAL_SDK_TOPOLOGY",
+      "execution_class": "LOCAL_COMPOSITION_CANDIDATE",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R003",
+      "chain": "Sui",
+      "relation_family": "NS_CLOB",
+      "route_evidence_grade": "OFFICIAL_SDK_TOPOLOGY",
+      "execution_class": "LOCAL_COMPOSITION_CANDIDATE",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R004",
+      "chain": "Sui",
+      "relation_family": "DEEP_CLOB",
+      "route_evidence_grade": "OFFICIAL_SDK_TOPOLOGY",
+      "execution_class": "LOCAL_COMPOSITION_CANDIDATE",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R005",
+      "chain": "Sui",
+      "relation_family": "SYNTH_STABLE",
+      "route_evidence_grade": "OFFICIAL_SDK_TOPOLOGY",
+      "execution_class": "LOCAL_COMPOSITION_CANDIDATE",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R006",
+      "chain": "Sui",
+      "relation_family": "SYNTH_STABLE",
+      "route_evidence_grade": "OFFICIAL_SDK_TOPOLOGY",
+      "execution_class": "LOCAL_COMPOSITION_CANDIDATE",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R007",
+      "chain": "Ethereum",
+      "relation_family": "FRAX_DIRECT_REDEEM",
+      "route_evidence_grade": "CONDITIONAL_COMPOSITION",
+      "execution_class": "LOCAL_COMPOSITION_CANDIDATE",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R008",
+      "chain": "Ethereum",
+      "relation_family": "FRAX_STABLE_TRIANGLE",
+      "route_evidence_grade": "HYPOTHESIS",
+      "execution_class": "DISCOVERY_ONLY",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R009",
+      "chain": "Ethereum",
+      "relation_family": "CURVE_STABLE_TRIANGLE",
+      "route_evidence_grade": "HYPOTHESIS",
+      "execution_class": "DISCOVERY_ONLY",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R010",
+      "chain": "Ethereum",
+      "relation_family": "USD0_FRAX_TRIANGLE",
+      "route_evidence_grade": "HYPOTHESIS",
+      "execution_class": "DISCOVERY_ONLY",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R011",
+      "chain": "Ethereum",
+      "relation_family": "FRAX_SHARE_VS_POOL",
+      "route_evidence_grade": "CONDITIONAL_COMPOSITION",
+      "execution_class": "LOCAL_COMPOSITION_CANDIDATE",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R012",
+      "chain": "Ethereum",
+      "relation_family": "CURVE_SAVINGS_VS_POOL",
+      "route_evidence_grade": "CONDITIONAL_COMPOSITION",
+      "execution_class": "LOCAL_COMPOSITION_CANDIDATE",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R013",
+      "chain": "Ethereum",
+      "relation_family": "USUAL_SAVINGS_VS_POOL",
+      "route_evidence_grade": "CONDITIONAL_COMPOSITION",
+      "execution_class": "LOCAL_COMPOSITION_CANDIDATE",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R014",
+      "chain": "Ethereum",
+      "relation_family": "USUAL_EURO_SAVINGS",
+      "route_evidence_grade": "CONDITIONAL_COMPOSITION",
+      "execution_class": "LOCAL_COMPOSITION_CANDIDATE",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R015",
+      "chain": "Ethereum",
+      "relation_family": "EUR_FX_TRIANGLE",
+      "route_evidence_grade": "HYPOTHESIS",
+      "execution_class": "DISCOVERY_ONLY",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R016",
+      "chain": "Ethereum",
+      "relation_family": "EUR_USD_FX",
+      "route_evidence_grade": "HYPOTHESIS",
+      "execution_class": "DISCOVERY_ONLY",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R017",
+      "chain": "Ethereum",
+      "relation_family": "BUSD0_TWO_TOKEN",
+      "route_evidence_grade": "HYPEREDGE_REQUIRED",
+      "execution_class": "DISCOVERY_ONLY",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R018",
+      "chain": "Solana",
+      "relation_family": "SOLANA_STABLE",
+      "route_evidence_grade": "HYPOTHESIS",
+      "execution_class": "DISCOVERY_ONLY",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R019",
+      "chain": "Solana",
+      "relation_family": "LST_NAV",
+      "route_evidence_grade": "HYPOTHESIS",
+      "execution_class": "DISCOVERY_ONLY",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R020",
+      "chain": "Solana",
+      "relation_family": "LST_LST",
+      "route_evidence_grade": "HYPOTHESIS",
+      "execution_class": "DISCOVERY_ONLY",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R021",
+      "chain": "Solana",
+      "relation_family": "INF_NAV",
+      "route_evidence_grade": "HYPOTHESIS",
+      "execution_class": "DISCOVERY_ONLY",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R022",
+      "chain": "Solana",
+      "relation_family": "BTC_WRAPPER",
+      "route_evidence_grade": "HYPOTHESIS",
+      "execution_class": "DISCOVERY_ONLY",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R023",
+      "chain": "X Layer",
+      "relation_family": "THREE_STABLE",
+      "route_evidence_grade": "HYPOTHESIS",
+      "execution_class": "DISCOVERY_ONLY",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R024",
+      "chain": "X Layer",
+      "relation_family": "PENDLE_DISCOUNT",
+      "route_evidence_grade": "CONDITIONAL_COMPOSITION",
+      "execution_class": "LOCAL_COMPOSITION_CANDIDATE",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R025",
+      "chain": "X Layer",
+      "relation_family": "PENDLE_MATURITY_ROLL",
+      "route_evidence_grade": "HYPOTHESIS",
+      "execution_class": "DISCOVERY_ONLY",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R026",
+      "chain": "Monad",
+      "relation_family": "MON_CLOB_AMM",
+      "route_evidence_grade": "HYPOTHESIS",
+      "execution_class": "DISCOVERY_ONLY",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R027",
+      "chain": "Monad",
+      "relation_family": "MON_BTC4",
+      "route_evidence_grade": "HYPOTHESIS",
+      "execution_class": "DISCOVERY_ONLY",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R028",
+      "chain": "HyperEVM",
+      "relation_family": "INTERCHAIN_FLOW_TRIGGERED",
+      "route_evidence_grade": "HYPOTHESIS",
+      "execution_class": "DISCOVERY_ONLY",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R029",
+      "chain": "HyperEVM",
+      "relation_family": "HYPE_STAKING",
+      "route_evidence_grade": "HYPOTHESIS",
+      "execution_class": "DISCOVERY_ONLY",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R030",
+      "chain": "Plasma",
+      "relation_family": "CROSS_VENUE_STABLE",
+      "route_evidence_grade": "HYPOTHESIS",
+      "execution_class": "DISCOVERY_ONLY",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R031",
+      "chain": "Plasma",
+      "relation_family": "SUSDE_TRIANGLE",
+      "route_evidence_grade": "HYPOTHESIS",
+      "execution_class": "DISCOVERY_ONLY",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R032",
+      "chain": "Ink",
+      "relation_family": "INK_SYNTHETIC",
+      "route_evidence_grade": "HYPOTHESIS",
+      "execution_class": "DISCOVERY_ONLY",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R033",
+      "chain": "Gnosis",
+      "relation_family": "FX_REFERENCE",
+      "route_evidence_grade": "HYPOTHESIS",
+      "execution_class": "DISCOVERY_ONLY",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R034",
+      "chain": "Avalanche",
+      "relation_family": "AMM_MECHANISM_BENCHMARK",
+      "route_evidence_grade": "HYPOTHESIS",
+      "execution_class": "DISCOVERY_ONLY",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R035",
+      "chain": "Berachain",
+      "relation_family": "BERA_COLLATERAL_STABLE",
+      "route_evidence_grade": "HYPOTHESIS",
+      "execution_class": "DISCOVERY_ONLY",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    },
+    {
+      "id": "V6-R036",
+      "chain": "Sei",
+      "relation_family": "SEI_STABLE_NATIVE",
+      "route_evidence_grade": "HYPOTHESIS",
+      "execution_class": "DISCOVERY_ONLY",
+      "sign_enabled": false,
+      "broadcast_enabled": false,
+      "atomicity_verified": false,
+      "flash_capacity_verified": false,
+      "exact_amount_quotes_verified": false,
+      "net_pnl_verified": false
+    }
+  ],
+  "v6_conditional_hyperedges": [
+    {
+      "id": "USUAL_MINT_BUSD0",
+      "chain": "Ethereum",
+      "kind": "SPLIT",
+      "execution_class": "CONDITIONAL_COMPOSITION",
+      "summary": "USD0 → bUSD0 + rt-bUSD0",
+      "atomic_local_flash_leg": false,
+      "source_status": "ARCHIVED_DOCUMENTATION_ONLY"
+    },
+    {
+      "id": "USUAL_EARLY_EXIT",
+      "chain": "Ethereum",
+      "kind": "COMBINE",
+      "execution_class": "CONDITIONAL_COMPOSITION",
+      "summary": "bUSD0 + rt-bUSD0 → USD0",
+      "atomic_local_flash_leg": false,
+      "source_status": "ARCHIVED_DOCUMENTATION_ONLY"
+    },
+    {
+      "id": "USUAL_EUR0_SWAPPER",
+      "chain": "Ethereum",
+      "kind": "SWAPPER_BUFFER",
+      "execution_class": "CONDITIONAL_COMPOSITION",
+      "summary": "EURC → EUR0; T+0 only if buffer, otherwise T+1..T+5",
+      "atomic_local_flash_leg": false,
+      "source_status": "ARCHIVED_DOCUMENTATION_ONLY"
+    },
+    {
+      "id": "USUAL_sUSD0_SHARE",
+      "chain": "Ethereum",
+      "kind": "ERC4626_REDEEM",
+      "execution_class": "SIMULATION_REQUIRED",
+      "summary": "sUSD0 → USD0",
+      "atomic_local_flash_leg": false,
+      "source_status": "ARCHIVED_DOCUMENTATION_ONLY"
+    },
+    {
+      "id": "USUAL_sEUR0_SHARE",
+      "chain": "Ethereum",
+      "kind": "ERC4626_REDEEM",
+      "execution_class": "SIMULATION_REQUIRED",
+      "summary": "sEUR0 → EUR0",
+      "atomic_local_flash_leg": false,
+      "source_status": "ARCHIVED_DOCUMENTATION_ONLY"
+    },
+    {
+      "id": "FRAX_DIRECT_USDC_EXIT",
+      "chain": "Ethereum",
+      "kind": "ONE_TRANSACTION_REDEMPTION",
+      "execution_class": "SIMULATION_REQUIRED",
+      "summary": "frxUSD → USDC; maxRedeem, USTB liquidity, caller eligibility/allowance required",
+      "atomic_local_flash_leg": false,
+      "source_status": "ARCHIVED_DOCUMENTATION_ONLY"
+    },
+    {
+      "id": "FRAX_sfrxUSD_SHARE",
+      "chain": "Ethereum",
+      "kind": "ERC4626_REDEEM",
+      "execution_class": "SIMULATION_REQUIRED",
+      "summary": "sfrxUSD → frxUSD",
+      "atomic_local_flash_leg": false,
+      "source_status": "ARCHIVED_DOCUMENTATION_ONLY"
+    },
+    {
+      "id": "CURVE_scrvUSD_SHARE",
+      "chain": "Ethereum",
+      "kind": "ERC4626_REDEEM",
+      "execution_class": "SIMULATION_REQUIRED",
+      "summary": "scrvUSD → crvUSD",
+      "atomic_local_flash_leg": false,
+      "source_status": "ARCHIVED_DOCUMENTATION_ONLY"
+    },
+    {
+      "id": "ETHENA_sUSDe_EXIT",
+      "chain": "Ethereum",
+      "kind": "DELAYED_REDEMPTION",
+      "execution_class": "REFERENCE_ONLY",
+      "summary": "sUSDe → USDe; 1–7 day cooldown",
+      "atomic_local_flash_leg": false,
+      "source_status": "ARCHIVED_DOCUMENTATION_ONLY"
+    },
+    {
+      "id": "PENDLE_PT_USDG_2026",
+      "chain": "X Layer",
+      "kind": "TIME_LOCKED_REDEMPTION",
+      "execution_class": "TIME_LOCKED",
+      "summary": "PT-USDG → USDG at maturity; pre-maturity only verified secondary sale",
+      "atomic_local_flash_leg": false,
+      "source_status": "ARCHIVED_DOCUMENTATION_ONLY"
+    },
+    {
+      "id": "CCTP_USDC",
+      "chain": "multi",
+      "kind": "CROSS_CHAIN",
+      "execution_class": "REBALANCE_ONLY",
+      "summary": "USDC(chain A) → USDC(chain B) async",
+      "atomic_local_flash_leg": false,
+      "source_status": "ARCHIVED_DOCUMENTATION_ONLY"
+    },
+    {
+      "id": "USDT0_OFT",
+      "chain": "multi",
+      "kind": "CROSS_CHAIN",
+      "execution_class": "SIGNAL_OR_REBALANCE_ONLY",
+      "summary": "USDT0(chain A) → USDT0(chain B) async",
+      "atomic_local_flash_leg": false,
+      "source_status": "ARCHIVED_DOCUMENTATION_ONLY"
+    }
+  ],
+  "v6_flash_funding_models": [
+    {
+      "chain": "Solana",
+      "provider": "Project 0",
+      "primitive": "start_flashloan + borrow/repay + end_flashloan",
+      "capacity": "READ_BANK_LIQUIDITY + CAP + ACCOUNT_HEALTH",
+      "status": "PRIMITIVE_DOCUMENTED_CAPACITY_UNKNOWN"
+    },
+    {
+      "chain": "Sui",
+      "provider": "DeepBook V3",
+      "primitive": "borrowBase/QuoteAsset + returnBase/QuoteAsset in PTB",
+      "capacity": "POOL_ASSET_BALANCE_AT_CHECKPOINT",
+      "status": "PRIMITIVE_DOCUMENTED_CAPACITY_UNKNOWN"
+    },
+    {
+      "chain": "EVM",
+      "provider": "Morpho Blue",
+      "primitive": "flashLoan/onMorphoFlashLoan callback",
+      "capacity": "ERC20.balanceOf(MORPHO_SINGLETON) per chain",
+      "status": "PRIMITIVE_DOCUMENTED_CAPACITY_UNKNOWN"
+    },
+    {
+      "chain": "EVM",
+      "provider": "Aave V3",
+      "primitive": "flashLoanSimple",
+      "capacity": "reserve current available + mutable premium",
+      "status": "PRIMITIVE_DOCUMENTED_CAPACITY_UNKNOWN"
+    }
+  ],
+  "invariants": [
+    "These archive layers are not 164 independent trading strategies.",
+    "An anomaly label never proves identity, market, state, quote, capacity or profitability.",
+    "Historical and symbolic records retain execution_permission NONE until canonical admission gates pass.",
+    "Cross-chain, queue, cooldown and maturity transformations are not local atomic flashloan legs unless the exact same-transaction boundary is proved.",
+    "All shared pools/books/ticks/bins/collateral/lender resources are deduplicated."
+  ],
+  "completion_gates": [
+    "Every source ID maps to a canonical owner or typed ORPHANED_RESEARCH_ONLY.",
+    "Each detector has a falsifiable hypothesis, null/control, required data, negative examples and proof gates.",
+    "Each route/hyperedge preserves asset vectors, chain/settlement semantics and shared resource set.",
+    "Each lender has fresh capacity, fee, eligibility and repayment evidence before qualification.",
+    "No new duplicate graph, solver, registry, ledger, source catalog, capital graph or scheduler."
+  ]
+}

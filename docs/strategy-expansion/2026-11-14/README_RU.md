@@ -27,7 +27,9 @@ R10 inventory/replay explicitly states that it made no `src/` strategy-owner cha
 - `PARALLEL_STRATEGY_EXECUTION_ARCHITECTURE_RU.md` — shared-state, resource reservation, portfolio scheduling and parallelism.
 - `STRATEGY_EXPANSION_ASSIGNMENTS_RU.md` — coordinated implementation/research work packages and dependencies.
 - `STRATEGY_ACCEPTANCE_MATRIX.json` — machine-readable strategy families, proof gates and status vocabulary.
-- `CODEX_STRATEGY_EXPANSION_START_HERE.md` — agent entry assignment for THIS pack only.
+- `CODEX_STRATEGY_EXPANSION_START_HERE.md` — legacy SX-only pointer; the authoritative campaign trigger is `CODEX_STRATEGY_CAMPAIGN_START_HERE.md`.
+- `ARCHIVE_DETECTOR_TAXONOMY_COVERAGE_GATE_RU.md` + `ARCHIVE_DETECTOR_TAXONOMY_CROSSWALK_V1.json` — SX-17 reconciliation of V3's 64 anomaly classes, V4's 25 detectors, 19 V3 routes, 36 V6 routes, 12 V6 hyperedges and 4 funding primitive references.
+- `PAIR_ARCHIVE_COVERAGE_AND_IMPORT_GATE_RU.md` + `02_ALL_NEW_CURRENCY_PAIRS_V6_SOURCE_2026-10-08.md` — pair-by-pair proof requirements and the preserved V6 catalog.
 
 ## Binding non-goals
 
@@ -37,7 +39,7 @@ R10 inventory/replay explicitly states that it made no `src/` strategy-owner cha
 - No Robinhood Stock Tokens or tokenized equities.
 - No copied third-party SDK/code without license and revision review.
 - No duplicate graph, solver, asset registry, market database, correlation ledger, journal, capital graph, admission authority or execution pipeline. Extend canonical owners.
-- No PR auto-merge. Every implementation slice must be a reviewable PR and remain unmerged until repository owner approval.
+- PRs must remain reviewable, tested and evidence-backed. For this defined strategy / Build Bigger Universe / flashloan campaign, the repository owner explicitly delegated in-scope PR creation, review and merge authority on 2026-11-14. The agent may merge only after current required checks, provenance/license review, owner-overlap audit, resolved review threads, clean rebase, mergeability and branch protection all pass. This is not permission for on-chain or financial actions.
 
 ## How to use
 

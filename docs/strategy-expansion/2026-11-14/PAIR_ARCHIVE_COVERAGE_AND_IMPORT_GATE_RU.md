@@ -76,3 +76,8 @@ Not every row will reach the final tier. Research-only, blocked, unsupported, as
 - Cross-chain bridges, CCTP/OFT/IBC, TON async, CEX settlement, cooldown queues, delayed redemption and maturity claims are not local atomic edges.
 - V6 LST/yield/vault/wrapper and cross-currency pairs require typed rights, exchange-rate, maturity, oracle and exit semantics; ticker similarity is insufficient.
 - Every row must keep `execution_permission=NONE` or its source read-only status until separately admitted by the existing evidence gates.
+
+
+## Source ZIP availability requirement
+
+The archive manifest records ChatGPT Library IDs but does not itself give a local CLI agent the bytes of those attachments. Before PAIR-00 claims completion, materialize the eleven original ZIP files using `ARCHIVE_SOURCE_MATERIALIZATION_RU.md`. Missing originals must be reported as `BLOCKED_SOURCE_ARCHIVE_UNAVAILABLE`, not silently replaced by counts or symbols.

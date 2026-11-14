@@ -1,3 +1,5 @@
+> **Legacy SX-only entrypoint:** for the full current campaign, use root `CODEX_START_HERE.md` and `CODEX_STRATEGY_CAMPAIGN_START_HERE.md`. This older short assignment is not the primary project trigger. It remains as a scoped pointer to the original SX pack; do not use it to replace or duplicate the MASTER / Build Bigger Universe campaign.
+
 > **Campaign expansion update (2026-11-14):** The complete cross-project trigger is now in `CODEX_STRATEGY_CAMPAIGN_START_HERE.md`. Read it before dispatching any SX work. It adds recovered parallel-chat gaps EXP-01…EXP-10 and the archived Wave-6 Market Ecology track W6-00…W6-11. Current snapshot when added: d52e61f36ece249c1221c8e71d22aa29ef476e21; #643 merged and #645 open for SX-12. Re-fetch current main/PR status. Do not duplicate merged/open lanes.
 
 # CODEX START HERE — Strategy Expansion Pack (separate from market integration)

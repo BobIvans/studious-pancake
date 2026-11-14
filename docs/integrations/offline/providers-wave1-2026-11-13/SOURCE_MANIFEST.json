@@ -1,0 +1,425 @@
+{
+  "schema_version": "studious-pancake.providers-wave1-offline-sources.v1",
+  "prepared_at_utc": "2026-11-14",
+  "retrieval_window_utc": "2026-11-13T22:20Z..2026-11-14T00:35Z",
+  "repository_base_sha_audited": "86be458a87ed3f499cc32ff56426b2866c90422a",
+  "stream": "G (multi-provider quote/build expansion - source dossiers wave 1)",
+  "hash_policy": {
+    "content_sha256": "SHA-256 computed locally over the line-ending-normalized bytes (CRLF->LF) of each dossier file by verify_offline_bundle.py, so the check is stable across git autocrlf/eol settings while still catching any content edit; it is a local integrity hash, not a provider-supplied signature.",
+    "upstream_commit_pin": "GitHub commit/tag pins identify the reviewed upstream source generation via the authenticated GitHub metadata API; a pin is not an on-chain deployment attestation.",
+    "docs_pages": "Docs pages were read as official .md variants and transcribed as original editorial extracts; full page copies are deliberately not vendored (upstream page copyright). Exact canonical URLs + retrieval timestamps recorded per source."
+  },
+  "flag_taxonomy_note": "No RAW_OFFICIAL_SNAPSHOT is claimed in this bundle: no upstream page/file was archived verbatim. Every entry is OFFICIAL_CONTRACT_EXTRACT_ONLY (editorial transcription of current official pages + pinned upstream metadata).",
+  "safety": {
+    "sign_enabled": false,
+    "send_enabled": false,
+    "credentials_used": "NONE (no credentials exist in this environment)",
+    "live_provider_calls": "NONE",
+    "credential_names_referenced_only": [
+      "x-api-key (Titan)",
+      "Authorization Bearer JWT (Titan gateway)",
+      "OK-ACCESS-KEY / OK-ACCESS-SIGN / OK-ACCESS-TIMESTAMP / OK-ACCESS-PASSPHRASE (OKX)",
+      "apiKey query param (Rango, FlowX)",
+      "Config.setApiKey / Config.setBluefinXApiKey (Bluefin7K)",
+      "apiKey/secretKey/apiPassphrase/projectId (OKX via 7K MetaAg)",
+      "externalFee/recipient (Aftermath)",
+      "commission.partner (Bluefin7K, FlowX)"
+    ]
+  },
+  "sources": {
+    "titan_solana": {
+      "endpoints_for_quote_race": "portal.api.titan.exchange/api/v1/quote/swap (x-api-key; JSON); response is quotes map + per-provider SwapRoute instruction bundles; userPublicKey required; slippageBps; fee fields optional",
+      "provider": "Titan",
+      "chain": "solana",
+      "canonical_urls": [
+        "https://titan-exchange.gitbook.io/titan/titan-developer-docs",
+        "https://titan-exchange.gitbook.io/titan/titan-developer-docs/developers-portal/quickstart.md",
+        "https://titan-exchange.gitbook.io/titan/titan-developer-docs/swap-api/quickstart.md",
+        "https://titan-exchange.gitbook.io/titan/titan-developer-docs/getting-started/authentication.md",
+        "https://titan-exchange.gitbook.io/titan/titan-developer-docs/swap-api/guides/fee-collection.md",
+        "https://titan-exchange.gitbook.io/titan/titan-developer-docs/resources/sdk.md",
+        "https://github.com/Titan-Pathfinder/titan-sdk-ts"
+      ],
+      "retrieved_at_utc": "2026-11-14 (session window 2026-11-13T22:20Z..2026-11-14T00:35Z)",
+      "snapshot_status": "OFFICIAL_CONTRACT_EXTRACT_ONLY",
+      "api_endpoints": {
+        "portal_quote": "GET https://portal.api.titan.exchange/api/v1/quote/swap (x-api-key header, JSON)",
+        "gateway_quote": "GET <distributor-endpoint>/api/v1/quote/swap (Authorization: Bearer <jwt>, MessagePack)",
+        "direct_ws": "wss://<endpoint>/api/v1/ws?auth=<jwt>"
+      },
+      "auth_scheme": "x-api-key header (portal API key from developer.titan.exchange); Authorization: Bearer JWT or ?auth=<jwt> query param for gateway/direct (distributor credentials); credential names only",
+      "published_rate_limits": "UNKNOWN - no numeric quotas published on reviewed pages; free Sandbox tier stated without numbers",
+      "build_output_semantics": "UNSIGNED_INSTRUCTION_BUNDLE: quotes map keyed by provider; each SwapRoute carries inAmount/outAmount/slippageBps/computeUnitsSafe/instructions[] (p/a/d short names)/addressLookupTables[]/expiresAtMs|expiresAfterSlot/metadata.ExpectedWinner; integrator assembles VersionedTransaction client-side; no serialized unsigned transaction returned",
+      "fee_fields": "request feeAccount (ATA must exist)/feeBps (u16, max 10000, higher rejected with no quotes)/feeFromInputMint (default fee side = output token; fee deducted from swap amount); response platformFee {amount u64 smallest unit, fee_bps u8}; zero app fee on Titan routes, DART routes up to 1 bps; referral/LP fee fields UNKNOWN",
+      "error_429_semantics": "401 on credential/host mismatch (documented); feeBps > 10000 -> no quotes; broader error taxonomy not documented (UNKNOWN); no published 429 contract",
+      "upstream_pins": {
+        "github_repo": "Titan-Pathfinder/titan-sdk-ts",
+        "latest_tag": "v0.1.5 = cdf9234024058155d2295a6f37bb1253a9e3cc0d",
+        "main_commit": "7588482454bee284a7437d0bd5fce6c02edfb60f (2026-09-08T15:43:20Z)",
+        "npm_package": "@titanexchange/sdk-ts 0.1.6 (package.json), license MIT, engines node>=18.19",
+        "rust_crates": "titan-api-types = 5; titan-api-codec = 1.2 (docs install snippet)"
+      },
+      "license_status": "SDK MIT (GitHub API license.spdx_id=MIT + package.json license field); docs pages not vendored (editorial extract only)",
+      "dossier_file": "TITAN_SOLANA.md",
+      "content_sha256": "de5912f45f349cf559a328563afbb915dc1985125be48431366a1c82cf8f3c58"
+    },
+    "okx_dex_multichain": {
+      "endpoints_for_quote_race": "GET /api/v6/dex/aggregator/quote (economic quote) AND GET /api/v6/dex/aggregator/swap-instruction (instruction bundle; slippagePercent + userWalletAddress) — swap endpoint returns serialized tx but blockhash must be refreshed locally, so instruction path is the comparable one for route evidence",
+      "provider": "OKX DEX",
+      "chain": "solana (chainIndex 501) + sui surface noted",
+      "canonical_urls": [
+        "https://web3.okx.com/onchainos/dev-docs/trade/dex-use-swap-solana-quick-start",
+        "https://web3.okx.com/onchainos/dev-docs/trade/dex-get-quote",
+        "https://web3.okx.com/onchainos/dev-docs/trade/dex-solana-swap-instruction",
+        "https://web3.okx.com/onchainos/dev-docs/trade/dex-error-code"
+      ],
+      "retrieved_at_utc": "2026-11-14 (session window 2026-11-13T22:20Z..2026-11-14T00:35Z)",
+      "snapshot_status": "OFFICIAL_CONTRACT_EXTRACT_ONLY",
+      "api_endpoints": {
+        "quote": "GET https://web3.okx.com/api/v6/dex/aggregator/quote",
+        "swap": "GET https://web3.okx.com/api/v6/dex/aggregator/swap",
+        "swap_instruction_solana": "GET https://web3.okx.com/api/v6/dex/aggregator/swap-instruction",
+        "simulate_whitelist_only": "POST /api/v6/dex/pre-transaction/simulate",
+        "broadcast_whitelist_only": "POST /api/v6/dex/pre-transaction/broadcast-transaction",
+        "orders": "GET /api/v6/dex/post-transaction/orders",
+        "history": "GET /api/v6/dex/aggregator/history"
+      },
+      "auth_scheme": "headers OK-ACCESS-KEY, OK-ACCESS-SIGN (Base64 HmacSHA256(timestamp+method+requestPath+(query|body), secretKey)), OK-ACCESS-TIMESTAMP (ISO), OK-ACCESS-PASSPHRASE; 7K MetaAg OKX provider additionally names projectId (not named in reviewed OKX pages; UNKNOWN); credential names only",
+      "published_rate_limits": "No numeric quotas published; documented rejection is code 50011 / HTTP 429 'Rate limit reached. Please refer to API documentation and throttle requests accordingly'",
+      "build_output_semantics": "quote = ECONOMIC_QUOTE (dexRouterList with dexProtocol.dexName+percent, fromTokenAmount/toTokenAmount, tradeFee USD estimate, estimateGasFee smallest units, priceImpactPercent, token taxRate); swap-instruction = UNSIGNED_INSTRUCTION_BUNDLE (instructionLists[] {data base64, accounts[] {isSigner,isWritable,pubkey}, programId}, addressLookupTableAccount[], createTokenAccountList, routerResult, tx{from,to,minReceiveAmount,slippagePercent}, wsolRentFee); swap = SERIALIZED_UNSIGNED_TRANSACTION base58 (VersionedTransaction.deserialize or legacy Transaction.from; MUST refresh recentBlockhash locally - documented 'CRITICAL!')",
+      "fee_fields": "feePercent = referrer commission of fromTokenAmount (max 10% Solana, 3% other chains, up to 9 decimals); fromTokenReferrerWalletAddress/toTokenReferrerWalletAddress (swap-instruction); tradeFee = 'Estimated network fee (USD) of the quote route' (gas estimate); wsolRentFee; LP fee breakdown UNKNOWN; taxRate on token objects is token-transfer tax (0.01=1%)",
+      "error_429_semantics": "50011/429 rate limit; 401 auth codes 50103-50113 (empty/invalid key, empty/incorrect passphrase, empty/invalid sign/timestamp, invalid signature); 400 parameter codes 50014/51000; HTTP-200 body codes 82000 insufficient liquidity, 82104 unsupported token, 82105 unsupported chain, 82102/82103 min/max quantity, 80005 'Not enough Sui objects under the address for swapping' (active Sui surface), 80000 repeated request, 50026/500 system error, 0/200 success",
+      "upstream_pins": {
+        "solana_chain": "chainIndex 501; SOL 11111111111111111111111111111111; USDC EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "repo_noted_not_pinned": "https://github.com/okx/dex-solana-binary (POST /swap quote+assembly; not pinned this wave)"
+      },
+      "license_status": "docs extracts only; no SDK vendored (UNKNOWN - no SDK license reviewed)",
+      "dossier_file": "OKX_DEX_MULTICHAIN.md",
+      "content_sha256": "d2ebed109eba2aa62d9120ffc2e18842c554113eeeb5a10ff71a6bf116922c95"
+    },
+    "openocean_solana": {
+      "endpoints_for_quote_race": "GET open-api.openocean.finance/v4/{chain}/quote (economic quote; inTokenAddress/outTokenAddress/amountDecimals/slippage) AND /v4/{chain}/swap (serialized unsigned tx hex; requires account + whitelisted API key); chain slug BLOCKED_MISSING_PIN",
+      "provider": "OpenOcean",
+      "chain": "solana",
+      "canonical_urls": [
+        "https://docs.openocean.finance/docs/solana-swap-api",
+        "https://docs.openocean.finance/docs/swap-api/v4",
+        "https://docs.openocean.finance/docs/swap-api/guide",
+        "https://docs.openocean.finance/docs/skills/prerequisites",
+        "https://github.com/openocean-finance/OpenOcean-API-Examples"
+      ],
+      "retrieved_at_utc": "2026-11-14 (session window 2026-11-13T22:20Z..2026-11-14T00:35Z)",
+      "snapshot_status": "OFFICIAL_CONTRACT_EXTRACT_ONLY",
+      "api_endpoints": {
+        "quote": "GET https://open-api.openocean.finance/v4/:chain/quote",
+        "reverse_quote": "GET /v4/:chain/reverseQuote",
+        "swap": "GET /v4/:chain/swap",
+        "token_list": "GET /v4/:chain/tokenList",
+        "dex_list": "GET /v4/:chain/dexList",
+        "gas_price": "GET /v4/:chain/gasPrice",
+        "get_transaction": "GET /v4/:chain/getTransaction",
+        "decode_input_data": "GET|POST /v4/:chain/decodeInputData",
+        "swagger_ui": "https://open-api.openocean.finance/v4/swagger-ui.html"
+      },
+      "auth_scheme": "Solana access whitelisted + API key (obtained via OpenOcean DevRel/BD, official pointer t.me/De1_API); EXACT HEADER NAME NOT VERIFIED from primary source this wave (BLOCKED_MISSING_PIN acquisition row); official SwapSol.js example performs unauthenticated GETs",
+      "published_rate_limits": "'It's 2RPS by default' (Solana overview); skills prerequisites: 'Free tier is limited to 2 requests per second'; 429/5xx backoff guidance documented",
+      "build_output_semantics": "quote = ECONOMIC_QUOTE (inToken/outToken/inAmount/outAmount/estimatedGas 'only a reference'/path/price_impact; amountDecimals replaces deprecated amount); swap = SERIALIZED_UNSIGNED_TRANSACTION hex-encoded (official SwapSol.js: VersionedTransaction.deserialize(Buffer.from(data,'hex')) when res.isVersioned else legacy Transaction.from); response shape data.data.data with isVersioned discriminator",
+      "fee_fields": "V4 swap referrer/referrerFee range 0.01%-5% (V4 index); Solana overview: on-chain referral fee 'configurable up to 3%' (3% vs 5% discrepancy recorded verbatim, binding limit BLOCKED_MISSING_PIN); zero API fees for Solana swaps; 'OpenOcean will share 20% of the fees by default'; amountOut-with-commission display semantics UNKNOWN",
+      "error_429_semantics": "429 documented with progressive backoff guidance (prerequisites page); detailed error-code table NOT found on reviewed pages (UNKNOWN)",
+      "overlap_note": "Official: Solana Meta-Aggregator integrates 'liquidity from the two major Solana Dex aggregators - Jupiter and Titan' -> fully correlated with Jupiter V2 + Titan (see PROVIDER_OVERLAP_NOTES.md)",
+      "upstream_pins": {
+        "github_repo": "openocean-finance/OpenOcean-API-Examples (main, pushed 2025-11-05; default branch main; license field null)",
+        "official_example_file": "frontend/src/pages/SwapSol.js (quote params inTokenAddress/outTokenAddress/amountDecimals/slippage/gasPrice; swap adds account; chainId 'solana')"
+      },
+      "license_status": "examples repo license null; docs extracts only",
+      "dossier_file": "OPENOCEAN_SOLANA.md",
+      "content_sha256": "5f2a2171da7a1992e49fd8cd515f7dcf9fc03894377db06c7c27f0417cbc43cf"
+    },
+    "rango_multichain": {
+      "endpoints_for_quote_race": "GET {public-api|api}.rango.exchange/basic/quote (economic quote; from/to/amount/slippage) AND /basic/swap (adds fromAddress/toAddress; returns chain-typed instruction bundle); apiKey query param required",
+      "provider": "Rango",
+      "chain": "multichain incl. solana + sui",
+      "canonical_urls": [
+        "https://docs.rango.exchange/llms.txt",
+        "https://docs.rango.exchange/api-integration/api-key-and-rate-limits.md",
+        "https://docs.rango.exchange/api-integration/basic-api-single-step/api-reference/get-quote.md",
+        "https://docs.rango.exchange/api-integration/basic-api-single-step/api-reference/create-transaction-swap.md",
+        "https://docs.rango.exchange/api-integration/basic-api-single-step/sample-transactions.md",
+        "https://docs.rango.exchange/technical/fee-structure.md",
+        "https://docs.rango.exchange/api-integration/basic-api-single-step/monetization.md",
+        "https://docs.rango.exchange/api-troubleshooting.md"
+      ],
+      "retrieved_at_utc": "2026-11-14 (session window 2026-11-13T22:20Z..2026-11-14T00:35Z)",
+      "snapshot_status": "OFFICIAL_CONTRACT_EXTRACT_ONLY",
+      "api_endpoints": {
+        "quote": "GET https://public-api.rango.exchange/basic/quote (public test key) | https://api.rango.exchange/basic/quote (private key)",
+        "swap": "GET {host}/basic/swap",
+        "meta": "GET {host}/meta (blockchains/tokens/swappers; not extracted this wave)"
+      },
+      "auth_scheme": "API key attached to every request as QUERY PARAMETER apiKey=<key> (not a header); public test host public-api.rango.exchange, private host api.rango.exchange; keys via Discord users-support ticket; docs publish a public test key literal (not stored in this repo); credential name only",
+      "published_rate_limits": "'default rate limits per IP and API key'; numeric values NOT published (UNKNOWN; custom limits via Discord); server-side callers may need IP whitelisting; enterprise dedicated endpoints offered",
+      "build_output_semantics": "quote = ECONOMIC_QUOTE (from/to asset ids, amount machine-readable base units, slippage percent default 0.5); swap = CHAIN-TYPED UNSIGNED_INSTRUCTION_BUNDLE: Solana tx {type:'SOLANA', instructions[], recentBlockhash null unless partially signed, signatures[]}; broadcast note: base64 encoding required (base58 deprecated); all Solana routes VERSIONED except SOL<->WSOL wrapper; SUI tx type documented but sub-shape NOT extracted this wave; route fields returned alongside",
+      "fee_fields": "referrerFee percent (1.12 = 1.12%), max 3%, default 10 bps (0.1%); Rango adds 0.15% on top of affiliate fee with Public Test/Private API keys; affiliate program currently unsupported on Solana/Cosmos/Tron; Solana fee charging 'not ready for public use'; swapper fees charged by underlying protocols; app.rango.exchange zero fee",
+      "error_429_semantics": "{error, errorCode, traceId}; 4-digit codes {category}{type}: 11xx server (1101 internal, 1102 underlying-protocol exception), 12xx validation (1201 bad request, 1202 outside swapper min/max with thresholds returned, 1203 balance retrieval failure, 1204 invalid tx hash, 1205 token not found, 1206 unsupported chain), 13xx routing (1301 loss>18% of input USD, 1302 quote/create amount discrepancy, 1303 route expired - 5 min window, recommend 1 min, 1304 no valid route), 14xx auth (1401), 15xx KYC; HTTP-level 429 behavior not documented on reviewed page",
+      "upstream_pins": {
+        "openapi_schema_file": "linked from api-reference.md at /files/EsrXvOjOsHXzDUhQUtOC; NOT downloaded this wave (typed note)"
+      },
+      "license_status": "docs extracts only (UNKNOWN - no SDK license reviewed)",
+      "dossier_file": "RANGO_MULTICHAIN.md",
+      "content_sha256": "79bc3fbdb90ab0c9c7ada0314aa69d48a551e14e398748cda9248eae5bdd9411"
+    },
+    "aftermath_sui": {
+      "endpoints_for_quote_race": "POST /api/router/trade-route (economic route; coinInType/coinOutType + coinInAmount|coinOutAmount) AND POST /api/router/transactions/add-trade (composable PTB {tx, coinOutId} into caller transaction); /transactions/trade schema BLOCKED_MISSING_PIN",
+      "provider": "Aftermath",
+      "chain": "sui",
+      "canonical_urls": [
+        "https://docs.aftermath.finance/llms.txt",
+        "https://docs.aftermath.finance/for-developers/api.md",
+        "https://docs.aftermath.finance/for-developers/api/rest-api/authorization.md",
+        "https://docs.aftermath.finance/for-developers/api/rest-api/auxiliary-endpoints.md",
+        "https://docs.aftermath.finance/for-developers/api/rest-api/error-handling.md",
+        "https://docs.aftermath.finance/for-developers/typescript-sdk/products/router.md",
+        "https://docs.aftermath.finance/trade/smart-order-router/fees.md"
+      ],
+      "retrieved_at_utc": "2026-11-14 (session window 2026-11-13T22:20Z..2026-11-14T00:35Z)",
+      "snapshot_status": "OFFICIAL_CONTRACT_EXTRACT_ONLY",
+      "api_endpoints": {
+        "supported_coins": "GET /api/router/supported-coins (flat array of Sui coin types; official scale note: 92,803 entries ~7.8 MB on 2026-08-22 - bounded intake mandatory)",
+        "trade_route": "POST /api/router/trade-route (coinInType+coinOutType + exactly one of coinInAmount|coinOutAmount; fixed-output requires slippage; optional route filters, externalFee, referrer)",
+        "add_trade": "POST /api/router/transactions/add-trade (composes quoted completeRoute into EXISTING serialized transaction; returns {tx, coinOutId}; coinOutId uses SDK-style casing {Input:0}|{Result:3}|{NestedResult:[2,1]})",
+        "trade_undocumented": "POST /api/router/transactions/trade (responds in production, ABSENT from OpenAPI; no documented schema; official guidance: use add-trade) -> BLOCKED_MISSING_PIN"
+      },
+      "auth_scheme": "default anonymous; increased rate limits via locally-signed requests (wallet signatures; Ed25519/Secp256k1/Secp256r1 keypair examples with @mysten/sui); exact signed-request header names NOT extracted this wave (typed note); no API-key values",
+      "published_rate_limits": "'Default rate limit: 1000 requests per 10 seconds' (authorization.md); increase via Discord ticket format sui-address/rate-limit-requests",
+      "build_output_semantics": "trade-route = ECONOMIC_QUOTE (complete route); SDK getTransactionForCompleteTradeRoute = fresh Sui Transaction (PTB); addTransactionForCompleteTradeRoute / add-trade endpoint = COMPOSABLE PTB (appends into caller's Transaction, returns {tx, coinOutId}; 'swap can be performed before or after any logic within the existing transaction')",
+      "fee_fields": "'No protocol fee is taken on trades performed through the Aftermath Smart-Order Router'; integrator fee optional per swap via externalFee {recipient, feePercentage} (0.01 = 1%); 'Aftermath retains 2.5% of whatever platform fee is set'; zero fee when unconfigured; underlying LP fee breakdown UNKNOWN",
+      "error_429_semantics": "error variants {error_code, message, short_message?}|{error}|string|null; headers X-Error-Code (numeric)/X-Error-Message; preview routes may return HTTP 200 with {error} payload - data.error is primary signal; router-specific code table + 429 contract NOT extracted (typed note)",
+      "upstream_pins": {
+        "sdk_npm": "aftermath-ts-sdk (npm install per docs); exact package.json version UNKNOWN this wave; docs reference SDK version v3.3.1 in router-endpoint warning",
+        "transport": "SDK supports gRPC transport config (lifecycle-and-transport.md exists; not extracted)"
+      },
+      "license_status": "UNKNOWN - SDK license not reviewed this wave (acquisition row recorded)",
+      "dossier_file": "AFTERMATH_SUI.md",
+      "content_sha256": "ecb580cffcf0cfb0b94786772030c5e0b08b784dc693b7e9a51903d6847fed2a"
+    },
+    "cetus_aggregator_sui": {
+      "endpoints_for_quote_race": "https://api-sui.cetus.zone/router_v3/find_routes (economic quote; from/target/amount/byAmountIn) + SDK findRouters->fastRouterSwap|routerSwapWithMaxAmountIn|routerSwap (composable PTB into caller Transaction); V2 router_v2 deprecated soon",
+      "provider": "Cetus Aggregator",
+      "chain": "sui",
+      "canonical_urls": [
+        "https://cetus-1.gitbook.io/cetus-developer-docs/llms.txt",
+        "https://cetus-1.gitbook.io/cetus-developer-docs/developer/cetus-plus-aggregator",
+        "https://cetus-1.gitbook.io/cetus-developer-docs/developer/cetus-aggregator/getting-started.md",
+        "https://cetus-1.gitbook.io/cetus-developer-docs/developer/cetus-aggregator/features-available.md",
+        "https://github.com/CetusProtocol/aggregator"
+      ],
+      "retrieved_at_utc": "2026-11-14 (session window 2026-11-13T22:20Z..2026-11-14T00:35Z)",
+      "snapshot_status": "OFFICIAL_CONTRACT_EXTRACT_ONLY",
+      "api_endpoints": {
+        "v3_find_routes": "https://api-sui.cetus.zone/router_v3/find_routes (current; SDK >= 1.1.1)",
+        "v2_find_routes_deprecated_soon": "https://api-sui.cetus.zone/router_v2/find_routes (V2 deprecated soon; 0.x SDK)"
+      },
+      "auth_scheme": "no API-key surface documented on reviewed pages ('API keys, if needed' conditional wording; UNKNOWN); no credential names published",
+      "published_rate_limits": "UNKNOWN - none found on reviewed pages",
+      "build_output_semantics": "find_routes/findRouters = ECONOMIC_QUOTE: ResponseV3 {quoteID, amountIn BN, amountOut BN, byAmountIn, paths[] (v3 replaces v2 routes), insufficientLiquidity, deviationRatio (0.01=1% vs market), packages, overlayFee, totalDeepFee, error RouterError}; build = COMPOSABLE_PT: fastRouterSwap (auto coinWithBalance) / routerSwapWithMaxAmountIn (caller coin + maxAmountIn protection) / routerSwap (caller coin full balance) all take caller-owned txb: Transaction; required {router, slippage (0<=s<1 decimal), txb}",
+      "fee_fields": "response overlayFee ('The amount for overlay fee') + totalDeepFee ('Calculated need deep fee for deep pools'); build payDeepFeeAmount (deepbookv3 path; 'all pools that charge a swap fee are covered by Cetus'); partner/cetusDlmmPartner addresses for fee share (percent mechanics in partner-swap.md NOT extracted); sponsored build mode documented (swap does not use txb.gas when sponsor pays)",
+      "error_429_semantics": "error RouterError {code, msg} documented as field; concrete code table NOT extracted (typed note); insufficientLiquidity bool is documented no-route-adjacent signal; deviationRatio documents price-deviation warning; HTTP/429 contract UNKNOWN",
+      "on_chain_packages": "AggregatorV3 0x33ec64e9bb369bf045ddc198c81adbf2acab424da37465d95296ee02045d2b17 (v3); named routers incl. CetusRouter 0xb1e11cea..., AftermathRouter 0xb20fbe0c..., FlowxRouter 0x5307d1e8..., BluefinRouter 0xaa4c2913..., DeepbookV3Router 0xbb2796b4... (full official table in dossier; current-at-retrieval, re-verify before builder work)",
+      "default_providers_v1_5_5": "deepbookv3, flowx v2/v3, kriya v2/v3, aftermath, turbos, volo, afsui, scallop, springsui, bluefin, haedalhmm&v2, alphafi, steamm(cpmm&omm&ommv2), metastable, obric, haedal(hasui & hawal), momentum, magma, fullsail, cetusdlmm, ferraclmm, ferradlmm, bolt, magmapropamm",
+      "upstream_pins": {
+        "github_repo": "CetusProtocol/aggregator main ae5bc1e7fe710d96a60ca5dbcc2591966d29de9c (2026-10-19); tag v1.7.5 same commit",
+        "npm_package": "@cetusprotocol/aggregator-sdk 1.7.5; package.json license field null",
+        "deps": "@mysten/sui 2.31.2; @pythnetwork/hermes-client ^3.1.0; json-bigint; node-fetch; bip39; dotenv"
+      },
+      "license_status": "UNKNOWN - package.json license null; no LICENSE file at repo root (GitHub contents 404); do not copy source without license review",
+      "dossier_file": "CETUS_AGGREGATOR_SUI.md",
+      "content_sha256": "5a22ddd03e996173f1716107633439d87c4f73ec5195580a00ea862ed4630b98"
+    },
+    "sevenk_bluefin7k_sui": {
+      "endpoints_for_quote_race": "https://aggregator.api.sui-prod.bluefin.io v2/quote (economic quote; getQuote tokenIn/tokenOut/amountIn) + SDK buildTx (composable PTB {tx, coinOut}; slippage decimal; commission partner required even at 0 bps); 5 RPS default",
+      "provider": "7K / Bluefin7K",
+      "chain": "sui",
+      "canonical_urls": [
+        "https://docs.7k.ag/llms.txt",
+        "https://docs.7k.ag/7k-aggregator/overview.md",
+        "https://docs.7k.ag/developers/sdk.md",
+        "https://github.com/fireflyprotocol/bluefin7k-typescript-sdk",
+        "https://github.com/7k-ag/7k-sdk-ts"
+      ],
+      "retrieved_at_utc": "2026-11-14 (session window 2026-11-13T22:20Z..2026-11-14T00:35Z)",
+      "snapshot_status": "OFFICIAL_CONTRACT_EXTRACT_ONLY",
+      "api_endpoints": {
+        "main": "https://aggregator.api.sui-prod.bluefin.io (default endpoint provider 'Bluefin7k' -> v2/quote; 'Bluefin7kV2' -> v3/quote with RFQ support)",
+        "lo_dca": "https://lod-dca.7k.ag",
+        "statistic": "https://statistic.7k.ag"
+      },
+      "auth_scheme": "Config.setApiKey(...) for backend usage (API key optional at default rate; required + partner info for increase; frontend needs none); separate Config.setBluefinXApiKey for BluefinX routing; credential names only",
+      "published_rate_limits": "Default 5 requests/second (published table: Frontend 5 RPS no increase possible; Backend 5 RPS without key, increase requires API key + partner information via Discord ticket)",
+      "build_output_semantics": "getQuote({tokenIn, tokenOut, amountIn, sources?}) = ECONOMIC_QUOTE; buildTx({quoteResponse, accountAddress, slippage (decimal), commission {partner, commissionBps} (partner REQUIRED even at 0 bps for tracking), extendTx? {tx, coinIn}}) returns {tx, coinOut} = COMPOSABLE_PT (fresh full Transaction or appended into caller's Transaction); oracle-priced sources (obric, haedal_pmm, sevenk_v1, steamm_oracle_quoter v1/v2) excluded until Pyth endpoint configured (official)",
+      "fee_fields": "commission.commissionBps (1 bps = 0.01%); 7K MetaAg knobs partner/partnerCommissionBps (default 0), tipBps ('Tip to 7K Protocol', default 0), slippageBps (default 100); service-side platform fee default UNKNOWN",
+      "error_429_semantics": "explicit 429/error table for aggregator endpoints NOT found on reviewed pages (typed note); Pyth misconfiguration behavior documented (source exclusion + SDK log)",
+      "on_chain_constants": "_7K_PACKAGE_ID 0x62412b7268c35f3808336aee57a52836501f40b8ba5d936f8ad275e672befd04; _7K_CONFIG 0x47442a93f7727d188ba7cb71031170d1786af70013cb7ad5115f3fe877ff0c54; _7K_VAULT 0x442ad50389ed5cda6f7a6f5a7ae6361a4c05ef1d9fb2e54fbba5a268d690bfe6; legacy V1-V4 package IDs commented in src/constants/_7k.ts",
+      "sources_list": "suiswap, turbos, cetus, bluemove, kriya, kriya_v3, aftermath, flowx, bluefinx, obric, haedal_pmm, sevenk_v1, steamm_oracle_quoter, steamm_oracle_quoter_v2",
+      "upstream_pins": {
+        "github_repo_direct_sdk": "fireflyprotocol/bluefin7k-typescript-sdk tag bluefin7k-sdk-release-7.6.3 = 947da0666a3fb4893656f0914472d5a30feead4b; main pushed 2026-09-28; license MIT",
+        "npm_direct_sdk": "@bluefin-exchange/bluefin7k-aggregator-sdk latest 7.7.0; license MIT; repository field points to fireflyprotocol/bluefin7k-typescript-sdk",
+        "metaag_sdk": "@7kprotocol/sdk-ts 5.0.0-beta.2 (main 4c9804b234cb81fe538060f2841d77317e347645, 2026-05-21); tag v4.0.0 = 281e9ae48cd0963c1d879e7e068bc48a287f0d03; MIT; mainnet-only; MetaAg compares bluefin7k/flowx/cetus/okx (OKX provider needs apiKey/secretKey/apiPassphrase/projectId); MetaAg.swap = composable PTB returning TransactionObjectArgument; fastSwap (sign+execute) out of scope"
+      },
+      "license_status": "MIT for both SDKs (GitHub API + npm metadata); docs extracts only",
+      "dossier_file": "SEVENK_BLUEFIN7K_SUI.md",
+      "content_sha256": "ca09ce36271dee8c468cffaf45074db8e1b8a65a7b3356e2207f2ae6c64a99ad"
+    },
+    "flowx_sui": {
+      "endpoints_for_quote_race": "GET api.flowx.finance/flowx-ag-routing/api/v1/quote (economic quote; AggregatorQuoter.getRoutes) + TradeBuilder.build().buildTransaction({client}) fresh PTB / trade.swap({client,tx}) composable append; apiKey query param; slippage scale 1e6",
+      "provider": "FlowX",
+      "chain": "sui",
+      "canonical_urls": [
+        "https://docs.flowx.finance/llms.txt",
+        "https://docs.flowx.finance/developer/flowx-sdk/swap-aggregator.md",
+        "https://github.com/FlowX-Finance/sdk"
+      ],
+      "retrieved_at_utc": "2026-11-14 (session window 2026-11-13T22:20Z..2026-11-14T00:35Z)",
+      "snapshot_status": "OFFICIAL_CONTRACT_EXTRACT_ONLY",
+      "api_endpoints": {
+        "quote": "https://api.flowx.finance/flowx-ag-routing/api/v1/quote",
+        "batch_quotes": "https://api.flowx.finance/flowx-ag-routing/api/v1/batch-quotes",
+        "multi_quotes": "https://api.flowx.finance/flowx-ag-routing/api/v1/multi-quotes",
+        "request_timeout_ms": 30000,
+        "graphql": "https://api.flowx.finance/flowx-be/graphql",
+        "pyth": "https://hermes.pyth.network/v2"
+      },
+      "auth_scheme": "apiKey passed as QUERY PARAMETER (official source AggregatorQuoter: batchQuoteURI?apiKey=; constructor apiKey?: string); anonymous availability UNKNOWN; credential name only",
+      "published_rate_limits": "UNKNOWN - none found on reviewed docs pages (llms-full grep empty)",
+      "build_output_semantics": "getRoutes = ECONOMIC_QUOTE (tokenIn/tokenOut full Move types, amountIn, includeSources/excludeSources, commission, maxHops default+max 3, splitDistributionPercent default 1 max 100, excludePools); official WARNING: 'amountOut FROM QUOTE WHEN USE WITH COMMISSION ONLY FOR DISPLAY, NOT FOR CALCULATE ONCHAIN'; TradeBuilder(...).sender().slippage((pct/100)*1e6).commission().build().buildTransaction({client}) = FRESH PTB; trade.swap({client, tx}) returns coinOut = COMPOSABLE_PT appended into caller's Transaction",
+      "fee_fields": "Commission(partner, Coin(type), CommissionType.PERCENTAGE (1% = (1/100)*1e6) | FLAT (raw amount incl. decimals), directTransfer bool); pass same commission to getRoutes AND TradeBuilder; fee-coin choice rules documented (fee collected in chosen coin; receive-nothing edge case); on-chain collect event 0xc263060d3cbb4155057f0010f92f63ca56d5121c298d01f7a33607342ec299b0::partner_manager::Collect",
+      "error_429_semantics": "quoter HTTP/error contract NOT documented on reviewed pages (typed note); SDK requestTimeout 30000ms; quote expiry fields UNKNOWN",
+      "protocols_enum": "FLOWX, FLOWX_CLMM, KRIYA, KRIYA_CLMM, TURBOS, CETUS, AFTERMATH, AFTERMATH_LSD, DEEPBOOK, DEEPBOOK_V3, BLUEMOVE, BLUEMOVE_FUN, BLUEFIN, FLOWX_PMM, HOP_FUN, 7K_FUN, SEVENK_V1, TURBOS_FUN, OBRIC, HAEDAL_PMM, HAEDAL, SPRING_SUI, ALPHA_FI, VOLO_LSD, STEAMM, METASTABLE, MAGMA_FINANCE, MOMENTUM_FINANCE, FULL_SAIL, IPX_TIDE (+ DeepbookV3Swap/DipCoinDexSwap/FerraClmmSwap entities)",
+      "upstream_pins": {
+        "github_repo": "FlowX-Finance/sdk master 9a3290888c05c0ef635d32c5cbcfb901789a15dc (2026-01-29); no release tags",
+        "npm_package": "@flowx-finance/sdk latest 2.1.0; license None in registry"
+      },
+      "license_status": "UNKNOWN - no LICENSE file (GitHub license endpoint 404); npm license None; default-copyright; do not copy source without license review",
+      "dossier_file": "FLOWX_SUI.md",
+      "content_sha256": "7d97bd0fc1274802535d383b28d66e07cdd541b0744ca80961f09f31038ca69d"
+    }
+  },
+  "acquisitions": [
+    {
+      "id": "openocean_auth_header_name",
+      "type": "BLOCKED_MISSING_PIN",
+      "cause": "Exact HTTP header name presenting the OpenOcean API key was not verifiable from any primary page this wave; WebSearch summary claims 'api-key' header but no reviewed primary page names it and the official example shows unauthenticated GETs.",
+      "exact_acquisition_step": "After API key is obtained from OpenOcean DevRel (t.me/De1_API), fetch the official Swagger UI https://open-api.openocean.finance/v4/swagger-ui.html and the authenticated-request doc page; transcribe the exact header; record content SHA-256 of the page.",
+      "owner": "Stream G wave-2 dossier refresh (docs/integrations/offline/providers-wave1-2026-11-13)",
+      "created_at_utc": "2026-11-14"
+    },
+    {
+      "id": "openocean_openapi_spec",
+      "type": "BLOCKED_MISSING_PIN",
+      "cause": "Machine-readable OpenAPI spec unreachable: /v4/v3/api-docs, /v4/api-docs, /v3/api-docs, /v4/openapi.json all HTTP 404 (public unauthenticated probes, 2026-11-14). Exact V4 response schema not pinned.",
+      "exact_acquisition_step": "Capture the swagger-ui.html definition source (browser devtools network export) or request a spec URL from OpenOcean; archive raw JSON snapshot + SHA-256; then upgrade entry to OFFICIAL_CONTRACT_EXTRACT_ONLY.",
+      "owner": "Stream G wave-2 dossier refresh",
+      "created_at_utc": "2026-11-14"
+    },
+    {
+      "id": "openocean_solana_chain_slug",
+      "type": "BLOCKED_MISSING_PIN",
+      "cause": "Official example code uses chain 'solana' in /v4/{chain}/... while a search-level reference shows '/v4/sol/...'; accepted slug set not pinned.",
+      "exact_acquisition_step": "Verify accepted slugs against the Swagger UI and the official SwapSol.js at the pinned commit; record both if both exist.",
+      "owner": "Stream G wave-2 dossier refresh",
+      "created_at_utc": "2026-11-14"
+    },
+    {
+      "id": "openocean_solana_referral_cap",
+      "type": "BLOCKED_MISSING_PIN",
+      "cause": "Referral fee cap inconsistent across official pages: V4 swap referrerFee range 0.01%-5% vs Solana overview 'configurable up to 3%'.",
+      "exact_acquisition_step": "Fetch the Solana-specific swap/referrer doc page (whitelisted access) and record the binding Solana cap verbatim with retrieval hash.",
+      "owner": "Stream G wave-2 dossier refresh",
+      "created_at_utc": "2026-11-14"
+    },
+    {
+      "id": "openocean_solana_swap_entitlement",
+      "type": "BLOCKED_MISSING_PIN",
+      "cause": "Search-level statement that the Solana /swap build endpoint is paid-subscriber-only is not verified on a primary page.",
+      "exact_acquisition_step": "Confirm entitlement tiers on the official Solana swap API page / with OpenOcean BD at key issuance; record the exact sentence.",
+      "owner": "Stream G wave-2 dossier refresh",
+      "created_at_utc": "2026-11-14"
+    },
+    {
+      "id": "aftermath_transactions_trade_schema",
+      "type": "BLOCKED_MISSING_PIN",
+      "cause": "POST /api/router/transactions/trade responds in production but is absent from the OpenAPI declaration with no documented request/response schema (official statement); official guidance is to use transactions/add-trade.",
+      "exact_acquisition_step": "Download the production OpenAPI document at https://aftermath.finance/docs/ and verify whether trade remains undeclared; keep add-trade as the only build path until a schema exists.",
+      "owner": "Stream G wave-2 dossier refresh",
+      "created_at_utc": "2026-11-14"
+    },
+    {
+      "id": "aftermath_sdk_package_version_and_license",
+      "type": "BLOCKED_MISSING_PIN",
+      "cause": "aftermath-ts-sdk exact npm version and license not read from the registry this wave; docs reference SDK v3.3.1 in a warning without a package version.",
+      "exact_acquisition_step": "Query https://registry.npmjs.org/aftermath-ts-sdk for dist-tags.latest + license; record version, license, repository URL.",
+      "owner": "Stream G wave-2 dossier refresh",
+      "created_at_utc": "2026-11-14"
+    },
+    {
+      "id": "aftermath_signed_request_headers",
+      "type": "BLOCKED_MISSING_PIN",
+      "cause": "The increased-rate-limit signed-request flow is documented as code (local wallet signatures) but the exact HTTP header names for the signed envelope were not transcribed.",
+      "exact_acquisition_step": "Extract the header names from docs.aftermath.finance/for-developers/api/rest-api/authorization.md + rest-api/authentication.md at next refresh; record verbatim header names only.",
+      "owner": "Stream G wave-2 dossier refresh",
+      "created_at_utc": "2026-11-14"
+    },
+    {
+      "id": "cetus_license_and_error_table",
+      "type": "BLOCKED_MISSING_PIN",
+      "cause": "@cetusprotocol/aggregator-sdk package.json has license: null and the repo has no LICENSE file (GitHub contents 404); RouterError numeric code table not extracted.",
+      "exact_acquisition_step": "Ask Cetus team / check the docs legal section for SDK licensing before any source reuse; capture the aggregator RouterError code list from the docs or the OpenAPI of api-sui.cetus.zone; record verbatim.",
+      "owner": "Stream G wave-2 dossier refresh",
+      "created_at_utc": "2026-11-14"
+    },
+    {
+      "id": "flowx_license_and_rate_limits",
+      "type": "BLOCKED_MISSING_PIN",
+      "cause": "FlowX-Finance/sdk has no LICENSE file (GitHub license endpoint 404) and npm reports license None; no published rate limits found on docs.flowx.finance; anonymous quote availability unknown.",
+      "exact_acquisition_step": "Request license clarification and rate-limit entitlement from FlowX developer channel at SDK-integration time; archive the reply as evidence with URL + timestamp.",
+      "owner": "Stream G wave-2 dossier refresh",
+      "created_at_utc": "2026-11-14"
+    },
+    {
+      "id": "titan_numeric_rate_limits_and_error_taxonomy",
+      "type": "BLOCKED_MISSING_PIN",
+      "cause": "No published numeric rate limits or broader error-code taxonomy found on reviewed Titan pages (only 401 credential-mismatch and feeBps>10000 no-quote behavior documented).",
+      "exact_acquisition_step": "At sandbox-key issuance, record the portal tier's documented quota page (developer.titan.exchange) and any error-code appendix; update dossier; never infer numbers.",
+      "owner": "Stream G wave-2 dossier refresh",
+      "created_at_utc": "2026-11-14"
+    },
+    {
+      "id": "okx_sui_surface_and_numeric_quotas",
+      "type": "BLOCKED_MISSING_PIN",
+      "cause": "OKX Sui quote/build parameter contract (chainIndex, Sui-specific fields) not extracted this wave; numeric per-tier quotas not published (only 50011/429 documented).",
+      "exact_acquisition_step": "Fetch the Onchain OS docs Sui swap quick-start + any published rate-limit table at next refresh; record exact URLs and content hashes.",
+      "owner": "Stream G wave-2 dossier refresh",
+      "created_at_utc": "2026-11-14"
+    },
+    {
+      "id": "sevenk_service_fee_and_429_contract",
+      "type": "BLOCKED_MISSING_PIN",
+      "cause": "Bluefin7K aggregator-service-side platform fee default and an explicit 429/error-code table were not found on reviewed pages (published: 5 RPS default).",
+      "exact_acquisition_step": "At API-key issuance (Discord ticket), request the documented quota/error contract; update dossier with verbatim quotes.",
+      "owner": "Stream G wave-2 dossier refresh",
+      "created_at_utc": "2026-11-14"
+    },
+    {
+      "id": "rango_numeric_limits_and_openapi_file",
+      "type": "BLOCKED_MISSING_PIN",
+      "cause": "Rango publishes the rate-limit policy (per IP + per key) but not numeric defaults; the OpenAPI JSON schema file linked from the API Reference page (/files/EsrXvOjOsHXzDUhQUtOC) was not downloaded; SUI tx sub-shape not extracted.",
+      "exact_acquisition_step": "Download the linked OpenAPI file at next refresh (public URL, no credentials), archive + hash it; extract the SUI transaction sub-shape from sample-transactions.md.",
+      "owner": "Stream G wave-2 dossier refresh",
+      "created_at_utc": "2026-11-14"
+    }
+  ],
+  "related_existing_owners": {
+    "jupiter_v2": "docs/integrations/offline/solana-p0/JUPITER_SWAP_V2.openapi.yaml (upstream jup-ag/docs d40d936979af3ec75a12a053e3fbeb1f75eb31ce, blob c8bad7a7dc9ff60149b55c20e46d7d57e75e2dd8) - referenced, not re-pinned",
+    "zerox_solana": "docs/integrations/offline/solana-p0/ZEROX_SOLANA_SWAP.md - referenced, not re-pinned",
+    "direct_deepbook": "existing GPR-03 Sui lanes - referenced, not re-pinned"
+  }
+}

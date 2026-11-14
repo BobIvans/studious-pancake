@@ -247,6 +247,20 @@
       "status": "OPEN_SOURCE_BLOCKED_REBASE_REQUIRED",
       "head": "4ffffddc",
       "note": "Research math only; Curve source commit SHA pin and whitepaper missing, per-market rooted state and unit-scale reconciliation unproven. No code copied from proprietary source."
+    },
+    {
+      "n": 649,
+      "lane": "SX-03",
+      "status": "OPEN_SOURCE_BLOCKED",
+      "head": "4ffffddc",
+      "note": "Source commit SHA, whitepaper, unit-scale and rooted per-market state pending."
+    },
+    {
+      "n": 656,
+      "lane": "strategy-docs/SX17/W6-12",
+      "status": "OPEN_CI_PENDING",
+      "head": "b340f55b",
+      "note": "Clean-base docs-only consolidation after #645/#648; subject to current CI and merge review."
     }
   ],
   "workstreams_final": {
@@ -305,5 +319,5 @@
     "Execute SX-17 runtime fanout over existing application/registry/consumer/AGG-05 owners; build W6-12 public participant episodes/archetypes on existing MarketEpisode/decision/replay owners.",
     "R04/R05/R06 remain user/evidence-gated after qualified capital edges, exact quotes, builders and QPR readiness."
   ],
-  "open": "1 current strategy PR: #649 SX-03 LLAMMA; source commit SHA/whitepaper/unit/per-market rooted-state blockers remain open. #652 pending current branch CI/rebase merge."
+  "open": "One strategy-code PR remains open: #649 SX-03 LLAMMA (source/units/rooted-state blockers). Documentation consolidation PR #656 adds SX-17/W6-12 and is under current CI/review."
 }

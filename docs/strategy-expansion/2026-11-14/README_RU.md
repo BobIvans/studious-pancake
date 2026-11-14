@@ -42,3 +42,13 @@ R10 inventory/replay explicitly states that it made no `src/` strategy-owner cha
 ## How to use
 
 Place this directory in the repository as-is. Agents should start from `CODEX_STRATEGY_EXPANSION_START_HERE.md`, read the source files above, refresh all statuses against current main and active PRs, then execute independent work packages in parallel only where ownership/dependencies permit. The pack must remain an additive overlay: the active market-integration assignment is owned by its existing agents.
+
+
+## Research expansion v2 from accessible parallel-chat history
+
+After SX-00 reconciliation (#639), an additional pass over accessible saved conversation/archive extracts identified further mechanisms and research families. Added:
+- STRATEGY_RESEARCH_ARCHIVE_ADDENDUM_RU.md — SX-17…SX-25, DP-01…DP-08 dataset plan, owner mapping and dependency plan.
+- STRATEGY_RESEARCH_ACCEPTANCE_MATRIX_V2.json — machine-readable additive overlay; v1 remains unchanged.
+- SX-17…SX-25 appended to STRATEGY_EXPANSION_ASSIGNMENTS_RU.md.
+
+Read the v2 addendum after SX-00. Historical extracts are not complete server-side transcripts of every parallel chat; SX-24/SX-25 therefore preserve ongoing source/strategy discovery without duplicating canonical owners or auto-qualifying ideas.

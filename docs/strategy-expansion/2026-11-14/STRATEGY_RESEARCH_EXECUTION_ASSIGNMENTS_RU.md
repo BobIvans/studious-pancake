@@ -49,3 +49,24 @@ Run 4–8 independent workers as a soft target, each with its own current-main w
 
 ## Merge and safety
 The repository owner explicitly authorized autonomous engineering PR creation, review and merge for this Studious Pancake strategy / Build Bigger Universe / flashloan campaign in the direct instruction dated 2026-11-14. This is the human approval required by AGENTS.md for in-scope campaign PRs; no new confirmation is needed for those PRs. Merge only after current required checks are green, source/license evidence is reviewed, clean rebase and owner-overlap audit pass, all review threads are resolved, the PR is mergeable and branch protection allows it. Never bypass checks, fake statuses or force-push main. This authority is limited to this engineering campaign, not unrelated PRs or any on-chain/financial action. No keys/accounts/wallets, signing, sending, borrowing, spending, deployments, live enablement or production promotion. No tokenized equities, sandwich/frontrun, user targeting or unauthorized private flow. Unknown is not zero; every amount needs a fresh exact quote; TVL is not capacity.
+
+
+
+## DS-00…DS-11 — broad arbitrage data-source integration workstream
+
+Canonical assignments and acceptance are in ARBITRAGE_MAP_DATA_SOURCE_ASSIGNMENTS_RU.md; strategy/source semantics are in ARBITRAGE_MAP_STRATEGY_AND_DATA_SOURCE_ATLAS_RU.md; the machine source ledger is ARBITRAGE_DATA_SOURCE_CATALOG_V1.json.
+
+- DS-00 source pins, license, quotas and current entitlement audit.
+- DS-01 Solana/Sui/EVM/TON/Cosmos raw chain intake, finality, slots/checkpoints and replay.
+- DS-02 canonical asset, pool, book, token representation and claim identity.
+- DS-03 33 direct venue families and exact invariant/state/quote math.
+- DS-04 Jupiter V2/0x/Titan plus future Solana/Sui/EVM quote/build sources; preserve losing quotes and dedupe underlying liquidity.
+- DS-05 public CEX/perps books/trades/funding/OI/mark/index; reference or inventory strategies.
+- DS-06 oracle, stablecoin issuer, PSM, LST/LRT, vault and redemption state.
+- DS-07 R02/R03 flash capital, liquidation/keeper rights, capacity/fees and builders.
+- DS-08 bridges/message/attestation/finality; signal or inventory only.
+- DS-09 launch/migration/new pool and long-tail event radar.
+- DS-10 The Graph/Substreams, Dune/DefiLlama/CoinGecko/GeckoTerminal, protocol history and market-ecology replay.
+- DS-11 strategy→source→identity→state→quote→capital→builder→simulation→paper/replay coverage and installed-runtime reachability.
+
+This is a data integration overlay on existing P0/GPR/DV/R02/R03/R13/R10/SX/EXP/W6 owners, not a new source registry or runtime.

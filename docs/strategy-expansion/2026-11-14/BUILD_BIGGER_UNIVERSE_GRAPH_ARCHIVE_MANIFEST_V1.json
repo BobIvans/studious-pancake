@@ -140,5 +140,23 @@
     "Do not treat version counts as unique totals; preserve source IDs, candidate IDs, chain and representation distinctions.",
     "Do not import historical tokenized-equity/RWA stock ideas: current user policy excludes Robinhood Stock Tokens, xStocks and tokenized equities.",
     "Never overwrite current canonical code owners with legacy ZIP prototypes."
+  ],
+  "derived_archival_datasets": [
+    {
+      "path": "docs/strategy-expansion/2026-11-14/BUILD_BIGGER_UNIVERSE_GRAPH_ARCHIVE_CANDIDATES_2026-10-06.json.gz",
+      "source_input": "STUDIOUS_PANCAKE_UNIVERSAL_MARKET_GRAPH_RND_2026-10-07.zip::inputs/03__Вставленный текст(20261006-034611).txt",
+      "source_input_sha256": "210382ecb9c86d7b33fc0c1c3d9ba37179a5d3727e049b87edffc8028ac7fef0",
+      "compressed_sha256": "6dbcb44fdb9ec74b623836f055978628ed865b756edf9d43dc85ddca74489aee",
+      "decompressed_json_sha256": "8f8d958d9d45636c8275d8fcbd13273a8eeb60a1da65b7efdfcca903ebcd5467",
+      "records": {
+        "solana_relationships": 83,
+        "triangle_routes": 14,
+        "sui_relationships": 12,
+        "new_relationships_225_324": 100,
+        "dynamic_event_patterns": 4
+      },
+      "status": "HISTORICAL_DISCOVERY_ONLY_EXECUTION_PERMISSION_NONE",
+      "integrity_note": "Source claims 1–224 but input only supplies 83 Solana consolidated rows and Sui 205–216; 217–224 missing; do not invent."
+    }
   ]
 }

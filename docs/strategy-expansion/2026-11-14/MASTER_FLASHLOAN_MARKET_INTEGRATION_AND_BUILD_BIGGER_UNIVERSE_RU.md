@@ -364,3 +364,21 @@ The repository owner explicitly grants the coding agent autonomous repository-en
 This grants broad repository engineering autonomy, **not unrestricted infrastructure or financial authority**. It does not grant access to secrets/private keys, creation or use of wallets/accounts/ATAs/obligations/positions, signing, broadcasting, submitting, borrowing, spending, deploying, provider activation, live market interaction, QPR/DIN override or production promotion. Use only already-approved read-only sources and public evidence. When a credential, paid access, operator approval, private account address or user authorization is required, report the exact missing item as BLOCKED and continue independent work.
 
 No agent may enable live capabilities by editing environment flags, config, feature flags or CI policy. A coding agent may prepare unsigned plans and sender-free simulations only under the existing project's authorization/evidence gates. Production/live execution remains a separate explicit operator decision after paper qualification and all security/economic gates.
+
+
+### 2.1 Exact relationship data recovered from original embedded input
+
+The first graph ZIP's embedded \`inputs/03__Вставленный текст(20261006-034611).txt\` has been parsed into a machine-readable archival dataset:
+- \`BUILD_BIGGER_UNIVERSE_GRAPH_ARCHIVE_CANDIDATES_2026-10-06.json.gz\`
+- SHA-256 of the decompressed JSON: \`8f8d958d9d45636c8275d8fcbd13273a8eeb60a1da65b7efdfcca903ebcd5467\`
+- SHA-256 of the gzip payload: \`6dbcb44fdb9ec74b623836f055978628ed865b756edf9d43dc85ddca74489aee\`
+
+Dataset rows: 83 consolidated Solana relationships (#1–83), 14 documented triangular routes, 12 Sui relationships (#205–216), all 100 new relationships (#225–324), and 4 unnumbered dynamic EVENT patterns. Source refs, original anomaly class, historical tier and abbreviated mint candidates are preserved. All rows default to HISTORICAL_DISCOVERY_ONLY / execution_permission=NONE.
+
+Important integrity issue: although the source title says relationships #1–224, the embedded input contains only 83 consolidated Solana rows plus Sui #205–216; TON #185–204 is intentionally excluded, and #217–224 are absent. No missing IDs are invented. #293 is a methodology/detector row, not an asset pair; #249/#270/#282 and other rows include basket/NAV/event watches, not necessarily pools. The agent must preserve these distinctions.
+
+To inspect locally:
+\`\`\`powershell
+python -c "import gzip,pathlib; p=pathlib.Path('docs/strategy-expansion/2026-11-14/BUILD_BIGGER_UNIVERSE_GRAPH_ARCHIVE_CANDIDATES_2026-10-06.json.gz'); pathlib.Path(str(p)[:-3]).write_bytes(gzip.decompress(p.read_bytes()))"
+\`\`\`
+The resulting JSON is a historical seed list, not an authoritative registry. Re-resolve all canonical mints/types, current market/pool/book identity, state, exact quotes and capacity before promotion. Historical HOT/WARM/RSRCH/EVENT labels are not current heat scores.

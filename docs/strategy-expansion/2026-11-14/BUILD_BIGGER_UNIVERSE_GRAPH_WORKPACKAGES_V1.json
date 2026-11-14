@@ -1570,5 +1570,19 @@
       "Current GPR 268 rows are placeholders with runtime_enabled=false; 92 identity records are R&D registry entries, not runtime qualification."
     ],
     "note": "Counts overlap across source generations; never sum them into a unique live market count. See PAIR_ARCHIVE_COVERAGE_AND_IMPORT_GATE_RU.md for the evidence and PAIR-00 acceptance contract."
+  },
+  "archive_candidate_dataset": {
+    "path": "docs/strategy-expansion/2026-11-14/BUILD_BIGGER_UNIVERSE_GRAPH_ARCHIVE_CANDIDATES_2026-10-06.json.gz",
+    "gzip_sha256": "6dbcb44fdb9ec74b623836f055978628ed865b756edf9d43dc85ddca74489aee",
+    "decompressed_json_sha256": "8f8d958d9d45636c8275d8fcbd13273a8eeb60a1da65b7efdfcca903ebcd5467",
+    "rows": {
+      "solana": 83,
+      "triangles": 14,
+      "sui": 12,
+      "expansion_225_324": 100,
+      "dynamic_event_patterns": 4
+    },
+    "classification": "HISTORICAL_DISCOVERY_ONLY",
+    "missing_ids_note": "Input claims #1-224 but does not provide #217-224. Do not invent."
   }
 }

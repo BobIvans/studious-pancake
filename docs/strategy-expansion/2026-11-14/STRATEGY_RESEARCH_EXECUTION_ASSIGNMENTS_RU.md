@@ -9,7 +9,7 @@ Refresh current main, PRs, CI, branch protection and exact owners. Reconcile S01
 
 ## SX — merged vs remaining
 - SX-00 #639, SX-01 #641, SX-09 #642, SX-10/SX-11 #643: merged at the checked snapshot; don't repeat.
-- SX-12 #645: open at checked snapshot; inspect/review its exact head and merge only after required evidence/checks. It consumes SX-01 ResourceManifest and AGG-05.
+- SX-12 #645: MERGED as an offline CONTROL_PLANE optimizer; consumes SX-01 ResourceManifest + AGG-05; no live allocation authority.
 - SX-02 flash-mint/lender comparison; SX-03 LLAMMA; SX-04 OEV; SX-05 JIT/LVR; SX-06 CLOB/RFQ/queue; SX-07 complete-set claims; SX-08 lending rate/refinance; SX-13 causal/learning; SX-14 verifiable procurement/mechanism lab; SX-15 observability; SX-16 coordinator integration.
 - SX-12 depends on SX-01+AGG-05; SX-15 consumes evidence from completed lanes; SX-16 runs last.
 
@@ -50,8 +50,8 @@ See tasks/SX17_MULTI_STRATEGY_RUNTIME_FANOUT_RU.md. Strategy catalog/library cov
 See tasks/W6_12_OBSERVED_PARTICIPANT_STRATEGY_INTELLIGENCE_RU.md. Extend W6-01/02/05/06 using public/authorized on-chain participant episodes and existing MarketEpisode/decision/replay owners. Evaluate complete net outcomes, failed attempts, inventory, liabilities, fees, capital lock, censoring and drawdown. No real-world identity resolution, doxxing, private flow or automatic copy trading. Research only.
 
 ## Current dispatch snapshot after master PR #646 and Titan PR #647
-- Current main at this update: 73911801f12eb8c365421d5dcaea40c20a503a0a.
+- Current main after #645/#648 merges: c9ed36b6902502fc4dc51610f0094d27a50fd6fb.
 - #646 MASTER FLASHLOAN + Build Bigger Universe archive handoff is merged; it preserves the original full master scope and recovered archive lineage.
 - #647 R13 Titan adapter is merged; quote/build kernel remains the shared R13 owner.
-- #645 SX-12, #648 SX-08 and #649 SX-03 are still open at this snapshot and have stale bases / are not mergeable against latest main. Rebase/recheck before review; #649 carries a proprietary Curve source license / missing commit and whitepaper blockers and must not be treated as source-qualified.
+- #645 SX-12 and #648 SX-08 have merged as offline/research models. #649 SX-03 remains open and source-blocked: missing Curve source commit SHA, whitepaper, unit-scale reconciliation and rooted per-market state. Do not treat LLAMMA as source-qualified.
 - Re-fetch main, PRs and CI before dispatch; this is a dated snapshot, not live authority.

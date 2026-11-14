@@ -1,0 +1,207 @@
+{
+  "schema_version": "studious-pancake.sui-market-wave2-offline-sources.v1",
+  "prepared_at_utc": "2026-11-14",
+  "retrieval_window_utc": "2026-11-14T08:30Z..2026-11-14T11:45Z",
+  "repository_base_sha_audited": "e2b65c0ceefdc6f9f99cdc0187ff23dc7815acc8",
+  "branch": "agent/evm-sui-dossiers-wave2",
+  "stream": "R09-L2 (Sui market wave-2 source dossiers - docs-only lane)",
+  "prior_wave_inheritance": {
+    "quote_routing": "Aftermath/Cetus-aggregator/FlowX SDK QUOTE surfaces owned by docs/integrations/offline/providers-wave1-2026-11-13/ (PR #621) - cited, not re-pinned.",
+    "lending_ledger": "NAVI/Scallop/Bucket/Suilend rows owned by docs/roadmap/r01-r02-live-capital-readers-2026-10-08/offline/SOURCE_LEDGER.json - cited, not re-pinned.",
+    "deepbook_upgrade": "Wave-1 deepbook ledger row (SDK-name facts, docs-only) extended by this wave with Move-level API + official package metadata."
+  },
+  "hash_policy": {
+    "content_sha256": "SHA-256 computed locally over the line-ending-normalized bytes (CRLF->LF) of each dossier file by verify_offline_bundle.py, so the check is stable across git autocrlf/eol settings while still catching any content edit; it is a local integrity hash, not a provider-supplied signature.",
+    "upstream_commit_pin": "GitHub commit pins identify the reviewed upstream source generation via the authenticated GitHub metadata API; a pin is not an on-chain deployment attestation.",
+    "docs_pages": "Docs pages were read as official text/.md variants and transcribed as original editorial extracts with load-bearing verbatim quotes; full page copies are deliberately not vendored. Exact canonical URLs + retrieval timestamps recorded per source."
+  },
+  "flag_taxonomy_note": "RAW_OFFICIAL_SNAPSHOT is claimed ONLY for verbatim constants copied from pinned official sources (Move struct fields, package/object IDs, Move function signatures). Behavior text is OFFICIAL_CONTRACT_EXTRACT_ONLY / DOCS_REFERENCE_ONLY. No live Sui RPC/GraphQL/gRPC read was performed.",
+  "safety": {
+    "sign_enabled": false,
+    "send_enabled": false,
+    "credentials_used": "NONE (no credentials exist in this environment)",
+    "live_provider_calls": "NONE",
+    "live_node_calls": "NONE (docs/GitHub research only; zero chain reads)",
+    "provider_enabled_by_this_wave": false,
+    "capacity_claims": "NONE - all flash capacity states are UNKNOWN by typing (never zero)"
+  },
+  "sources": {
+    "cetus_clmm_pool": {
+      "provider": "Cetus CLMM (cetus_clmm Move package)",
+      "chain": "sui-mainnet",
+      "canonical_urls": [
+        "https://github.com/CetusProtocol/cetus-clmm-interface/tree/main/sui/cetus_clmm/sources/pool.move",
+        "https://github.com/CetusProtocol/cetus-clmm-sui-sdk/blob/main/src/config/mainnet.ts",
+        "https://cetus-1.gitbook.io/cetus-developer-docs/developer/via-sdk/features-available/fee.md",
+        "https://cetus-1.gitbook.io/cetus-developer-docs/developer/via-sdk-v2/sdk-modules/cetusprotocol-sui-clmm-sdk/getting-clmm-pools.md"
+      ],
+      "retrieved_at_utc": "2026-11-14",
+      "snapshot_status": "RAW_OFFICIAL_SNAPSHOT (Move struct + SDK config IDs) + OFFICIAL_CONTRACT_EXTRACT_ONLY (docs fee table)",
+      "interface_surface": "struct Pool<phantom CoinTypeA, phantom CoinTypeB> has key, store { id, coin_a: Balance, coin_b: Balance, tick_spacing: u32, fee_rate: u64 (numerator, denominator 1_000_000), liquidity: u128, current_sqrt_price: u128, current_tick_index: I32, fee_growth_global_a/b: u128, fee_protocol_coin_a/b: u64, tick_manager, rewarder_manager, position_manager, is_pause: bool, ... }",
+      "pool_identity_pins": {
+        "clmm_pool_package_id": "0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb",
+        "clmm_published_at": "0xc6faf3703b0e8ba9ed06b7851134bbbe7565eb35ff823fd78432baa4cbeaa12e",
+        "pools_registry_object": "0xf699e7f2276f5c9a75944b37a0c5b5d9ddfd2471bf6242483b03ab2887d198d0",
+        "global_config_id": "0xdaa46292632c3c4d8f31f23ea0f9b36a28ff3677e9684980e4438403a67a3d8f",
+        "global_vault_id": "0xce7bceef26d3ad1f6d9b6f13a953f053e6ed3ca77907516481ce99ae8e588f2b",
+        "cetus_config_package_id": "0x95b8d278b876cae22206131fb9724f701c9444515813042f54f0a426c9a3bc2f"
+      },
+      "pool_identity_pin_source": "RAW_OFFICIAL_SNAPSHOT from CetusProtocol/cetus-clmm-sui-sdk src/config/mainnet.ts at pinned SHA",
+      "fee_semantics": "fee_rate = numerator over 1_000_000 (struct doc comment); docs fee table by tick spacing: 2->0.0001, 10->0.0005, 60->0.0025, 200->0.01; per-pathway fee = input x fee rate",
+      "units_decimals": "coin decimals in CoinType Move metadata (never assumed 9); current_sqrt_price u128 sqrt-price-X64; balances u64 smallest units; price conversions via TickMath.sqrtPriceX64ToPrice",
+      "flash_loan_semantics": "MISSING_PIN (negative finding): no flash-loan entry/hot-potato receipt found in pinned pool.move review; Cetus is swap/discovery surface only",
+      "rate_limits": "n/a (on-chain reads only when later enabled; docs pages carry no quota contract)",
+      "failure_semantics": "is_pause bool per pool (pause state is live state, not constant)",
+      "upstream_pins": {
+        "move_interface_repo": "CetusProtocol/cetus-clmm-interface",
+        "move_interface_commit": "991f50e23dd0e34d134adb3b0ad4c1d30ab45e50",
+        "move_interface_commit_date": "2026-10-28T07:24:56Z",
+        "sdk_repo": "CetusProtocol/cetus-clmm-sui-sdk",
+        "sdk_commit": "bb37cda30d5aca63c2398e6886a1701cca1cf87d",
+        "sdk_commit_date": "2025-02-28T10:23:03Z",
+        "sdk_staleness_note": "SDK config ~9 months old at retrieval; on-chain package drift possible (typed blocker)"
+      },
+      "license_status": "repos reviewed have no LICENSE assertion confirmed this wave (SDK upstream docs extract only; do not vendor source without license review); docs GitBook pages not vendored",
+      "status": "PINNED_CURRENT",
+      "typed_blockers": [
+        "BLOCKED_MISSING_PIN: on-chain live package/object ID confirmation (SDK config stale 2025-02-28)",
+        "BLOCKED_MISSING_PIN: live pool balances/liquidity (capacity UNKNOWN)",
+        "BLOCKED_MISSING_PIN: per-pool fee_rate + pause state",
+        "MISSING_PIN: Cetus CLMM flash-loan API (negative finding)",
+        "EXTERNAL_CONFORMANCE_MISSING: PTB simulation proof"
+      ],
+      "dossier_file": "CETUS_CLMM_POOL_WAVE2.md",
+      "content_sha256": "7755e461bf283add7b770be21d03ffbd4f3531872f269fa835b62c25ee379423"
+    },
+    "aftermath_router": {
+      "provider": "Aftermath (spot AMM + router on-chain packages)",
+      "chain": "sui-mainnet",
+      "canonical_urls": [
+        "https://docs.aftermath.finance/pools/contracts.md",
+        "https://docs.aftermath.finance/llms.txt"
+      ],
+      "retrieved_at_utc": "2026-11-14",
+      "snapshot_status": "RAW_OFFICIAL_SNAPSHOT (docs contract table verbatim)",
+      "interface_surface": "amm package 0xefe170ec0be4d762196bedecd7a065816576198a6527c99282a2551aaa7da38c; ammInterface package 0x0625dc2cd40aee3998a1d6620de8892964c15066e0a285d8b573910ed4c75d50; poolRegistry object 0xfcc774493db2c45c79f688f88d28023a3e7d98e4ee9f48bbf5c7990f651577ae; protocolFeeVault/treasury/insuranceFund/lpCoinsTable objects pinned",
+      "fee_semantics": "protocol fee accrues to protocolFeeVault/treasury objects; per-pool LP fee parameters NOT transcribed (typed blocker)",
+      "units_decimals": "pool type tags <CoinTypeA,CoinTypeB>; decimals from coin metadata; pool balances smallest units",
+      "flash_loan_semantics": "MISSING_PIN (negative finding): no flash-loan API in official docs reviewed; discovery/quote routing only",
+      "rate_limits": "SDK/API rate limits owned by PR #621 AFTERMATH_SUI.md (not re-pinned)",
+      "failure_semantics": "not transcribed this wave (owned by #621 surface)",
+      "upstream_pins": {
+        "docs_page": "https://docs.aftermath.finance/pools/contracts.md",
+        "sdk_surface_owner": "PR #621 (aftermath-ts-sdk, docs v3.3.1 warning)"
+      },
+      "license_status": "aftermath-ts-sdk license UNKNOWN (PR #621 acquisition row inherited); docs extracts only",
+      "status": "PINNED_CURRENT",
+      "typed_blockers": [
+        "MISSING_PIN: AMM Move flash-loan API (negative finding)",
+        "BLOCKED_MISSING_PIN: per-pool fee parameters / LP fee split / pause state",
+        "BLOCKED_MISSING_PIN: on-chain live package ID confirmation vs docs page",
+        "EXTERNAL_CONFORMANCE_MISSING: PTB simulation proof"
+      ],
+      "dossier_file": "AFTERMATH_ROUTER_WAVE2.md",
+      "content_sha256": "198585f153dccafcb5aaaed947ffd3ccb27a714e666ee15f57124ec56e8b3114"
+    },
+    "flowx_aggregator": {
+      "provider": "FlowX Finance aggregator (on-chain surface)",
+      "chain": "sui-mainnet",
+      "canonical_urls": [
+        "https://docs.flowx.finance/contract/swap.md",
+        "https://docs.flowx.finance/llms.txt"
+      ],
+      "retrieved_at_utc": "2026-11-14",
+      "snapshot_status": "RAW_OFFICIAL_SNAPSHOT (doc page anchors) + MISSING_PIN rows",
+      "interface_surface": "docs expose exactly two on-chain anchors as suiexplorer links: AMM 0xba153169476e8c3114962261d1edc70de5ad9781b83cc617ecc8c1923191cae0, ZAPPER 0x38eff60545e56d3bc1bab5f3efa31f50089e5f4b2d55d77717adcc041d34839f; object kind (package vs shared object) not labeled by the page (typed blocker)",
+      "fee_semantics": "UNKNOWN this wave (owned partly by #621 SDK fee fields)",
+      "units_decimals": "UNKNOWN this wave (no official schema page reviewed)",
+      "flash_loan_semantics": "MISSING_PIN (negative finding): no flash-loan API documented; quote routing only",
+      "rate_limits": "MISSING_PIN (no published 429/error contract on reviewed pages)",
+      "failure_semantics": "MISSING_PIN",
+      "upstream_pins": {
+        "sdk_surface_owner": "PR #621 (FlowX-Finance/sdk 9a32908..., @flowx-finance/sdk 2.1.0, license None)"
+      },
+      "license_status": "SDK license UNKNOWN per PR #621 (inherited); docs extracts only",
+      "status": "PARTIAL_PIN",
+      "typed_blockers": [
+        "MISSING_PIN: aggregator on-chain package ID + Move module surface",
+        "MISSING_PIN: flash-loan API (negative finding)",
+        "BLOCKED_MISSING_PIN: AMM/ZAPPER anchor object kind; pool fee/decimals; error/rate-limit contract",
+        "EXTERNAL_CONFORMANCE_MISSING: PTB simulation proof"
+      ],
+      "dossier_file": "FLOWX_AGGREGATOR_WAVE2.md",
+      "content_sha256": "4be9b78c84615652687e98faffd83e70a7deb542ea7dd3c7beb9b893378e3131"
+    },
+    "deepbook_v3_flash": {
+      "provider": "DeepBook V3 (MystenLabs) + official Sui docs",
+      "chain": "sui-mainnet (testnet pins recorded)",
+      "canonical_urls": [
+        "https://docs.sui.io/onchain-finance/deepbook/deepbookv3-sdk/flash-loans",
+        "https://github.com/MystenLabs/deepbookv3/tree/main/packages/deepbook",
+        "https://github.com/MystenLabs/deepbookv3/blob/main/packages/deepbook/Published.toml",
+        "https://github.com/MystenLabs/deepbookv3/blob/main/packages/deepbook/sources/pool.move"
+      ],
+      "retrieved_at_utc": "2026-11-14",
+      "snapshot_status": "RAW_OFFICIAL_SNAPSHOT (Published.toml + Move signatures) + OFFICIAL_CONTRACT_EXTRACT_ONLY (docs quotes)",
+      "interface_surface": "Move: borrow_flashloan_base/borrow_flashloan_quote (&mut Pool, amount: u64, &mut TxContext) -> (Coin<...>, FlashLoan); return_flashloan_base/return_flashloan_quote (&mut Pool, coin, flash_loan); FlashLoan type in vault module; SDK wrappers borrowBaseAsset/returnBaseAsset/borrowQuoteAsset/returnQuoteAsset",
+      "pool_identity_pins": {
+        "mainnet_published_at": "0xbca0cefe720330e7bb4f2283438b68de6a0e656688db4ac90d61e71fe6151fe8",
+        "mainnet_original_id": "0x2c8d603bc51326b8c13cef9dd07031a408a48dddb541963357661df5d3204809",
+        "mainnet_version": 9,
+        "mainnet_chain_id": "35834a8a",
+        "testnet_published_at": "0x4b1c2a827983d8fa73f6dc366cfab23636ae52e81e499d8724b71408fe6a00a4",
+        "testnet_original_id": "0xfb28c4cbc6865bd1c897d26aecbe1f8792d1509a20ffec692c800660cbec6982",
+        "testnet_version": 21
+      },
+      "pool_identity_pin_source": "RAW_OFFICIAL_SNAPSHOT from packages/deepbook/Published.toml at pinned SHA; correction: web-snippet package 0x2c8d552b... is NOT official - official original-id is 0x2c8d603...809",
+      "fee_semantics": "docs: 'DeepBook charges nothing for a flash loan'; constant-vs-governance-state unpinned (typed blocker); returning amount != borrowed aborts EIncorrectQuantityReturned",
+      "units_decimals": "base/quote amounts u64 smallest units; pool type <BaseAsset,QuoteAsset>; hot-potato FlashLoan struct has no abilities",
+      "flash_loan_semantics": "PINNED_CURRENT: flash loans LIVE in current docs (fetched 2026-11-14) + source; borrow returns Coin + FlashLoan hot potato; must return to pool by end of PTB; unreplied -> 'The entire PTB reverts.'",
+      "rate_limits": "n/a (on-chain); docs pages carry no quota contract",
+      "failure_semantics": "EIncorrectQuantityReturned on wrong repayment; entire PTB reverts on unrepaid hot potato",
+      "upstream_pins": {
+        "repo": "MystenLabs/deepbookv3",
+        "commit": "3230fcd35a1bb74544115694e37a16f5f6842466",
+        "repo_pushed_at": "2026-11-14T00:08:14Z",
+        "license": "Apache-2.0"
+      },
+      "license_status": "Apache-2.0 (GitHub API; repo) - vendoring allowed with attribution; docs pages not vendored",
+      "status": "PINNED_CURRENT",
+      "typed_blockers": [
+        "BLOCKED_MISSING_PIN: live per-pool flash capacity (pool/vault balances) - UNKNOWN, never zero",
+        "BLOCKED_MISSING_PIN: pool registry / poolKey enumeration pin",
+        "BLOCKED_MISSING_PIN: zero flash fee constant-vs-governance state",
+        "EXTERNAL_CONFORMANCE_MISSING: PTB simulation proof"
+      ],
+      "dossier_file": "DEEPBOOK_V3_FLASH_WAVE2.md",
+      "content_sha256": "1864ce5c0c7ebdea98334796479d850dd0b7d3638afa6aca24fbef9603b3331f"
+    },
+    "sui_ptb_atomicity": {
+      "provider": "Sui protocol (PTB semantics, official docs)",
+      "chain": "sui (protocol-level)",
+      "canonical_urls": [
+        "https://docs.sui.io/develop/transactions/ptbs/prog-txn-blocks",
+        "https://docs.sui.io/develop/transactions/ptbs/"
+      ],
+      "retrieved_at_utc": "2026-11-14",
+      "snapshot_status": "DOCS_REFERENCE_ONLY (official citations, verbatim quotes)",
+      "interface_surface": "PTB: 'The runtime applies the effects of each transaction command in the block, atomically at the end of the transaction.'; 'If one transaction command fails, the entire block fails and none of the effects from the commands apply.'; up to 1,024 unique operations; in-order command execution with results chaining; gas budget withdrawn up-front, unused returned",
+      "flash_loan_semantics": "hot-potato receipt (DeepBook FlashLoan) must be consumed in the same PTB - local atomicity by construction, no receiver contract; modeled by src/multichain/sui.py (SuiPtbAdapter/SuiHotPotatoObligation), read-only context",
+      "fee_semantics": "n/a (protocol-level note; no fee surface)",
+      "fee_fields": "n/a",
+      "capacity_read_surface": "n/a (note file); discovery vs capital distinction: DEX state = discovery evidence; lender capacity = capital evidence requiring governed checkpoint-consistent reads (R02-CAP-C standard)",
+      "upstream_pins": {
+        "docs_pages": "docs.sui.io (no commit pin published for docs; retrieval timestamp recorded)"
+      },
+      "license_status": "n/a (editorial note; official docs quoted under fair-extraction policy, not vendored)",
+      "status": "PINNED_CURRENT",
+      "typed_blockers": [],
+      "dossier_file": "SUI_PTB_ATOMICITY_WAVE2.md",
+      "content_sha256": "52839c2a0e90b186204886dc6cbb4b88350ca7881b701f700ee5954bb420939f"
+    }
+  },
+  "overlap_files": [
+    "OVERLAP_NOTES.md",
+    "README.md"
+  ]
+}

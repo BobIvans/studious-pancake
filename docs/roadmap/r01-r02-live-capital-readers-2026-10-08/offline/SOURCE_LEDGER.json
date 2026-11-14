@@ -7,6 +7,12 @@
   "offline_content_kind": "ORIGINAL_EDITORIAL_TECHNICAL_FACTS_NOT_FULL_COPY",
   "live_chain_capacity_verified": false,
   "execution_authority": "NONE",
+  "last_wave": "2026-11-14",
+  "last_wave_retrieval_window_utc": "2026-11-13T20:51:00Z/2026-11-14T00:11:53Z",
+  "last_wave_scope": "R07_STREAM_L_EVM_DOSSIERS_MORPHO_BLUE_AND_AAVE_V3_DEPLOYMENT_FLASHLOAN_PINS_DOCS_ONLY",
+  "evm_domain_isolated_from_solana_sui": true,
+  "cross_chain_atomicity_assumed": false,
+  "provider_enabled_by_this_wave": false,
   "source_pins": [
     {
       "repo": "jup-ag/docs",
@@ -37,6 +43,42 @@
     {
       "repo": "morpho-org/morpho-blue",
       "sha": "8e26ca6a8dbc5089edcd67fb576248810fd2870a"
+    },
+    {
+      "repo": "morpho-org/sdks",
+      "sha": "56f1ed62827a7aab39d979c0143d1fbf970c37ca",
+      "file": "packages/morpho-ts/src/addresses.ts",
+      "role": "EVM_MORPHO_PER_CHAIN_ADDRESS_REGISTRY"
+    },
+    {
+      "repo": "morpho-org/morpho-blue-deployment",
+      "sha": "3c9ac96cf5c7352ff01739a15d6057198e76d70e",
+      "role": "EVM_MORPHO_DEPLOYMENT_BROADCAST_LOGS_FROZEN_2024_09_05"
+    },
+    {
+      "repo": "aave/aave-v3-origin",
+      "sha": "5c2eb37f39959dd491ba97fdc2af94bb4ee88f41",
+      "license": "BSL-1.1",
+      "change_license": "MIT",
+      "change_date": "2027-03-06",
+      "role": "EVM_AAVE_CURRENT_SOURCE_LINEAGE"
+    },
+    {
+      "repo": "aave/aave-v3-core",
+      "sha": "782f51917056a53a2c228701058a6c3fb233684a",
+      "tag": "v1.19.4",
+      "license": "BSL-1.1_CONVERTED_MIT_2023_01_27",
+      "deprecated": true,
+      "role": "EVM_AAVE_V3_0_DEPLOYED_SOURCE_LINEAGE"
+    },
+    {
+      "repo": "bgd-labs/aave-address-book",
+      "sha": "b8c801a413c4b934afaf7976d2ddc5fbada6dce6",
+      "package": "@aave-dao/aave-address-book",
+      "version": "4.77.6",
+      "integrity": "sha512-leqAnLA5Au27VDRMSNQeaqHmCQ5rjQXOo/7bivWay9Q2T4ZU8dQYZGSsdGu/MUttZs8TQrsQtLOVxFQGIHJh5w==",
+      "license": "MIT",
+      "role": "EVM_AAVE_MACHINE_READABLE_DEPLOYMENT_REGISTRY"
     },
     {
       "repo": "euler-xyz/euler-vault-kit",
@@ -209,15 +251,54 @@
       "role": "P1_EVM",
       "review_grade": "OFFICIAL_DOC_AND_PINNED_SOURCE",
       "official_url": "https://docs.morpho.org/developers/contracts/blue/",
+      "dossier_version": "2026-11-14",
+      "retrieved_utc": "2026-11-14T00:11:53Z",
+      "fact_classes": [
+        "RAW_OFFICIAL_SNAPSHOT",
+        "DOCS_REFERENCE_ONLY"
+      ],
       "reviewed_facts": [
         "flashLoan(address,uint256,bytes)",
         "zero fee",
         "singleton balance",
-        "onMorphoFlashLoan"
+        "onMorphoFlashLoan",
+        "callback receiver is the calling contract (no separate receiver param)",
+        "repay via approve + morpho pull; missing approval reverts atomically",
+        "maxFlashLoan equals token balance of Morpho Blue singleton",
+        "not ERC-3156 compliant (docs)",
+        "per-market fee capped MAX_FEE=0.25e18 is a lending fee, not flash cost"
       ],
+      "license_spdx": "GPL-2.0",
       "pinned_repo": "morpho-org/morpho-blue",
-      "pinned_repo_sha": "8e26ca6a8dbc5089edcd67fb576248810fd2870a",
+      "pinned_repo_sha": "339a885801972740eb27f51da110a4675b839d42",
       "pinned_file_path": "src/interfaces/IMorpho.sol",
+      "release_tag": "v1.0.0",
+      "release_tag_sha": "55d2d99304fb3fb930c688462ae2ccabb1d533ad",
+      "previous_pins": [
+        {
+          "repo": "morpho-org/morpho-blue",
+          "sha": "8e26ca6a8dbc5089edcd67fb576248810fd2870a",
+          "wave": "2026-10-08"
+        }
+      ],
+      "address_registry_repo": "morpho-org/sdks",
+      "address_registry_sha": "56f1ed62827a7aab39d979c0143d1fbf970c37ca",
+      "deployment_pins": {
+        "1": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+        "8453": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+        "10": "0xce95AfbB8EA029495c66020883F87aaE8864AF92",
+        "42161": "0x6c247b1F6182318877311737BaC0844bAa518F5e",
+        "137": "0x1bF0c2541F820E775182832f06c0B7Fc27A25f67",
+        "56": "0x01b0Bd309AA75547f7a37Ad7B1219A898E67a83a"
+      },
+      "deployment_pin_source": "RAW_OFFICIAL_SNAPSHOT morpho-org/sdks addresses.ts cross-checked docs.morpho.org/developers/contracts/addresses",
+      "deployment_pins_chain_count": 6,
+      "deployment_pins_registry_total_chains": 44,
+      "typed_blockers": [
+        "BLOCKED_MISSING_PIN: per-chain live singleton token balances (R-02 bounded read)",
+        "BLOCKED_MISSING_PIN: reusable callback receiver contract source/deployment (R-03)",
+        "EXTERNAL_CONFORMANCE_MISSING: fork simulation proof (R-05)"
+      ],
       "upstream_full_docs_vendored": false,
       "live_state_checked": false,
       "decoder_fully_verified": false,
@@ -226,17 +307,82 @@
     {
       "id": "aave_v3",
       "role": "P2_EVM",
-      "review_grade": "OFFICIAL_DOC",
+      "review_grade": "OFFICIAL_DOC_AND_PINNED_SOURCE",
       "official_url": "https://aave.com/docs/aave-v3/guides/flash-loans",
-      "reviewed_facts": [
-        "flashLoanSimple",
-        "flashLoan",
-        "FLASHLOAN_PREMIUM_TOTAL",
-        "fee waiver whitelist-specific"
+      "dossier_version": "2026-11-14",
+      "retrieved_utc": "2026-11-14T00:11:53Z",
+      "fact_classes": [
+        "RAW_OFFICIAL_SNAPSHOT",
+        "DOCS_REFERENCE_ONLY",
+        "BLOCKED_MISSING_PIN"
       ],
-      "pinned_repo": null,
-      "pinned_repo_sha": null,
-      "pinned_file_path": null,
+      "reviewed_facts": [
+        "flashLoanSimple(receiverAddress,asset,amount,params,referralCode) single asset, fee never waived",
+        "flashLoan(receiverAddress,assets[],amounts[],modes[],params,referralCode) multi asset, fee waived only for ACLManager-approved flashBorrowers",
+        "executeOperation(asset(s),amount(s),premium(s),initiator,params) callback on receiverAddress",
+        "repay via approve pool amount+premium or open variable-rate debt position (flashLoan only)",
+        "premium 0.05% at deployment, governance adjustable via PoolConfigurator.updateFlashloanPremiumTotal",
+        "live premium must be read Pool.FLASHLOAN_PREMIUM_TOTAL() (uint128 bps of 10000)",
+        "flash available only for reserves with borrowing enabled and active",
+        "capacity read: Pool.getReservesList + Pool.getReserveData + IERC20(asset).balanceOf(POOL)",
+        "missing approval/balance reverts atomically"
+      ],
+      "license_spdx": "BSL-1.1",
+      "license_note": "aave-v3-origin v3.3 BSL-1.1, Additional Use Grant permits non-production use/copy/modify, converts to MIT by 2027-03-06; aave/aave-v3-core (V3.0 lineage, deprecated) BSL-1.1 with change date 2023-01-27, converted to MIT; official statement aave.com/docs/resources/code-licensing",
+      "pinned_repo": "aave/aave-v3-origin",
+      "pinned_repo_sha": "5c2eb37f39959dd491ba97fdc2af94bb4ee88f41",
+      "pinned_file_path": "contracts/protocol/libraries/logic/FlashLoanLogic.sol",
+      "additional_pins": [
+        {
+          "repo": "aave/aave-v3-core",
+          "sha": "782f51917056a53a2c228701058a6c3fb233684a",
+          "tag": "v1.19.4",
+          "role": "V3_0_DEPLOYED_SOURCE_LINEAGE_DEPRECATED_FOR_3_1"
+        },
+        {
+          "repo": "bgd-labs/aave-address-book",
+          "sha": "b8c801a413c4b934afaf7976d2ddc5fbada6dce6",
+          "package": "@aave-dao/aave-address-book",
+          "version": "4.77.6",
+          "integrity": "sha512-leqAnLA5Au27VDRMSNQeaqHmCQ5rjQXOo/7bivWay9Q2T4ZU8dQYZGSsdGu/MUttZs8TQrsQtLOVxFQGIHJh5w==",
+          "role": "CHAIN_ID_AND_POOL_MACHINE_READABLE_REGISTRY"
+        }
+      ],
+      "deployment_pin_source": "RAW_OFFICIAL_SNAPSHOT aave.com/docs/reference/addresses page JSON cross-verified @aave-dao/aave-address-book@4.77.6 CHAIN_ID+POOL (all rows agree)",
+      "deployment_pins": {
+        "1": "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+        "1_prime_lido": "0x4e033931ad43597d96D6bcc25c280717730B58B1",
+        "1_etherfi": "0x0AA97c284e98396202b6A04024F5E2c65026F3c0",
+        "1_horizon_rwa": "0xAe05Cd22df81871bc7cC2a04BeCfb516bFe332C8",
+        "10": "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
+        "42161": "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
+        "43114": "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
+        "137": "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
+        "8453": "0xA238Dd80C259a72e81d7e4664a9801593F98d1c5",
+        "56": "0x6807dc923806fE8Fd134338EABCA509979a7e0cB",
+        "42220": "0x3E59A31363E2ad014dcbc521c4a0d5757d9f3402",
+        "100": "0xb50201558B00496A145fE76f7424749556E326D8",
+        "57073": "0x2816cf15F6d2A220E789aA011D5EE4eB6c47FEbA",
+        "59144": "0xc47b8C00b0f69a36fa203Ffeac0334874574a8Ac",
+        "5000": "0x458F293454fE0d67EC0655f3672301301DD51422",
+        "4326": "0x7e324AbC5De01d112AfC03a584966ff199741C28",
+        "143": "0x69a5F9AD4f96ebf0a0C792dD42a01cC5C0102fef",
+        "9745": "0x925a2A7214Ed92428B5b1B090F80b25700095e12",
+        "196": "0xE3F3Caefdd7180F884c01E57f65Df979Af84f116",
+        "11155111_testnet": "0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951",
+        "1088_deprecated": "0x90df02551bB792286e8D4f13E0e357b4Bf1D6a57",
+        "534352_deprecated": "0x11fCfe756c05AD438e312a7fd934381537D3cFfe",
+        "1868_deprecated": "0xDd3d7A7d03D9fD9ef45f3E587287922eF65CA38B",
+        "146_deprecated": "0x5362dBb1e601abF3a4c14c22ffEdA64042E5eAA3",
+        "324_deprecated": "0x78e30497a3c7527d953c6B1E3541b021A98Ac43c"
+      },
+      "correlation_rule": "four Ethereum instances are separate pools with separate liquidity, each its own underlying_capital_resource_id; identical Pool address on 10/42161/43114/137 is a deterministic deployment artifact, not shared liquidity",
+      "typed_blockers": [
+        "BLOCKED_MISSING_PIN: per-chain live FLASHLOAN_PREMIUM_TOTAL() and per-reserve active/borrowing/paused flags (R-02 bounded read)",
+        "BLOCKED_MISSING_PIN: L2 Pool variant flashLoanSimple specifics not pinned; L2 chains may expose L2 Pool instead of generic Pool",
+        "BLOCKED_LICENSE_GRANT: aave-v3-origin BSL-1.1 until 2027-03-06; production use needs governance waiver/commercial grant; non-production research within Additional Use Grant",
+        "EXTERNAL_CONFORMANCE_MISSING: fork simulation proof (R-05)"
+      ],
       "upstream_full_docs_vendored": false,
       "live_state_checked": false,
       "decoder_fully_verified": false,

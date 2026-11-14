@@ -1,3 +1,15 @@
+# Главный coding-agent trigger — MASTER FLASHLOAN MARKET INTEGRATION + Build Bigger Universe Graph
+
+**Это основное задание для полного market-universe / flashloan проекта.** Не использовать короткий Strategy Expansion trigger вместо него.
+
+Read first:
+1. docs/strategy-expansion/2026-11-14/MASTER_FLASHLOAN_MARKET_INTEGRATION_AND_BUILD_BIGGER_UNIVERSE_RU.md
+2. docs/strategy-expansion/2026-11-14/BUILD_BIGGER_UNIVERSE_GRAPH_ARCHIVE_RECONCILIATION_RU.md
+3. docs/strategy-expansion/2026-11-14/BUILD_BIGGER_UNIVERSE_GRAPH_WORKPACKAGES_V1.json
+4. docs/strategy-expansion/2026-11-14/BUILD_BIGGER_UNIVERSE_GRAPH_ARCHIVE_MANIFEST_V1.json
+
+Сохраняй полный исходный MASTER scope: MASTER-00 → P0 → Sui → CLOB → EVM → additional economic integrations. Новый архивный crosswalk дополняет, а не заменяет master roadmap. Strategy Expansion SX/EXP/W6 остаётся связанным дочерним workstream.
+
 ## Strategy campaign update — 2026-11-14
 
 The expanded all-project strategy campaign now lives at:

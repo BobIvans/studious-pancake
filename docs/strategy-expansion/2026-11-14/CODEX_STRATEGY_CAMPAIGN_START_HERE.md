@@ -1,3 +1,11 @@
+> **Primary assignment update:** the full project trigger is now MASTER FLASHLOAN MARKET INTEGRATION + BUILD BIGGER UNIVERSE GRAPH. Read the canonical master assignment and archive reconciliation first; the original scope is preserved and expanded with GPR-01A…GPR-05, TON-RADAR-01, all 25 prior-chat strategy families, 33 direct venue families, 17 funding candidates, V3/V4/V5/V6 pair/graph deltas, DV-00…08 and F/F6 execution lanes. The previous EXP-01…10 + Wave-6 strategy campaign below is a supporting workstream, not a replacement for MASTER.
+
+Canonical files:
+- `docs/strategy-expansion/2026-11-14/MASTER_FLASHLOAN_MARKET_INTEGRATION_AND_BUILD_BIGGER_UNIVERSE_RU.md`
+- `docs/strategy-expansion/2026-11-14/BUILD_BIGGER_UNIVERSE_GRAPH_ARCHIVE_RECONCILIATION_RU.md`
+- `docs/strategy-expansion/2026-11-14/BUILD_BIGGER_UNIVERSE_GRAPH_WORKPACKAGES_V1.json`
+- `docs/strategy-expansion/2026-11-14/BUILD_BIGGER_UNIVERSE_GRAPH_ARCHIVE_MANIFEST_V1.json`
+
 # CODEX STRATEGY CAMPAIGN — полный запуск стратегии и параллельного R&D
 
 Repository: BobIvans/studious-pancake

@@ -1,0 +1,144 @@
+{
+  "schema": "studious-pancake.build-bigger-universe-archive-manifest.v1",
+  "generated_at": "2026-11-14",
+  "retrieval_note": "Recovered from the available ChatGPT Library artifacts by exact ZIP name and materialized as raw files. This is the accessible archive lineage, not a full verbatim export of every message in the chat.",
+  "chat_name": "Build Bigger Universe Graph",
+  "source_archives": [
+    {
+      "name": "OCC_STRATEGY_MASTER_2026-10-03.zip",
+      "library_file_id": "file_000000000d2482468035ac2eb9eb32fc",
+      "size_bytes": 1904422,
+      "files": 176,
+      "sha256": "0e377f76584e8604faf67765984964119b596db98bf18c12f49410d0c260035b",
+      "role": "Earlier broad strategy/context baseline; not the specific Bigger Universe graph thread."
+    },
+    {
+      "name": "FLASH_GRAPH_EXPANSION_RND_2026-10-07.zip",
+      "library_file_id": "file_0000000029bc820a94487910abe8c3b7",
+      "size_bytes": 26743,
+      "files": 15,
+      "sha256": "b1fc6c1fe7c27e758b9f70fe803d99c54d6f10a18d378d9f5caad9cc7b3c11dd",
+      "role": "Early flash graph source and bounded cycle research."
+    },
+    {
+      "name": "STUDIOUS_PANCAKE_UNIVERSAL_MARKET_GRAPH_RND_2026-10-07.zip",
+      "library_file_id": "file_0000000051ac8210b8b66e28285257e5",
+      "size_bytes": 232245,
+      "files": 42,
+      "sha256": "3a066812dafc957e39f6aee5db4477c6660cd3e3f0dfcd18523337a3e70b01e1",
+      "role": "First Build Bigger Universe Graph source ZIP; embedded user inputs; 519 pairs; 33 venues; 17 funding candidates."
+    },
+    {
+      "name": "STUDIOUS_PANCAKE_MAXIMUM_DIRECT_DATA_GRAPH_RND_2026-10-07.zip",
+      "library_file_id": "file_00000000d6b48210988bf39dc58fdc05",
+      "size_bytes": 348233,
+      "files": 96,
+      "sha256": "3f863c5efcfaa25aa3f833584689d0911b81d23629a1a874c868595d2f755a97",
+      "role": "Maximum direct data graph and direct-data adapter architecture."
+    },
+    {
+      "name": "STUDIOUS_PANCAKE_MAXIMUM_DIRECT_DATA_GRAPH_RND_V3_2026-10-08.zip",
+      "library_file_id": "file_00000000a11c82109276480a0ee76258",
+      "size_bytes": 826038,
+      "files": 136,
+      "sha256": "fad1d9ed7217bc07abd3225d3853dd4c7b7bb5c974272d4cdd81c9b4633f7563",
+      "role": "Prior-chat strategy delta; 25 strategy families; 1,147 candidates; 14 direct families/22 source variants; source entitlements."
+    },
+    {
+      "name": "STUDIOUS_PANCAKE_MARKET_UNIVERSE_V3_2026-10-08.zip",
+      "library_file_id": "file_000000006a9c81f48dc226262ad08879",
+      "size_bytes": 735280,
+      "files": 131,
+      "sha256": "8900f2b5e57bdbfe7b5549b7a32133641b937812bf02edb26aae8571f462e88d",
+      "role": "V3 market universe, 162 high-value seeds, 34 routes and source/collision review."
+    },
+    {
+      "name": "STUDIOUS_PANCAKE_ECONOMIC_WORLD_GRAPH_V4_2026-10-08.zip",
+      "library_file_id": "file_00000000fbc882108dbcf59bf618ad89",
+      "size_bytes": 1359632,
+      "files": 37,
+      "sha256": "6ab002d66d0b42a4c2d1cda58f1706a92b2c5a9996bc385bb05a90c92ca19f75",
+      "role": "Economic world graph snapshot: 2,998 nodes, 11,523 research-only edges, 838 pairs + 175 symbolic additions."
+    },
+    {
+      "name": "STUDIOUS_PANCAKE_FLASHLOAN_SOURCE_EXPANSION_V4_1_2026-10-08.zip",
+      "library_file_id": "file_00000000d5b4820a9112824f20735f37",
+      "size_bytes": 44435,
+      "files": 24,
+      "sha256": "3008483fc6c690cf73fd97de98a4870e8c914e3d6c9a12ee58310cb877ee5758",
+      "role": "Source families, atomicity/rights, conditional route atlas, sequential PR plan."
+    },
+    {
+      "name": "STUDIOUS_PANCAKE_FOUR_DOC_DEEP_MARKET_ATLAS_V5_2026-10-08.zip",
+      "library_file_id": "file_00000000c3448210bb594be18aff0b1e",
+      "size_bytes": 94122,
+      "files": 23,
+      "sha256": "e72d9d0f2e57f2571ab550f895a1066e856bb816ed7138be169b1d57fd334f91",
+      "role": "V5 emerging-chain atlas, free-data governance, chain routes and repo compatibility."
+    },
+    {
+      "name": "STUDIOUS_PANCAKE_FLASHLOAN_DEEP_PAIR_RESEARCH_V6_2026-10-08.zip",
+      "library_file_id": "file_00000000b7ec820aa5a5da0921ffbed5",
+      "size_bytes": 122997,
+      "files": 30,
+      "sha256": "d80f12d2c9acd7eb91e053a4b46c7003f5f5a91d0c58ad011ca86e26f128b798",
+      "role": "V6 175 pair hypotheses, 12 conditional hyperedges, flash funding and source budget/deprecation deltas."
+    },
+    {
+      "name": "FLASHLOAN_DIRECT_VENUE_AUDIT_2026-10-08.zip",
+      "library_file_id": "file_00000000d7ac82109c37f69f3233961a",
+      "size_bytes": 12402,
+      "files": 5,
+      "sha256": "cfcd301de9e44bd2d44ddcdecd136f5c31393c90f5c960d91c264708abfaf916",
+      "role": "Historical DV-00…DV-08 implementation truth audit at an old main SHA."
+    }
+  ],
+  "separate_spec_files": [
+    {
+      "name": "CODEX_ASSIGNMENT_DYNAMIC_UNIVERSE_MASTER_2026-10-07.md",
+      "role": "GPR-01A/B through GPR-05 plus TON-RADAR-01; canonical owners and acceptance."
+    },
+    {
+      "name": "STUDIOUS_PANCAKE_DYNAMIC_UNIVERSE_RELATION_GENERATORS_CORRELATION_LEDGER_RND_2026-10-07.docx",
+      "role": "Original Dynamic Universe / relation generator / heat / correlation / FlashCapitalGraph architecture."
+    }
+  ],
+  "extracted_work_evidence": {
+    "embedded_user_inputs_in_first_graph_zip": [
+      "inputs/04__Вставленный текст(20261006-043957).txt",
+      "inputs/05__Вставленный текст(20261007-135122).txt"
+    ],
+    "key_machine_files": [
+      "data/market_universe_candidates.json",
+      "data/source_catalog.json",
+      "data/direct_venue_catalog.json",
+      "data/flash_lenders.json",
+      "data/route_templates.json",
+      "data/flash_lenders.csv",
+      "data/asset_identity_bootstrap.json",
+      "data/direct_state_identification_patterns.json",
+      "data_v3/market_universe_v3.json",
+      "data_v3/prior_chat_strategy_families_v3.json",
+      "data_v3/direct_families_14_coverage_v3.json",
+      "v3_research/new_high_value_family_seeds.json",
+      "v3_research/route_expansion.json",
+      "v3_research/ticker_collision_review.json",
+      "data/all_symbolic_research_pairs.json",
+      "data/v4_additions_symbolic_only.json",
+      "data/world_graph_nodes.json",
+      "data/world_graph_edges.json",
+      "data/v6_new_pair_candidates_DELTA_TO_V5.json",
+      "data/v6_conditional_protocol_hyperedges.json",
+      "data/v6_flash_funding_eligibility_matrix.json",
+      "data/v6_data_source_budget_and_deprecations.json"
+    ]
+  },
+  "fidelity_and_use_rules": [
+    "The Library did not return a complete verbatim chat transcript; this manifest records the full recovered ZIP progression and named GPR specification artifacts available at retrieval time.",
+    "ZIPs are historical research artifacts; official docs, addresses, licenses, deployment status, quotas and source entitlements must be refreshed before implementation.",
+    "All pair seeds and V4 graph edges are research-only; no automatic execution permissions.",
+    "Do not treat version counts as unique totals; preserve source IDs, candidate IDs, chain and representation distinctions.",
+    "Do not import historical tokenized-equity/RWA stock ideas: current user policy excludes Robinhood Stock Tokens, xStocks and tokenized equities.",
+    "Never overwrite current canonical code owners with legacy ZIP prototypes."
+  ]
+}

@@ -1,0 +1,1542 @@
+{
+  "schema": "studious-pancake.build-bigger-universe-graph-workpackages.v1",
+  "snapshot_date": "2026-11-14",
+  "archive_baseline": "2026-10-03_to_2026-10-08",
+  "note": "Historical research inventory. No pair/venue/lender is live qualified by appearance here.",
+  "counts": {
+    "original_pair_seeds": 519,
+    "v3_total_pair_candidates": 1147,
+    "v3_new_high_value_seeds": 162,
+    "v4_pair_candidates": 838,
+    "v4_new_symbolic_pairs": 175,
+    "v4_world_nodes": 2998,
+    "v4_world_edges": 11523,
+    "v6_new_pair_candidates": 175,
+    "v6_conditional_hyperedges": 12,
+    "v6_flash_funding_families": 4,
+    "v3_source_profiles": 86,
+    "initial_source_profiles": 65,
+    "direct_venue_families": 33,
+    "flash_funding_candidates": 17,
+    "prior_chat_strategy_families": 25,
+    "v3_route_templates": 34,
+    "archived_route_cycles": 19,
+    "direct_v3_families": 14,
+    "direct_v3_source_variants": 22
+  },
+  "pair_archive_semantics": {
+    "original_519": "UNRESOLVED_HYPOTHESES_NOT_EXECUTABLE",
+    "v3_1147": "RESEARCH_ONLY; market identity and canonical asset IDs null in archive",
+    "v4_838": "SYMBOLIC_UNVERIFIED; canonical_count=0",
+    "v4_additions_175": "SYMBOLIC_UNVERIFIED; execution_permission=NONE",
+    "v6_175": "candidate hypotheses; exact pool/quote/capital not evidenced",
+    "ticker_collision_review_count": 34,
+    "dedup_rule": "Do not collapse by ticker/casefold; chain + verified canonical identifier + representation kind + underlying identity required."
+  },
+  "strategy_families": [
+    {
+      "id": "STRAT-01",
+      "name": "multi-DEX 2-hop",
+      "execution_class": "LOCAL_ATOMIC_CANDIDATE",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "distinct underlying pools; exact state + independent verification"
+    },
+    {
+      "id": "STRAT-02",
+      "name": "same-chain 3-5 hop cycle",
+      "execution_class": "LOCAL_ATOMIC_CANDIDATE",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "closed graph; exact per-leg amount quotes; PR118 sizing"
+    },
+    {
+      "id": "STRAT-03",
+      "name": "AMM vs CLOB",
+      "execution_class": "LOCAL_ATOMIC_CANDIDATE",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "full-fill/IOC/partial-fill semantics; exact book VWAP"
+    },
+    {
+      "id": "STRAT-04",
+      "name": "LST fair value / relative value",
+      "execution_class": "CONDITIONAL_HYPEREDGE",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "protocol exchange rate and immediate exit only; cooldown is non-atomic"
+    },
+    {
+      "id": "STRAT-05",
+      "name": "pool migration and bin shocks",
+      "execution_class": "SIGNAL_ONLY",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "event-driven migration/bin/liquidity/fee changes; not assumed low latency"
+    },
+    {
+      "id": "STRAT-06",
+      "name": "ERC-4626 vault NAV",
+      "execution_class": "CONDITIONAL_HYPEREDGE",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "totalAssets/convertToAssets/previewRedeem/maxWithdraw and caller rights"
+    },
+    {
+      "id": "STRAT-07",
+      "name": "Pendle PT/YT near maturity",
+      "execution_class": "HEDGED_NON_ATOMIC",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "expiry and pre-maturity sale separate; maturity later is not flash exit"
+    },
+    {
+      "id": "STRAT-08",
+      "name": "stablecoin PSM/mint/redeem",
+      "execution_class": "CONDITIONAL_HYPEREDGE",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "issuer rights, min lot, fee, cap, asynchronous window"
+    },
+    {
+      "id": "STRAT-09",
+      "name": "RWA/corporate-action/reference window",
+      "execution_class": "EXCLUDED_OR_REFERENCE_ONLY",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "tokenized equities excluded; permitted non-equity references remain non-executable"
+    },
+    {
+      "id": "STRAT-10",
+      "name": "gold/commodity wrapper reference",
+      "execution_class": "SIGNAL_ONLY",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "cross-domain reference; local pool required for any local candidate"
+    },
+    {
+      "id": "STRAT-11",
+      "name": "BTC wrapper parity",
+      "execution_class": "HEDGED_NON_ATOMIC",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "issuer/bridge trust root and separate representation identities"
+    },
+    {
+      "id": "STRAT-12",
+      "name": "interchain flow-triggered local scan",
+      "execution_class": "SIGNAL_ONLY",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "CCTP/OFT/USDT0 inflow is heat trigger only, not atomic bridge route"
+    },
+    {
+      "id": "STRAT-13",
+      "name": "flash lender selection crossover",
+      "execution_class": "CONTROL_PLANE",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "amount-specific capacity/fee/availability and same-state comparison"
+    },
+    {
+      "id": "STRAT-14",
+      "name": "EulerSwap lending-aware depth",
+      "execution_class": "LOCAL_ATOMIC_CANDIDATE",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "source-specific SDK/vault/reserve exact math"
+    },
+    {
+      "id": "STRAT-15",
+      "name": "Uniswap V4 flash accounting",
+      "execution_class": "LOCAL_ATOMIC_CANDIDATE",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "PoolId/PoolKey/hooks/transient accounting; not proof of free funding"
+    },
+    {
+      "id": "STRAT-16",
+      "name": "Balancer V3 flash accounting",
+      "execution_class": "LOCAL_ATOMIC_CANDIDATE",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "Vault hooks/transient balances and deployment-specific settlement"
+    },
+    {
+      "id": "STRAT-17",
+      "name": "DODO DVM/DPP flash loan",
+      "execution_class": "LOCAL_ATOMIC_CANDIDATE",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "verified flashLoan implementation, callback, active pool fees"
+    },
+    {
+      "id": "STRAT-18",
+      "name": "ERC-3156 generic lender",
+      "execution_class": "LOCAL_ATOMIC_CANDIDATE",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "maxFlashLoan/flashFee/onFlashLoan and callback security"
+    },
+    {
+      "id": "STRAT-19",
+      "name": "Ekubo/Starknet atomic liquidity",
+      "execution_class": "RESEARCH_ONLY",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "Cairo state/math and protocol-level atomicity proof"
+    },
+    {
+      "id": "STRAT-20",
+      "name": "prediction-market complete sets",
+      "execution_class": "CONDITIONAL_HYPEREDGE",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "outcome vectors, split/merge, ERC1155 resolution and settlement"
+    },
+    {
+      "id": "STRAT-21",
+      "name": "CoW/intent/solver residual",
+      "execution_class": "HEDGED_NON_ATOMIC",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "signed intent, TTL, solver rights/auction, partial fills; protocol-specific"
+    },
+    {
+      "id": "STRAT-22",
+      "name": "lending looping/carry",
+      "execution_class": "HEDGED_NON_ATOMIC",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "multi-period yield/capital/withdrawal/liquidation risk; not instant flash PnL"
+    },
+    {
+      "id": "STRAT-23",
+      "name": "liquidation and OEV",
+      "execution_class": "CONDITIONAL_HYPEREDGE",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "callback/keeper/eligibility, oracle update rights and competitive costs"
+    },
+    {
+      "id": "STRAT-24",
+      "name": "CEX lead/lag",
+      "execution_class": "SIGNAL_ONLY",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "external reference signal, not a same-domain transaction leg"
+    },
+    {
+      "id": "STRAT-25",
+      "name": "cross-chain rebalancing inventory",
+      "execution_class": "HEDGED_NON_ATOMIC",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "prefunded capital/bridge/finality/stranding; not flash-circular"
+    }
+  ],
+  "direct_venues": [
+    {
+      "venue_id": "VENUE-01",
+      "name": "Uniswap V2",
+      "domain": "EVM",
+      "mechanic": "CPMM",
+      "pitfalls": "integer reserve math incl fee; fee-on-transfer/reentrancy",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-02",
+      "name": "Uniswap V3",
+      "domain": "EVM",
+      "mechanic": "CLMM",
+      "pitfalls": "sqrtPriceX96, liquidity, initialized ticks/bitmap",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-03",
+      "name": "Uniswap V4",
+      "domain": "EVM",
+      "mechanic": "HOOKED_CLMM",
+      "pitfalls": "PoolKey, hook address/permission/bytecode, callbacks and custom accounting",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-04",
+      "name": "Curve StableSwap/NG",
+      "domain": "EVM",
+      "mechanic": "STABLESWAP",
+      "pitfalls": "get_dy/invariant/rates/metapool/rate providers",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-05",
+      "name": "Balancer V2/V3",
+      "domain": "EVM",
+      "mechanic": "VAULT_MIXED",
+      "pitfalls": "Vault querySwap/batchSwap, composable pools, scaling and hooks",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-06",
+      "name": "PancakeSwap V2",
+      "domain": "EVM/BNB",
+      "mechanic": "CPMM",
+      "pitfalls": "reserve integer math and token tax",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-07",
+      "name": "PancakeSwap V3",
+      "domain": "EVM/BNB",
+      "mechanic": "CLMM",
+      "pitfalls": "tick spacing/fee tiers",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-08",
+      "name": "Pancake Infinity",
+      "domain": "EVM/BNB",
+      "mechanic": "HOOK_POOL",
+      "pitfalls": "bin/CLAMM/hooks; per-hook semantics",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-09",
+      "name": "Aerodrome/Velodrome",
+      "domain": "EVM",
+      "mechanic": "STABLE_VOLATILE_SLIPSTREAM",
+      "pitfalls": "distinct stable/volatile/CLMM invariant",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-10",
+      "name": "LFJ Liquidity Book",
+      "domain": "EVM",
+      "mechanic": "BIN_AMM",
+      "pitfalls": "active bin/bin step/dynamic fees",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-11",
+      "name": "Pharaoh DLMM",
+      "domain": "EVM/Avalanche",
+      "mechanic": "BIN_AMM",
+      "pitfalls": "bin math/dynamic fee/bin rounding",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-12",
+      "name": "Kuru",
+      "domain": "EVM/Monad",
+      "mechanic": "HYBRID_CLOB_AMM",
+      "pitfalls": "book sequence + AMM state",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-13",
+      "name": "Kodiak/BEX",
+      "domain": "EVM/Berachain",
+      "mechanic": "AMM_CLMM",
+      "pitfalls": "version/deprecation/market identity",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-14",
+      "name": "Shadow/Metropolis",
+      "domain": "EVM/Sonic",
+      "mechanic": "CLMM_DLMM",
+      "pitfalls": "exact pool model and lender deprecation",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-15",
+      "name": "Sushi",
+      "domain": "EVM",
+      "mechanic": "CPMM_CLMM",
+      "pitfalls": "pool-specific curve",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-16",
+      "name": "Ekubo",
+      "domain": "Cairo/Starknet",
+      "mechanic": "CLAMM",
+      "pitfalls": "Cairo-native math; no EVM ABI assumptions",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-17",
+      "name": "Orca Whirlpools",
+      "domain": "Solana/SVM",
+      "mechanic": "CLMM",
+      "pitfalls": "tick arrays and program-specific state",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-18",
+      "name": "Meteora DLMM",
+      "domain": "Solana/SVM",
+      "mechanic": "BIN_AMM",
+      "pitfalls": "active bins and dynamic fee hysteresis",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-19",
+      "name": "Raydium CLMM",
+      "domain": "Solana/SVM",
+      "mechanic": "CLMM",
+      "pitfalls": "program-specific tick arrays/fees",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-20",
+      "name": "Raydium CPMM",
+      "domain": "Solana/SVM",
+      "mechanic": "CPMM",
+      "pitfalls": "reserves/fee/Token-2022",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-21",
+      "name": "Meteora DAMM/DBC",
+      "domain": "Solana/SVM",
+      "mechanic": "DYNAMIC_BONDING",
+      "pitfalls": "curve/graduation/migration; not ordinary pool",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-22",
+      "name": "Manifest",
+      "domain": "Solana/SVM",
+      "mechanic": "CLOB",
+      "pitfalls": "book depth/VWAP/slot coherence",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-23",
+      "name": "Phoenix",
+      "domain": "Solana/SVM",
+      "mechanic": "CLOB",
+      "pitfalls": "sequence/lot sizes/maker-taker fees",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-24",
+      "name": "OpenBook",
+      "domain": "Solana/SVM",
+      "mechanic": "CLOB",
+      "pitfalls": "market version/decimals/sequence",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-25",
+      "name": "PumpSwap",
+      "domain": "Solana/SVM",
+      "mechanic": "AMM",
+      "pitfalls": "pool origin/migration/token safety",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-26",
+      "name": "DeepBook V3",
+      "domain": "Sui/Move",
+      "mechanic": "CLOB",
+      "pitfalls": "object version/checkpoint/shared object contention",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-27",
+      "name": "Cetus",
+      "domain": "Sui/Move",
+      "mechanic": "CLMM",
+      "pitfalls": "full Move type/ticks/liquidity",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-28",
+      "name": "Aftermath Pools",
+      "domain": "Sui/Move",
+      "mechanic": "WEIGHTED_POOL",
+      "pitfalls": "pool-specific weights/fees/router aliasing",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-29",
+      "name": "Bluefin",
+      "domain": "Sui/Move",
+      "mechanic": "AMM_CLOB",
+      "pitfalls": "PTB and book/AMM aliasing",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-30",
+      "name": "Osmosis",
+      "domain": "Cosmos",
+      "mechanic": "POOL_ROUTE",
+      "pitfalls": "pool manager/IBC denom/gas/AMM-specific math",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-31",
+      "name": "STON.fi",
+      "domain": "TON",
+      "mechanic": "AMM",
+      "pitfalls": "jetton masters/pool version; TON async",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-32",
+      "name": "DeDust",
+      "domain": "TON",
+      "mechanic": "AMM",
+      "pitfalls": "jetton masters/pool state; TON async",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-33",
+      "name": "Tonco",
+      "domain": "TON",
+      "mechanic": "CLMM",
+      "pitfalls": "tick/liquidity/TON async",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    }
+  ],
+  "flash_funding_candidates": [
+    {
+      "lender_id": "FUND-01",
+      "name": "Morpho Blue",
+      "domain": "EVM",
+      "primitive": "flashLoan/onMorphoFlashLoan",
+      "constraints": "singleton token balance, per-chain deployed contract and callback",
+      "status": "NOT_QUALIFIED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-02",
+      "name": "Bend Morpho fork",
+      "domain": "Berachain",
+      "primitive": "Morpho-compatible callback",
+      "constraints": "deployment/callback and token balance recheck",
+      "status": "NOT_QUALIFIED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-03",
+      "name": "Aave V3",
+      "domain": "EVM multichain",
+      "primitive": "flashLoan/flashLoanSimple",
+      "constraints": "per-chain deployment, reserve eligibility and premium",
+      "status": "NOT_QUALIFIED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-04",
+      "name": "Yei",
+      "domain": "Sei",
+      "primitive": "Aave fork FlashLoanLogic",
+      "constraints": "active pool, live fee and reserve",
+      "status": "NOT_QUALIFIED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-05",
+      "name": "Project 0",
+      "domain": "Solana",
+      "primitive": "begin/end bank flash",
+      "constraints": "bank cap, borrowable status, health/oracle, no nested flash, tx/account limits",
+      "status": "USER_PRIORITY_NOT_LIVE_QUALIFIED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-06",
+      "name": "Kamino",
+      "domain": "Solana",
+      "primitive": "lending/flash primitive",
+      "constraints": "production primitive, reserve config, fee and borrowable capacity",
+      "status": "USER_PRIORITY_NOT_LIVE_QUALIFIED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-07",
+      "name": "Marginfi",
+      "domain": "Solana",
+      "primitive": "bank flash",
+      "constraints": "deprioritized; user/security/economic gate; not mandatory",
+      "status": "DEPRIORITIZED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-08",
+      "name": "Scallop",
+      "domain": "Sui",
+      "primitive": "Move PTB flashloan",
+      "constraints": "package/type/fee/receipt/checkpoint",
+      "status": "NOT_QUALIFIED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-09",
+      "name": "NAVI",
+      "domain": "Sui",
+      "primitive": "Move flash",
+      "constraints": "package/type/getAllFlashLoanAssets/max/fee",
+      "status": "OFFLINE_OR_PARTIAL_NOT_LIVE_QUALIFIED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-10",
+      "name": "DeepBook",
+      "domain": "Sui",
+      "primitive": "CLOB financing PTB",
+      "constraints": "pool asset balance/checkpoint, borrow/trade shared-pool contention",
+      "status": "OFFLINE_OR_PARTIAL_NOT_LIVE_QUALIFIED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-11",
+      "name": "Cetus",
+      "domain": "Sui",
+      "primitive": "flash swap/loan PTB",
+      "constraints": "package/version/receipt and live pool state",
+      "status": "NOT_QUALIFIED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-12",
+      "name": "Suilend",
+      "domain": "Sui",
+      "primitive": "flash loan candidate",
+      "constraints": "fee/availability/capacity proof",
+      "status": "NOT_QUALIFIED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-13",
+      "name": "Ekubo",
+      "domain": "Starknet",
+      "primitive": "Cairo flash liquidity candidate",
+      "constraints": "contract/deployment and atomic receipt",
+      "status": "NOT_QUALIFIED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-14",
+      "name": "Uniswap V2 flash swap",
+      "domain": "Ethereum/EVM",
+      "primitive": "pair callback",
+      "constraints": "deployment/pair, callback and repayment math",
+      "status": "DEX_FACILITY_NOT_LENDER_QUALIFIED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-15",
+      "name": "Balancer Vault",
+      "domain": "Ethereum/EVM",
+      "primitive": "flash liquidity facility",
+      "constraints": "Vault version, token balance, callback and fee",
+      "status": "NOT_QUALIFIED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-16",
+      "name": "Osmosis",
+      "domain": "Osmosis",
+      "primitive": "no verified lender in archive",
+      "constraints": "read-only unless protocol-specific facility proven",
+      "status": "DATA_ONLY",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-17",
+      "name": "TON",
+      "domain": "TON",
+      "primitive": "async message ecosystem",
+      "constraints": "no general same-tx flash assumption",
+      "status": "DATA_ONLY",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    }
+  ],
+  "archived_route_templates": [
+    {
+      "id": "CYCLE-01",
+      "domain": "Solana",
+      "route": "USDC→USDG→USDT→USDC",
+      "status": "SYMBOLIC_RESEARCH_HYPOTHESIS",
+      "execution_permission": "NONE",
+      "all_legs_require_live_verification": true
+    },
+    {
+      "id": "CYCLE-02",
+      "domain": "Solana",
+      "route": "USDC→SOL→JitoSOL→USDC",
+      "status": "SYMBOLIC_RESEARCH_HYPOTHESIS",
+      "execution_permission": "NONE",
+      "all_legs_require_live_verification": true
+    },
+    {
+      "id": "CYCLE-03",
+      "domain": "Solana",
+      "route": "USDC→SOL→JupSOL→USDC",
+      "status": "SYMBOLIC_RESEARCH_HYPOTHESIS",
+      "execution_permission": "NONE",
+      "all_legs_require_live_verification": true
+    },
+    {
+      "id": "CYCLE-04",
+      "domain": "Sui",
+      "route": "USDC→SUI→DEEP→USDC",
+      "status": "SYMBOLIC_RESEARCH_HYPOTHESIS",
+      "execution_permission": "NONE",
+      "all_legs_require_live_verification": true
+    },
+    {
+      "id": "CYCLE-05",
+      "domain": "Sui",
+      "route": "USDC→wUSDT→sbUSDT→USDC",
+      "status": "SYMBOLIC_RESEARCH_HYPOTHESIS",
+      "execution_permission": "NONE",
+      "all_legs_require_live_verification": true
+    },
+    {
+      "id": "CYCLE-06",
+      "domain": "Ethereum",
+      "route": "USDC→USD0→USDC (Curve vs Uniswap)",
+      "status": "SYMBOLIC_RESEARCH_HYPOTHESIS",
+      "execution_permission": "NONE",
+      "all_legs_require_live_verification": true
+    },
+    {
+      "id": "CYCLE-07",
+      "domain": "Ethereum",
+      "route": "USD0→bUSD0→USD0 (venue A vs B)",
+      "status": "SYMBOLIC_RESEARCH_HYPOTHESIS",
+      "execution_permission": "NONE",
+      "all_legs_require_live_verification": true
+    },
+    {
+      "id": "CYCLE-08",
+      "domain": "Plasma",
+      "route": "USDT0→USDe→USDT0 (Fluid vs Curve)",
+      "status": "SYMBOLIC_RESEARCH_HYPOTHESIS",
+      "execution_permission": "NONE",
+      "all_legs_require_live_verification": true
+    },
+    {
+      "id": "CYCLE-09",
+      "domain": "HyperEVM",
+      "route": "USDC→USDT0→WHYPE→USDC",
+      "status": "SYMBOLIC_RESEARCH_HYPOTHESIS",
+      "execution_permission": "NONE",
+      "all_legs_require_live_verification": true
+    },
+    {
+      "id": "CYCLE-10",
+      "domain": "Monad",
+      "route": "USDC→WETH→MON→USDC",
+      "status": "SYMBOLIC_RESEARCH_HYPOTHESIS",
+      "execution_permission": "NONE",
+      "all_legs_require_live_verification": true
+    },
+    {
+      "id": "CYCLE-11",
+      "domain": "Monad",
+      "route": "USDC→cbBTC→WBTC→MON→USDC",
+      "status": "SYMBOLIC_RESEARCH_HYPOTHESIS",
+      "execution_permission": "NONE",
+      "all_legs_require_live_verification": true
+    },
+    {
+      "id": "CYCLE-12",
+      "domain": "X Layer",
+      "route": "USDC→USDG→USDT0→USDC",
+      "status": "SYMBOLIC_RESEARCH_HYPOTHESIS",
+      "execution_permission": "NONE",
+      "all_legs_require_live_verification": true
+    },
+    {
+      "id": "CYCLE-13",
+      "domain": "Ink",
+      "route": "USDT0→USDG→kBTC→USDT0",
+      "status": "SYMBOLIC_RESEARCH_HYPOTHESIS",
+      "execution_permission": "NONE",
+      "all_legs_require_live_verification": true
+    },
+    {
+      "id": "CYCLE-14",
+      "domain": "Arc",
+      "route": "USDC→WETH→cirBTC→USDC",
+      "status": "SYMBOLIC_RESEARCH_HYPOTHESIS",
+      "execution_permission": "NONE",
+      "all_legs_require_live_verification": true
+    },
+    {
+      "id": "CYCLE-15",
+      "domain": "Mantle",
+      "route": "WETH→mETH→cmETH→WETH",
+      "status": "SYMBOLIC_RESEARCH_HYPOTHESIS",
+      "execution_permission": "NONE",
+      "all_legs_require_live_verification": true
+    },
+    {
+      "id": "CYCLE-16",
+      "domain": "Unichain",
+      "route": "USDC→HYPE→USDC (v3 vs v4)",
+      "status": "SYMBOLIC_RESEARCH_HYPOTHESIS",
+      "execution_permission": "NONE",
+      "all_legs_require_live_verification": true
+    },
+    {
+      "id": "CYCLE-17",
+      "domain": "Avalanche",
+      "route": "USDC→WAVAX→WETH→USDC",
+      "status": "SYMBOLIC_RESEARCH_HYPOTHESIS",
+      "execution_permission": "NONE",
+      "all_legs_require_live_verification": true
+    },
+    {
+      "id": "CYCLE-18",
+      "domain": "Sei",
+      "route": "USDC→USDT0→WSEI→USDC",
+      "status": "SYMBOLIC_RESEARCH_HYPOTHESIS",
+      "execution_permission": "NONE",
+      "all_legs_require_live_verification": true
+    },
+    {
+      "id": "CYCLE-19",
+      "domain": "Berachain",
+      "route": "USDC.e→BUSD→WBERA→USDC.e",
+      "status": "SYMBOLIC_RESEARCH_HYPOTHESIS",
+      "execution_permission": "NONE",
+      "all_legs_require_live_verification": true
+    }
+  ],
+  "gpr_packages": [
+    "GPR-01A",
+    "GPR-01B",
+    "GPR-02A",
+    "GPR-02B",
+    "GPR-03",
+    "GPR-04",
+    "GPR-05",
+    "TON-RADAR-01"
+  ],
+  "direct_venue_audit_packages": [
+    "DV-00",
+    "DV-01",
+    "DV-02",
+    "DV-03",
+    "DV-04",
+    "DV-05",
+    "DV-06",
+    "DV-07",
+    "DV-08"
+  ],
+  "historical_f_series": [
+    "F-00",
+    "F-01",
+    "F-02",
+    "F-03",
+    "F-04",
+    "F-05",
+    "F-06",
+    "F-07",
+    "F-08",
+    "F-09",
+    "F-10",
+    "F-11"
+  ],
+  "historical_v6_series": [
+    "F6-00",
+    "F6-01",
+    "F6-02",
+    "F6-03",
+    "F6-04",
+    "F6-05",
+    "F6-06",
+    "F6-07",
+    "F6-08"
+  ],
+  "ten_v4_intelligence_extensions": [
+    "MULTISURFACE_FAIR_VALUE",
+    "LIQUIDITY_VS_CAPITAL_IMBALANCE",
+    "RATE_NAV",
+    "MATURITY_SURFACE",
+    "MARKET_SESSION_AND_CORPORATE_ACTION_REFERENCE",
+    "ISSUER_AWARE_STABLE_PARITY",
+    "MULTI_VENUE_CAUSAL_FRAGMENTATION",
+    "FLOW_TO_LOCAL_DISLOCATION",
+    "SPOT_PERP_LEAD_SIGNAL",
+    "PROTOCOL_STATE_REGIME_SWITCH"
+  ],
+  "v6_conditional_hyperedges": [
+    "USUAL_MINT_BUSD0",
+    "USUAL_EARLY_EXIT",
+    "USUAL_EUR0_SWAPPER",
+    "USUAL_sUSD0_SHARE",
+    "USUAL_sEUR0_SHARE",
+    "FRAX_DIRECT_USDC_EXIT",
+    "FRAX_sfrxUSD_SHARE",
+    "CURVE_scrvUSD_SHARE",
+    "ETHENA_sUSDe_EXIT",
+    "PENDLE_PT_USDG_2026",
+    "CCTP_USDC",
+    "USDT0_OFT"
+  ],
+  "work_packages": [
+    {
+      "id": "MASTER-00",
+      "scope": "Pair/source/asset/strategy/lender/provider crosswalk; dedupe IDs; refresh PR/owner/dependency inventory",
+      "owner": "Coordinator",
+      "dependency": "Current main/PR/CI + archive provenance",
+      "gate": "No source changes before owner audit",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "GPR-01A",
+      "scope": "Canonical asset resolver and versioned identity evidence",
+      "owner": "Assets resolver owner",
+      "dependency": "issuer/registry + on-chain proof",
+      "gate": "Ticker collisions ambiguous; chain token program/Move type/decimals/authority",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "GPR-01B",
+      "scope": "Dynamic Universe live registry and venue ingestors",
+      "owner": "Dynamic Universe owner",
+      "dependency": "official registries + source rights",
+      "gate": "Discovery only; lifecycle/tombstones/pagination/negative evidence",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "GPR-02A",
+      "scope": "Bounded relation generators and economic relation/hyperedge mapping",
+      "owner": "Relation generator/economic graph owners",
+      "dependency": "verified assets + market identity + anchors",
+      "gate": "ResearchRelation never equals executable DirectedQuoteEdge",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "GPR-02B",
+      "scope": "HOT/WARM/COLD/EVENT budget-aware heat and scheduling",
+      "owner": "Heat scheduler owner",
+      "dependency": "observations/quotas/anomalies",
+      "gate": "heat schedules data only",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "GPR-03",
+      "scope": "Correlation residual/lead-lag store and replay",
+      "owner": "CorrelationLedger owner",
+      "dependency": "aligned observations + proven anchors",
+      "gate": "advisory; source/pool alias penalties; time controls",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "GPR-04",
+      "scope": "Dynamic FlashCapitalGraph source adapters and capacity evidence",
+      "owner": "FlashCapitalGraph/R02 owner",
+      "dependency": "rooted bank/reserve/pool balances + fee + constraints",
+      "gate": "Build != capacity; amount-specific and user-gated",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "GPR-05",
+      "scope": "Read-only real-data campaign and paper handoff",
+      "owner": "Coordinator + QPR/R06 owners",
+      "dependency": "verified identity/state/quote/capital",
+      "gate": "false positives, negative evidence, cost and source ablation",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "TON-RADAR-01",
+      "scope": "STON/DeDust/Tonco/Omniston read-only research lane",
+      "owner": "TON owner",
+      "dependency": "TON chain/source evidence",
+      "gate": "async; no local atomic borrowing assumption",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "DV-00",
+      "scope": "Current capability truth audit",
+      "owner": "Coordinator/direct venue owners",
+      "dependency": "current main and source tests",
+      "gate": "status based on code/tests, not doc claims",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "DV-01",
+      "scope": "Raydium CPMM exact rooted state and quotes",
+      "owner": "P0-1/P0-3 owners",
+      "dependency": "program/pool/vault/mint/fee/state quorum",
+      "gate": "existing P0 PRs are base; no duplicate",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "DV-02",
+      "scope": "Orca/Meteora/Raydium CLMM/DLMM exact tick/bin evaluator binding",
+      "owner": "P0-3/R04 owners",
+      "dependency": "complete tick/bin arrays + dynamic fee + Token-2022",
+      "gate": "decoder != evaluator != quote",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "DV-03",
+      "scope": "Manifest/Phoenix/OpenBook CLOB snapshot/sequence/IOC",
+      "owner": "R07/orderbook owners",
+      "dependency": "market identity, depth, lot/tick/fee",
+      "gate": "fixture until real subscription conformance",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "DV-04",
+      "scope": "Sui DeepBook/Cetus/Aftermath exact object/checkpoint and PTB dry-run",
+      "owner": "Sui R02/R03/R05 owners",
+      "dependency": "gRPC/GraphQL/Core + type/object version",
+      "gate": "no JSON-RPC dependency; no object lock assumptions",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "DV-05",
+      "scope": "First EVM chain local state + V2/V3/Curve + Morpho/Aave pilot",
+      "owner": "EVM lead/R13/R05",
+      "dependency": "chain/deployment/token/pool/block + capacity",
+      "gate": "one chain only",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "DV-06",
+      "scope": "Complex EVM venue conformance (Balancer/Aero/Pancake/V4/etc)",
+      "owner": "Direct venue owners",
+      "dependency": "SDK/ABI/source/deployment/hook proof",
+      "gate": "separate PR per family, after DV-05",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "DV-07",
+      "scope": "Osmosis/TON observer-only research adapters",
+      "owner": "Domain owners",
+      "dependency": "source/chain identity/license",
+      "gate": "no cross-chain atomic claim",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "DV-08",
+      "scope": "24/72-hour source ablation and read-only qualification",
+      "owner": "Coordinator",
+      "dependency": "exact observations/quotes/capital/paper receipts",
+      "gate": "no live sender",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "F-00",
+      "scope": "Source/SDK audit and dedup",
+      "owner": "Coordinator",
+      "dependency": "archival/current source ledgers",
+      "gate": "license/version/quota",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "F-01",
+      "scope": "Solana exact direct quotes",
+      "owner": "Solana venue owner",
+      "dependency": "P0 inputs, quote state",
+      "gate": "exact amount, rooted slot, Token-2022",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "F-02",
+      "scope": "Solana CLOB",
+      "owner": "R07/orderbook owner",
+      "dependency": "Manifest/Phoenix/OpenBook subscriptions",
+      "gate": "depth/lot/IOC/partial fills",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "F-03",
+      "scope": "Sui gRPC/GraphQL + DeepBook/Cetus quotes",
+      "owner": "Sui owner",
+      "dependency": "checkpoint/object versions",
+      "gate": "same-state quote",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "F-04",
+      "scope": "Sui native flash capacity/PTB",
+      "owner": "R02/R03/R05",
+      "dependency": "flash pool balance + PTB dry-run",
+      "gate": "no shared-pool self-impact",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "F-05",
+      "scope": "EVM V2/V3/Curve + Morpho/Aave",
+      "owner": "EVM pilot owner",
+      "dependency": "one chain and pinned state",
+      "gate": "same-block simulation",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "F-06",
+      "scope": "Additional EVM venues/funding sources",
+      "owner": "Direct venue/EVM owner",
+      "dependency": "DV-05 qualification",
+      "gate": "one adapter per PR",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "F-07",
+      "scope": "Source/asset/strategy family expansions",
+      "owner": "GPR owner",
+      "dependency": "AssetResolver + source eligibility",
+      "gate": "no guessed IDs",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "F-08",
+      "scope": "V4/Infinity/hooks/Velodrome/Balancer SDK gaps",
+      "owner": "EVM direct owner",
+      "dependency": "PoolKey/hooks/callback/source pins",
+      "gate": "fail closed unknown hook",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "F-09",
+      "scope": "LST/LRT/Pendle/ERC4626 NAV and exit",
+      "owner": "Rights/strategy owner",
+      "dependency": "conversion and rights evidence",
+      "gate": "queues/maturity non-atomic",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "F-10",
+      "scope": "Osmosis + TON radar",
+      "owner": "Domain owner",
+      "dependency": "read-only source adapters",
+      "gate": "async domains",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "F-11",
+      "scope": "72h paper replay/source ablation",
+      "owner": "R06/coordinator",
+      "dependency": "qualified exact inputs",
+      "gate": "complete all-in PnL and no-trade",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "F6-00",
+      "scope": "Source admission/dedup/provenance + deprecated registry review",
+      "owner": "Source governance",
+      "dependency": "source entitlement overlay",
+      "gate": "archive Sanctum TOML must be treated stale",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "F6-01",
+      "scope": "Sui AUSD/WAL/NS object proof and exact orderbook",
+      "owner": "Sui owner",
+      "dependency": "full Move coin type + pool IDs + checkpoint",
+      "gate": "historical IDs require live verification",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "F6-02",
+      "scope": "Frax/USUAL/savings-vault operation modeling",
+      "owner": "Conditional transformation owner",
+      "dependency": "preview/max/fee/caller/asset liquidity",
+      "gate": "rights/async gate",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "F6-03",
+      "scope": "Euro FX EUR0/EURe/EURC markets",
+      "owner": "EVM pilot/source owner",
+      "dependency": "current exact pools + FX reference timestamps",
+      "gate": "FX reference not quote",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "F6-04",
+      "scope": "Solana live LST registry and valuations",
+      "owner": "AssetResolver/R10-B",
+      "dependency": "current registry/API entitlement + RPC",
+      "gate": "archived Sanctum TOML not active authority",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "F6-05",
+      "scope": "Flash funding eligibility / constraint quote",
+      "owner": "R02/FlashCapitalGraph",
+      "dependency": "amount-size live balance/fee/limits",
+      "gate": "no doc-only capacity",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "F6-06",
+      "scope": "Pendle market inventory and maturity",
+      "owner": "R10-D owner",
+      "dependency": "expiry/current exit/rights",
+      "gate": "no maturity-as-atomic",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "F6-07",
+      "scope": "Cross-chain/issuer lag controls",
+      "owner": "CorrelationLedger owner",
+      "dependency": "timestamp alignment + no-flow controls",
+      "gate": "correlation is not causation",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    },
+    {
+      "id": "F6-08",
+      "scope": "Replay/qualification and negative corpus",
+      "owner": "QPR/R06 owner",
+      "dependency": "exact evidence at one generation",
+      "gate": "no synthetic PASS",
+      "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
+    }
+  ],
+  "hard_gates": [
+    "AssetIdentity requires canonical on-chain identifier and chain-specific type/program proof; ticker is display only.",
+    "ResearchRelation is never an executable DirectedQuoteEdge.",
+    "Exact amount quote required at every sizing point; no extrapolation/scaling.",
+    "All pool/market observations carry underlying liquidity resource IDs and provider/operator correlation groups.",
+    "Capacity must be live, amount-specific, eligible, fee-known and state-generation bound; no TVL or documentation inference.",
+    "Borrow+all route legs+repay must close in a single settlement domain/tx/PTB before LOCAL_ATOMIC.",
+    "Bridge/TON/IBC/CEX/queue/maturity/carry are reference/inventory/rebalance unless atomicity proven.",
+    "All data-source rights, quotas, source version and licensing must be current.",
+    "Live signing/sending/borrowing/spending/deployments/provider activation remain prohibited.",
+    "Robinhood Stock Tokens, xStocks and tokenized-equity strategies are EXCLUDED by current user policy."
+  ]
+}

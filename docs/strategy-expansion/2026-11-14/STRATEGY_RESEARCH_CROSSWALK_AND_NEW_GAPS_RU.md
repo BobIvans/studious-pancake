@@ -1,3 +1,5 @@
+> **Archive reconciliation:** the V1/V3/V4/V4.1/V5/V6 Build Bigger Universe Graph work is now mapped in `BUILD_BIGGER_UNIVERSE_GRAPH_ARCHIVE_RECONCILIATION_RU.md` and assigned through `BUILD_BIGGER_UNIVERSE_GRAPH_WORKPACKAGES_V1.json`. The previous ten EXP families are only the incremental gaps, not the full recovered strategy universe.
+
 # Strategy research crosswalk — что уже есть, что расширить, что действительно новое
 
 **Snapshot:** main d52e61f36ece249c1221c8e71d22aa29ef476e21; PR #643 merged, #645 open for SX-12 at authoring. Исторические статусы не считать live: агент обновляет их до запуска.

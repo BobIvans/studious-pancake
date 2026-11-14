@@ -1,3 +1,5 @@
+> **Master dependency:** execute the complete original MASTER/GPR/DV/F/F6 programme in `MASTER_FLASHLOAN_MARKET_INTEGRATION_AND_BUILD_BIGGER_UNIVERSE_RU.md` before considering this matrix a complete project plan. SX/EXP/W6 assignments add strategy economics and research/portfolio layers; they do not replace asset/market/source discovery or direct venue/flash-source work.
+
 # Strategy campaign assignments — launch matrix
 
 Полные технические требования, acceptance, dependencies and safety rules are in CODEX_STRATEGY_CAMPAIGN_START_HERE.md and STRATEGY_RESEARCH_CROSSWALK_AND_NEW_GAPS_RU.md. This file is the dispatch matrix, not a second source of truth.

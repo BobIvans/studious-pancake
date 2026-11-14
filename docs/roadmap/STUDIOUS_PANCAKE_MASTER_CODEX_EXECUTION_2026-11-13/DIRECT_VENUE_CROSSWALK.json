@@ -1,0 +1,249 @@
+{
+  "schema_version": "studious-pancake.direct-venue-crosswalk.v1",
+  "audited_main_sha": "86be458a87ed3f499cc32ff56426b2866c90422a",
+  "note": "Historical Direct Venue Audit DEX_STATUS was checked at main 8e222fc (2026-10-08); use as a historical baseline and revalidate each row against current main before coding. Catalog presence != implementation/live qualification.",
+  "families": [
+    {
+      "id": "raydium_cpmm",
+      "chain": "solana",
+      "status": "CANONICAL_READER_EXISTS_UNQUALIFIED",
+      "owners": [
+        "src/providers/raydium_cpmm_native.py",
+        "src/market/native_cpmm_capture.py",
+        "src/direct_venue/cpmm_math.py"
+      ],
+      "missing": [
+        "real current mainnet proof and independent quorum",
+        "current root-slot and pool/vault bytes",
+        "same-state amount quote and full route simulation"
+      ],
+      "next": "retain as CPMM owner; don't rebuild"
+    },
+    {
+      "id": "raydium_clmm",
+      "chain": "solana",
+      "status": "OFFLINE_MATH_OR_REFERENCE_UNQUALIFIED",
+      "owners": [
+        "src/direct_venue/mpr2617.py",
+        "src/direct_venue/super03.py",
+        "P0-3"
+      ],
+      "missing": [
+        "full pool config/tick arrays/bitmap/oracle dependency closure",
+        "official SDK quote parity",
+        "Token-2022 fees and dynamic fee constraints"
+      ],
+      "next": "P0-3 exact CLMM decoder in focused PR"
+    },
+    {
+      "id": "meteora_dlmm",
+      "chain": "solana",
+      "status": "INDEXED_UNBOUND_OFFLINE_MATH",
+      "owners": [
+        "src/solana_parallel_radar/radar.py",
+        "src/ingest/amm_math.py",
+        "src/direct_venue/super03.py"
+      ],
+      "missing": [
+        "active bin + required bin arrays/bitmap",
+        "dynamic fee and consumed input/partial fill semantics",
+        "rooted same-state SDK quote vectors"
+      ],
+      "next": "P0-3 exact DLMM reader"
+    },
+    {
+      "id": "orca_whirlpools",
+      "chain": "solana",
+      "status": "LICENSE_BLOCKED_AND_UNQUALIFIED",
+      "owners": [
+        "src/direct_venue/mpr2617.py",
+        "src/agg06_solana_venues.py"
+      ],
+      "missing": [
+        "legal approval for current upstream license before code reuse",
+        "tick arrays/oracle/Token-2022 quote parity"
+      ],
+      "next": "legal review only; do not vendor or copy blocked sources"
+    },
+    {
+      "id": "manifest_clob",
+      "chain": "solana",
+      "status": "INDEXED_OR_RADAR_ONLY",
+      "owners": [
+        "src/solana_parallel_radar/radar.py",
+        "src/strategy/strategies.py"
+      ],
+      "missing": [
+        "true orderbook levels, lot/tick, cross-side depth and sequence freshness",
+        "same-state IOC output + market identity",
+        "current book subscriptions"
+      ],
+      "next": "P0-1 discovery, later CLOB exact reader"
+    },
+    {
+      "id": "phoenix",
+      "chain": "solana",
+      "status": "FIXTURE_GATED",
+      "owners": [
+        "src/providers/orderbook/",
+        "src/providers/orderbook/pr066_phoenix.py"
+      ],
+      "missing": [
+        "live book sequence/backfill, lot/fee and exact taker walk",
+        "legal/versioned SDK and on-chain account proof"
+      ],
+      "next": "CLOB agent after identity/source contract"
+    },
+    {
+      "id": "openbook_v2",
+      "chain": "solana",
+      "status": "FIXTURE_GATED",
+      "owners": [
+        "src/providers/orderbook/"
+      ],
+      "missing": [
+        "bids/asks slabs, event queue, lot sizes, fee and exact walk",
+        "current market id and replay"
+      ],
+      "next": "CLOB agent after identity/source contract"
+    },
+    {
+      "id": "uniswap_v2_v3",
+      "chain": "evm",
+      "status": "PARTIAL_GENERIC_STATE_AND_QUOTER_UNQUALIFIED",
+      "owners": [
+        "src/ingest/amm_math.py",
+        "src/multichain/evm_financing.py",
+        "src/resources/market_source_catalog.json"
+      ],
+      "missing": [
+        "per-chain deployments/factory and exact pair/pool ID",
+        "block-pinned state, fees, transfer/rebase handling and exact quote/sim"
+      ],
+      "next": "R09 EVM pilot chooses one chain, not all L2s"
+    },
+    {
+      "id": "uniswap_v4",
+      "chain": "evm",
+      "status": "STATE_ONLY_SDK_QUOTE_REQUIRED",
+      "owners": [
+        "src/multichain/evm_settlement.py",
+        "src/resources/market_source_catalog.json"
+      ],
+      "missing": [
+        "PoolKey/PoolId/hook codehash/hookData/fees/Quoter parity"
+      ],
+      "next": "after V2/V3 pilot"
+    },
+    {
+      "id": "curve_ng",
+      "chain": "evm",
+      "status": "GENERIC_MATH_NOT_CURVE_NG_EXACT",
+      "owners": [
+        "src/ingest/amm_math.py",
+        "src/resources/market_source_catalog.json"
+      ],
+      "missing": [
+        "pool registry and exact get_dy, coins/rates/offpeg fees/meta-pool rules"
+      ],
+      "next": "exact per-pool query/quote PR"
+    },
+    {
+      "id": "balancer_v2_v3",
+      "chain": "evm",
+      "status": "V2_VAULT_TOKENS_ONLY_V3_SDK_GAP",
+      "owners": [
+        "src/multichain/evm_settlement.py",
+        "src/resources/market_source_catalog.json"
+      ],
+      "missing": [
+        "V2 queryBatchSwap / V3 querySwap, scaled balances, rate providers, hooks"
+      ],
+      "next": "separate V2 and V3 adapters"
+    },
+    {
+      "id": "pancakeswap_v2_v3_infinity",
+      "chain": "evm",
+      "status": "GENERIC_V2_V3_STATE_INFINITY_SDK_GAP",
+      "owners": [
+        "src/ingest/amm_math.py",
+        "src/resources/market_source_catalog.json"
+      ],
+      "missing": [
+        "chain/factory pins, Infinity CLAMM/LBAMM hooks and dynamic fees"
+      ],
+      "next": "after EVM pilot"
+    },
+    {
+      "id": "aerodrome_velodrome",
+      "chain": "evm",
+      "status": "V2_POOL_AND_CONTRACT_QUOTE_SLIPSTREAM_SDK_GAP",
+      "owners": [
+        "src/resources/market_source_catalog.json",
+        "src/multichain/"
+      ],
+      "missing": [
+        "stable/volatile pool configuration and Slipstream CLMM SDK exact state"
+      ],
+      "next": "focused venue PR"
+    },
+    {
+      "id": "deepbook_v3",
+      "chain": "sui",
+      "status": "INDEXED_SHADOW_PTB_OFFLINE",
+      "owners": [
+        "src/gpr_sui_shadow/",
+        "src/multichain/sui.py",
+        "src/discovery/dynamic_universe/ingestors.py"
+      ],
+      "missing": [
+        "gRPC/Core checkpoint object reads and versions",
+        "book depth and exact quote",
+        "flash capacity / gas object conflicts"
+      ],
+      "next": "R09 Sui market-data; separate from NAVI R02"
+    },
+    {
+      "id": "cetus_after_sc",
+      "chain": "sui",
+      "status": "INDEXED_UNBOUND_OR_RESEARCH_ONLY",
+      "owners": [
+        "src/gpr_sui_shadow/",
+        "src/discovery/dynamic_universe/ingestors.py"
+      ],
+      "missing": [
+        "current package/Move type and pool object",
+        "ticks, fee, same checkpoint quote",
+        "PTB composition"
+      ],
+      "next": "R09 Sui"
+    },
+    {
+      "id": "osmosis",
+      "chain": "cosmos",
+      "status": "DISCOVERY_OR_SQS_REFERENCE",
+      "owners": [
+        "source catalog / R09"
+      ],
+      "missing": [
+        "current pool state and exact local quote",
+        "same-domain atomic lender/builder"
+      ],
+      "next": "signal/discovery only"
+    },
+    {
+      "id": "ston_dedust",
+      "chain": "ton",
+      "status": "REST_DISCOVERY_ASYNC",
+      "owners": [
+        "src/discovery/dynamic_universe/ton_radar.py",
+        "source catalog"
+      ],
+      "missing": [
+        "native contract state and exact swap execution math",
+        "chain-specific atomic borrow→swap→repay"
+      ],
+      "next": "R09 TON radar; asynchronous paths signal-only"
+    }
+  ]
+}

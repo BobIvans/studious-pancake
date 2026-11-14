@@ -1,0 +1,148 @@
+{
+  "schema_version": "studious-pancake.master-pair-delta-summary.v1",
+  "generated_at": "2026-11-13",
+  "main_sha": "86be458a87ed3f499cc32ff56426b2866c90422a",
+  "source_cutoff": "Historical archives through 2026-10-08",
+  "counts": {
+    "V3_market_universe_base_rows": 519,
+    "V3_curated_high_value_rows": 162,
+    "V3_original_old_rows_in_dedup_receipt": 693,
+    "V3_old_casefold_keys": 659,
+    "V3_old_casefold_collision_excess": 34,
+    "V4_symbolic_pair_rows": 838,
+    "V4_new_unique_vs_V3_overlay_receipt": 175,
+    "V4_local_route_motifs": 1399,
+    "V5_chain_local_seeds": 203,
+    "V5_symbolic_routes": 39,
+    "V5_non_swap_hyperedges": 11,
+    "V6_pair_delta_to_V5": 175,
+    "V6_discovery_hypothesis_rows": 154,
+    "V6_route_families": 36,
+    "V6_conditional_hyperedges": 12,
+    "raw_pair_rows_across_selected_generations": 1897,
+    "casefold_chain_symbol_pair_clusters": 959,
+    "repeated_mentions_beyond_one_per_cluster": 938,
+    "clusters_mentioned_in_multiple_archive_generations": 551,
+    "canonical_asset_ids_proven_by_archive_pair_index": 0,
+    "current_live_pool_ids_proven_by_archive_pair_index": 0
+  },
+  "interpretation": {
+    "candidate_key": "(casefold(chain label), sorted casefold(pair symbols))",
+    "key_is_identity": false,
+    "duplicates_are_assets": false,
+    "cross_archive_mentions_are_independent_confirmations": false,
+    "auto_merge_allowed": false,
+    "full_raw_records": "The exact 1,897 source rows remain in the original archives and must be ingested with original archive record IDs during MASTER-00; this summary is a reconciliation index, not the complete pair catalogue.",
+    "note": "V3/V4 overlay totals and V5/V6 deltas use different archive-generation definitions. Do not sum their counts and report the result as current unique markets or pools."
+  },
+  "main_priority_clusters": [
+    {
+      "chain": "Solana",
+      "pairs": [
+        "USDC/USDT",
+        "USDG/USDC",
+        "USD1/USDC",
+        "PYUSD/USDC",
+        "JupUSD/USDC",
+        "SOL/USDC",
+        "JitoSOL/SOL",
+        "JupSOL/SOL",
+        "mSOL/SOL",
+        "INF/SOL",
+        "cbBTC/USDC",
+        "xBTC/cbBTC",
+        "JLP/USDC"
+      ],
+      "all_state": "DISCOVERY_ONLY"
+    },
+    {
+      "chain": "Sui",
+      "pairs": [
+        "SUI/USDC",
+        "DEEP/SUI",
+        "DEEP/USDC",
+        "WAL/USDC",
+        "NS/USDC",
+        "wUSDC/USDC",
+        "wUSDT/USDC",
+        "sbUSDT/USDC",
+        "wUSDT/sbUSDT",
+        "suiUSDe/USDC",
+        "USDsui/USDC",
+        "xBTC/USDC",
+        "LZWBTC/USDC",
+        "afSUI/SUI",
+        "haSUI/SUI",
+        "vSUI/SUI"
+      ],
+      "all_state": "DISCOVERY_ONLY"
+    },
+    {
+      "chain": "Ethereum",
+      "pairs": [
+        "USD0/USDC",
+        "bUSD0/USD0",
+        "rt-bUSD0/bUSD0",
+        "EUR0/EURe",
+        "EUR0/EURC",
+        "sEUR0/EUR0",
+        "USDe/USDC",
+        "sUSDe/USDe",
+        "frxUSD/USDC",
+        "sfrxUSD/frxUSD",
+        "scrvUSD/crvUSD",
+        "WETH/USDC",
+        "wstETH/WETH",
+        "cbETH/WETH"
+      ],
+      "all_state": "DISCOVERY_ONLY_OR_CONDITIONAL_RIGHTS"
+    },
+    {
+      "chain": "Other EVM",
+      "pairs": [
+        "USDC/USDT0",
+        "USDT0/WHYPE",
+        "USDC/WETH",
+        "WETH/MON",
+        "MON/USDC",
+        "cirBTC/USDC",
+        "kBTC/WETH",
+        "USDC/USDT0/WHYPE multi-hop"
+      ],
+      "chains": [
+        "Monad",
+        "HyperEVM",
+        "Plasma",
+        "X Layer",
+        "Ink",
+        "Arc",
+        "Sei",
+        "Berachain",
+        "Unichain",
+        "Katana",
+        "Tempo",
+        "Gnosis",
+        "Base",
+        "Arbitrum",
+        "Avalanche"
+      ],
+      "all_state": "DISCOVERY_ONLY"
+    },
+    {
+      "chain": "TON/Cosmos",
+      "pairs": [
+        "TON/USDT",
+        "TON/tsTON",
+        "OSMO/ATOM",
+        "ATOM/USDC"
+      ],
+      "all_state": "ASYNC_OR_DISCOVERY_ONLY"
+    }
+  ],
+  "policy_exclusions": [
+    "Robinhood Stock Tokens",
+    "tokenized equities",
+    "any equity-backed token route"
+  ],
+  "next_action": "MASTER-00 must expand all source rows from the original archives, resolve each symbol via AssetResolver and current deployed source evidence, and publish the complete full pair-level machine delta."
+}

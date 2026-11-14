@@ -1,87 +1,60 @@
-# Whole-project task index — parallel workstream assignments
+# Whole-project task index — current residual workstreams (2026-11-14)
 
-This is the orchestration index, not a replacement for protocol-specific technical dossiers. The lead launches independent workstreams concurrently; each worker owns one narrow task/PR/worktree. Shared-owner edits are serialized behind interface freeze.
+This is the orchestration index, not a replacement for technical dossiers. Refresh main, open PRs, CI and `PARALLEL_EXECUTION_STATUS.json` before every dispatch. One worktree/owner/PR per bounded task.
 
-## Completed / do not repeat
-| Work | Evidence | Instruction |
+## Completed baselines — do not repeat
+| Work | Main PR | Truth |
+|---|---:|---|
+| R-01 reconciliation | #584 | COMPLETE; no legacy re-merge |
+| P0-1 indexed intake → Dynamic Universe | #593 | IN MAIN; live identity/source qualification remains |
+| P0-2 Jupiter V2 + 0x quote owner | #604 | IN MAIN; 0x live capture unbound/authorization-gated |
+| P0-3 Raydium CLMM + Meteora DLMM offline math | #613 | IN MAIN; live state/quotes remain; Orca license-gated |
+| R-02 CAP-A Jupiter Lend | #602 | PARTIAL_DECODED; effective capacity UNKNOWN |
+| R-02 CAP-B Kamino | #612 | PARTIAL_DECODED; effective capacity UNKNOWN |
+| R-02 CAP-C NAVI | #609 | PARTIAL_DECODED; effective capacity UNKNOWN |
+| R-03 unsigned contract/builders | #606 | Jupiter/NAVI offline only; Kamino ABI and P0 path blocked |
+| H relation/correlation | #614 | 7 residual families + timestamp-aligned lead/lag; not strategy promotion |
+| R11/R12 baseline | #611/#605 | Windows/mypy and strict pip-audit 0 findings |
+| parallel dashboard | #615 | canonical status owner; refresh snapshot |
+
+## Track A — P0 residual qualification, not rebuild
+- P0-1-R: verify pagination/cadence/gap recovery, partial-vs-complete snapshots, canonical identity and source freshness.
+- P0-2-R: governed Jupiter V2/0x same-size live quote capture/replay; needs user authorization, public taker context and configured credential names (never commit secrets).
+- P0-3-R: rooted exact pool/tick/bin state and quote parity for Raydium CLMM/Meteora DLMM, Token-2022 and complete dependency closure; Orca only after license review.
+
+## Track B — R-02 CAP-D + shared live evidence
+- CAP-A/B/C code is present but no effective flash capacity is qualified. User authorization is required for rooted Solana and governed Sui reads with independent quorum.
+- CAP-D: wallet-free Project0 bank discovery; optionally validate an existing account from public authority/account addresses only. Never create Marginfi accounts.
+- Shared live gate: QPR/DIN governed read-only sources, physical quotas, independent operator quorum, immutable slot/checkpoint state and replay. Until authorized, keep negative receipts and effective capacity UNKNOWN.
+- Do not infer cap from API max, TVL, token vault balance, program existence or admin fee alone.
+
+## Track C — R-03 residual builders
+- R03-Kamino: pin generated flash borrow/repay modules and IDL; exact instruction-index remapping and reserve fee/rounding; never guess ABI.
+- R03-P0: existing-account-only plan; public address check is optional; no init or signer.
+- Jupiter/NAVI builds remain offline unsigned, not routes. `build_status` never substitutes for capacity evidence.
+
+## Track D — gated integration chain
+| ID | Scope | Entry gate |
 |---|---|---|
-| R-01 reconciliation | #584 merged | COMPLETE; do not rerun or remerge legacy branches |
-| QPR-01 authority/fixes | reconciled mainline | verify owners; no duplicate implementation |
-| R-02 prerequisite observations | #585 merged | BLOCKED; zero qualified capital edges; preserve negative evidence |
-| R-02 offline SDK pack | #586 merged | use local pins; do not re-vendor |
-| Solana P0 offline master | #588 merged | three market-data tasks already written |
-| Raydium/Meteora references | #589 merged | verify local blobs; Orca license blocker remains |
-| Whole-project agent handoff | #591/#592 merged | current orchestration base; use this parallelized successor |
+| R04 | amount/capital-aware route selector using existing graph/solver/sizer | same-generation exact per-size venue quotes + qualified relevant capital + builder |
+| R05 | complete unsigned Solana message/Sui PTB/EVM transaction simulation | R04 candidate + same-state dependencies + borrow/repay/callback/object closure + all costs |
+| R06 | durable paper qualification including negatives/no-trade | R05 evidence + QPR readiness + replay/holdout |
+| R07 | one provider/venue per focused PR | license/deployment/identity/state/fee/cap/builder/simulation and incremental utility |
+| R08 | runtime composition / boot-path audit | canonical contracts only; no second authority |
 
-## Track A — Solana market-data (parallel after shared identity/evidence contract)
-| ID | Assignment |
-|---|---|
-| P0-1 | docs/roadmap/p0-offline-execution-master-2026-11-13/tasks/P0-1_SOLANA_INTAKE_DYNAMIC_UNIVERSE.md |
-| P0-2 | docs/roadmap/p0-offline-execution-master-2026-11-13/tasks/P0-2_JUPITER_0X_QUOTES.md |
-| P0-3 | docs/roadmap/p0-offline-execution-master-2026-11-13/tasks/P0-3_DIRECT_STATE_VERIFICATION.md |
-| P1/P2 source expansion | docs/roadmap/p0-offline-execution-master-2026-11-13/tasks/P1_P2_AFTER_P0.md |
+## Track E — remaining whole-project lanes
+- R09: Sui GPR-03 transport/checkpoint remediation, TON radar, one-chain EVM pilot, CEX/oracle/reference feed governance.
+- R10: expanded strategy crosswalk + falsifiable research (see `tasks/R10_STRATEGIES_AND_INTELLIGENCE.md` and the master strategy overlay).
+- R13: multiprovider quote/build research (Titan/OKX/OpenOcean/Rango; Sui Aftermath/Cetus/7K/FlowX) while preserving P0-2 as sole Jupiter V2/0x owner.
+- R14: four-tier rent sponsorship/Slumlord economics tied to unsigned builders; rent sponsorship is not trading-capital or network-fee sponsorship.
+- R11: base Windows/mypy fix is in main; triage the remaining ~60 previously documented Windows failures in bounded groups.
+- R12: strict pip-audit 0 findings is in main; only repeat on lockfile/advisory change.
 
-## Track B — flash-capital R-02 (four independent read-only readers)
-| ID | Assignment |
-|---|---|
-| R02-CAP-A Jupiter Lend | tasks/R02_CAPITAL_READERS.md |
-| R02-CAP-B Kamino | tasks/R02_CAPITAL_READERS.md |
-| R02-CAP-C NAVI | tasks/R02_CAPITAL_READERS.md |
-| R02-CAP-D Project 0 bank-only | tasks/R02_CAPITAL_READERS.md |
+## Global evidence vocabulary
+`IN_MAIN_VERIFIED`, `IMPLEMENTED_UNQUALIFIED`, `IMPLEMENTED_UNBOUND`, `PARTIAL_DECODED`, `FIXTURE_ONLY`, `BUILT_OFFLINE_UNQUALIFIED`, `LIVE_READ_PROVEN`, `RPC_EXACT`, `SIMULATION_PASS`, `PAPER_QUALIFIED`, `BLOCKED`, `RETIRED`, `RESEARCH_ONLY`, `SIGNAL_ONLY`. A PASS names main SHA, source/config generation, immutable hash, rooted slot/checkpoint/block, exact resource and tests/replay. Unknown is never zero.
 
-Detailed source baseline: docs/roadmap/r02-capacity-recovery-2026-10-08/ and docs/roadmap/r01-r02-live-capital-readers-2026-10-08/offline/.
+## Parallel dispatch
+One coordinator and ~4–8 independent workers is a practical starting point, not a hard target. Isolate worktrees. Freeze interfaces before parallel writes. Never let agents collide in AssetResolver, Dynamic Universe/source catalog, QPR/DIN, quote normalizers, FlashCapitalGraph, unsigned-plan, exact simulation or runtime authority.
 
-## Track C — R-03 unsigned builders
-| ID | Assignment |
-|---|---|
-| R03-00 common contract | tasks/R03_UNSIGNED_BUILDERS.md |
-| R03-A Jupiter | tasks/R03_UNSIGNED_BUILDERS.md |
-| R03-B Kamino | tasks/R03_UNSIGNED_BUILDERS.md |
-| R03-C NAVI | tasks/R03_UNSIGNED_BUILDERS.md |
-| R03-D Project 0 | tasks/R03_UNSIGNED_BUILDERS.md |
-
-R03 contract-only and offline fixtures can run while R02 is blocked. No live-capital-backed promotion until the matching R02 proof passes.
-
-## Track D — route / simulation / paper / providers
-| ID | Assignment | Dependency |
-|---|---|---|
-| R04 | tasks/R04_CAPITAL_AWARE_ROUTE_SELECTOR.md | exact quotes + relevant R02 capacity + R03 builder |
-| R05 | tasks/R05_EXACT_ATOMIC_SIMULATION.md | R04 candidate and full current state |
-| R06 | tasks/R06_PAPER_QUALIFICATION.md | existing QPR/campaign readiness PASS + R05 |
-| R07 | tasks/R07_PROVIDER_EXPANSION.md | one provider per PR; source/deployment/reader/builder/simulation proof |
-
-R07 source research can run throughout; provider activation is individually gated.
-
-## Track E — whole-project additional assignments
-| ID | Assignment | Parallel scope |
-|---|---|---|
-| R08 | tasks/R08_RUNTIME_COMPOSITION_INTEGRATION.md | audit current app composition and missing owner injections; code only after contract/gates |
-| R09 | tasks/R09_MULTICHAIN_AND_DATA_FEEDS.md | Sui, TON, EVM, CEX, oracle and reference data |
-| R10 | tasks/R10_STRATEGIES_AND_INTELLIGENCE.md | strategy coverage, graph, correlations, ML and replay experiments |
-| R11 | tasks/R11_PLATFORM_CI_AND_REPRODUCIBILITY.md | Windows/WSL, CI, packaging, offline verifiers and test reliability |
-| R12 | tasks/R12_DEPENDENCY_SECURITY_REMEDIATION.md | Remediate current strict pip-audit blockers in pinned dependency locks |
-
-## Parallel execution policy
-Start independent tracks A, B, C-00, E and source research concurrently in isolated worktrees. Workers may begin read-only audits, technical source verification, offline fixtures and contract proposals while dependencies are pending. The lead freezes shared interfaces before multiple workers edit a common owner. E1/R04 and later integration stages may prepare design/tests but cannot claim readiness until their evidence dependencies pass.
-
-## Track F — quote/build and rent economics specialist lanes
-| ID | Assignment | Parallel scope / dependency |
-|---|---|---|
-| R13 | tasks/R13_MULTIPROVIDER_QUOTES_AND_BUILDS.md | Research and qualify Solana/Sui providers in parallel; shared quote/build contracts must be frozen; P0-2 owns Jupiter V2 + 0x baseline |
-| R14 | tasks/R14_RENT_SPONSOR_INTEGRATION.md | Audit/implement route-level existing-account/provider-sponsor/Slumlord/persistent-rent choice; freeze with R03 and R13 before integration |
-
-R13/R14 extend documented Universal Source + Execution contracts. The files are design baselines, not proof that all provider adapters or RentSponsorPlanner are implemented in code. Inspect actual callsites and package boundaries before changing owners.
-
-## Global evidence states
-Use IN_MAIN_VERIFIED, IMPLEMENTED_UNQUALIFIED, IMPLEMENTED_UNBOUND, OPEN_PR_NOT_IN_MAIN, FIXTURE_ONLY, STUB, PLANNED, LIVE_READ_PROVEN, RPC_EXACT, BUILT_OFFLINE_UNQUALIFIED, SIMULATION_PASS, PAPER_QUALIFIED, BLOCKED and RETIRED. Each PASS identifies commit, config/source generation, evidence hashes, slot/checkpoint, tests and replay command.
-
-## Global safety
-No private material, account creation, token-account creation, signer loading, sending, borrowing, spending, production promotion or env-flag bypass. No provider is enabled because it appears in the catalog or has an adapter class. No mass merge. 
-
-
-## Whole-project orchestration references
-- Multi-agent launch matrix and collision/dependency rules: docs/roadmap/agent-execution-master-2026-11-13/MULTI_AGENT_EXECUTION_PLAN.md
-- Current-main knowledge/owner map: docs/roadmap/agent-execution-master-2026-11-13/PROJECT_KNOWLEDGE_BASE_MAP.md
-- Machine-readable initial workstream status: docs/roadmap/agent-execution-master-2026-11-13/PROJECT_STATUS.json (refresh before implementation)
-- Full orchestrator prompt: docs/roadmap/agent-execution-master-2026-11-13/PARALLEL_AGENT_LAUNCH_PROMPT.md
-- GLM-5.3-Flash operating guide: docs/roadmap/agent-execution-master-2026-11-13/GLM_AGENT_OPERATING_GUIDE.md
+## Safety
+No private material, account/ATA/obligation creation, signer, send, borrowing, spending, deployments, provider activation, production promotion or env-flag bypass. No mass merge.

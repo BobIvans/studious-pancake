@@ -1,0 +1,202 @@
+{
+  "schema_version": "studious-pancake.master-pr-inventory.v1",
+  "audited_main_sha": "86be458a87ed3f499cc32ff56426b2866c90422a",
+  "audited_at_utc": "2026-11-13T20:04:46Z",
+  "entries": [
+    {
+      "pr": 595,
+      "title": "docs: broaden agent handoff to parallel whole-project execution",
+      "state": "MERGED",
+      "merged_at": "2026-11-13T20:04:47Z",
+      "workstream": "orchestration",
+      "decision": "CURRENT_CANONICAL_MASTER; reuse docs/roadmap/agent-execution-master-2026-11-13/"
+    },
+    {
+      "pr": 594,
+      "title": "Docs: parallel master execution mandate for Codex/GLM",
+      "state": "OPEN_STALE_DIVERGED",
+      "workstream": "orchestration",
+      "decision": "DO_NOT_MERGE_UNCHANGED; compare unique text against #595 and port only if missing"
+    },
+    {
+      "pr": 593,
+      "title": "P0-1: safe Solana indexed intake -> Dynamic Universe",
+      "state": "OPEN_NOT_IN_MAIN",
+      "workstream": "P0-1",
+      "head": "codex/p0-1-solana-intake-dynamic-universe-2026-11-13",
+      "ahead_at_last_compare": 4,
+      "behind_at_last_compare": 64,
+      "decision": "REVIEW_AND_REBASE_EXISTING_WORK; no duplicate P0-1 agent"
+    },
+    {
+      "pr": 592,
+      "title": "Refresh P0/R-02 handoff cross-links",
+      "state": "MERGED",
+      "workstream": "orchestration",
+      "decision": "ALREADY_IN_MAIN"
+    },
+    {
+      "pr": 591,
+      "title": "Unified offline-first coding-agent handoff",
+      "state": "MERGED",
+      "workstream": "orchestration",
+      "decision": "ALREADY_IN_MAIN; restores broad R-02 offline source docs superseding #583"
+    },
+    {
+      "pr": 590,
+      "title": "P0-0 baseline and reconciliation",
+      "state": "CLOSED_NOT_MERGED",
+      "workstream": "P0 baseline",
+      "decision": "SUPERSEDED_BY #595 and refreshed master; do not merge"
+    },
+    {
+      "pr": 589,
+      "title": "Pinned Raydium and Meteora source references",
+      "state": "MERGED",
+      "workstream": "P0-3",
+      "decision": "REFERENCE_FILES_IN_MAIN; not a live exact-state reader"
+    },
+    {
+      "pr": 588,
+      "title": "P0 master handoff",
+      "state": "MERGED",
+      "workstream": "P0",
+      "decision": "ASSIGNMENTS_IN_MAIN; P0-1/2/3 separate lanes"
+    },
+    {
+      "pr": 586,
+      "title": "R-02 capacity recovery offline SDK references",
+      "state": "MERGED",
+      "merged_at": "2026-11-13T18:59:26Z",
+      "workstream": "R02/R03",
+      "decision": "OFFLINE_REFERENCES_IN_MAIN; not live reader/capacity proof"
+    },
+    {
+      "pr": 583,
+      "title": "R-01/R-02 offline R&D",
+      "state": "CLOSED_NOT_MERGED",
+      "workstream": "R02 docs",
+      "decision": "SUPERSEDED; do not merge"
+    },
+    {
+      "pr": 578,
+      "title": "Historical RCN-00 QPR/GPR reconciliation R&D",
+      "state": "OPEN_HISTORICAL",
+      "workstream": "R01",
+      "decision": "R01 COMPLETE #584; inspect unique material only, no remerge"
+    }
+  ],
+  "dependencies": [
+    {
+      "id": "MASTER-00",
+      "depends_on": [
+        "current main/PR refresh",
+        "archive inventory"
+      ],
+      "unblocks": [
+        "P0 interface freeze",
+        "strategy crosswalk",
+        "agent owner map"
+      ]
+    },
+    {
+      "id": "P0-1",
+      "depends_on": [
+        "MASTER-00 identity/evidence envelope"
+      ],
+      "parallel_with": [
+        "P0-2",
+        "P0-3"
+      ],
+      "note": "Existing PR #593 is open and must be rebased/reviewed first."
+    },
+    {
+      "id": "P0-2",
+      "depends_on": [
+        "MASTER-00 identity/evidence envelope"
+      ],
+      "parallel_with": [
+        "P0-1",
+        "P0-3"
+      ],
+      "note": "Migrate existing quote owner, no duplicate quote engine."
+    },
+    {
+      "id": "P0-3",
+      "depends_on": [
+        "MASTER-00 identity/evidence envelope"
+      ],
+      "parallel_with": [
+        "P0-1",
+        "P0-2"
+      ],
+      "note": "CPMM exists; CLMM/DLMM missing exact state; Orca license gate."
+    },
+    {
+      "id": "R02-CAP-A-D",
+      "depends_on": [
+        "R02 source/ABI pins and QPR/DIN authority"
+      ],
+      "parallel_with": [
+        "P0-1/2/3",
+        "R03-00"
+      ],
+      "blocks": [
+        "R04 capital availability"
+      ]
+    },
+    {
+      "id": "R03-00",
+      "depends_on": [
+        "shared unsigned plan interface"
+      ],
+      "parallel_with": [
+        "R02 readers as offline contracts"
+      ],
+      "blocks": [
+        "provider-specific route building"
+      ]
+    },
+    {
+      "id": "R04",
+      "depends_on": [
+        "exact market quotes",
+        "relevant R02 capacity",
+        "relevant R03 builder"
+      ],
+      "blocks": [
+        "R05"
+      ]
+    },
+    {
+      "id": "R05",
+      "depends_on": [
+        "R04 candidates",
+        "complete current state/unsigned message"
+      ],
+      "blocks": [
+        "R06"
+      ]
+    },
+    {
+      "id": "R06",
+      "depends_on": [
+        "QPR readiness PASS",
+        "R05 simulation evidence"
+      ],
+      "blocks": [
+        "review for paper qualification"
+      ]
+    },
+    {
+      "id": "R07",
+      "depends_on": [
+        "individual provider source/fee/cap/builder/simulation proof"
+      ],
+      "parallel_with": [
+        "research only; not activation"
+      ]
+    }
+  ],
+  "merge_policy": "No mass merges. The owner explicitly authorizes merging this documentation update only. Code PRs remain review-only unless separately approved."
+}

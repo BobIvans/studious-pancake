@@ -353,7 +353,7 @@ Definition of complete: every archive family/market/source/strategy has a truthf
 
 ## 19. Owner-authorized autonomous engineering scope
 
-The repository owner authorizes the coding agent to carry this assignment through as an autonomous engineering campaign within the repository's granted GitHub permissions:
+The repository owner explicitly grants the coding agent autonomous repository-engineering authority for this defined Studious Pancake campaign, including implementation, review, creation and merge of its in-scope PRs. The user's direct instruction in the ChatGPT conversation on 2026-11-14 (requesting full agent authority to execute and merge) is the explicit human approval required by AGENTS.md rule 11 for this campaign. This delegated approval is limited to the strategy / Build Bigger Universe / flashloan engineering assignments and PRs produced by them; it is not a blanket approval for unrelated PRs or external financial actions:
 - Read the complete repository, source, tests, history, PR diffs, archived ZIP lineage and current project documentation; search official protocol documentation and source repositories.
 - Perform source/version/license/entitlement research, inspect SDK/IDL/ABI/deployments, and update the knowledge base and machine-readable crosswalk.
 - Create isolated branches/worktrees, write and refactor production/research code, tests, fixtures, docs and bounded CI tooling; run local tests, type/format/security/repository checks.

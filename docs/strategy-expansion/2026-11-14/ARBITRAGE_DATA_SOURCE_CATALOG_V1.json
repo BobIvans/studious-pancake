@@ -2134,6 +2134,106 @@
       ],
       "tier": "CONDITIONAL_RIGHTS",
       "limits": "Caller-specific limits, queues, maturity and claim settlement must be proven"
+    },
+    {
+      "id": "SRC-QUOTE-05",
+      "name": "EVM quote routers (1inch / Odos / ParaSwap / Kyber / 0x)",
+      "domain": "EVM",
+      "role": "AGGREGATOR_QUOTE_CANDIDATES",
+      "official_docs": null,
+      "data": [
+        "exact-in/out routes",
+        "fees",
+        "route legs",
+        "transaction or calldata builders"
+      ],
+      "strategy_use": [
+        "EVM direct-vs-synthetic",
+        "split flow",
+        "multihop"
+      ],
+      "tier": "QUOTE_NOT_INDEPENDENT_LIQUIDITY",
+      "limits": "Verify current official endpoint, chain support, auth, quota, response semantics and underlying pool correlation per provider"
+    },
+    {
+      "id": "SRC-CLAIM-02",
+      "name": "Pendle PT/YT and SY markets",
+      "domain": "EVM",
+      "role": "MATURITY_AND_YIELD_RIGHTS",
+      "official_docs": "https://docs.pendle.finance/",
+      "data": [
+        "market maturity",
+        "SY/PT/YT rates",
+        "market liquidity",
+        "redemption"
+      ],
+      "strategy_use": [
+        "PT/YT parity",
+        "maturity",
+        "yield basis"
+      ],
+      "tier": "CONDITIONAL_RIGHTS",
+      "limits": "Maturity redemption and pre-maturity DEX sale are separate; verify official SDK and queue/fee rules"
+    },
+    {
+      "id": "SRC-CLAIM-03",
+      "name": "Stablecoin PSM / issuer mint-redeem",
+      "domain": "Multi-chain",
+      "role": "ISSUER_REDEMPTION_STATE",
+      "official_docs": null,
+      "data": [
+        "mint/redeem permissions",
+        "caps",
+        "fees",
+        "buffers",
+        "queues",
+        "collateral state"
+      ],
+      "strategy_use": [
+        "stable triangles",
+        "PSM arbitrage",
+        "stable depeg"
+      ],
+      "tier": "CONDITIONAL_RIGHTS",
+      "limits": "Protocol-specific exact issuer docs, caller eligibility and real-time buffer/limits required"
+    },
+    {
+      "id": "SRC-CLAIM-04",
+      "name": "Conditional Tokens / prediction market claims",
+      "domain": "EVM",
+      "role": "CONDITIONAL_CLAIM_HYPEREDGE",
+      "official_docs": "https://github.com/gnosis/conditional-tokens-contracts",
+      "data": [
+        "outcome slots",
+        "split/merge",
+        "resolution",
+        "ERC-1155 balances"
+      ],
+      "strategy_use": [
+        "complete-set parity",
+        "conditional claims"
+      ],
+      "tier": "CONDITIONAL_RIGHTS",
+      "limits": "Resolution and merge rights; outcome vector is not an ordinary token pair"
+    },
+    {
+      "id": "SRC-BRIDGE-02",
+      "name": "Circle CCTP",
+      "domain": "Cross-chain",
+      "role": "BURN_MINT_ATTESTED_MESSAGE",
+      "official_docs": "https://developers.circle.com/cctp",
+      "data": [
+        "message nonce",
+        "attestation",
+        "source/destination domains",
+        "burn/mint events"
+      ],
+      "strategy_use": [
+        "flow-triggered local scan",
+        "inventory rebalance"
+      ],
+      "tier": "ASYNC_REFERENCE_OR_INVENTORY",
+      "limits": "Asynchronous message/attestation; not same-transaction flash capital"
     }
   ],
   "integration_assignments": [
@@ -2275,5 +2375,418 @@
     "Sui JSON-RPC mainnet is disabled; new Sui data readers use gRPC/GraphQL/checkpoints.",
     "DefiLlama free yield endpoint and GeckoTerminal/CoinGecko current quotas are subject to changed commercial terms.",
     "No wallet/account creation, signing, sending, borrowing, spending or production promotion."
+  ],
+  "strategy_source_requirements": [
+    {
+      "strategy_id": "STRAT-01",
+      "source_ids": [
+        "SRC-SOL-01",
+        "SRC-SOL-02",
+        "SRC-SUI-01",
+        "SRC-EVM-01",
+        "SRC-DEX-01",
+        "SRC-DEX-02",
+        "SRC-DEX-03",
+        "SRC-DEX-05",
+        "SRC-DEX-07",
+        "SRC-QUOTE-01",
+        "SRC-QUOTE-02",
+        "SRC-QUOTE-05"
+      ],
+      "notes": "These are minimum source families to assess, not proof of a current adapter, live data or executable route."
+    },
+    {
+      "strategy_id": "STRAT-02",
+      "source_ids": [
+        "SRC-SOL-01",
+        "SRC-SUI-01",
+        "SRC-EVM-01",
+        "SRC-DEX-01",
+        "SRC-DEX-02",
+        "SRC-DEX-03",
+        "SRC-DEX-05",
+        "SRC-DEX-07",
+        "SRC-QUOTE-01",
+        "SRC-QUOTE-02",
+        "SRC-LEND-01",
+        "SRC-LEND-04",
+        "SRC-LEND-07",
+        "SRC-LEND-08"
+      ],
+      "notes": "These are minimum source families to assess, not proof of a current adapter, live data or executable route."
+    },
+    {
+      "strategy_id": "STRAT-03",
+      "source_ids": [
+        "SRC-DEX-04",
+        "SRC-DEX-05",
+        "SRC-CEX-01",
+        "SRC-CEX-02",
+        "SRC-CEX-03",
+        "SRC-CEX-04",
+        "SRC-QUOTE-01",
+        "SRC-INTENT-01"
+      ],
+      "notes": "These are minimum source families to assess, not proof of a current adapter, live data or executable route."
+    },
+    {
+      "strategy_id": "STRAT-04",
+      "source_ids": [
+        "SRC-ORACLE-01",
+        "SRC-ORACLE-02",
+        "SRC-ORACLE-03",
+        "SRC-DEX-01",
+        "SRC-DEX-02",
+        "SRC-DEX-05",
+        "SRC-CLAIM-01"
+      ],
+      "notes": "These are minimum source families to assess, not proof of a current adapter, live data or executable route."
+    },
+    {
+      "strategy_id": "STRAT-05",
+      "source_ids": [
+        "SRC-SOL-01",
+        "SRC-SOL-02",
+        "SRC-DEX-02",
+        "SRC-DEX-03",
+        "SRC-DEX-04"
+      ],
+      "notes": "These are minimum source families to assess, not proof of a current adapter, live data or executable route."
+    },
+    {
+      "strategy_id": "STRAT-06",
+      "source_ids": [
+        "SRC-EVM-01",
+        "SRC-CLAIM-01",
+        "SRC-ORACLE-01"
+      ],
+      "notes": "These are minimum source families to assess, not proof of a current adapter, live data or executable route."
+    },
+    {
+      "strategy_id": "STRAT-07",
+      "source_ids": [
+        "SRC-CLAIM-02",
+        "SRC-EVM-01",
+        "SRC-DEX-07"
+      ],
+      "notes": "These are minimum source families to assess, not proof of a current adapter, live data or executable route."
+    },
+    {
+      "strategy_id": "STRAT-08",
+      "source_ids": [
+        "SRC-CLAIM-03",
+        "SRC-ORACLE-01",
+        "SRC-ORACLE-02",
+        "SRC-DEX-07"
+      ],
+      "notes": "These are minimum source families to assess, not proof of a current adapter, live data or executable route."
+    },
+    {
+      "strategy_id": "STRAT-09",
+      "source_ids": [
+        "SRC-ORACLE-01",
+        "SRC-ORACLE-02",
+        "SRC-INDEX-01"
+      ],
+      "notes": "These are minimum source families to assess, not proof of a current adapter, live data or executable route."
+    },
+    {
+      "strategy_id": "STRAT-10",
+      "source_ids": [
+        "SRC-ORACLE-01",
+        "SRC-ORACLE-02",
+        "SRC-CEX-01",
+        "SRC-CEX-02"
+      ],
+      "notes": "These are minimum source families to assess, not proof of a current adapter, live data or executable route."
+    },
+    {
+      "strategy_id": "STRAT-11",
+      "source_ids": [
+        "SRC-SOL-01",
+        "SRC-SUI-01",
+        "SRC-EVM-01",
+        "SRC-BRIDGE-01",
+        "SRC-BRIDGE-02",
+        "SRC-CLAIM-03"
+      ],
+      "notes": "These are minimum source families to assess, not proof of a current adapter, live data or executable route."
+    },
+    {
+      "strategy_id": "STRAT-12",
+      "source_ids": [
+        "SRC-BRIDGE-01",
+        "SRC-BRIDGE-02",
+        "SRC-SOL-01",
+        "SRC-SUI-01",
+        "SRC-EVM-01"
+      ],
+      "notes": "These are minimum source families to assess, not proof of a current adapter, live data or executable route."
+    },
+    {
+      "strategy_id": "STRAT-13",
+      "source_ids": [
+        "SRC-LEND-01",
+        "SRC-LEND-02",
+        "SRC-LEND-03",
+        "SRC-LEND-04",
+        "SRC-LEND-05",
+        "SRC-LEND-07",
+        "SRC-LEND-08",
+        "SRC-LEND-09",
+        "SRC-LEND-10"
+      ],
+      "notes": "These are minimum source families to assess, not proof of a current adapter, live data or executable route."
+    },
+    {
+      "strategy_id": "STRAT-14",
+      "source_ids": [
+        "SRC-EVM-01",
+        "SRC-QUOTE-05"
+      ],
+      "notes": "These are minimum source families to assess, not proof of a current adapter, live data or executable route."
+    },
+    {
+      "strategy_id": "STRAT-15",
+      "source_ids": [
+        "SRC-DEX-07",
+        "SRC-EVM-01",
+        "SRC-INDEX-01"
+      ],
+      "notes": "These are minimum source families to assess, not proof of a current adapter, live data or executable route."
+    },
+    {
+      "strategy_id": "STRAT-16",
+      "source_ids": [
+        "SRC-DEX-10",
+        "SRC-EVM-01",
+        "SRC-INDEX-01"
+      ],
+      "notes": "These are minimum source families to assess, not proof of a current adapter, live data or executable route."
+    },
+    {
+      "strategy_id": "STRAT-17",
+      "source_ids": [
+        "SRC-LEND-09",
+        "SRC-EVM-01"
+      ],
+      "notes": "These are minimum source families to assess, not proof of a current adapter, live data or executable route."
+    },
+    {
+      "strategy_id": "STRAT-18",
+      "source_ids": [
+        "SRC-LEND-10",
+        "SRC-EVM-01"
+      ],
+      "notes": "These are minimum source families to assess, not proof of a current adapter, live data or executable route."
+    },
+    {
+      "strategy_id": "STRAT-19",
+      "source_ids": [
+        "SRC-EVM-01",
+        "SRC-INDEX-01"
+      ],
+      "notes": "These are minimum source families to assess, not proof of a current adapter, live data or executable route."
+    },
+    {
+      "strategy_id": "STRAT-20",
+      "source_ids": [
+        "SRC-CLAIM-04",
+        "SRC-EVM-01",
+        "SRC-INDEX-01"
+      ],
+      "notes": "These are minimum source families to assess, not proof of a current adapter, live data or executable route."
+    },
+    {
+      "strategy_id": "STRAT-21",
+      "source_ids": [
+        "SRC-INTENT-01",
+        "SRC-QUOTE-05",
+        "SRC-EVM-01"
+      ],
+      "notes": "These are minimum source families to assess, not proof of a current adapter, live data or executable route."
+    },
+    {
+      "strategy_id": "STRAT-22",
+      "source_ids": [
+        "SRC-LEND-01",
+        "SRC-LEND-02",
+        "SRC-LEND-04",
+        "SRC-LEND-07",
+        "SRC-LEND-08",
+        "SRC-CEX-04",
+        "SRC-ORACLE-01"
+      ],
+      "notes": "These are minimum source families to assess, not proof of a current adapter, live data or executable route."
+    },
+    {
+      "strategy_id": "STRAT-23",
+      "source_ids": [
+        "SRC-ORACLE-01",
+        "SRC-ORACLE-02",
+        "SRC-LEND-01",
+        "SRC-LEND-02",
+        "SRC-LEND-04",
+        "SRC-LEND-07",
+        "SRC-LEND-08"
+      ],
+      "notes": "These are minimum source families to assess, not proof of a current adapter, live data or executable route."
+    },
+    {
+      "strategy_id": "STRAT-24",
+      "source_ids": [
+        "SRC-CEX-01",
+        "SRC-CEX-02",
+        "SRC-CEX-03",
+        "SRC-CEX-04",
+        "SRC-ORACLE-01",
+        "SRC-ORACLE-02"
+      ],
+      "notes": "These are minimum source families to assess, not proof of a current adapter, live data or executable route."
+    },
+    {
+      "strategy_id": "STRAT-25",
+      "source_ids": [
+        "SRC-BRIDGE-01",
+        "SRC-BRIDGE-02",
+        "SRC-SOL-01",
+        "SRC-SUI-01",
+        "SRC-EVM-01",
+        "SRC-CEX-01",
+        "SRC-CEX-04"
+      ],
+      "notes": "These are minimum source families to assess, not proof of a current adapter, live data or executable route."
+    }
+  ],
+  "exp_strategy_source_overlay": [
+    {
+      "strategy_id": "EXP-01",
+      "source_ids": [
+        "SRC-SOL-01",
+        "SRC-SOL-02",
+        "SRC-QUOTE-01",
+        "SRC-QUOTE-02",
+        "SRC-QUOTE-03"
+      ]
+    },
+    {
+      "strategy_id": "EXP-02",
+      "source_ids": [
+        "SRC-SOL-01",
+        "SRC-SOL-02",
+        "SRC-DEX-03",
+        "SRC-DEX-02"
+      ]
+    },
+    {
+      "strategy_id": "EXP-03",
+      "source_ids": [
+        "SRC-SOL-01",
+        "SRC-DEX-01",
+        "SRC-DEX-02",
+        "SRC-DEX-03"
+      ]
+    },
+    {
+      "strategy_id": "EXP-04",
+      "source_ids": [
+        "SRC-SOL-01",
+        "SRC-DEX-01",
+        "SRC-DEX-02"
+      ]
+    },
+    {
+      "strategy_id": "EXP-05",
+      "source_ids": [
+        "SRC-ORACLE-01",
+        "SRC-ORACLE-02",
+        "SRC-LEND-01",
+        "SRC-LEND-02",
+        "SRC-LEND-04",
+        "SRC-LEND-07"
+      ]
+    },
+    {
+      "strategy_id": "EXP-06",
+      "source_ids": [
+        "SRC-SOL-01",
+        "SRC-SUI-01",
+        "SRC-EVM-01",
+        "SRC-INDEX-01"
+      ]
+    },
+    {
+      "strategy_id": "EXP-07",
+      "source_ids": [
+        "SRC-CEX-01",
+        "SRC-CEX-02",
+        "SRC-CEX-04",
+        "SRC-QUOTE-01",
+        "SRC-QUOTE-02"
+      ]
+    },
+    {
+      "strategy_id": "EXP-08",
+      "source_ids": [
+        "SRC-INTENT-01",
+        "SRC-QUOTE-05"
+      ]
+    },
+    {
+      "strategy_id": "EXP-09",
+      "source_ids": [
+        "SRC-CEX-01",
+        "SRC-CEX-02",
+        "SRC-CEX-03",
+        "SRC-CEX-04",
+        "SRC-ORACLE-01",
+        "SRC-ORACLE-02"
+      ]
+    },
+    {
+      "strategy_id": "EXP-10",
+      "source_ids": [
+        "SRC-DEX-07",
+        "SRC-EVM-01",
+        "SRC-INDEX-01"
+      ]
+    }
+  ],
+  "status_semantics": {
+    "ARCHIVE_HYPOTHESIS": "Historical archive item; no current market/capacity proof.",
+    "DOCUMENTATION_REVIEWED": "Official documentation page inspected; SDK/API version and deployed state still need pinning.",
+    "REPO_ADAPTER_MERGED": "Adapter code is in repo; live entitlement and route qualification remain separate.",
+    "DISCOVERY_ONLY": "May generate candidates; cannot supply execution state by itself.",
+    "QUOTE_NOT_INDEPENDENT_LIQUIDITY": "Quote result is not a second independent pool; preserve provider correlation and route lineage.",
+    "WITHDRAWALS_ONLY": "Not an active swap venue except an explicitly verified deployment/pool exception.",
+    "BLOCKED_LICENSE": "No vendor source reuse until exact license permits it.",
+    "BLOCKED_CAPACITY": "Primitive exists or is documented but live amount capacity not proven.",
+    "WIRED_SHADOW": "Connected through installed supported composition and reproducible sender-free receipts.",
+    "PAPER_QUALIFIED": "Only after existing campaign readiness and full route/simulation gates pass."
+  },
+  "current_external_caveats": [
+    {
+      "source": "Balancer BIP-928",
+      "status": "MOST_POOLS_WITHDRAWALS_ONLY",
+      "effective_date": "2026-10-30",
+      "exception": "Partner-requested V3 pools may remain live only until 2026-11-30; verify exact pool list/state."
+    },
+    {
+      "source": "DefiLlama",
+      "status": "FREE_YIELD_POOLS_ENDPOINTS_STOPPED",
+      "effective_date": "2026-11-13",
+      "migration": "/yields/v1/pools and /yields/v1/chart/{pool} require API plan."
+    },
+    {
+      "source": "CoinGecko / GeckoTerminal",
+      "status": "PUBLIC_API_LIMITED",
+      "detail": "CoinGecko public API 5-15 calls/minute; GeckoTerminal higher-rate onchain DEX access is Pro."
+    },
+    {
+      "source": "Sui Foundation Mainnet",
+      "status": "JSON_RPC_DISABLED",
+      "effective_date": "2026-07-27",
+      "migration": "Use gRPC, GraphQL RPC, checkpoints and archive store."
+    }
   ]
 }

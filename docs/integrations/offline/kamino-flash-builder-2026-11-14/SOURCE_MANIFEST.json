@@ -1,0 +1,63 @@
+{
+  "schema": "kamino-flash-builder.source-manifest.v1",
+  "date": "2026-11-14",
+  "purpose": "offline reading and codegen reference only; not an installed dependency, executable runtime, deployed ABI attestation or live evidence",
+  "reproduction": "git blob SHA1 = SHA1('blob '+content.byteLength+'\\0'+content bytes); verify offline via 'git hash-object <local_path>' or verify_offline_bundle.py",
+  "upstream_repository": "https://github.com/Kamino-Finance/klend-sdk",
+  "upstream_commit_sha": "3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8",
+  "package_version": "13.0.2",
+  "package_version_note": "package.json at the pinned commit declares \"version\": \"13.0.2\" (blob efce3196423cab1e81125a74a49014ad36cf6ace, already vendored in docs/roadmap/r02-capacity-recovery-2026-10-08/offline/vendor/kamino/package.json.txt)",
+  "license_label": "MIT (package.json at the pinned commit)",
+  "retrieved_at": "2026-11-14",
+  "retrieval_channel": "raw.githubusercontent.com (raw blob endpoint) at the exact pinned commit; bytes hashed with git hash-object and byte-compared against the raw endpoint output",
+  "entries": [
+    {
+      "local_path": "vendor-reference/klend/flashBorrowReserveLiquidity.ts.txt",
+      "origin": "https://github.com/Kamino-Finance/klend-sdk/blob/3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8/src/@codegen/klend/instructions/flashBorrowReserveLiquidity.ts",
+      "upstream_repository": "Kamino-Finance/klend-sdk",
+      "upstream_commit_sha": "3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8",
+      "upstream_path": "src/@codegen/klend/instructions/flashBorrowReserveLiquidity.ts",
+      "upstream_git_blob_sha": "d3e4062acbfac32d9fdb48604832762c33f31c0e",
+      "license_label": "MIT (package.json)",
+      "bytes": 2888,
+      "reference_only": true
+    },
+    {
+      "local_path": "vendor-reference/klend/flashRepayReserveLiquidity.ts.txt",
+      "origin": "https://github.com/Kamino-Finance/klend-sdk/blob/3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8/src/@codegen/klend/instructions/flashRepayReserveLiquidity.ts",
+      "upstream_repository": "Kamino-Finance/klend-sdk",
+      "upstream_commit_sha": "3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8",
+      "upstream_path": "src/@codegen/klend/instructions/flashRepayReserveLiquidity.ts",
+      "upstream_git_blob_sha": "369cd6ac39e4f160d6482790050c469a6d10d811",
+      "license_label": "MIT (package.json)",
+      "bytes": 3013,
+      "reference_only": true
+    },
+    {
+      "local_path": "vendor-reference/klend/programId.ts.txt",
+      "origin": "https://github.com/Kamino-Finance/klend-sdk/blob/3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8/src/@codegen/klend/programId.ts",
+      "upstream_repository": "Kamino-Finance/klend-sdk",
+      "upstream_commit_sha": "3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8",
+      "upstream_path": "src/@codegen/klend/programId.ts",
+      "upstream_git_blob_sha": "e41d81b7d076e2c85c24bc3b45803c2b974a9b2c",
+      "license_label": "MIT (package.json)",
+      "bytes": 420,
+      "reference_only": true
+    }
+  ],
+  "previously_pinned_entries": [
+    {
+      "note": "ReserveFees borsh layout and Fraction fixed-point semantics were pinned earlier by the R-02 offline kit and remain authoritative for fee decoding/projection",
+      "local_path": "docs/roadmap/r02-capacity-recovery-2026-10-08/offline/vendor/kamino/ReserveFees.ts.txt",
+      "upstream_git_blob_sha": "54358dac24be146a1f7b310d2851dd7b61d69789"
+    },
+    {
+      "local_path": "docs/roadmap/r02-capacity-recovery-2026-10-08/offline/vendor/kamino/fraction.ts.txt",
+      "upstream_git_blob_sha": "0020a1293fd0bced5987b2429a6b5ed8e2f693e8"
+    },
+    {
+      "local_path": "docs/roadmap/r02-capacity-recovery-2026-10-08/offline/vendor/kamino/package.json.txt",
+      "upstream_git_blob_sha": "efce3196423cab1e81125a74a49014ad36cf6ace"
+    }
+  ]
+}

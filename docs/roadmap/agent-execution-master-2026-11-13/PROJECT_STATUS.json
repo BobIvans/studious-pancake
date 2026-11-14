@@ -1,9 +1,9 @@
 {
   "schema_version": "studious-pancake.project-status.v1",
-  "updated_at_utc": "2026-11-13",
+  "updated_at_utc": "2026-11-14",
   "repository": "BobIvans/studious-pancake",
-  "main_sha_at_audit": "215a3544483d73052e796eff79b893d346b10524",
-  "audit_scope": "GitHub read-only audit against main@215a3544483d73052e796eff79b893d346b10524 after PR #597 merged and stale PR #594 closed on 2026-11-13. Inspected current main metadata, PR #593 compare and workflow results, status and key canonical owners. No local checkout/full verifier or new live RPC was run; historical evidence remains historical.",
+  "main_sha_at_audit": "c9ed36b6902502fc4dc51610f0094d27a50fd6fb",
+  "audit_scope": "GitHub read-only main/PR/CI audit after #645 SX-12 and #648 SX-08 merged, with #649 still open. Inspected canonical strategy/runtime owners, strategy archive pack and merged PR evidence through #648. No local Windows checkout/full verifier or new live RPC was run; implementation and live evidence states remain distinct.",
   "status_vocabulary": [
     "IN_MAIN_VERIFIED",
     "IMPLEMENTED_UNQUALIFIED",
@@ -79,7 +79,7 @@
     {
       "id": "SOL-DISC-01",
       "name": "Solana indexed market intake",
-      "status": "OPEN_PR_NOT_IN_MAIN",
+      "status": "IMPLEMENTED_UNQUALIFIED",
       "owners": [
         "src/market/discovery.py",
         "src/solana_parallel_radar/",
@@ -88,19 +88,19 @@
       "evidence": [
         "DIN-01 report and replay",
         "P0-1 assignment",
-        "PR #593 (open; head a3c9fef74c6c01197290890d413ad3e4d5034b4b)"
+        "PR #593 (open; head a3c9fef74c6c01197290890d413ad3e4d5034b4b)",
+        "PR #593 merged; bounded intake/cadence/coverage bridge"
       ],
       "blockers": [
-        "PR #593 contains the cadence/coverage/identity bridge but is not merged. Its base 176f413 now compares 4 commits ahead / 76 behind current main; refresh/rebase before merge.",
-        "All fixtures are synthetic; no live provider capture or complete rooted mint proof was performed in that PR.",
-        "PR #593 Repository verification CI failed strict pip-audit with the existing 68 findings across 9 packages; other visible jobs succeeded. R-12 remains a prerequisite for a clean full CI run."
+        "All PR #593 fixtures are synthetic; no live provider capture or rooted mint quorum was proven.",
+        "Source schemas/entitlements and full current market coverage remain unqualified."
       ],
-      "next": "Refresh/rebase #593 on current main; rerun focused/full verifier and strict dependency audit, then merge only after clean CI and review; preserve source blockers."
+      "next": "Use merged bounded scheduler and identity-fail-closed handoff; obtain separately authorized live root/source receipts before exact market promotion."
     },
     {
       "id": "SOL-QUOTE-01",
       "name": "Jupiter V2 + 0x comparable quotes",
-      "status": "IMPLEMENTED_UNBOUND",
+      "status": "IMPLEMENTED_UNQUALIFIED",
       "owners": [
         "src/solana_parallel_radar/probes.py",
         "src/solana_parallel_radar/cli.py",
@@ -108,12 +108,13 @@
       ],
       "evidence": [
         "P0-2 assignment",
-        "Jupiter V2 OpenAPI mirror"
+        "Jupiter V2 OpenAPI mirror",
+        "PR #604 Jupiter V2 + 0x owner"
       ],
       "blockers": [
-        "Historical main probe used Jupiter V1 /swap/v1/quote; V2 migration, source auth, comparable live captures and replay require recheck."
+        "0x and Jupiter live comparable quote capture still requires provider entitlement/public taker and explicit opt-in; no quote extrapolation."
       ],
-      "next": "P0-2 migrate existing owner; do not add duplicate router."
+      "next": "Run bounded authorized P0-2 capture and replay same canonical pair/amount/time, retaining losing quotes and correlation."
     },
     {
       "id": "SOL-STATE-01",
@@ -125,12 +126,13 @@
       ],
       "evidence": [
         "P0-3 assignment",
-        "PR #589 pinned Raydium/Meteora source references"
+        "PR #589 pinned Raydium/Meteora source references",
+        "PR #613 Raydium CLMM/Meteora DLMM state/math"
       ],
       "blockers": [
-        "Raydium CPMM canonical owner needs current exact-state proof; CLMM/DLMM readers incomplete; Orca custom license review blocked."
+        "Decoder/math implementation is not itself live state proof, exact quote qualification or evaluator binding; Orca custom license remains blocked."
       ],
-      "next": "P0-3 complete one venue reader at a time with full dependencies and exact-in math."
+      "next": "Bind verified exact state to quote/route evaluators; keep Orca excluded pending legal/source review."
     },
     {
       "id": "SUI-DATA-01",
@@ -143,12 +145,13 @@
       ],
       "evidence": [
         "DIN-02 report/replay",
-        "GPR-03 PR #573 restored by #579"
+        "GPR-03 PR #573 restored by #579",
+        "PR #635 Sui/EVM source dossiers"
       ],
       "blockers": [
-        "Historical 21 coin/24 market sample is not current; current package/object/checkpoint, decimals and depth/fee proofs need live capture."
+        "Current independent checkpoint/object state, source availability and exact depth/fee semantics remain to be verified per venue."
       ],
-      "next": "R09 Sui lane; distinguish DEX state from lender capacity."
+      "next": "Continue Sui direct-state/provider lanes; NAVI capacity reader remains separate R02-CAP-C."
     },
     {
       "id": "TON-RADAR-01",
@@ -158,12 +161,13 @@
         "src/discovery/dynamic_universe/ton_radar.py"
       ],
       "evidence": [
-        "Dynamic Universe implementation report"
+        "Dynamic Universe implementation report",
+        "PR #620/#630 TON ingestion/source dossiers"
       ],
       "blockers": [
-        "Read-only discovery/async classification; current source schema and atomic flash-borrow/repay path not proven."
+        "TON route/settlement remains asynchronous; no atomic flash borrow/repay path is proven."
       ],
-      "next": "Keep radar; pin current sources; research execution primitive separately."
+      "next": "Keep discovery/signal/rebalance only; validate source pins and independent direct-pool state."
     },
     {
       "id": "EVM-DATA-01",
@@ -177,9 +181,9 @@
         "AGG-11 multichain models/capability registry"
       ],
       "blockers": [
-        "Deployment pins, ABI/bytecode, real capacity, receiver/callback and fork simulation missing."
+        "Per-venue deployed chain/contract/bytecode pins, current on-chain state, callback semantics, capital capacity and fork simulation remain incomplete; Euler BSL licensing is blocked."
       ],
-      "next": "R09 source and deployment dossiers; no live executor claim."
+      "next": "Continue one venue/source dossier at a time; keep EVM candidates disabled until deployed-state and execution semantics are independently proven."
     },
     {
       "id": "CAP-R02",
@@ -196,17 +200,18 @@
       "evidence": [
         "PR #585 negative capture",
         "PR #586 merged offline SDK pack",
-        "PR #591 merged 27-provider dossier"
+        "PR #591 merged 27-provider dossier",
+        "PR #602 CAP-A, #609 CAP-C, #612 CAP-B, #619 CAP-D merged reader slices"
       ],
       "blockers": [
-        "Jupiter admin observation lacks TokenReserve/vault/effective borrow capacity; Kamino executable program observation lacks full reserve/fee/capacity proof; NAVI checkpoint lacks pool object state; P0 authority/account not supplied; zero qualified edges; 27 providers disabled."
+        "All four provider readers are implemented offline/unqualified; zero qualified capital edges. Effective capacity remains UNKNOWN pending LIVE_ROOTED_RPC, LIVE_SUI_CHECKPOINT and optional existing operator account evidence. No provider activation."
       ],
-      "next": "R02-CAP-A/B/C/D in parallel, read-only, exact resource proofs."
+      "next": "Run individually authorized rooted/read-only observations and prove resource-level capacity, fee, constraints, freshness and independent provenance for each provider."
     },
     {
       "id": "CAP-R03",
       "name": "Provider-specific unsigned financing builders",
-      "status": "IMPLEMENTED_UNQUALIFIED",
+      "status": "BUILT_OFFLINE_UNQUALIFIED",
       "owners": [
         "src/lending/agg03_financing_ports.py",
         "src/lending/financing.py",
@@ -216,12 +221,13 @@
       ],
       "evidence": [
         "PR #586 R03 builder handoff",
-        "src/multichain/evm_financing.py"
+        "src/multichain/evm_financing.py",
+        "PR #606 unsigned builder conformance; #640 Kamino instruction references in planner"
       ],
       "blockers": [
-        "Existing models and ports do not prove byte-level SDK conformance or full live state-bound builder path."
+        "Unsigned SDK-conformant build does not prove live reserve capacity or a supported full route; Project 0 needs existing operator account evidence."
       ],
-      "next": "R03-00 contract freeze then provider-specific offline/unsigned builders."
+      "next": "Bind matching R02 resource proof, exact quote/venue evidence and full transaction/PTB simulation; keep outputs unsigned."
     },
     {
       "id": "STRATEGY-01",
@@ -239,14 +245,14 @@
         "tests under tests/test_dynamic_relations.py and multihop solver tests"
       ],
       "blockers": [
-        "Only explicit shadow-ready capabilities are supported; topology shortlists do not equal exact route/economic proof; many registry strategies remain disabled/fixture-only."
+        "Broad atlas and relation/portfolio research exist, but only six strategy registrations are currently present and only circular_arbitrage has a real two-leg shadow detector. LST detectors are stubs; liquidation/orderbook shells are fixture-only; Pump is boundary-only. SX-01 is advisory contract, not runtime registry."
       ],
-      "next": "R10 inventory all families and replay-based experiments."
+      "next": "Execute SX-17 runtime fanout plus R10-1/2/3 detector/evaluator follow-through; catalog presence must never imply installed runtime reachability."
     },
     {
       "id": "ROUTE-R04",
       "name": "Capital-aware route/lender/amount selection",
-      "status": "IMPLEMENTED_UNQUALIFIED",
+      "status": "BLOCKED",
       "owners": [
         "src/strategy/arbitrage_graph.py",
         "src/strategy/multihop_solver.py",
@@ -257,9 +263,9 @@
         "Existing graph, bounded solver, PR118 sizing and FlashCapitalGraph"
       ],
       "blockers": [
-        "No proof in current status that exact quotes, live capacity, provider-specific unsigned build and all-in costs are integrated for a supported complete route."
+        "Zero qualified R02 capital edges; route combinations still need comparable exact quotes, exact state, provider-specific builders and full all-cost/rent evidence."
       ],
-      "next": "R04 only for combinations with real exact quote/capacity/build evidence."
+      "next": "Prepare offline route selector tests but do not promote until a matching quote + R02 capacity + R03 builder combination is proven."
     },
     {
       "id": "SIM-R05",
@@ -274,14 +280,14 @@
         "ExactSimulationFinalizer and atomic vertical code"
       ],
       "blockers": [
-        "Live/current RPC, lender reader, route build conformance and complete transaction evidence remain gated."
+        "Exact simulation owner exists, but current live state, matching qualified capital, provider-specific build conformance and a supported complete candidate route are not yet available."
       ],
-      "next": "R05 after qualified R04 candidates and relevant provider evidence."
+      "next": "Complete sender-free exact simulation for evidence-complete R04 candidates only."
     },
     {
       "id": "PAPER-R06",
       "name": "Durable paper and campaign qualification",
-      "status": "IMPLEMENTED_UNQUALIFIED",
+      "status": "BLOCKED",
       "owners": [
         "src/paper_shadow/",
         "src/qualification_campaign/",
@@ -291,9 +297,9 @@
         "Durable paper service and campaign owners"
       ],
       "blockers": [
-        "No current 24h paper qualification PASS; QPR readiness and full exact vertical dependencies must be current."
+        "No current 24-hour paper qualification PASS on an evidence-complete route; QPR/campaign readiness and R05 dependencies remain gating."
       ],
-      "next": "R06 only after source/QPR/R04/R05 gates."
+      "next": "Do not start a paper campaign until current QPR/campaign gate, R04 candidate and R05 exact simulation are all PASS."
     },
     {
       "id": "PROVIDER-R07",
@@ -315,7 +321,7 @@
     {
       "id": "PLATFORM-R11",
       "name": "Platform/CI/offline reproducibility",
-      "status": "BLOCKED",
+      "status": "IMPLEMENTED_UNQUALIFIED",
       "owners": [
         "scripts/verify_repo.py",
         ".github/workflows/",
@@ -323,18 +329,18 @@
         "docs/roadmap/r02-capacity-recovery-2026-10-08/offline/"
       ],
       "evidence": [
-        "P0-0 baseline in superseded #590 branch"
+        "P0-0 baseline in superseded #590 branch",
+        "PR #623 platform compatibility shims and current repository verification workflows"
       ],
       "blockers": [
-        "Historical Windows 11 native blockers remain unverified on the current local environment: fcntl collection gate and os.getuid runtime calls; WSL-first choice was recorded but must be checked locally.",
-        "Current GitHub Repository verification on #595 and #593 failed at strict pip-audit. Keep platform/runtime issues separate from dependency findings and rerun the actual Python 3.13 full verifier."
+        "Linux CI is green on inspected merged PRs; user's exact local Windows/WSL setup and residual native Windows coverage still need operator-local verification."
       ],
-      "next": "R11 platform baseline plus R12 dependency audit remediation; verify current WSL and run full verifier."
+      "next": "Run current-main offline verifiers and tests on the target Windows/WSL environment; keep OS-specific issues separate from CI."
     },
     {
       "id": "SEC-R12",
       "name": "Dependency and supply-chain security remediation",
-      "status": "BLOCKED",
+      "status": "IMPLEMENTED",
       "owners": [
         "pyproject.toml",
         "requirements.lock",
@@ -343,18 +349,16 @@
         "scripts/verify_repo.py"
       ],
       "evidence": [
-        "CI run #2975 on PR #595: pip-audit reported 68 known advisories across 9 packages; formatter, mypy, wheel smoke, non-root image smoke and secret scan succeeded."
+        "CI run #2975 on PR #595: pip-audit reported 68 known advisories across 9 packages; formatter, mypy, wheel smoke, non-root image smoke and secret scan succeeded.",
+        "PR #605 strict pip-audit reports zero findings with no ignores"
       ],
-      "blockers": [
-        "GitHub Repository verification on #595 and #593 reported 68 known advisories across nine locked packages: aiohttp, brotli, certifi, setuptools, black, msgpack, filelock, pillow and uv. Captured versions/fix candidates are historical workflow output; refresh current advisory IDs and compatible releases on latest main.",
-        "Do not upgrade blindly, suppress advisories or weaken --strict; use pyproject/uv lock workflow and full compatibility verification."
-      ],
-      "next": "Rerun strict pip-audit against latest main, identify exact advisory IDs and runtime/dev reachability, remediate compatible pins through the documented lock workflow, run full tests and publish an audit artifact."
+      "blockers": [],
+      "next": "Keep strict dependency audit enabled and re-run on every lockfile/dependency update."
     },
     {
       "id": "QUOTE-BUILD-R13",
       "name": "Multi-provider quote/build race (Solana + Sui)",
-      "status": "PLANNED",
+      "status": "IMPLEMENTED_UNQUALIFIED",
       "owners": [
         "src/solana_parallel_radar/",
         "src/gpr_sui_shadow/",
@@ -364,18 +368,18 @@
       "evidence": [
         "P0-2 Jupiter V2 + 0x contract",
         "UXE/R-03 offline builder dossier",
-        "R-13 assignment"
+        "R-13 assignment",
+        "PR #638 frozen quote/build kernel; PR #647 Titan adapter"
       ],
       "blockers": [
-        "Existing provider probes/contracts must be audited against actual code and supported composition; provider API/build modes and correlation are not yet qualified across the full candidate set.",
-        "Requires current official source pins, per-provider quotas/auth, exact amount normalization and a frozen shared contract; no signer/sender."
+        "Titan is sender-free/offline adapter evidence only; other provider adapters/live entitlements/real quotes remain individually unqualified."
       ],
-      "next": "Start read-only audits and source dossiers concurrently; implement one provider at a time after quote/build interface freeze and P0-2 ownership coordination."
+      "next": "Continue per-provider adapters against frozen R13-K kernel, one provider per PR, with correlation and exact amount semantics."
     },
     {
       "id": "RENT-PLAN-R14",
       "name": "Route-level rent/provider sponsorship planner",
-      "status": "PLANNED",
+      "status": "IMPLEMENTED_UNQUALIFIED",
       "owners": [
         "src/lending/slumlord.py",
         "docs/roadmap/universal-source-execution-rnd-2026-10-07/RENT_SPONSOR_PLANNER.md",
@@ -383,13 +387,53 @@
       ],
       "evidence": [
         "Existing sender-free Slumlord Borrow/Repay/CheckRepaid adapter",
-        "R-14 assignment"
+        "R-14 assignment",
+        "PR #617 RentSponsorPlanner; PR #640 Kamino wiring follow-up"
       ],
       "blockers": [
-        "RentSponsorPlanner is documented but no production code class/callsite was confirmed in this audit.",
-        "0x/Titan sponsor/payer semantics, co-signing, rent refunds and close-authority conditions require current official pins and exact unsigned builder evidence."
+        "Route-specific sponsor/payer live semantics and cost evidence remain provider-dependent; no on-chain account creation or funding is authorized."
       ],
-      "next": "Freeze the rent-cost plan with R03/R13; implement reuse/sponsor/Slumlord-ephemeral/persistent modes using existing Slumlord owner only, with deterministic negative tests."
+      "next": "Verify provider-specific co-sign/rent refund/close authority and wire plan only into existing unsigned plan/economic ranking."
+    },
+    {
+      "id": "SX17",
+      "name": "Runtime multi-strategy fanout and evidence-gated composition",
+      "status": "PLANNED",
+      "owners": [
+        "src/application.py",
+        "src/strategy/registry.py",
+        "src/strategy/consumer.py",
+        "src/strategy/conflict_scheduler.py",
+        "existing paper/shadow composition"
+      ],
+      "evidence": [
+        "R08 #624/#627: 15/27 owner groups wired, 12 library-only",
+        "SX-01 #641 advisory typed strategy contract"
+      ],
+      "blockers": [
+        "The catalog has six registrations but only circular two-leg real shadow detector; several entries are stubs/fixture-only/boundary-only.",
+        "No complete installed bounded multi-strategy fanout with immutable snapshot generation, deterministic merge, backpressure and failure isolation."
+      ],
+      "next": "Execute docs/strategy-expansion/2026-11-14/tasks/SX17_MULTI_STRATEGY_RUNTIME_FANOUT_RU.md; reuse owners and do not add registry/consumer/scheduler."
+    },
+    {
+      "id": "W6-12",
+      "name": "Observed participant strategy intelligence and evidence graph",
+      "status": "PLANNED",
+      "owners": [
+        "src/market_data_evolution/contracts.py",
+        "src/agg02/",
+        "src/intelligence/episode_builder.py",
+        "existing decision dataset/causal owners"
+      ],
+      "evidence": [
+        "W6-01/02 archetypes/population calibration",
+        "W6-05/06 competition/survival/PSRO research"
+      ],
+      "blockers": [
+        "No explicit end-to-end public participant episode -> full net attribution -> strategy archetype -> held-out replay package existed in the recovered assignment set."
+      ],
+      "next": "Execute docs/strategy-expansion/2026-11-14/tasks/W6_12_OBSERVED_PARTICIPANT_STRATEGY_INTELLIGENCE_RU.md; public/authorized pseudonymous data only."
     }
   ],
   "global_safety": {
@@ -401,82 +445,113 @@
     "no_account_creation": true,
     "no_spending": true
   },
-  "next_agent_action": "Fetch latest main and re-run the baseline before implementation. Launch independent workstreams in isolated worktrees: P0-1/2/3, R02-A/B/C/D, R03-00, R09/R10, R11/R12, R13 and R14. PR #593 must be rebased from its 176f413 base (4 ahead / 76 behind current main) and reverified; strict pip-audit remains failed. R04/R05/R06 and provider promotion remain evidence-gated.",
+  "next_agent_action": "Fetch latest main/PRs/CI and run offline verifiers before coding. Start non-overlapping SX-17 and W6-12 plus remaining SX/R10/EXP/W6 lanes in isolated worktrees. Merge only after tests/source rights/owner overlap/CI gates; keep #649 source-blocked. R02 live capacity remains zero qualified edges/UNKNOWN until authorized rooted proof; R04/R05/R06 and production remain gated.",
   "audit_notes": [
-    "Current main SHA was fetched from GitHub branch metadata: 86be458a87ed3f499cc32ff56426b2866c90422a (merge #595).",
-    "PR #593 is an implementation PR, not yet merged. It adds bounded cadence/coverage bridge and synthetic fixtures; no live capture was performed. Its source branch is behind current main and its Repository verification failed strict pip-audit.",
-    "PR #594's older documentation branch is stale/superseded. R-13 multi-provider quote/build race and R-14 RentSponsorPlanner/Slumlord scope now have dedicated assignments.",
-    "Current CI logs from #595/#593 show strict pip-audit failure with 68 advisories across 9 locked packages; formatter/mypy, secret scan, wheel/console and non-root image smoke succeeded. Refresh audit before remediation.",
-    "No local verifier or live RPC was run during this status refresh. Historical test totals and #585 evidence are not current live capacity.",
-    "After PR #597 merged at 215a3544483d73052e796eff79b893d346b10524, PR #594 was closed unmerged as superseded. PR #593 compare against latest main is diverged 4 ahead / 76 behind; its Repository verification workflow is still failed."
+    "Current GitHub main audit base is c9ed36b6902502fc4dc51610f0094d27a50fd6fb after #645/#648 merged; refreshed PR snapshot is a GitHub metadata/code-owner audit, not a local Windows run or live RPC.",
+    "R02 readers #602/#609/#612/#619 are merged as offline/unqualified reader slices; zero qualified capacity edges remains the truth.",
+    "PR #649 LLAMMA has green CI but remains open/source-blocked due pending source commit pin, whitepaper, unit-scale reconciliation and rooted per-market state. A green CI does not clear those semantic blockers.",
+    "SX-12 #645 and SX-08 #648 are merged research/offline models; neither activates strategy execution or live capital.",
+    "Runtime strategy audit: six registered strategy entries, only circular_arbitrage has a real two-leg shadow detector; SX-17 is a new required runtime fanout/composition package.",
+    "W6-12 is a new public/authorized pseudonymous participant intelligence package; no identity resolution/private orderflow/copy trading."
   ],
   "pr_snapshot": {
-    "main_sha": "215a3544483d73052e796eff79b893d346b10524",
-    "checked_at_utc": "2026-11-13",
+    "main_sha": "c9ed36b6902502fc4dc51610f0094d27a50fd6fb",
+    "checked_at_utc": "2026-11-14",
     "prs": [
       {
-        "number": 584,
-        "state": "MERGED",
-        "workstream": "R01_COMPLETE"
-      },
-      {
-        "number": 585,
-        "state": "MERGED",
-        "workstream": "R02_BLOCKED_EVIDENCE"
-      },
-      {
-        "number": 586,
-        "state": "MERGED",
-        "workstream": "R02_OFFLINE_SDK_R03_HANDOFF"
-      },
-      {
-        "number": 588,
-        "state": "MERGED",
-        "workstream": "P0_OFFLINE_MASTER"
-      },
-      {
-        "number": 589,
-        "state": "MERGED",
-        "workstream": "P0_RAYDIUM_METEORA_VENDOR_REFERENCES"
-      },
-      {
-        "number": 590,
-        "state": "CLOSED_UNMERGED_SUPERSEDED",
-        "workstream": "P0_BASELINE_REPLACED_BY_595"
-      },
-      {
-        "number": 591,
-        "state": "MERGED",
-        "workstream": "WHOLE_PROJECT_AGENT_HANDOFF"
-      },
-      {
-        "number": 592,
-        "state": "MERGED",
-        "workstream": "CROSS_LINK_REFRESH"
-      },
-      {
         "number": 593,
-        "state": "OPEN_PR_NOT_IN_MAIN",
-        "base_sha": "176f41378645f6f3b3fd95a59617633b5808acb4",
-        "head_sha": "a3c9fef74c6c01197290890d413ad3e4d5034b4b",
-        "comparison": "4 ahead / 64 behind current main",
-        "ci": "Repository verification failed strict pip-audit; remaining visible jobs passed"
-      },
-      {
-        "number": 594,
-        "state": "CLOSED_UNMERGED_SUPERSEDED",
-        "workstream": "whole-project orchestration",
-        "note": "Useful specialist scope transferred into R13/R14 and #595/#597 merged master."
-      },
-      {
-        "number": 595,
         "state": "MERGED",
-        "workstream": "WHOLE_PROJECT_PARALLEL_EXECUTION_MASTER"
+        "workstream": "P0-1_SOLANA_INTAKE_DYNAMIC_UNIVERSE"
       },
       {
-        "number": 597,
+        "number": 604,
         "state": "MERGED",
-        "workstream": "R13_R14_PARALLEL_EXECUTION_UPDATE"
+        "workstream": "P0-2_JUPITER_V2_0X_QUOTES"
+      },
+      {
+        "number": 605,
+        "state": "MERGED",
+        "workstream": "R12_STRICT_PIP_AUDIT_ZERO"
+      },
+      {
+        "number": 606,
+        "state": "MERGED",
+        "workstream": "R03_UNSIGNED_BUILDERS"
+      },
+      {
+        "number": 613,
+        "state": "MERGED",
+        "workstream": "P0-3_RAYDIUM_CLMM_METEORA_DLMM"
+      },
+      {
+        "number": 617,
+        "state": "MERGED",
+        "workstream": "R14_RENTSponsorPlanner"
+      },
+      {
+        "number": 623,
+        "state": "MERGED",
+        "workstream": "R11_PLATFORM_COMPATIBILITY"
+      },
+      {
+        "number": 627,
+        "state": "MERGED",
+        "workstream": "R08_COMPOSITION_OWNER_AUDIT"
+      },
+      {
+        "number": 638,
+        "state": "MERGED",
+        "workstream": "R13_QUOTE_BUILD_KERNEL"
+      },
+      {
+        "number": 639,
+        "state": "MERGED",
+        "workstream": "SX00_STRATEGY_CROSSWALK"
+      },
+      {
+        "number": 640,
+        "state": "MERGED",
+        "workstream": "R14_KAMINO_PLANNER_WIRING"
+      },
+      {
+        "number": 641,
+        "state": "MERGED",
+        "workstream": "SX01_STRATEGY_CONTRACT"
+      },
+      {
+        "number": 642,
+        "state": "MERGED",
+        "workstream": "SX09_LP_LIFECYCLE"
+      },
+      {
+        "number": 643,
+        "state": "MERGED",
+        "workstream": "SX10_SX11_BACKRUN_ASYNC"
+      },
+      {
+        "number": 645,
+        "state": "MERGED",
+        "workstream": "SX12_PORTFOLIO_OPTIMIZER_OFFLINE"
+      },
+      {
+        "number": 646,
+        "state": "MERGED",
+        "workstream": "MASTER_FLASHLOAN_BUILD_BIGGER_UNIVERSE"
+      },
+      {
+        "number": 647,
+        "state": "MERGED",
+        "workstream": "R13_TITAN_ADAPTER_OFFLINE"
+      },
+      {
+        "number": 648,
+        "state": "MERGED",
+        "workstream": "SX08_RATE_CURVE_REFINANCE_OFFLINE"
+      },
+      {
+        "number": 649,
+        "state": "OPEN_SOURCE_BLOCKED",
+        "workstream": "SX03_CURVE_LLAMMA"
       }
     ]
   }

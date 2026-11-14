@@ -1,6 +1,6 @@
 {
   "schema": "studious-pancake.strategy-research-acceptance.v2",
-  "snapshot_main": "d52e61f36ece249c1221c8e71d22aa29ef476e21",
+  "snapshot_main": "73911801f12eb8c365421d5dcaea40c20a503a0a",
   "snapshot_utc": "2026-11-14",
   "predecessor_prs": [
     599,
@@ -13,7 +13,8 @@
     641,
     642,
     643,
-    645
+    645,
+    646
   ],
   "dispositions": {
     "SX00": "MERGED_HISTORICAL_RECEIPT_REFRESH_REQUIRED",
@@ -32,7 +33,8 @@
     "SX13": "PLANNED",
     "SX14": "PLANNED",
     "SX15": "PLANNED",
-    "SX16": "COORDINATOR_INTEGRATION"
+    "SX16": "COORDINATOR_INTEGRATION",
+    "SX17": "PLANNED"
   },
   "additional_packages": [
     {
@@ -162,6 +164,27 @@
         "custom accounting vectors",
         "exact simulation/revert/gas"
       ]
+    },
+    {
+      "id": "SX-17",
+      "family": "ARCHIVE_DETECTOR_ANOMALY_TAXONOMY_RECONCILIATION",
+      "class": "CONTROL_PLANE_AND_RESEARCH",
+      "owner": "existing canonical owners mapped in ARCHIVE_DETECTOR_TAXONOMY_CROSSWALK_V1.json",
+      "source_counts": {
+        "v3_anomalies": 64,
+        "v4_detectors": 25,
+        "v3_routes": 19,
+        "v6_routes": 36,
+        "v6_hyperedges": 12,
+        "v6_funding_models": 4
+      },
+      "acceptance": [
+        "All archive IDs map exactly once to canonical owners/categories or typed orphaned research-only disposition.",
+        "Detector, strategy, signal, state guard, data-quality guard and conditional hyperedge are not conflated.",
+        "Current main and open PRs re-audited; SX-17 does not duplicate PAIR-00 or P0/R02/R03/R13 work.",
+        "Negative/stale/ambiguous/no-pool/no-capacity/partial-fill/queue/hook-mismatch cases are represented.",
+        "No duplicate graph, solver, registry, source store, quote kernel, capital graph, ledger, journal, scheduler or release authority."
+      ]
     }
   ],
   "ecology": [
@@ -233,7 +256,20 @@
     "No shared pool, collateral, lender capacity, inventory, depth, tick/bin, account lock or quota double consumption.",
     "Models/correlation/ecology are advisory only; synthetic data stays synthetic.",
     "No wallet/account/ATA/obligation creation, private keys, signing, sending, borrowing, spending, deploying, provider activation, live trading or production promotion.",
-    "No tokenized equities, sandwich/frontrun, user targeting or unauthorized private flow."
+    "No tokenized equities, sandwich/frontrun, user targeting or unauthorized private flow.",
+    "SX-17 archive taxonomy crosswalk preserves 64 V3 anomaly IDs, 25 V4 detector templates, 19 V3 route families, 36 V6 route candidates, 12 V6 hyperedges and 4 funding primitive references without granting execution permission."
   ],
-  "completion_rule": "Every family has one owner, truthful evidence tier, dependencies, replay/tests and next gate. Selected work is merged or explicitly BLOCKED/RESEARCH_ONLY/EXCLUDED with evidence. Documentation-only merge is not strategy implementation or profitability proof."
+  "completion_rule": "Every family has one owner, truthful evidence tier, dependencies, replay/tests and next gate. Selected work is merged or explicitly BLOCKED/RESEARCH_ONLY/EXCLUDED with evidence. Documentation-only merge is not strategy implementation or profitability proof.",
+  "archive_detector_taxonomy": {
+    "path": "ARCHIVE_DETECTOR_TAXONOMY_CROSSWALK_V1.json",
+    "counts": {
+      "v3_anomaly_classes": 64,
+      "v4_detector_templates": 25,
+      "v3_research_route_families": 19,
+      "v6_route_families": 36,
+      "v6_conditional_hyperedges": 12,
+      "v6_flash_funding_models": 4
+    },
+    "status": "ARCHIVE_ONLY_NO_EXECUTION_PERMISSION"
+  }
 }

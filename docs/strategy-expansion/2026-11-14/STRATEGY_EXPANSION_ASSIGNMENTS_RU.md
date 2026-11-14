@@ -134,7 +134,7 @@
 - Reuse SX-01 StrategyContractV1, current StrategyRegistry, build_application, OpportunityConsumer/queue/tracker, R08 composition, QPR/DIN, AGG-05 WorkResourceSet/conflict scheduler, SX-12 portfolio optimizer and existing paper/shadow composition.
 - Add bounded concurrent detector evaluation over one immutable MarketSnapshotGeneration, deterministic ordering, worker cancellation/deadline/backpressure, failure isolation, duplicate idempotency and shared-resource conflict admission.
 - Do not create a second registry, runner, queue, scheduler, ledger, graph or paper authority. Do not enable all catalog entries. Only real detector bodies with their own state/quote/capacity/build gates may enter shadow.
-- Dependencies: SX-01 (#641), R08 (#624/#627), AGG-05, R10-1/R10-2/R10-3 and SX-12 (#645 if merged). R04/R05/R06 remain promotion gates.
+- Dependencies: SX-01 (#641), R08 (#624/#627), AGG-05, R10-1/R10-2/R10-3 and SX-12 (#645 merged as offline CONTROL_PLANE model). R04/R05/R06 remain promotion gates.
 - Acceptance: 1/2/4/8-worker determinism; completion-order invariance; stale generation rejection; isolated exception/timeout; bounded queue/backpressure; no duplicate resource consumption; installed wheel/capability parity; no promotion from class/config presence.
 
 ### W6-12 — Observed participant strategy intelligence and evidence graph

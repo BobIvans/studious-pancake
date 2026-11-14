@@ -9,6 +9,17 @@ STON.fi DEX REST v1 (assets/pools/stats), DeDust API v2 pools, and the
 swap.coffee aggregator v1 pools read path. Omniston RFQ stays an injected
 read-only reader. TON is asynchronous and multi-contract; no single aggregator
 enumerates the whole TON universe, and a failed page never retires a market.
+
+Wave-2 verification (docs/integrations/offline/ton-wave2-2026-11-14/):
+re-verified without code behavior change — STON.fi REST schema and the
+Omniston ``stonfi.omni.v1beta8`` namespace remain current, TON Center v2 and
+TonAPI v2 method contracts are now spec-pinned (still no state adapter; live
+capture stays unauthorized), and TON has no provable native flash-loan
+primitive (typed ATOMICITY_RESEARCH note). Tonco keeps NO adapter: its
+GraphQL indexer schema is MISSING_PIN, so Tonco candidates may only enter
+through the swap.coffee ``dexes`` enum below. The pin-state registry
+``TON_SOURCE_PIN_STATES`` records this per source; flipping a state there
+without a new versioned dossier is a review failure.
 """
 
 from __future__ import annotations
@@ -34,6 +45,23 @@ _ENDPOINTS = ("assets", "pools", "stats")
 # DeDust native-coin asset rows carry no address ({"type": "native"}); this
 # reserved marker is a display identity, never a chain address claim.
 TON_NATIVE_ASSET = "ton:native"
+
+# Typed per-source evidence states from docs/integrations/offline/
+# ton-wave2-2026-11-14/SOURCE_MANIFEST.json, wave-2 scope only (dedust.io and
+# swap.coffee were not re-verified in wave 2; their pin state lives in the
+# wave-1 dossier). Research metadata only; no behavior reads this mapping.
+# "tonco" stays MISSING_PIN: its GraphQL indexer schema is unpinned, so no
+# Tonco adapter exists and none may be written from memory — candidates enter
+# only via the swap.coffee dexes enum. TON Center and TonAPI method contracts
+# are spec-pinned in wave 2, but a state adapter still requires separately
+# authorized live capture, so no source is enabled here.
+TON_SOURCE_PIN_STATES: Mapping[str, str] = {
+    "ston.fi": "PINNED_CURRENT",
+    "omniston": "PINNED_CURRENT",
+    "tonco": "MISSING_PIN",
+    "toncenter": "PINNED_CURRENT",
+    "tonapi": "PINNED_CURRENT",
+}
 
 
 class TonSchemaError(ValueError):

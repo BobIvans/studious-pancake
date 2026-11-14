@@ -9,9 +9,18 @@ Refresh current main, PRs, CI, branch protection and exact owners. Reconcile S01
 
 ## SX — merged vs remaining
 - SX-00 #639, SX-01 #641, SX-09 #642, SX-10/SX-11 #643: merged at the checked snapshot; don't repeat.
-- SX-12 #645: open at checked snapshot; inspect/review its exact head and merge only after required evidence/checks. It consumes SX-01 ResourceManifest and AGG-05.
-- SX-02 flash-mint/lender comparison; SX-03 LLAMMA; SX-04 OEV; SX-05 JIT/LVR; SX-06 CLOB/RFQ/queue; SX-07 complete-set claims; SX-08 lending rate/refinance; SX-13 causal/learning; SX-14 verifiable procurement/mechanism lab; SX-15 observability; SX-16 coordinator integration.
+- SX-12 #645 remains an open lane in the latest checked state; it consumes SX-01 ResourceManifest and AGG-05. Review its current head/checks; do not duplicate it.
+- SX-03 #649 and SX-08 #648 are open implementation lanes; review their exact current heads/source pins before dispatching follow-up work.
+- SX-02 flash-mint/lender comparison; SX-04 OEV; SX-05 JIT/LVR; SX-06 CLOB/RFQ/queue; SX-07 complete-set claims; SX-13 causal/learning; SX-14 verifiable procurement/mechanism lab; SX-15 observability; SX-16 coordinator integration.
+- #646 Build Bigger Universe master recovery is merged. #650 is the separate exact archival relationship dataset follow-up; check its status and do not duplicate its rows.
 - SX-12 depends on SX-01+AGG-05; SX-15 consumes evidence from completed lanes; SX-16 runs last.
+
+## SX-17 — V3/V4/V6 archive detector and anomaly taxonomy
+- Read `ARCHIVE_DETECTOR_TAXONOMY_COVERAGE_GATE_RU.md` and `ARCHIVE_DETECTOR_TAXONOMY_CROSSWALK_V1.json`.
+- Reconcile all 64 V3 anomaly IDs, 25 V4 detector templates, 19 V3 route families, 36 V6 route hypotheses, 12 V6 conditional hyperedges and 4 V6 funding primitive families to canonical owners.
+- Distinguish strategy families from exact-state guards, source-quality controls, identity constraints, settlement constraints and reference signals. Do not instantiate one runtime strategy per anomaly label.
+- Investigate true uncovered mechanisms only (multi-token pool hyperedges, Mento session windows, Balancer rate-provider drift, Phoenix version/queue semantics and hook custom accounting are explicit checks).
+- Extend existing owners; no duplicate graph, registry, solver, quote kernel, capital graph, ledger, scheduler or data store.
 
 ## R10 follow-through
 - R10-1: bind CPMM exact evaluator to graph→PR118 sizing→native paper qualification.
@@ -39,4 +48,4 @@ W6-00 ownership/synthetic-real; W6-01 archetype IR; W6-02 empirical population c
 Run 4–8 independent workers as a soft target, each with its own current-main worktree, task owner and PR. Shared graph/registry/capability/status/quote/capital/scheduler/simulation owners are serialized. Do not duplicate P0-1/2/3, R02/R03, R13-K or AGG-05. Continue unrelated offline work if another lane is BLOCKED.
 
 ## Merge and safety
-Autonomous PR creation/merge is authorized only after current required checks, tests, source/license verification, no overlapping owner, clean rebase and mergeability pass. Do not bypass branch protection or fake CI. No keys/accounts/wallets, signing, sending, borrowing, spending, deployments, live enablement or production promotion. No tokenized equities, sandwich/frontrun, user targeting or unauthorized private flow. Unknown is not zero; every amount needs a fresh exact quote; TVL is not capacity.
+The repository owner explicitly authorized autonomous engineering PR creation, review and merge for this Studious Pancake strategy / Build Bigger Universe / flashloan campaign in the direct instruction dated 2026-11-14. This is the human approval required by AGENTS.md for in-scope campaign PRs; no new confirmation is needed for those PRs. Merge only after current required checks are green, source/license evidence is reviewed, clean rebase and owner-overlap audit pass, all review threads are resolved, the PR is mergeable and branch protection allows it. Never bypass checks, fake statuses or force-push main. This authority is limited to this engineering campaign, not unrelated PRs or any on-chain/financial action. No keys/accounts/wallets, signing, sending, borrowing, spending, deployments, live enablement or production promotion. No tokenized equities, sandwich/frontrun, user targeting or unauthorized private flow. Unknown is not zero; every amount needs a fresh exact quote; TVL is not capacity.

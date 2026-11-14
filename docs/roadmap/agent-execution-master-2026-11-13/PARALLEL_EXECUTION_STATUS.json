@@ -276,11 +276,11 @@
       "note": "Capture-backed MarginFi FlashCapitalProvider bridge; offline only, effective capacity remains UNKNOWN and zero qualified edges until all gates."
     },
     {
-      "n": 656,
-      "lane": "docs-runtime-w6",
-      "status": "OPEN_STALE_PREDECESSOR",
-      "head": "d8157a82",
-      "note": "Superseded ID collision/old base; must close after clean-base SX-18/W6-12 successor has passed checks."
+      "n": 657,
+      "lane": "docs-SX18-W6-12",
+      "status": "OPEN_CI_PENDING",
+      "head": "90568a85",
+      "note": "Clean-base handoff; SX-18 runtime fanout + W6-12 participant strategy intelligence. JSON parse/duplicate ID validation done; predecessor #656 closed superseded."
     }
   ],
   "workstreams_final": {
@@ -339,5 +339,5 @@
     "Continue R10-1 CPMM exact graph-to-sizing-to-paper and R10-3 residual-fed LST detector work if not already landed; verify current PR/status before dispatch.",
     "Live captures remain user-gated; then R02 effective capacity -> R04 -> R05 -> R06 in dependency order."
   ],
-  "open": "Open PRs requiring current review: #649 (SX-03 source-blocked), #655 (R10-2 offline MarginFi bridge; rebase/recheck), #656 (predecessor runtime/W6 documentation handoff; stale/review finding; supersede after successor merge)."
+  "open": "Open strategy PRs: #649 (SX-03 source-blocked), #655 (R10-2 rebase/review), #657 (SX-18/W6-12 documentation handoff awaiting CI). #656 predecessor is closed as superseded."
 }

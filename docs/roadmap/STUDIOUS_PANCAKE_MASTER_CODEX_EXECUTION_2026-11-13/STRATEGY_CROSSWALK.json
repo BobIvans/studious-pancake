@@ -1,7 +1,7 @@
 {
   "schema_version": "studious-pancake.strategy-crosswalk.v1",
-  "generated_at": "2026-11-13",
-  "main_sha": "86be458a87ed3f499cc32ff56426b2866c90422a",
+  "generated_at": "2026-11-14",
+  "main_sha": "a82a512b01e9bcef4c41e369ee49168e74ec1173",
   "archive_generations": [
     "V3",
     "V4",
@@ -12,6 +12,33 @@
     "direct-venue-audit"
   ],
   "all_rows": "Research crosswalk. A family may be partially implemented in shared owners and still disabled/unqualified. No automatic strategy registration or execution grant.",
+  "sx_overlay": {
+    "note": "MASTER-00 refresh 2026-11-14: rows reconciled against current main and the Strategy Expansion pack (SX-00 reconciliation #639). sx_package links each family to its SX work package; new families appended for genuinely missing mechanisms. Machine-readable implementation matrix: MASTER00_IMPLEMENTATION_MATRIX.json in this directory. No automatic registration or execution grant is created by this overlay.",
+    "frozen_contracts": [
+      "R13-K quote/build kernel r13.quote-build-kernel.v1 (src/execution/quote_build_kernel.py, #638): refuse_amount_extrapolation, PoolIdentityDeduplicator, None=UNKNOWN never zero, BuildHandoff seam",
+      "PR118 sizing owner (src/economics/non_monotonic_sizing.py): finite amount grids, exact route cost ledger, no alternate sizing solver"
+    ],
+    "sx_status": {
+      "SX-00": "IMPLEMENTED (#639)",
+      "SX-01": "IMPLEMENTED (#641)",
+      "SX-09": "IMPLEMENTED (#642)",
+      "SX-02": "IN_FLIGHT parallel session",
+      "SX-03": "IN_FLIGHT parallel session",
+      "SX-04": "IN_FLIGHT parallel session",
+      "SX-05+06": "IN_FLIGHT parallel session",
+      "SX-07": "IN_FLIGHT parallel session",
+      "SX-08": "IN_FLIGHT parallel session",
+      "SX-10+11": "IN_FLIGHT parallel session",
+      "SX-12": "IN_FLIGHT parallel session (stacked on merged SX-01)",
+      "SX-13": "IN_FLIGHT parallel session",
+      "SX-14": "IN_FLIGHT parallel session",
+      "R10-1": "IN_FLIGHT lead session (CPMM cycle binding)",
+      "R10-2": "IN_FLIGHT lead session (MarginFi capital edges)",
+      "R10-3": "IN_FLIGHT lead session (LST residual-fed detectors)",
+      "SX-15": "PLANNED coordinator",
+      "SX-16": "PLANNED coordinator"
+    }
+  },
   "families": [
     {
       "id": "STRAT-DIRECT-2LEG",
@@ -146,7 +173,7 @@
         "instant exit vs cooldown/epoch",
         "slashing and redeem cap"
       ],
-      "next": "Separate tradable pool legs from reference NAV and delayed redemption; LST detector shells remain disabled."
+      "next": "Separate tradable pool legs from reference NAV and delayed redemption; residual-fed shadow detector bodies = R10-3 lane (fail-closed, IMPLEMENTED_UNBOUND; capability flip separately gated on lst_exchange_rate_unproven / instant_exit_unproven proofs)."
     },
     {
       "id": "STRAT-BTC-WRAPPER",
@@ -211,7 +238,7 @@
         "Token-2022 fee/hooks",
         "program/deployment/rooted state"
       ],
-      "next": "P0-3 Raydium CLMM and Meteora DLMM; Orca license approval gate."
+      "next": "P0-3 exact decoders/math landed (#613, LEN receipt #634); remaining: bind CLMM/DLMM exact evaluators behind the graph (CPMM binding = R10-1 lane), Orca license approval gate."
     },
     {
       "id": "STRAT-MIGRATION-EVENT",
@@ -505,6 +532,139 @@
         "no provider/pool identity leakage"
       ],
       "next": "Deterministic baselines first; ML remains advisory and cannot skip hard gates."
+    },
+    {
+      "id": "STRAT-LLAMMA-BANDED-LIQ",
+      "name": "Curve LLAMMA banded liquidation (acceptance family CREDIT-LLAMMA)",
+      "archive_sources": [
+        "SX-00 gap derivation 2026-11-14"
+      ],
+      "owners": [
+        "src/cross_chain/agg12.py (admission shells)",
+        "src/mega8_08/pr287.py (stubs)",
+        "additive: src/strategy_evolution/llamma_band_math.py"
+      ],
+      "status": "STUB",
+      "sx_package": "SX-03",
+      "missing": [
+        "official band/oracle/collateral transition math from pinned primary source",
+        "per-market state requirements",
+        "boundary replay vectors across band crossings"
+      ],
+      "next": "SX-03 dossier + exact band arithmetic replay (research/shadow only; typed BLOCKED if the primary source cannot be pinned); no constant-product approximation."
+    },
+    {
+      "id": "STRAT-JIT-LVR",
+      "name": "JIT liquidity and LVR/toxic-flow (acceptance family MICRO-JIT)",
+      "archive_sources": [
+        "SX-00 gap derivation 2026-11-14"
+      ],
+      "owners": [
+        "additive: src/research/microstructure/lvr.py",
+        "additive: src/research/microstructure/jit_fill_replay.py"
+      ],
+      "status": "STUB",
+      "sx_package": "SX-05",
+      "missing": [
+        "authorized event-level JIT recipe",
+        "fill-to-markout replay",
+        "LVR decomposition and inventory/capital lock model"
+      ],
+      "next": "SX-05 research models; JIT never enabled without proven transaction rights; sandwich/frontrun/victim targeting permanently excluded."
+    },
+    {
+      "id": "STRAT-OEV-KEEPER",
+      "name": "Oracle update auctions / OEV / keeper competition (acceptance family MICRO-OEV)",
+      "archive_sources": [
+        "SX-00 gap derivation 2026-11-14"
+      ],
+      "owners": [
+        "additive: src/strategy_evolution/oev_auction_replay.py"
+      ],
+      "status": "STUB",
+      "sx_package": "SX-04",
+      "missing": [
+        "auction rights/keeper eligibility evidence from pinned official source",
+        "event timeline replay",
+        "bid/payment economics"
+      ],
+      "next": "SX-04 dossier + deterministic auction replay; SIGNAL_ONLY; oracle price is never an executable quote."
+    },
+    {
+      "id": "STRAT-LP-LIFECYCLE",
+      "name": "LP position lifecycle and fee/inventory harvesting (acceptance family LP-LIFECYCLE)",
+      "archive_sources": [
+        "SX-00 gap derivation 2026-11-14"
+      ],
+      "owners": [
+        "src/research/lp_lifecycle/position_lifecycle.py"
+      ],
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "evidence_pr": 642,
+      "sx_package": "SX-09",
+      "missing": [
+        "venue/protocol position-state provenance (model is venue-agnostic by design)",
+        "persistent capital lock is fail-closed (PersistentLpNotFlashFinancable); never flashloan-financed"
+      ],
+      "next": "Extend only through venue-specific provenance adapters after their own evidence gates; research model, no runtime wiring."
+    },
+    {
+      "id": "STRAT-PORT-CAPITAL-ALLOC",
+      "name": "Shared collateral, flash provider and portfolio allocator (acceptance family PORT-CAPITAL)",
+      "archive_sources": [
+        "SX-00 gap derivation 2026-11-14"
+      ],
+      "owners": [
+        "src/economics/flash_capital_graph/",
+        "src/strategy/conflict_scheduler.py (AGG-05)",
+        "additive: src/strategy/portfolio_optimizer.py"
+      ],
+      "status": "STUB",
+      "sx_package": "SX-12",
+      "missing": [
+        "joint capacity/portfolio allocation as additive AGG-05 consumer",
+        "independent-baseline comparison",
+        "worker determinism 1/2/4/8"
+      ],
+      "next": "SX-12 stacked on merged SX-01 contract; no resource double spend; joint result must improve after costs or be rejected."
+    },
+    {
+      "id": "STRAT-VERIFIABLE-DATA-COMPUTE",
+      "name": "Verifiable data/compute procurement (acceptance family DATA-COMPUTE)",
+      "archive_sources": [
+        "SX-00 gap derivation 2026-11-14"
+      ],
+      "owners": [
+        "src/research/pr359_wave15_institution.py (INST-01)",
+        "src/research/shadow_calculation_market.py",
+        "additive: src/research/verifiable_procurement.py"
+      ],
+      "status": "RESEARCH_ONLY",
+      "sx_package": "SX-14",
+      "missing": [
+        "one verifiable task definition + task hash",
+        "independent recomputation",
+        "cost/latency/accuracy baseline and duplicate-task idempotency"
+      ],
+      "next": "SX-14 verifiable task model + fixed offline workload comparison; no fabricated demand or payments."
+    },
+    {
+      "id": "STRAT-MECHANISM-LAB",
+      "name": "Auction/fee/allocation mechanism lab (acceptance family MECHANISM-LAB)",
+      "archive_sources": [
+        "SX-00 gap derivation 2026-11-14"
+      ],
+      "owners": [
+        "src/research/verifiable_procurement.py (mechanism comparison surface)"
+      ],
+      "status": "RESEARCH_ONLY",
+      "sx_package": "SX-14",
+      "missing": [
+        "fixed-workload rule comparison",
+        "surplus-ownership reporting",
+        "manipulation-resistance checks"
+      ],
+      "next": "SX-14 mechanism lab surface; no deployment, no real payments."
     }
   ]
 }

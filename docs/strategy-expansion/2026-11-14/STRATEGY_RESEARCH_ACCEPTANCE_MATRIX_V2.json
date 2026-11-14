@@ -1,6 +1,6 @@
 {
   "schema": "studious-pancake.strategy-research-acceptance.v2",
-  "snapshot_main": "73911801f12eb8c365421d5dcaea40c20a503a0a",
+  "snapshot_main": "9f173d7632cb30190bb8d9174ceba6d116eaec70",
   "snapshot_utc": "2026-11-14",
   "predecessor_prs": [
     599,
@@ -14,27 +14,30 @@
     642,
     643,
     645,
-    646
+    646,
+    647,
+    650,
+    654
   ],
   "dispositions": {
-    "SX00": "MERGED_HISTORICAL_RECEIPT_REFRESH_REQUIRED",
-    "SX01": "MERGED_SCHEMA_ONLY",
-    "SX09": "MERGED_OFFLINE_GENERIC_LP_MODEL",
-    "SX10": "MERGED_OFFLINE_RESEARCH_ONLY",
-    "SX11": "MERGED_OFFLINE_SIGNAL_ONLY",
-    "SX12": "OPEN_PR_645_REVIEW_NOT_DUPLICATE",
+    "SX00": "MERGED_PR_639",
+    "SX01": "MERGED_PR_641_SCHEMA_ONLY",
+    "SX09": "MERGED_PR_642_OFFLINE_LP_LIFECYCLE_MODEL",
+    "SX10": "MERGED_PR_643_PERMITTED_BACKRUN_RESEARCH_ONLY",
+    "SX11": "MERGED_PR_643_ASYNC_SETTLEMENT_RESEARCH_ONLY",
+    "SX12": "MERGED_PR_645_OFFLINE_PORTFOLIO_OPTIMIZER",
     "SX02": "PLANNED",
-    "SX03": "PLANNED",
+    "SX03": "OPEN_PR_649_RESEARCH_ONLY_SOURCE_AND_WHITEPAPER_GATES",
     "SX04": "PLANNED",
     "SX05": "PLANNED",
     "SX06": "PLANNED",
     "SX07": "PLANNED",
-    "SX08": "PLANNED",
+    "SX08": "MERGED_PR_648_OFFLINE_RATE_CURVE_MODEL",
     "SX13": "PLANNED",
     "SX14": "PLANNED",
     "SX15": "PLANNED",
     "SX16": "COORDINATOR_INTEGRATION",
-    "SX17": "PLANNED"
+    "SX17": "MERGED_PR_654_ARCHIVE_TAXONOMY_CROSSWALK"
   },
   "additional_packages": [
     {
@@ -257,7 +260,10 @@
     "Models/correlation/ecology are advisory only; synthetic data stays synthetic.",
     "No wallet/account/ATA/obligation creation, private keys, signing, sending, borrowing, spending, deploying, provider activation, live trading or production promotion.",
     "No tokenized equities, sandwich/frontrun, user targeting or unauthorized private flow.",
-    "SX-17 archive taxonomy crosswalk preserves 64 V3 anomaly IDs, 25 V4 detector templates, 19 V3 route families, 36 V6 route candidates, 12 V6 hyperedges and 4 funding primitive references without granting execution permission."
+    "SX-17 archive taxonomy crosswalk preserves 64 V3 anomaly IDs, 25 V4 detector templates, 19 V3 route families, 36 V6 route candidates, 12 V6 hyperedges and 4 funding primitive references without granting execution permission.",
+    "A strategy/source row is not wired until actual supported runtime, direct state, exact quote, capital, builder, simulation and replay reachability are proven.",
+    "Aggregator quote providers must be grouped by underlying pool/operator correlation; they do not create independent liquidity.",
+    "CEX/perps/bridge/analytics feeds are signal or inventory sources, not same-chain flashloan legs."
   ],
   "completion_rule": "Every family has one owner, truthful evidence tier, dependencies, replay/tests and next gate. Selected work is merged or explicitly BLOCKED/RESEARCH_ONLY/EXCLUDED with evidence. Documentation-only merge is not strategy implementation or profitability proof.",
   "archive_detector_taxonomy": {
@@ -271,5 +277,34 @@
       "v6_flash_funding_models": 4
     },
     "status": "ARCHIVE_ONLY_NO_EXECUTION_PERMISSION"
+  },
+  "data_source_integration": {
+    "atlas": "docs/strategy-expansion/2026-11-14/ARBITRAGE_MAP_STRATEGY_AND_DATA_SOURCE_ATLAS_RU.md",
+    "machine_catalog": "docs/strategy-expansion/2026-11-14/ARBITRAGE_DATA_SOURCE_CATALOG_V1.json",
+    "assignments": [
+      "DS-00",
+      "DS-01",
+      "DS-02",
+      "DS-03",
+      "DS-04",
+      "DS-05",
+      "DS-06",
+      "DS-07",
+      "DS-08",
+      "DS-09",
+      "DS-10",
+      "DS-11"
+    ],
+    "trigger": "docs/strategy-expansion/2026-11-14/CODEX_ARBITRAGE_MAP_START_HERE.md",
+    "catalogue_counts": {
+      "source_rows": 55,
+      "archived_strategy_families": 25,
+      "direct_venue_families": 33,
+      "flash_funding_candidates": 17,
+      "EXP_extensions": 10,
+      "STRAT_source_mappings": 25,
+      "EXP_source_mappings": 10
+    },
+    "status": "DOCUMENTED_RESEARCH_MAP_NOT_YET_PROOF_OF_SOURCE_WIRING"
   }
 }

@@ -2,10 +2,10 @@
   "schema_version": "studious-pancake.parallel-execution-status.v2",
   "updated_at_utc": "2026-11-14",
   "current_main": {
-    "sha": "73911801f12eb8c365421d5dcaea40c20a503a0a",
+    "sha": "c9ed36b6902502fc4dc51610f0094d27a50fd6fb",
     "date": "2026-11-14",
-    "ci_state": "GREEN on PR #646 (repository verification, wheel/console, non-root image, secret scan) and PR #647 (release authority, read-only qualification, full CI); R12 strict pip-audit zero remains established after #605",
-    "note": "Main refreshed after #646 full MASTER + Build Bigger Universe archive handoff and #647 Titan adapter. Docs status and PR lanes below reflect this main snapshot."
+    "ci_state": "GREEN on #646/#647 and strategy PRs #645/#648; #652 full CI result recorded separately",
+    "note": "Refreshed after #645 SX-12 and #648 SX-08 merged. #649 LLAMMA remains open/source-blocked."
   },
   "merged_prs": [
     {
@@ -227,30 +227,26 @@
       "n": 647,
       "lane": "R13-TITAN",
       "what": "Titan quote adapter on frozen R13-K quote/build kernel; sender-free/offline, live capture not authorized"
+    },
+    {
+      "n": 645,
+      "lane": "SX-12",
+      "what": "Deterministic portfolio optimizer over SX-01 ResourceManifest + AGG-05; offline CONTROL_PLANE, no live allocations; 20 focused tests + 65 contract/scheduler regressions"
+    },
+    {
+      "n": 648,
+      "lane": "SX-08",
+      "what": "Exact Fraction utilization/rate-curve and refinance classification model; RESEARCH_ONLY, no live protocol curves or actual savings; 15 focused tests"
     }
   ],
   "closed": 24,
   "open_prs_at_refresh": [
     {
-      "n": 645,
-      "lane": "SX-12",
-      "status": "OPEN_REBASE_REQUIRED",
-      "head": "c802e59e",
-      "note": "Portfolio optimizer over SX-01 ResourceManifest + AGG-05; 20 deterministic tests reported, but not mergeable against latest main."
-    },
-    {
-      "n": 648,
-      "lane": "SX-08",
-      "status": "OPEN_REBASE_REQUIRED",
-      "head": "ed7abadf",
-      "note": "Offline utilization/rate/refinance model; 15 tests reported; no live protocol parameter pins."
-    },
-    {
       "n": 649,
       "lane": "SX-03",
-      "status": "OPEN_REBASE_REQUIRED_SOURCE_BLOCKED",
+      "status": "OPEN_SOURCE_BLOCKED_REBASE_REQUIRED",
       "head": "4ffffddc",
-      "note": "LLAMMA research math; Curve source proprietary/all-rights-reserved, source commit SHA and whitepaper/state unit proof pending; no code copied."
+      "note": "Research math only; Curve source commit SHA pin and whitepaper missing, per-market rooted state and unit-scale reconciliation unproven. No code copied from proprietary source."
     }
   ],
   "workstreams_final": {
@@ -263,9 +259,11 @@
     "composition": "Audits #624+#627: 15/27 owner groups wired, 12 library-only; INTEGRATION_GAP_* typed; 8-step composition plan",
     "providers": "13 providers documented across the R13 audit; frozen R13-K quote/build kernel #638; Titan adapter #647 merged as sender-free/offline. Live quote capture, public taker/credentials, correlated pool dedup and full quote qualification remain gated per provider.",
     "ton_sui_evm": "TON DISCOVERY_ONLY + typed negative atomicity; Sui wave-2 pinned; EVM wave-2 dossiers (Euler BSL-blocked); all capacity UNKNOWN; providers disabled",
-    "strategy_expansion": "Full master/archive handoff #646 merged; R13 Titan adapter #647 merged on frozen kernel #638. SX-00 #639, SX-01 #641, SX-09 #642, SX-10/SX-11 #643 merged. Open: SX-12 #645 (rebase), SX-08 #648 (rebase), SX-03 #649 (rebase + source/rights blocker). Newly assigned: SX-17 runtime multi-strategy fanout, W6-12 participant strategy intelligence. Remaining SX-02/04/05+06/07/13/14/15/16 and R10-1/2/3 follow-through.",
+    "strategy_expansion": "MASTER archive handoff #646 merged; R13 Titan adapter #647 merged; SX-00 #639, SX-01 #641, SX-09 #642, SX-10/SX-11 #643 merged; SX-12 #645 and SX-08 #648 now merged as offline/research models; SX-03 #649 remains open/source-blocked. Newly assigned SX-17 runtime fanout and W6-12 participant intelligence. Remaining SX-02/04/05+06/07/13/14/15/16 and R10-1/2/3 follow-through.",
     "runtime_parallelism": "SX-17 PLANNED: extend existing application/StrategyRegistry/OpportunityConsumer/AGG-05/paper root; one immutable snapshot generation; deterministic bounded workers; no second registry/scheduler/consumer; no stub activation.",
-    "participant_intelligence": "W6-12 PLANNED: public/authorized pseudonymous on-chain participant episodes to evidence-backed strategy archetypes, full net attribution, censoring and leakage-resistant holdout; no deanonymization or copy-trading."
+    "participant_intelligence": "W6-12 PLANNED: public/authorized pseudonymous on-chain participant episodes to evidence-backed strategy archetypes, full net attribution, censoring and leakage-resistant holdout; no deanonymization or copy-trading.",
+    "portfolio": "SX-12 #645 merged: deterministic conflict-free portfolio selection using SX-01 ResourceManifest + AGG-05; advisory/offline only, no live allocation.",
+    "lending_rates": "SX-08 #648 merged: exact Fraction research model for utilization/rate curve and refinance classification; official live parameters remain unpinned."
   },
   "user_decision_blockers": [
     {
@@ -301,12 +299,11 @@
     "live_observations_this_execution": 0
   },
   "integration_order_next": [
-    "Rebase/review #645, #648 and #649 against current main; hold #649 until licensing/source/whitepaper/state blockers are resolved.",
+    "Keep #649 LLAMMA open until official source revision pin, whitepaper, WAD unit/rounding reconciliation and per-market rooted state proof are resolved; no code reuse from proprietary source.",
     "Complete R10-1 CPMM graph-to-exact-sizing-to-paper binding, R10-2 MarginFi evidence-backed capital edge and R10-3 residual-fed LST detector bodies.",
-    "Continue independent SX-02/04/05+06/07/13/14 lanes and SX-15 observability.",
-    "Execute SX-17 runtime fanout audit/contract tests in parallel with W6-12 participant episode schema/replay research; integrate only through existing canonical owners.",
-    "Coordinator SX-16 final crosswalk/dashboard reconciliation after all lane receipts.",
-    "Live capture remains user-gated; then R02 effective capacity -> R04 -> R05 -> R06 in dependency order."
+    "Continue SX-02/04/05+06/07/13/14 and SX-15; SX-16 coordinator final reconciliation.",
+    "Execute SX-17 runtime fanout over existing application/registry/consumer/AGG-05 owners; build W6-12 public participant episodes/archetypes on existing MarketEpisode/decision/replay owners.",
+    "R04/R05/R06 remain user/evidence-gated after qualified capital edges, exact quotes, builders and QPR readiness."
   ],
-  "open": "3 current strategy PRs: #645 SX-12, #648 SX-08 and #649 SX-03; all require current-main rebase/check before merge."
+  "open": "1 current strategy PR: #649 SX-03 LLAMMA; source commit SHA/whitepaper/unit/per-market rooted-state blockers remain open. #652 pending current branch CI/rebase merge."
 }

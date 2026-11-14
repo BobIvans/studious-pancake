@@ -1,0 +1,93 @@
+{
+  "_fixture_note": "Deterministic OFFLINE fixture built ONLY from the pinned schema: docs/integrations/offline/providers-wave1-2026-11-13/TITAN_SOLANA.md + docs/integrations/offline/titan-adapter-2026-11-14/TITAN_ADAPTER_SCHEMA_PIN.md (official Titan developer docs, retrieved 2026-11-14). Synthetic base58 values stand in for a live capture; no network was used and none is authorized. Evidence only - nothing is compiled, signed or sent.",
+  "id": "qbatch-offline-2026-11-14-0001",
+  "inputMint": "So11111111111111111111111111111111111111112",
+  "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  "swapMode": "ExactIn",
+  "amount": 1000000000,
+  "metadata": {
+    "ExpectedWinner": "Titan"
+  },
+  "quotes": {
+    "Titan": {
+      "inAmount": 1000000000,
+      "outAmount": 162300000,
+      "slippageBps": 50,
+      "platformFee": {
+        "amount": 162300,
+        "fee_bps": 10
+      },
+      "steps": [
+        {
+          "ammKey": "8bxkJSQp9dVYqMjC7WD67CYvdATUdqUPeGrD4AuFPMWF",
+          "label": "Raydium AMM",
+          "inputMint": "So11111111111111111111111111111111111111112",
+          "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+          "inAmount": 1000000000,
+          "outAmount": 162300000,
+          "allocPpb": 1000000000,
+          "contextSlot": 300000001
+        }
+      ],
+      "instructions": [
+        {
+          "p": "ComputeBudget1111111111111111111111111111111",
+          "a": [],
+          "d": [1, 2, 3]
+        },
+        {
+          "p": "T1TANpTeScyeqVzzgNViGDNrkQ6qHz9KrSBS4aNXvGT",
+          "a": [
+            {
+              "p": "72neGwRAi6QWsFQjy3PkDuYBC5GNCRwC2aUMGcrkoJuP",
+              "s": false,
+              "w": true
+            }
+          ],
+          "d": [0, 255, 128]
+        }
+      ],
+      "addressLookupTables": [
+        "4vLTpTeScyeqVzzgNViGDNrkQ6qHz9KrSBS4aNXvGTw"
+      ],
+      "contextSlot": 300000001,
+      "timeTakenNs": 1200000,
+      "expiresAtMs": 1800000003000,
+      "expiresAfterSlot": 300000033,
+      "computeUnits": 180000,
+      "computeUnitsSafe": 200000
+    },
+    "Okx": {
+      "inAmount": 1000000000,
+      "outAmount": 162250000,
+      "slippageBps": 50,
+      "steps": [
+        {
+          "ammKey": "CtZAcRdmMb6NkKxtB9rTWPFSsMCLHMicyFaC8nmzK9vL",
+          "label": "Orca Whirlpool",
+          "inputMint": "So11111111111111111111111111111111111111112",
+          "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+          "inAmount": 700000000,
+          "outAmount": 113575000,
+          "allocPpb": 700000000
+        },
+        {
+          "ammKey": "GdNvAQ9p5ScyeqVzzgNViGDNrkQ6qHz9KrSBS4aNXvGQ",
+          "label": "Phoenix",
+          "inputMint": "So11111111111111111111111111111111111111112",
+          "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+          "inAmount": 300000000,
+          "outAmount": 48675000,
+          "allocPpb": 300000000,
+          "feeMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+          "feeAmount": 1000
+        }
+      ],
+      "instructions": [],
+      "transaction": "5OkxUnsignedTxEvidenceOnlyOpaqueNotDecodedBase58Evidence0000",
+      "addressLookupTables": [],
+      "computeUnits": 210000,
+      "reference_id": "okx-rfq-ref-0001"
+    }
+  }
+}

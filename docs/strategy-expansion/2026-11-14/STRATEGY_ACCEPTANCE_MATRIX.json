@@ -11,15 +11,15 @@
     "5": "docs/roadmap/agent-execution-master-2026-11-13/tasks/R10_STRATEGIES_AND_INTELLIGENCE.md",
     "6": "docs/roadmap/agent-execution-master-2026-11-13/tasks/R10_STRATEGY_INVENTORY_2026-11-14.md",
     "7": "docs/roadmap/agent-execution-master-2026-11-13/reports/R10_STRATEGY_REPLAY_EXPERIMENTS_2026-11-14.md",
-    "current_main": "73911801f12eb8c365421d5dcaea40c20a503a0a",
+    "current_main": "c9ed36b6902502fc4dc51610f0094d27a50fd6fb",
     "current_prs": {
       "merged": [
-        646,
-        647
-      ],
-      "open_rebase_required": [
         645,
-        648,
+        646,
+        647,
+        648
+      ],
+      "open": [
         649
       ]
     }

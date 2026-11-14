@@ -63,3 +63,18 @@ Use the exact owner map in the assignments. Each PR must be small, bounded, test
 ## Definition of done
 
 A strategy is only “covered” at the tier evidenced by its identity, source rights, exact state, quote, capacity, all-in economics, shared-resource feasibility, build/simulation/paper artifacts and holdout replay. A documented idea without those proofs remains research/blocked. Do not call the bot production-ready or profitable.
+
+
+## Research expansion v2 — current continuation
+
+The original SX-00 reconciliation is already merged in PR #639; do not repeat it from its old 5769 baseline. PR #640 has wired unsigned Kamino plan references into the existing planner; do not reimplement it. Refresh current main, open PRs and CI before dispatch.
+
+Read:
+- STRATEGY_RESEARCH_ARCHIVE_ADDENDUM_RU.md
+- STRATEGY_RESEARCH_ACCEPTANCE_MATRIX_V2.json
+
+The v2 addendum adds SX-17…SX-25: DEX-native flash accounting, collateral-first callbacks, credit-conditioned AMM liquidity, derivatives basis/options, inventory-aware OMS, public trader/bot archetype intelligence, event lifecycle, chain/dataset admission and opportunity half-life/competition intelligence.
+
+Execute all original SX-01…SX-16 residual work plus SX-17…SX-25. Use SX-00 (#639) dispositions as the starting owner map, then refresh statuses against latest main. Do not duplicate R10 items 1–3 (R04/R06, R02-CAP, R10 owners), P0/R09/provider lanes, PR #638 kernel or PR #640 Kamino planner wiring.
+
+The v2 machine-readable acceptance matrix is an additive overlay; keep v1 intact and reconcile both in SX-16. “Ready system” means every family has one owner, execution class, evidence requirements, reproducible tests/replay, typed status and next dependency. It does not mean every family is live or profitable.

@@ -1,0 +1,2279 @@
+{
+  "schema": "studious-pancake.arbitrage-map-data-source-catalog.v1",
+  "snapshot_utc": "2026-11-14",
+  "main_sha": "9f173d7632cb30190bb8d9174ceba6d116eaec70",
+  "purpose": "Strategy-to-data-source map for wiring the widest evidence-backed arbitrage research universe into existing bot owners. Not a new runtime registry and not an execution permission.",
+  "archive_baseline": {
+    "original_pair_seeds": 519,
+    "v3_total_pair_candidates": 1147,
+    "v3_new_high_value_seeds": 162,
+    "v4_pair_candidates": 838,
+    "v4_new_symbolic_pairs": 175,
+    "v4_world_nodes": 2998,
+    "v4_world_edges": 11523,
+    "v6_new_pair_candidates": 175,
+    "v6_conditional_hyperedges": 12,
+    "v6_flash_funding_families": 4,
+    "v3_source_profiles": 86,
+    "initial_source_profiles": 65,
+    "direct_venue_families": 33,
+    "flash_funding_candidates": 17,
+    "prior_chat_strategy_families": 25,
+    "v3_route_templates": 34,
+    "archived_route_cycles": 19,
+    "direct_v3_families": 14,
+    "direct_v3_source_variants": 22
+  },
+  "archive_strategy_families": [
+    {
+      "id": "STRAT-01",
+      "name": "multi-DEX 2-hop",
+      "execution_class": "LOCAL_ATOMIC_CANDIDATE",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "distinct underlying pools; exact state + independent verification"
+    },
+    {
+      "id": "STRAT-02",
+      "name": "same-chain 3-5 hop cycle",
+      "execution_class": "LOCAL_ATOMIC_CANDIDATE",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "closed graph; exact per-leg amount quotes; PR118 sizing"
+    },
+    {
+      "id": "STRAT-03",
+      "name": "AMM vs CLOB",
+      "execution_class": "LOCAL_ATOMIC_CANDIDATE",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "full-fill/IOC/partial-fill semantics; exact book VWAP"
+    },
+    {
+      "id": "STRAT-04",
+      "name": "LST fair value / relative value",
+      "execution_class": "CONDITIONAL_HYPEREDGE",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "protocol exchange rate and immediate exit only; cooldown is non-atomic"
+    },
+    {
+      "id": "STRAT-05",
+      "name": "pool migration and bin shocks",
+      "execution_class": "SIGNAL_ONLY",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "event-driven migration/bin/liquidity/fee changes; not assumed low latency"
+    },
+    {
+      "id": "STRAT-06",
+      "name": "ERC-4626 vault NAV",
+      "execution_class": "CONDITIONAL_HYPEREDGE",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "totalAssets/convertToAssets/previewRedeem/maxWithdraw and caller rights"
+    },
+    {
+      "id": "STRAT-07",
+      "name": "Pendle PT/YT near maturity",
+      "execution_class": "HEDGED_NON_ATOMIC",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "expiry and pre-maturity sale separate; maturity later is not flash exit"
+    },
+    {
+      "id": "STRAT-08",
+      "name": "stablecoin PSM/mint/redeem",
+      "execution_class": "CONDITIONAL_HYPEREDGE",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "issuer rights, min lot, fee, cap, asynchronous window"
+    },
+    {
+      "id": "STRAT-09",
+      "name": "RWA/corporate-action/reference window",
+      "execution_class": "EXCLUDED_OR_REFERENCE_ONLY",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "tokenized equities excluded; permitted non-equity references remain non-executable"
+    },
+    {
+      "id": "STRAT-10",
+      "name": "gold/commodity wrapper reference",
+      "execution_class": "SIGNAL_ONLY",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "cross-domain reference; local pool required for any local candidate"
+    },
+    {
+      "id": "STRAT-11",
+      "name": "BTC wrapper parity",
+      "execution_class": "HEDGED_NON_ATOMIC",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "issuer/bridge trust root and separate representation identities"
+    },
+    {
+      "id": "STRAT-12",
+      "name": "interchain flow-triggered local scan",
+      "execution_class": "SIGNAL_ONLY",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "CCTP/OFT/USDT0 inflow is heat trigger only, not atomic bridge route"
+    },
+    {
+      "id": "STRAT-13",
+      "name": "flash lender selection crossover",
+      "execution_class": "CONTROL_PLANE",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "amount-specific capacity/fee/availability and same-state comparison"
+    },
+    {
+      "id": "STRAT-14",
+      "name": "EulerSwap lending-aware depth",
+      "execution_class": "LOCAL_ATOMIC_CANDIDATE",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "source-specific SDK/vault/reserve exact math"
+    },
+    {
+      "id": "STRAT-15",
+      "name": "Uniswap V4 flash accounting",
+      "execution_class": "LOCAL_ATOMIC_CANDIDATE",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "PoolId/PoolKey/hooks/transient accounting; not proof of free funding"
+    },
+    {
+      "id": "STRAT-16",
+      "name": "Balancer V3 flash accounting",
+      "execution_class": "LOCAL_ATOMIC_CANDIDATE",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "Vault hooks/transient balances and deployment-specific settlement"
+    },
+    {
+      "id": "STRAT-17",
+      "name": "DODO DVM/DPP flash loan",
+      "execution_class": "LOCAL_ATOMIC_CANDIDATE",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "verified flashLoan implementation, callback, active pool fees"
+    },
+    {
+      "id": "STRAT-18",
+      "name": "ERC-3156 generic lender",
+      "execution_class": "LOCAL_ATOMIC_CANDIDATE",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "maxFlashLoan/flashFee/onFlashLoan and callback security"
+    },
+    {
+      "id": "STRAT-19",
+      "name": "Ekubo/Starknet atomic liquidity",
+      "execution_class": "RESEARCH_ONLY",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "Cairo state/math and protocol-level atomicity proof"
+    },
+    {
+      "id": "STRAT-20",
+      "name": "prediction-market complete sets",
+      "execution_class": "CONDITIONAL_HYPEREDGE",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "outcome vectors, split/merge, ERC1155 resolution and settlement"
+    },
+    {
+      "id": "STRAT-21",
+      "name": "CoW/intent/solver residual",
+      "execution_class": "HEDGED_NON_ATOMIC",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "signed intent, TTL, solver rights/auction, partial fills; protocol-specific"
+    },
+    {
+      "id": "STRAT-22",
+      "name": "lending looping/carry",
+      "execution_class": "HEDGED_NON_ATOMIC",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "multi-period yield/capital/withdrawal/liquidation risk; not instant flash PnL"
+    },
+    {
+      "id": "STRAT-23",
+      "name": "liquidation and OEV",
+      "execution_class": "CONDITIONAL_HYPEREDGE",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "callback/keeper/eligibility, oracle update rights and competitive costs"
+    },
+    {
+      "id": "STRAT-24",
+      "name": "CEX lead/lag",
+      "execution_class": "SIGNAL_ONLY",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "external reference signal, not a same-domain transaction leg"
+    },
+    {
+      "id": "STRAT-25",
+      "name": "cross-chain rebalancing inventory",
+      "execution_class": "HEDGED_NON_ATOMIC",
+      "archive_status": "RESEARCH_ONLY",
+      "execute": false,
+      "gate": "prefunded capital/bridge/finality/stranding; not flash-circular"
+    }
+  ],
+  "additional_strategy_workstreams": [
+    {
+      "id": "EXP-01",
+      "name": "Post-confirmed-swap residual and opportunity lifetime",
+      "execution_class": "LOCAL_ATOMIC_CANDIDATE",
+      "data_required": "Confirmed transaction deltas, exact post-state quotes, source latency and opportunity survival",
+      "canonical_owner": "Existing observation journal + exact quote/sizing + replay",
+      "qualification_gate": "Signal is not a guaranteed fill; never frontrun or use private order flow",
+      "status": "RESEARCH_ASSIGNMENT"
+    },
+    {
+      "id": "EXP-02",
+      "name": "Meteora DBC curve/graduation to DAMM migration",
+      "execution_class": "SIGNAL_TO_LOCAL_ATOMIC_CANDIDATE",
+      "data_required": "DBC curve state, migration events, new pool identity and post-migration exact state",
+      "canonical_owner": "Meteora DBC/DAMM source adapters + AssetResolver + DynamicUniverse",
+      "qualification_gate": "Migration event does not prove an active/healthy destination pool",
+      "status": "RESEARCH_ASSIGNMENT"
+    },
+    {
+      "id": "EXP-03",
+      "name": "Raydium CLMM / Meteora DLMM tick-bin liquidity cliff",
+      "execution_class": "LOCAL_ATOMIC_CANDIDATE",
+      "data_required": "Tick arrays/bitmap, active bin, liquidity distribution, fee regime and exact quote",
+      "canonical_owner": "Direct venue state + exact CLMM/DLMM math + PR118",
+      "qualification_gate": "Never fall back to CPMM math outside verified model scope",
+      "status": "RESEARCH_ASSIGNMENT"
+    },
+    {
+      "id": "EXP-04",
+      "name": "Token-2022 epoch transfer fee and transfer hooks",
+      "execution_class": "CROSS_CUTTING_EXECUTION_GUARD",
+      "data_required": "Mint extensions, epoch, withheld fee, hook program and extra account metas",
+      "canonical_owner": "Token identity resolver + transfer-fee/hook decoders + unsigned builder",
+      "qualification_gate": "No quote is valid unless actual transfer semantics are modelled",
+      "status": "RESEARCH_ASSIGNMENT"
+    },
+    {
+      "id": "EXP-05",
+      "name": "Lending liquidation forecast and cascade evidence",
+      "execution_class": "SIGNAL_ONLY_OR_CONDITIONAL_ATOMIC",
+      "data_required": "Borrower positions, collateral/debt, oracle, close factor, bonus, keeper permissions",
+      "canonical_owner": "Lending indexers + R02 capital + protocol-specific liquidation adapter",
+      "qualification_gate": "Forecast does not prove liquidation eligibility or keeper rights",
+      "status": "RESEARCH_ASSIGNMENT"
+    },
+    {
+      "id": "EXP-06",
+      "name": "Protocol invariant/state-transition anomaly sidecar",
+      "execution_class": "CROSS_CUTTING_GUARD",
+      "data_required": "Raw state, invariants, versioned program/contract and transitions",
+      "canonical_owner": "Existing mechanism_discovery + replay + direct state",
+      "qualification_gate": "An anomaly is a guard/alert, not a standalone alpha strategy",
+      "status": "RESEARCH_ASSIGNMENT"
+    },
+    {
+      "id": "EXP-07",
+      "name": "Opportunity survival, crowding and latency calibration",
+      "execution_class": "RESEARCH_ONLY_CONTROL_PLANE",
+      "data_required": "Quote age, detection-to-build latency, competing route density, source gaps and outcome receipts",
+      "canonical_owner": "Existing source journal + paper outcomes + MarketEpisode",
+      "qualification_gate": "Survivorship bias and missing outcomes must be retained",
+      "status": "RESEARCH_ASSIGNMENT"
+    },
+    {
+      "id": "EXP-08",
+      "name": "Intent/RFQ/CoW batch auction solver residual",
+      "execution_class": "CONDITIONAL_OR_HEDGED_NON_ATOMIC",
+      "data_required": "Quote streams, signed intent, TTL, solver auction, partial fills and settlement",
+      "canonical_owner": "CoW API / RFQ providers + existing quote/build contracts",
+      "qualification_gate": "Quote is not fill; order may not compose with flashloan",
+      "status": "RESEARCH_ASSIGNMENT"
+    },
+    {
+      "id": "EXP-09",
+      "name": "Spot-perp/futures/options/funding basis",
+      "execution_class": "HEDGED_NON_ATOMIC_OR_SIGNAL_ONLY",
+      "data_required": "CEX/onchain orderbooks, mark/index, funding, open interest, margin and liquidation data",
+      "canonical_owner": "Public CEX/perps feeds + existing correlation ledger",
+      "qualification_gate": "Requires inventory/hedge; not a flash loan held across periods",
+      "status": "RESEARCH_ASSIGNMENT"
+    },
+    {
+      "id": "EXP-10",
+      "name": "Uniswap v4 hook-specific fees/custom accounting",
+      "execution_class": "LOCAL_ATOMIC_CANDIDATE",
+      "data_required": "PoolId/PoolKey, hook address/permission/code hash, callbacks and exact deltas",
+      "canonical_owner": "Uniswap v4 PoolManager/hook decoder + exact quote/simulation",
+      "qualification_gate": "Never treat every v4 pool as standard v3 CLMM",
+      "status": "RESEARCH_ASSIGNMENT"
+    }
+  ],
+  "sx_research_overlay": [
+    {
+      "id": "SX-02",
+      "name": "Flash mint and lender-selection economics",
+      "class": "CONTROL_PLANE",
+      "status": "Research/implementation lane; check current PR state",
+      "data": [
+        "issuer mint/burn semantics",
+        "fees and caps",
+        "supply constraints",
+        "capacity and repayment postconditions"
+      ]
+    },
+    {
+      "id": "SX-03",
+      "name": "Curve LLAMMA and banded liquidation",
+      "class": "CONDITIONAL_HYPEREDGE",
+      "status": "Research-only; primary source/license/math gates must be checked",
+      "data": [
+        "banded collateral state",
+        "oracle crossing",
+        "soft-liquidation math",
+        "whitepaper/source revision"
+      ]
+    },
+    {
+      "id": "SX-04",
+      "name": "OEV/oracle auction and keeper strategy",
+      "class": "CONDITIONAL_HYPEREDGE",
+      "data": [
+        "oracle update timing",
+        "auction/keeper rights",
+        "liquidation eligibility",
+        "gas/priority/solver competition"
+      ]
+    },
+    {
+      "id": "SX-05",
+      "name": "JIT LP / LVR / adverse selection",
+      "class": "INVENTORY_OR_MARKET_STRUCTURE",
+      "data": [
+        "tick-level liquidity",
+        "swap flow",
+        "fee and rebate",
+        "inventory and adverse-selection markout"
+      ]
+    },
+    {
+      "id": "SX-06",
+      "name": "CLOB/RFQ/queue-aware market making",
+      "class": "INVENTORY_OR_CONDITIONAL",
+      "data": [
+        "L2 orderbook",
+        "sequence and queue",
+        "IOC/FOK/fill",
+        "RFQ TTL and settlement"
+      ]
+    },
+    {
+      "id": "SX-07",
+      "name": "Prediction-market complete sets and claims",
+      "class": "CONDITIONAL_HYPEREDGE",
+      "data": [
+        "outcome vector",
+        "split/merge rights",
+        "ERC-1155 resolution",
+        "settlement/finality"
+      ]
+    },
+    {
+      "id": "SX-08",
+      "name": "Lending rates, refinance and collateral optimizer",
+      "class": "HEDGED_NON_ATOMIC_OR_CONTROL_PLANE",
+      "data": [
+        "utilization/rate curves",
+        "supply/borrow caps",
+        "collateral/health",
+        "withdraw/repay constraints"
+      ]
+    },
+    {
+      "id": "SX-09",
+      "name": "LP lifecycle and inventory/fee harvesting",
+      "class": "INVENTORY_OR_CONDITIONAL",
+      "data": [
+        "position state",
+        "fees owed",
+        "range/tick/bin",
+        "capital lock and exit costs"
+      ]
+    },
+    {
+      "id": "SX-10",
+      "name": "Permitted backrun, blockspace and ordering economics",
+      "class": "CONDITIONAL_OR_RESEARCH_ONLY",
+      "data": [
+        "public transaction/auction state",
+        "inclusion/payment cost",
+        "own transaction residual",
+        "ordering rules"
+      ]
+    },
+    {
+      "id": "SX-11",
+      "name": "Cross-rollup/shared-sequencer and async inventory",
+      "class": "HEDGED_NON_ATOMIC_OR_SIGNAL_ONLY",
+      "data": [
+        "sequencer ordering",
+        "bridge messages",
+        "finality",
+        "prefunded inventory"
+      ]
+    },
+    {
+      "id": "SX-12",
+      "name": "Portfolio optimizer and multi-strategy resource allocation",
+      "class": "CONTROL_PLANE",
+      "data": [
+        "StrategyContractV1 ResourceManifest",
+        "AGG-05 WorkResourceSet",
+        "shared pools/collateral/capital",
+        "deterministic candidate set"
+      ]
+    },
+    {
+      "id": "SX-13",
+      "name": "Strategy learning and causal evaluation",
+      "class": "RESEARCH_ONLY",
+      "data": [
+        "chronological episodes",
+        "negative corpus",
+        "counterfactual replay",
+        "holdout and multiple-testing control"
+      ]
+    },
+    {
+      "id": "SX-14",
+      "name": "Verifiable data/compute procurement and mechanism lab",
+      "class": "RESEARCH_ONLY",
+      "data": [
+        "task hashes",
+        "independent recomputation",
+        "cost/latency/accuracy",
+        "mechanism simulation"
+      ]
+    },
+    {
+      "id": "SX-15",
+      "name": "Strategy portfolio observability and release matrix",
+      "class": "CONTROL_PLANE",
+      "data": [
+        "source coverage",
+        "candidate/rejection receipts",
+        "replay drift",
+        "package/runtime reachability"
+      ]
+    },
+    {
+      "id": "SX-16",
+      "name": "Final strategy-pack integration and evidence reconciliation",
+      "class": "COORDINATOR",
+      "data": [
+        "all strategy/source status",
+        "canonical owners",
+        "PR/CI/evidence",
+        "crosswalk consistency"
+      ]
+    }
+  ],
+  "venues": [
+    {
+      "venue_id": "VENUE-01",
+      "name": "Uniswap V2",
+      "domain": "EVM",
+      "mechanic": "CPMM",
+      "pitfalls": "integer reserve math incl fee; fee-on-transfer/reentrancy",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-02",
+      "name": "Uniswap V3",
+      "domain": "EVM",
+      "mechanic": "CLMM",
+      "pitfalls": "sqrtPriceX96, liquidity, initialized ticks/bitmap",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-03",
+      "name": "Uniswap V4",
+      "domain": "EVM",
+      "mechanic": "HOOKED_CLMM",
+      "pitfalls": "PoolKey, hook address/permission/bytecode, callbacks and custom accounting",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-04",
+      "name": "Curve StableSwap/NG",
+      "domain": "EVM",
+      "mechanic": "STABLESWAP",
+      "pitfalls": "get_dy/invariant/rates/metapool/rate providers",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-05",
+      "name": "Balancer V2/V3",
+      "domain": "EVM",
+      "mechanic": "VAULT_MIXED",
+      "pitfalls": "Vault querySwap/batchSwap, composable pools, scaling and hooks",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ],
+      "current_lifecycle_status": "WITHDRAWALS_ONLY_GENERAL_POOLS",
+      "exception_rule": "Only individually verified partner-requested V3 pools may remain live until 2026-11-30; require official exception list plus current onchain swap proof"
+    },
+    {
+      "venue_id": "VENUE-06",
+      "name": "PancakeSwap V2",
+      "domain": "EVM/BNB",
+      "mechanic": "CPMM",
+      "pitfalls": "reserve integer math and token tax",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-07",
+      "name": "PancakeSwap V3",
+      "domain": "EVM/BNB",
+      "mechanic": "CLMM",
+      "pitfalls": "tick spacing/fee tiers",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-08",
+      "name": "Pancake Infinity",
+      "domain": "EVM/BNB",
+      "mechanic": "HOOK_POOL",
+      "pitfalls": "bin/CLAMM/hooks; per-hook semantics",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-09",
+      "name": "Aerodrome/Velodrome",
+      "domain": "EVM",
+      "mechanic": "STABLE_VOLATILE_SLIPSTREAM",
+      "pitfalls": "distinct stable/volatile/CLMM invariant",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-10",
+      "name": "LFJ Liquidity Book",
+      "domain": "EVM",
+      "mechanic": "BIN_AMM",
+      "pitfalls": "active bin/bin step/dynamic fees",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-11",
+      "name": "Pharaoh DLMM",
+      "domain": "EVM/Avalanche",
+      "mechanic": "BIN_AMM",
+      "pitfalls": "bin math/dynamic fee/bin rounding",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-12",
+      "name": "Kuru",
+      "domain": "EVM/Monad",
+      "mechanic": "HYBRID_CLOB_AMM",
+      "pitfalls": "book sequence + AMM state",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-13",
+      "name": "Kodiak/BEX",
+      "domain": "EVM/Berachain",
+      "mechanic": "AMM_CLMM",
+      "pitfalls": "version/deprecation/market identity",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-14",
+      "name": "Shadow/Metropolis",
+      "domain": "EVM/Sonic",
+      "mechanic": "CLMM_DLMM",
+      "pitfalls": "exact pool model and lender deprecation",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-15",
+      "name": "Sushi",
+      "domain": "EVM",
+      "mechanic": "CPMM_CLMM",
+      "pitfalls": "pool-specific curve",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-16",
+      "name": "Ekubo",
+      "domain": "Cairo/Starknet",
+      "mechanic": "CLAMM",
+      "pitfalls": "Cairo-native math; no EVM ABI assumptions",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-17",
+      "name": "Orca Whirlpools",
+      "domain": "Solana/SVM",
+      "mechanic": "CLMM",
+      "pitfalls": "tick arrays and program-specific state",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-18",
+      "name": "Meteora DLMM",
+      "domain": "Solana/SVM",
+      "mechanic": "BIN_AMM",
+      "pitfalls": "active bins and dynamic fee hysteresis",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-19",
+      "name": "Raydium CLMM",
+      "domain": "Solana/SVM",
+      "mechanic": "CLMM",
+      "pitfalls": "program-specific tick arrays/fees",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-20",
+      "name": "Raydium CPMM",
+      "domain": "Solana/SVM",
+      "mechanic": "CPMM",
+      "pitfalls": "reserves/fee/Token-2022",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-21",
+      "name": "Meteora DAMM/DBC",
+      "domain": "Solana/SVM",
+      "mechanic": "DYNAMIC_BONDING",
+      "pitfalls": "curve/graduation/migration; not ordinary pool",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-22",
+      "name": "Manifest",
+      "domain": "Solana/SVM",
+      "mechanic": "CLOB",
+      "pitfalls": "book depth/VWAP/slot coherence",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-23",
+      "name": "Phoenix",
+      "domain": "Solana/SVM",
+      "mechanic": "CLOB",
+      "pitfalls": "sequence/lot sizes/maker-taker fees",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-24",
+      "name": "OpenBook",
+      "domain": "Solana/SVM",
+      "mechanic": "CLOB",
+      "pitfalls": "market version/decimals/sequence",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-25",
+      "name": "PumpSwap",
+      "domain": "Solana/SVM",
+      "mechanic": "AMM",
+      "pitfalls": "pool origin/migration/token safety",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-26",
+      "name": "DeepBook V3",
+      "domain": "Sui/Move",
+      "mechanic": "CLOB",
+      "pitfalls": "object version/checkpoint/shared object contention",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-27",
+      "name": "Cetus",
+      "domain": "Sui/Move",
+      "mechanic": "CLMM",
+      "pitfalls": "full Move type/ticks/liquidity",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-28",
+      "name": "Aftermath Pools",
+      "domain": "Sui/Move",
+      "mechanic": "WEIGHTED_POOL",
+      "pitfalls": "pool-specific weights/fees/router aliasing",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-29",
+      "name": "Bluefin",
+      "domain": "Sui/Move",
+      "mechanic": "AMM_CLOB",
+      "pitfalls": "PTB and book/AMM aliasing",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-30",
+      "name": "Osmosis",
+      "domain": "Cosmos",
+      "mechanic": "POOL_ROUTE",
+      "pitfalls": "pool manager/IBC denom/gas/AMM-specific math",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-31",
+      "name": "STON.fi",
+      "domain": "TON",
+      "mechanic": "AMM",
+      "pitfalls": "jetton masters/pool version; TON async",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-32",
+      "name": "DeDust",
+      "domain": "TON",
+      "mechanic": "AMM",
+      "pitfalls": "jetton masters/pool state; TON async",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    },
+    {
+      "venue_id": "VENUE-33",
+      "name": "Tonco",
+      "domain": "TON",
+      "mechanic": "CLMM",
+      "pitfalls": "tick/liquidity/TON async",
+      "qualified": false,
+      "required_evidence": [
+        "official version/source pin",
+        "deployed program/factory + pool/book identity",
+        "canonical asset identities",
+        "state generation",
+        "exact amount quote",
+        "all fees and consumed input",
+        "boundary replay"
+      ]
+    }
+  ],
+  "flash_funding_candidates": [
+    {
+      "lender_id": "FUND-01",
+      "name": "Morpho Blue",
+      "domain": "EVM",
+      "primitive": "flashLoan/onMorphoFlashLoan",
+      "constraints": "singleton token balance, per-chain deployed contract and callback",
+      "status": "NOT_QUALIFIED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-02",
+      "name": "Bend Morpho fork",
+      "domain": "Berachain",
+      "primitive": "Morpho-compatible callback",
+      "constraints": "deployment/callback and token balance recheck",
+      "status": "NOT_QUALIFIED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-03",
+      "name": "Aave V3",
+      "domain": "EVM multichain",
+      "primitive": "flashLoan/flashLoanSimple",
+      "constraints": "per-chain deployment, reserve eligibility and premium",
+      "status": "NOT_QUALIFIED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-04",
+      "name": "Yei",
+      "domain": "Sei",
+      "primitive": "Aave fork FlashLoanLogic",
+      "constraints": "active pool, live fee and reserve",
+      "status": "NOT_QUALIFIED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-05",
+      "name": "Project 0",
+      "domain": "Solana",
+      "primitive": "begin/end bank flash",
+      "constraints": "bank cap, borrowable status, health/oracle, no nested flash, tx/account limits",
+      "status": "USER_PRIORITY_NOT_LIVE_QUALIFIED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-06",
+      "name": "Kamino",
+      "domain": "Solana",
+      "primitive": "lending/flash primitive",
+      "constraints": "production primitive, reserve config, fee and borrowable capacity",
+      "status": "USER_PRIORITY_NOT_LIVE_QUALIFIED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-07",
+      "name": "Marginfi",
+      "domain": "Solana",
+      "primitive": "bank flash",
+      "constraints": "deprioritized; user/security/economic gate; not mandatory",
+      "status": "DEPRIORITIZED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-08",
+      "name": "Scallop",
+      "domain": "Sui",
+      "primitive": "Move PTB flashloan",
+      "constraints": "package/type/fee/receipt/checkpoint",
+      "status": "NOT_QUALIFIED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-09",
+      "name": "NAVI",
+      "domain": "Sui",
+      "primitive": "Move flash",
+      "constraints": "package/type/getAllFlashLoanAssets/max/fee",
+      "status": "OFFLINE_OR_PARTIAL_NOT_LIVE_QUALIFIED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-10",
+      "name": "DeepBook",
+      "domain": "Sui",
+      "primitive": "CLOB financing PTB",
+      "constraints": "pool asset balance/checkpoint, borrow/trade shared-pool contention",
+      "status": "OFFLINE_OR_PARTIAL_NOT_LIVE_QUALIFIED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-11",
+      "name": "Cetus",
+      "domain": "Sui",
+      "primitive": "flash swap/loan PTB",
+      "constraints": "package/version/receipt and live pool state",
+      "status": "NOT_QUALIFIED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-12",
+      "name": "Suilend",
+      "domain": "Sui",
+      "primitive": "flash loan candidate",
+      "constraints": "fee/availability/capacity proof",
+      "status": "NOT_QUALIFIED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-13",
+      "name": "Ekubo",
+      "domain": "Starknet",
+      "primitive": "Cairo flash liquidity candidate",
+      "constraints": "contract/deployment and atomic receipt",
+      "status": "NOT_QUALIFIED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-14",
+      "name": "Uniswap V2 flash swap",
+      "domain": "Ethereum/EVM",
+      "primitive": "pair callback",
+      "constraints": "deployment/pair, callback and repayment math",
+      "status": "DEX_FACILITY_NOT_LENDER_QUALIFIED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-15",
+      "name": "Balancer Vault",
+      "domain": "Ethereum/EVM",
+      "primitive": "flash liquidity facility",
+      "constraints": "Vault version, token balance, callback and fee",
+      "status": "NOT_QUALIFIED",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-16",
+      "name": "Osmosis",
+      "domain": "Osmosis",
+      "primitive": "no verified lender in archive",
+      "constraints": "read-only unless protocol-specific facility proven",
+      "status": "DATA_ONLY",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    },
+    {
+      "lender_id": "FUND-17",
+      "name": "TON",
+      "domain": "TON",
+      "primitive": "async message ecosystem",
+      "constraints": "no general same-tx flash assumption",
+      "status": "DATA_ONLY",
+      "capacity": null,
+      "fee": null,
+      "qualified": false
+    }
+  ],
+  "data_sources": [
+    {
+      "id": "SRC-SOL-01",
+      "name": "Solana RPC and WebSocket",
+      "domain": "Solana",
+      "role": "RAW_CHAIN_STATE",
+      "official_docs": "https://solana.com/docs/rpc/websocket/accountsubscribe",
+      "data": [
+        "accountSubscribe",
+        "programSubscribe",
+        "logsSubscribe",
+        "slots/blocks"
+      ],
+      "strategy_use": [
+        "all Solana strategy families"
+      ],
+      "tier": "PRIMARY_READ_ONLY",
+      "limits": "RPC plan-specific quotas, commitment/finality and provider correlation must be recorded"
+    },
+    {
+      "id": "SRC-SOL-02",
+      "name": "Solana Geyser plugin interface",
+      "domain": "Solana",
+      "role": "RAW_ACCOUNT_TRANSACTION_STREAM",
+      "official_docs": "https://github.com/solana-labs/solana/blob/master/docs/src/validator/geyser.md",
+      "data": [
+        "account updates",
+        "transactions",
+        "slot status",
+        "write_version"
+      ],
+      "strategy_use": [
+        "fast pool/book/liquidation state",
+        "stream gap recovery"
+      ],
+      "tier": "PRIMARY_STREAM",
+      "limits": "Provider/node deployment and commitment/replay semantics required"
+    },
+    {
+      "id": "SRC-SOL-03",
+      "name": "Triton Yellowstone / Dragon's Mouth",
+      "domain": "Solana",
+      "role": "MANAGED_GEYER_STREAM",
+      "official_docs": "https://www.triton.one/chains/solana",
+      "data": [
+        "accounts",
+        "transactions",
+        "slots",
+        "blocks",
+        "entries"
+      ],
+      "strategy_use": [
+        "high-throughput Solana market state"
+      ],
+      "tier": "PROVIDER_STREAM",
+      "limits": "Entitlement, price, retention, replay and reconnect contract must be pinned"
+    },
+    {
+      "id": "SRC-SOL-04",
+      "name": "Helius data plane",
+      "domain": "Solana",
+      "role": "INDEXED_EVENTS_AND_TRANSACTION_DATA",
+      "official_docs": "https://docs.helius.dev/",
+      "data": [
+        "parsed transactions",
+        "webhooks",
+        "address/program event discovery"
+      ],
+      "strategy_use": [
+        "event discovery",
+        "launch/migration",
+        "history"
+      ],
+      "tier": "INDEXER_NOT_STATE_AUTHORITY",
+      "limits": "Use as discovery/index source; reconcile exact state against chain accounts"
+    },
+    {
+      "id": "SRC-SUI-01",
+      "name": "Sui gRPC",
+      "domain": "Sui",
+      "role": "RAW_CHAIN_STREAM",
+      "official_docs": "https://docs.sui.io/develop/accessing-data/",
+      "data": [
+        "transactions",
+        "events",
+        "objects",
+        "checkpoints"
+      ],
+      "strategy_use": [
+        "all Sui strategy families"
+      ],
+      "tier": "PRIMARY_STREAM",
+      "limits": "Use checkpoint/object version and full Move type; JSON-RPC mainnet disabled"
+    },
+    {
+      "id": "SRC-SUI-02",
+      "name": "Sui GraphQL RPC and General-purpose Indexer",
+      "domain": "Sui",
+      "role": "QUERY_AND_INDEX",
+      "official_docs": "https://www.docs.sui.io/develop/accessing-data/graphql/graphql-rpc",
+      "data": [
+        "objects",
+        "transactions",
+        "events",
+        "historical/indexed data"
+      ],
+      "strategy_use": [
+        "Sui discovery/backfill/reader"
+      ],
+      "tier": "PRIMARY_QUERY",
+      "limits": "Understand indexer lag/pruning and use checkpoints for consistency"
+    },
+    {
+      "id": "SRC-SUI-03",
+      "name": "Sui Archival Store",
+      "domain": "Sui",
+      "role": "HISTORICAL_CHAIN_DATA",
+      "official_docs": "https://docs.sui.io/develop/accessing-data/",
+      "data": [
+        "historical checkpoints and transactions"
+      ],
+      "strategy_use": [
+        "replay",
+        "backfill",
+        "participant episodes"
+      ],
+      "tier": "HISTORICAL",
+      "limits": "Latency/cost differs from real-time gRPC"
+    },
+    {
+      "id": "SRC-EVM-01",
+      "name": "EVM archive/full node RPC",
+      "domain": "EVM",
+      "role": "RAW_CHAIN_STATE",
+      "official_docs": null,
+      "data": [
+        "eth_call",
+        "logs",
+        "traces",
+        "block hashes",
+        "state at block"
+      ],
+      "strategy_use": [
+        "exact EVM pool/reserve/vault/oracle state"
+      ],
+      "tier": "PRIMARY_READ_ONLY",
+      "limits": "Pin chain ID, endpoint, archive depth, trace support, reorg/finality and quota per chain"
+    },
+    {
+      "id": "SRC-EVM-02",
+      "name": "The Graph Subgraphs",
+      "domain": "Multi-chain",
+      "role": "INDEXER_AND_DISCOVERY",
+      "official_docs": "https://thegraph.com/docs/en/",
+      "data": [
+        "indexed contract events",
+        "historical pool entities",
+        "subgraph queries"
+      ],
+      "strategy_use": [
+        "discovery/backfill/analytics"
+      ],
+      "tier": "SECONDARY_INDEX",
+      "limits": "Deployment/schema/operator/version check; not live state authority"
+    },
+    {
+      "id": "SRC-EVM-03",
+      "name": "The Graph Substreams",
+      "domain": "Multi-chain",
+      "role": "STREAMING_INDEXER",
+      "official_docs": "https://thegraph.com/docs/en/substreams/overview/",
+      "data": [
+        "parallel chain indexing",
+        "trace-level EVM/account updates",
+        "multi-sink output"
+      ],
+      "strategy_use": [
+        "custom historical/realtime feeds"
+      ],
+      "tier": "SECONDARY_STREAM",
+      "limits": "Module and endpoint version, fork semantics, sink/replay cost"
+    },
+    {
+      "id": "SRC-QUOTE-01",
+      "name": "Jupiter Swap API V2",
+      "domain": "Solana",
+      "role": "AGGREGATOR_QUOTE_AND_BUILDER",
+      "official_docs": "https://github.com/jup-ag/docs/blob/main/swap/index.mdx",
+      "data": [
+        "Meta-Aggregator /order + /execute",
+        "Router /build + /submit",
+        "routing engine quote"
+      ],
+      "strategy_use": [
+        "P0-2",
+        "2-hop and multihop exact quote"
+      ],
+      "tier": "QUOTE_NOT_INDEPENDENT_LIQUIDITY",
+      "limits": "/order includes multiple routing engines; /build Metis only; distinguish managed landing vs composable instructions"
+    },
+    {
+      "id": "SRC-QUOTE-02",
+      "name": "0x Solana Swap API",
+      "domain": "Solana",
+      "role": "AGGREGATOR_QUOTE_AND_INSTRUCTIONS",
+      "official_docs": "https://docs.0x.org/solana/solana-swap-api/introduction",
+      "data": [
+        "POST /solana/swap-instructions",
+        "quote and instruction bundle",
+        "taker and slippage"
+      ],
+      "strategy_use": [
+        "P0-2",
+        "independent quote comparator"
+      ],
+      "tier": "QUOTE_NOT_INDEPENDENT_LIQUIDITY",
+      "limits": "Open beta as documented; API key; taker required; source response signature and build composition must be verified"
+    },
+    {
+      "id": "SRC-QUOTE-03",
+      "name": "Titan Solana adapter",
+      "domain": "Solana",
+      "role": "AGGREGATOR_QUOTE_AND_BUILDER",
+      "official_docs": null,
+      "data": [
+        "quote/build adapter on R13-K"
+      ],
+      "strategy_use": [
+        "quote race and build comparison"
+      ],
+      "tier": "REPO_ADAPTER_MERGED",
+      "limits": "PR #647 offline/sender-free adapter; live endpoint/entitlement and actual response coverage still need qualification"
+    },
+    {
+      "id": "SRC-QUOTE-04",
+      "name": "OpenOcean / OKX DEX / Rango",
+      "domain": "Solana/Sui/EVM",
+      "role": "MULTI_CHAIN_AGGREGATOR_CANDIDATES",
+      "official_docs": null,
+      "data": [
+        "route/quote/build APIs subject to current chain coverage"
+      ],
+      "strategy_use": [
+        "quote provider diversity"
+      ],
+      "tier": "CANDIDATE",
+      "limits": "Pin each chain endpoint/schema; identify quote-only vs instructions vs unsigned tx; dedupe underlying pools"
+    },
+    {
+      "id": "SRC-DEX-01",
+      "name": "Orca Whirlpools SDK",
+      "domain": "Solana",
+      "role": "DIRECT_CLMM_STATE_AND_MATH",
+      "official_docs": "https://orca-so.github.io/whirlpools/ts/",
+      "data": [
+        "tick arrays",
+        "liquidity",
+        "quote math",
+        "instruction layouts"
+      ],
+      "strategy_use": [
+        "Solana CLMM cross venue"
+      ],
+      "tier": "DIRECT_VENUE",
+      "limits": "Respect existing Orca license/source gate before code reuse"
+    },
+    {
+      "id": "SRC-DEX-02",
+      "name": "Raydium CPMM/CLMM",
+      "domain": "Solana",
+      "role": "DIRECT_POOL_STATE_AND_MATH",
+      "official_docs": "https://docs.raydium.io/",
+      "data": [
+        "reserves",
+        "CLMM ticks",
+        "fees",
+        "pool config"
+      ],
+      "strategy_use": [
+        "Solana direct market graph"
+      ],
+      "tier": "DIRECT_VENUE",
+      "limits": "Versioned SDK/IDL and exact pool state; confirm current docs paths"
+    },
+    {
+      "id": "SRC-DEX-03",
+      "name": "Meteora DLMM/DAMM/DBC",
+      "domain": "Solana",
+      "role": "DIRECT_BIN_AND_BONDING_CURVE_STATE",
+      "official_docs": "https://docs.meteora.ag/",
+      "data": [
+        "active bin",
+        "bin arrays",
+        "dynamic fees",
+        "bonding curve/migration"
+      ],
+      "strategy_use": [
+        "liquidity cliff",
+        "launch/migration"
+      ],
+      "tier": "DIRECT_VENUE",
+      "limits": "Pin program/package generation and bin/fee math"
+    },
+    {
+      "id": "SRC-DEX-04",
+      "name": "Phoenix / Manifest / OpenBook",
+      "domain": "Solana",
+      "role": "CLOB_STATE",
+      "official_docs": null,
+      "data": [
+        "orderbook levels",
+        "market config",
+        "sequence",
+        "fills"
+      ],
+      "strategy_use": [
+        "AMM-vs-CLOB",
+        "CLOB market making"
+      ],
+      "tier": "DIRECT_VENUE_CANDIDATE",
+      "limits": "Source-pin market version and exact IOC/FOK/partial-fill semantics"
+    },
+    {
+      "id": "SRC-DEX-05",
+      "name": "DeepBook V3",
+      "domain": "Sui",
+      "role": "CLOB_AND_FLASH_LOAN",
+      "official_docs": "https://www.docs.sui.io/onchain-finance/deepbook/deepbookv3-sdk/flash-loans",
+      "data": [
+        "orderbook",
+        "pool assets",
+        "PTB flash loan"
+      ],
+      "strategy_use": [
+        "Sui CLOB",
+        "atomic flash-funded routes"
+      ],
+      "tier": "DIRECT_VENUE_AND_CAPITAL",
+      "limits": "Checkpoint and hot-potato receipt; same PTB borrow/repay and shared pool resource contention"
+    },
+    {
+      "id": "SRC-DEX-06",
+      "name": "Cetus / Aftermath / Bluefin / Turbos / FlowX",
+      "domain": "Sui",
+      "role": "DIRECT_POOL_AND_ORDERBOOK",
+      "official_docs": "https://cetus-1.gitbook.io/cetus-developer-docs/developer/via-sdk-v2/sdk-modules/cetusprotocol-sui-clmm-sdk",
+      "data": [
+        "CLMM pool state",
+        "quote math",
+        "pool objects",
+        "orderbook where available"
+      ],
+      "strategy_use": [
+        "Sui direct markets"
+      ],
+      "tier": "DIRECT_VENUE_CANDIDATES",
+      "limits": "Pin full Move types, package IDs, object versions and exact quote/build support"
+    },
+    {
+      "id": "SRC-DEX-07",
+      "name": "Uniswap V2/V3/V4",
+      "domain": "EVM",
+      "role": "DIRECT_POOL_STATE_AND_HOOKS",
+      "official_docs": "https://developers.uniswap.org/docs/protocols/overview",
+      "data": [
+        "reserves",
+        "sqrtPrice/liquidity/ticks",
+        "PoolManager/PoolId/hooks/flash accounting"
+      ],
+      "strategy_use": [
+        "EVM multihop",
+        "hook/fee arbitrage"
+      ],
+      "tier": "DIRECT_VENUE",
+      "limits": "v4 requires PoolKey/PoolId and hook-specific state/accounting"
+    },
+    {
+      "id": "SRC-DEX-08",
+      "name": "PancakeSwap Infinity",
+      "domain": "EVM/BNB",
+      "role": "DIRECT_HOOKED_POOL_STATE",
+      "official_docs": "https://developer.pancakeswap.finance/contracts/infinity/overview",
+      "data": [
+        "Vault",
+        "PoolManager",
+        "hooks",
+        "flash accounting"
+      ],
+      "strategy_use": [
+        "hook/dynamic fee and route composition"
+      ],
+      "tier": "DIRECT_VENUE",
+      "limits": "Pool type/hook-specific model and deployment/version"
+    },
+    {
+      "id": "SRC-DEX-09",
+      "name": "Curve StableSwap/NG/LLAMMA",
+      "domain": "EVM",
+      "role": "DIRECT_STABLE_AND_BANDED_STATE",
+      "official_docs": null,
+      "data": [
+        "invariant",
+        "rates",
+        "metapool",
+        "LLAMMA bands"
+      ],
+      "strategy_use": [
+        "stablecoin FX",
+        "vault/redemption",
+        "LLAMMA research"
+      ],
+      "tier": "DIRECT_VENUE_CANDIDATE",
+      "limits": "SX-03 Curve source is proprietary/all-rights-reserved in current audit; no copying; require official whitepaper/source revision and independent implementation"
+    },
+    {
+      "id": "SRC-DEX-10",
+      "name": "Balancer V2/V3",
+      "domain": "EVM",
+      "role": "MULTI_TOKEN_VAULT_STATE",
+      "official_docs": "https://balancer.fi/",
+      "data": [
+        "Vault vectors",
+        "pool hooks",
+        "batch swaps",
+        "flash liquidity"
+      ],
+      "strategy_use": [
+        "multi-token routes and archive coverage"
+      ],
+      "tier": "LIFECYCLE_RESTRICTED",
+      "limits": "BIP-928: most pools withdrawal-only from 2026-10-30; explicit partner V3 exceptions only until 2026-11-30 after per-pool onchain verification"
+    },
+    {
+      "id": "SRC-DEX-11",
+      "name": "Aerodrome / Velodrome",
+      "domain": "EVM",
+      "role": "STABLE_VOLATILE_SLIPSTREAM_POOL_STATE",
+      "official_docs": null,
+      "data": [
+        "stable/volatile pools",
+        "Slipstream concentrated liquidity"
+      ],
+      "strategy_use": [
+        "Base/Optimism venue fragmentation"
+      ],
+      "tier": "DIRECT_VENUE_CANDIDATE",
+      "limits": "Per-chain deployment and pool factory/source pins required"
+    },
+    {
+      "id": "SRC-DEX-12",
+      "name": "LFJ Liquidity Book / Pharaoh DLMM",
+      "domain": "EVM",
+      "role": "BIN_AMM_STATE",
+      "official_docs": null,
+      "data": [
+        "active bins",
+        "bin step",
+        "dynamic fee"
+      ],
+      "strategy_use": [
+        "bin liquidity arbitrage"
+      ],
+      "tier": "DIRECT_VENUE_CANDIDATE",
+      "limits": "Different implementations; do not reuse Meteora math blindly"
+    },
+    {
+      "id": "SRC-LEND-01",
+      "name": "Project 0",
+      "domain": "Solana",
+      "role": "FLASH_CAPITAL",
+      "official_docs": "https://docs.marginfi.com/guides/flashloans",
+      "data": [
+        "begin/end bank flash",
+        "bank caps/status",
+        "health/oracle"
+      ],
+      "strategy_use": [
+        "Solana USDC/SOL capital hubs",
+        "liquidation",
+        "arbitrage"
+      ],
+      "tier": "DOCUMENTED_PRIMITIVE_CAPACITY_REQUIRES_R02",
+      "limits": "Direct transaction bracket; begin first/end last, one flash per transaction, no CPI; current bank and account requirements"
+    },
+    {
+      "id": "SRC-LEND-02",
+      "name": "Kamino",
+      "domain": "Solana",
+      "role": "FLASH_CAPITAL_AND_LENDING_STATE",
+      "official_docs": null,
+      "data": [
+        "Reserve/LendingMarket",
+        "flash borrow/repay",
+        "fees and caps"
+      ],
+      "strategy_use": [
+        "Solana capital hubs",
+        "liquidation"
+      ],
+      "tier": "R02_READER_AND_R03_BUILDER",
+      "limits": "Use pinned klend SDK, coherent reserve/vault state and instruction index semantics"
+    },
+    {
+      "id": "SRC-LEND-03",
+      "name": "Jupiter Lend",
+      "domain": "Solana",
+      "role": "FLASH_CAPITAL_AND_LENDING_STATE",
+      "official_docs": "https://dev.jup.ag/docs/lend",
+      "data": [
+        "TokenReserve",
+        "vaults",
+        "flash borrow/payback"
+      ],
+      "strategy_use": [
+        "Solana capital hub",
+        "route financing"
+      ],
+      "tier": "R02_READER_AND_R03_BUILDER",
+      "limits": "Admin fee alone is not capacity; validate reserve/vault and deployed program"
+    },
+    {
+      "id": "SRC-LEND-04",
+      "name": "NAVI",
+      "domain": "Sui",
+      "role": "FLASH_CAPITAL",
+      "official_docs": "https://sdk.naviprotocol.io/lending/flashloan",
+      "data": [
+        "flashloan assets",
+        "max amount",
+        "fee",
+        "coinType",
+        "PTB receipt"
+      ],
+      "strategy_use": [
+        "Sui USDC/SUI hubs",
+        "liquidation"
+      ],
+      "tier": "R02_READER_AND_R03_BUILDER",
+      "limits": "Not every asset/pool supports flash; amount-limited; live fee/capacity"
+    },
+    {
+      "id": "SRC-LEND-05",
+      "name": "Bucket Protocol",
+      "domain": "Sui",
+      "role": "FLASH_MINT_AND_LOAN",
+      "official_docs": "https://docs.bucketprotocol.io/developer-and-security/technical-resources",
+      "data": [
+        "USDB flash mint/loan SDK",
+        "CDP/PSM objects"
+      ],
+      "strategy_use": [
+        "USDB/USDC/stable routes"
+      ],
+      "tier": "CANDIDATE_REQUIRES_PIN_AND_R02_R03",
+      "limits": "Verify deployed package/version, exact flashMint/flashBurn fee, supply and hot-potato semantics"
+    },
+    {
+      "id": "SRC-LEND-06",
+      "name": "Scallop / Suilend / Cetus candidates",
+      "domain": "Sui",
+      "role": "LENDING_AND_FLASH_CANDIDATE",
+      "official_docs": null,
+      "data": [
+        "reserve/pool/loan/flash semantics"
+      ],
+      "strategy_use": [
+        "Sui capital expansion"
+      ],
+      "tier": "CANDIDATE",
+      "limits": "Do not infer a flash primitive without current official contract and resource evidence"
+    },
+    {
+      "id": "SRC-LEND-07",
+      "name": "Aave V3",
+      "domain": "EVM",
+      "role": "FLASH_CAPITAL",
+      "official_docs": "https://www.aave.com/docs/aave-v3/guides/flash-loans",
+      "data": [
+        "flashLoan/flashLoanSimple",
+        "reserve liquidity",
+        "premium"
+      ],
+      "strategy_use": [
+        "EVM arbitrage/liquidation"
+      ],
+      "tier": "DOCUMENTED_PRIMITIVE_CAPACITY_REQUIRES_READER_AND_BUILDER",
+      "limits": "Premium is governance mutable; receiver callback and approval pull semantics"
+    },
+    {
+      "id": "SRC-LEND-08",
+      "name": "Morpho Blue",
+      "domain": "EVM",
+      "role": "FLASH_CAPITAL",
+      "official_docs": "https://docs.morpho.org/learn/concepts/flashloans/",
+      "data": [
+        "flashLoan/token balance/callback"
+      ],
+      "strategy_use": [
+        "EVM arbitrage/collateral swap"
+      ],
+      "tier": "DOCUMENTED_PRIMITIVE_CAPACITY_REQUIRES_READER_AND_BUILDER",
+      "limits": "Not ERC-3156 compliant; capacity is Morpho contract token balance; caller callback"
+    },
+    {
+      "id": "SRC-LEND-09",
+      "name": "DODO DVM/DPP",
+      "domain": "EVM",
+      "role": "FLASH_CAPITAL",
+      "official_docs": "https://docs.dodoex.io/en/developer/contracts/dodo-v1-v2/guides/flash-loan",
+      "data": [
+        "flashLoan",
+        "DVM/DPP callback",
+        "pool balances"
+      ],
+      "strategy_use": [
+        "EVM pool callback arbitrage"
+      ],
+      "tier": "DOCUMENTED_PRIMITIVE_CAPACITY_REQUIRES_READER_AND_BUILDER",
+      "limits": "Pool type, callback receiver and repayment invariant must be proven"
+    },
+    {
+      "id": "SRC-LEND-10",
+      "name": "ERC-3156 lenders",
+      "domain": "EVM",
+      "role": "FLASH_CAPITAL_STANDARD",
+      "official_docs": "https://eips.ethereum.org/EIPS/eip-3156",
+      "data": [
+        "maxFlashLoan",
+        "flashFee",
+        "onFlashLoan"
+      ],
+      "strategy_use": [
+        "discover additional lenders"
+      ],
+      "tier": "STANDARD_NOT_A_LENDER",
+      "limits": "Standard is interface only; each deployed lender, token capacity and callback independently qualified"
+    },
+    {
+      "id": "SRC-ORACLE-01",
+      "name": "Chainlink Data Feeds",
+      "domain": "Multi-chain",
+      "role": "ORACLE_REFERENCE_AND_GUARD",
+      "official_docs": "https://docs.chain.link/data-feeds/overview",
+      "data": [
+        "latestRoundData",
+        "updatedAt",
+        "heartbeat/deviation",
+        "SVR"
+      ],
+      "strategy_use": [
+        "lending/liquidation",
+        "NAV and stale-price guards"
+      ],
+      "tier": "ORACLE_NOT_LIQUIDITY",
+      "limits": "Not a streaming feed; freshness and per-feed heartbeat/deviation required"
+    },
+    {
+      "id": "SRC-ORACLE-02",
+      "name": "Pyth Price Feeds / Hermes",
+      "domain": "Multi-chain",
+      "role": "ORACLE_REFERENCE_AND_SIGNED_UPDATES",
+      "official_docs": "https://docs.pyth.network/api-reference",
+      "data": [
+        "price",
+        "confidence",
+        "expo",
+        "publish_time",
+        "signed onchain updates"
+      ],
+      "strategy_use": [
+        "price anchors",
+        "liquidation/market dislocation"
+      ],
+      "tier": "ORACLE_NOT_LIQUIDITY",
+      "limits": "API auth/channel/latency and confidence intervals must be pinned"
+    },
+    {
+      "id": "SRC-ORACLE-03",
+      "name": "Switchboard",
+      "domain": "Multi-chain",
+      "role": "ORACLE_REFERENCE",
+      "official_docs": "https://docs.switchboard.xyz/",
+      "data": [
+        "on-demand / pull feeds, where supported"
+      ],
+      "strategy_use": [
+        "protocol oracle and independent price checks"
+      ],
+      "tier": "ORACLE_NOT_LIQUIDITY",
+      "limits": "Verify chain/program/deployment and current update permissions"
+    },
+    {
+      "id": "SRC-CEX-01",
+      "name": "Binance Spot API/Streams",
+      "domain": "CEX",
+      "role": "PUBLIC_ORDERBOOK_AND_TRADES",
+      "official_docs": "https://github.com/binance/binance-spot-api-docs",
+      "data": [
+        "depth",
+        "aggTrades",
+        "bookTicker",
+        "exchangeInfo",
+        "WebSocket streams"
+      ],
+      "strategy_use": [
+        "CEX lead-lag",
+        "basis",
+        "market structure"
+      ],
+      "tier": "REFERENCE_OR_INVENTORY",
+      "limits": "Public market-data-only endpoints exist; sequence/gap and symbol filters required"
+    },
+    {
+      "id": "SRC-CEX-02",
+      "name": "Coinbase Advanced Trade / Exchange WS",
+      "domain": "CEX",
+      "role": "PUBLIC_ORDERBOOK_AND_TRADES",
+      "official_docs": "https://help.coinbase.com/en/developer-platform/websocket-feeds/advanced-trade",
+      "data": [
+        "level2",
+        "ticker",
+        "trades",
+        "market status"
+      ],
+      "strategy_use": [
+        "CEX-DEX basis",
+        "lead-lag"
+      ],
+      "tier": "REFERENCE_OR_INVENTORY",
+      "limits": "Public feeds are not private execution access or available inventory"
+    },
+    {
+      "id": "SRC-CEX-03",
+      "name": "Kraken WebSocket",
+      "domain": "CEX",
+      "role": "PUBLIC_ORDERBOOK_AND_TRADES",
+      "official_docs": "https://support.kraken.com/articles/360022326871-kraken-websocket-api-frequently-asked-questions",
+      "data": [
+        "public market data channels",
+        "orderbook/trades"
+      ],
+      "strategy_use": [
+        "CEX reference and cross-exchange spreads"
+      ],
+      "tier": "REFERENCE_OR_INVENTORY",
+      "limits": "Public and authenticated feeds are separate"
+    },
+    {
+      "id": "SRC-CEX-04",
+      "name": "Hyperliquid API",
+      "domain": "CEX_PERPS",
+      "role": "PUBLIC_MARKET_AND_DERIVATIVES_DATA",
+      "official_docs": "https://hyperliquid.gitbook.io/Hyperliquid-docs/for-developers/api/info-endpoint",
+      "data": [
+        "allMids",
+        "meta",
+        "spot/perp market metadata",
+        "funding/open interest where endpoints document"
+      ],
+      "strategy_use": [
+        "spot-perp basis",
+        "funding signals",
+        "CEX/onchain lead-lag"
+      ],
+      "tier": "REFERENCE_OR_INVENTORY",
+      "limits": "Pagination/data depth and venue semantics must be recorded"
+    },
+    {
+      "id": "SRC-CEX-05",
+      "name": "OKX / Bybit / Drift / Jupiter Perps",
+      "domain": "CEX_PERPS_AND_ONCHAIN_PERPS",
+      "role": "PUBLIC_MARKET_DATA_CANDIDATES",
+      "official_docs": null,
+      "data": [
+        "orderbooks",
+        "trades",
+        "funding",
+        "open interest",
+        "mark/index/oracle"
+      ],
+      "strategy_use": [
+        "basis/funding/market making"
+      ],
+      "tier": "CANDIDATE",
+      "limits": "Pin each official API, instrument ID, funding interval and book sequence"
+    },
+    {
+      "id": "SRC-INTENT-01",
+      "name": "CoW Protocol API",
+      "domain": "EVM/Solana",
+      "role": "INTENT_QUOTE_AUCTION",
+      "official_docs": "https://docs.cow.fi/cow-protocol/integrate/api",
+      "data": [
+        "POST /quote",
+        "quote stream",
+        "auction/trades/order status"
+      ],
+      "strategy_use": [
+        "solver residual",
+        "batch auction",
+        "intent execution"
+      ],
+      "tier": "INTENT_NOT_DIRECT_POOL",
+      "limits": "Solver competition and signed intent semantics; quote != settlement/fill"
+    },
+    {
+      "id": "SRC-INDEX-01",
+      "name": "The Graph Subgraphs / Substreams",
+      "domain": "Multi-chain",
+      "role": "HISTORICAL_INDEX_AND_STREAM",
+      "official_docs": "https://thegraph.com/docs/en/",
+      "data": [
+        "subgraph GraphQL",
+        "Substreams",
+        "Firehose/trace data"
+      ],
+      "strategy_use": [
+        "discovery/backfill/replay"
+      ],
+      "tier": "SECONDARY_INDEX",
+      "limits": "Check deployment/schema/operator; raw state remains authoritative"
+    },
+    {
+      "id": "SRC-INDEX-02",
+      "name": "DefiLlama API",
+      "domain": "Multi-chain",
+      "role": "PROTOCOL_TVL_STABLECOIN_YIELD_DISCOVERY",
+      "official_docs": "https://api-docs.defillama.com/",
+      "data": [
+        "protocols",
+        "TVL",
+        "stablecoins",
+        "prices",
+        "yields"
+      ],
+      "strategy_use": [
+        "universe discovery and risk context"
+      ],
+      "tier": "DISCOVERY_ONLY",
+      "limits": "Free yield /pools and /chart/{pool} endpoints shut down 2026-11-13; yields now require API plan"
+    },
+    {
+      "id": "SRC-INDEX-03",
+      "name": "CoinGecko / GeckoTerminal",
+      "domain": "Multi-chain",
+      "role": "TOKEN_AND_DEX_DISCOVERY",
+      "official_docs": "https://www.coingecko.com/en/api/documentation",
+      "data": [
+        "token/market metadata",
+        "onchain DEX discovery where entitled"
+      ],
+      "strategy_use": [
+        "long-tail discovery/backfill"
+      ],
+      "tier": "DISCOVERY_ONLY",
+      "limits": "Public API 5–15 calls/minute; GeckoTerminal higher-rate onchain DEX data moved to Pro"
+    },
+    {
+      "id": "SRC-BRIDGE-01",
+      "name": "Circle CCTP / Wormhole / LayerZero OFT / Across / deBridge",
+      "domain": "Cross-chain",
+      "role": "MESSAGE_FLOW_AND_SETTLEMENT",
+      "official_docs": null,
+      "data": [
+        "message/nonce/attestation",
+        "source/destination chain",
+        "finality/fees/status"
+      ],
+      "strategy_use": [
+        "local scan triggers",
+        "cross-chain inventory/basis"
+      ],
+      "tier": "ASYNC_REFERENCE_OR_INVENTORY",
+      "limits": "Do not model as same-transaction flashloan liquidity"
+    },
+    {
+      "id": "SRC-CLAIM-01",
+      "name": "ERC-4626 and Pendle claims/redemptions",
+      "domain": "EVM",
+      "role": "VAULT_AND_MATURITY_RIGHTS",
+      "official_docs": "https://eips.ethereum.org/EIPS/eip-4626",
+      "data": [
+        "maxWithdraw",
+        "maxRedeem",
+        "previewRedeem",
+        "PT/YT maturity"
+      ],
+      "strategy_use": [
+        "vault NAV",
+        "PT/YT maturity and yield"
+      ],
+      "tier": "CONDITIONAL_RIGHTS",
+      "limits": "Caller-specific limits, queues, maturity and claim settlement must be proven"
+    }
+  ],
+  "integration_assignments": [
+    {
+      "id": "DS-00",
+      "name": "Source pins, API entitlement and license audit",
+      "priority": "P0",
+      "depends": []
+    },
+    {
+      "id": "DS-01",
+      "name": "Raw chain intake and coherent state snapshots",
+      "priority": "P0",
+      "depends": [
+        "P0-1",
+        "R08"
+      ]
+    },
+    {
+      "id": "DS-02",
+      "name": "Canonical asset/pool/book/representation identity",
+      "priority": "P0",
+      "depends": [
+        "AssetResolver",
+        "DynamicUniverse",
+        "PAIR-00"
+      ]
+    },
+    {
+      "id": "DS-03",
+      "name": "Direct venue state and exact quote coverage",
+      "priority": "P0",
+      "depends": [
+        "DS-01",
+        "DS-02",
+        "P0-3",
+        "DV-00..08"
+      ]
+    },
+    {
+      "id": "DS-04",
+      "name": "Multi-provider quote/build capture",
+      "priority": "P0",
+      "depends": [
+        "P0-2",
+        "R13-K",
+        "R03"
+      ]
+    },
+    {
+      "id": "DS-05",
+      "name": "CEX/perps/microstructure reference feeds",
+      "priority": "P1",
+      "depends": [
+        "existing source governance",
+        "correlation ledger"
+      ]
+    },
+    {
+      "id": "DS-06",
+      "name": "Oracle/stablecoin/issuer/redemption state",
+      "priority": "P1",
+      "depends": [
+        "DS-01",
+        "DS-02",
+        "SX-04",
+        "SX-07"
+      ]
+    },
+    {
+      "id": "DS-07",
+      "name": "Lending/liquidation/flash-capital evidence",
+      "priority": "P0",
+      "depends": [
+        "R02",
+        "R03",
+        "FlashCapitalGraph"
+      ]
+    },
+    {
+      "id": "DS-08",
+      "name": "Bridge/cross-chain flow and settlement",
+      "priority": "P1",
+      "depends": [
+        "DS-01",
+        "DS-02"
+      ]
+    },
+    {
+      "id": "DS-09",
+      "name": "Launch/migration and long-tail market discovery",
+      "priority": "P1",
+      "depends": [
+        "DS-01",
+        "DS-02",
+        "EXP-02",
+        "EXP-03"
+      ]
+    },
+    {
+      "id": "DS-10",
+      "name": "Indexers, analytics and replay corpora",
+      "priority": "P1",
+      "depends": [
+        "existing raw journal",
+        "MarketEpisode",
+        "W6"
+      ]
+    },
+    {
+      "id": "DS-11",
+      "name": "Per-strategy end-to-end source wiring and coverage matrix",
+      "priority": "P0",
+      "depends": [
+        "DS-00..10",
+        "R04",
+        "R05",
+        "R06",
+        "AGG-05"
+      ]
+    }
+  ],
+  "classification_rules": {
+    "LOCAL_ATOMIC_CANDIDATE": "All legs + lender operations settle within one chain transaction or Sui PTB; exact state, amount quotes, capacity, repayment and simulation required.",
+    "CONDITIONAL_HYPEREDGE": "Mint/burn, redemption, claim, vault, liquidation, auction or rights transformation; immediate caller rights and same-transaction postconditions must be proven.",
+    "HEDGED_NON_ATOMIC": "Requires inventory, CEX hedge, bridge, funding interval, cooldown or multi-period carry.",
+    "SIGNAL_ONLY": "External reference, oracle, CEX, bridge or event signal that may trigger a local scan but is not a local liquidity leg.",
+    "CONTROL_PLANE": "Sizing, lender selection, portfolio, scheduler, conflict or observability; not an alpha opportunity by itself.",
+    "CROSS_CUTTING_GUARD": "Identity, exact math, stale state, token extension, source quality or risk control; not a strategy by itself."
+  },
+  "global_gates": [
+    "Never treat quote routers as independent underlying liquidity.",
+    "Never treat TVL, displayed book depth, admin flags or documentation fee as current flash capacity.",
+    "Re-quote every nonlinear amount candidate; do not scale one quote by a multiplier.",
+    "All strategy candidates must be traceable to canonical identity, source hashes, coherent state generation and exact economic costs.",
+    "Unknown values remain UNKNOWN; no default zero for fee, capacity, transfer tax, rent, gas or redemption delay.",
+    "Research universe remains broad; execution universe is a separately gated subset.",
+    "Balancer generic pools are not active routes after BIP-928 withdrawals-only transition; verify per-pool v3 exception before routing.",
+    "Sui JSON-RPC mainnet is disabled; new Sui data readers use gRPC/GraphQL/checkpoints.",
+    "DefiLlama free yield endpoint and GeckoTerminal/CoinGecko current quotas are subject to changed commercial terms.",
+    "No wallet/account creation, signing, sending, borrowing, spending or production promotion."
+  ]
+}

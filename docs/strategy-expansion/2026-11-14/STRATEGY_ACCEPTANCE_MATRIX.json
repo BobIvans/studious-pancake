@@ -1,0 +1,223 @@
+{
+  "schema": "studious-pancake.strategy-expansion-acceptance.v1",
+  "date": "2026-11-14",
+  "scope": "Additive strategy knowledge and assignment overlay; not a runtime capability manifest",
+  "source_baseline": [
+    "docs/web3-market-scale/design-input/04_STRATEGIES_RU.md",
+    "docs/web3-market-scale/design-input/25_OPPORTUNITY_ATLAS_RU.md",
+    "docs/web3-market-scale/design-input/data/tasks.json",
+    "docs/roadmap/STUDIOUS_PANCAKE_MASTER_CODEX_EXECUTION_2026-11-13/STRATEGY_UNIVERSE_ATLAS.md",
+    "docs/roadmap/STUDIOUS_PANCAKE_MASTER_CODEX_EXECUTION_2026-11-13/STRATEGY_CROSSWALK.json",
+    "docs/roadmap/agent-execution-master-2026-11-13/tasks/R10_STRATEGIES_AND_INTELLIGENCE.md",
+    "docs/roadmap/agent-execution-master-2026-11-13/tasks/R10_STRATEGY_INVENTORY_2026-11-14.md",
+    "docs/roadmap/agent-execution-master-2026-11-13/reports/R10_STRATEGY_REPLAY_EXPERIMENTS_2026-11-14.md"
+  ],
+  "statuses": [
+    "EXISTING_RESEARCH",
+    "PARTIAL_OWNER",
+    "FIXTURE_ONLY",
+    "STUB",
+    "PLANNED",
+    "NEW_GAP",
+    "BLOCKED",
+    "RESEARCH_ONLY",
+    "EXCLUDED"
+  ],
+  "execution_classes": [
+    "LOCAL_ATOMIC_CANDIDATE",
+    "CONDITIONAL_HYPEREDGE",
+    "HEDGED_NON_ATOMIC",
+    "SIGNAL_ONLY",
+    "CONTROL_PLANE",
+    "RESEARCH_ONLY",
+    "EXCLUDED"
+  ],
+  "families": [
+    {
+      "id": "ARB-CORE",
+      "name": "Direct, fragmentation, synthetic and bounded cycles",
+      "class": "LOCAL_ATOMIC_CANDIDATE",
+      "status": "EXISTING_RESEARCH",
+      "owner": "src/strategy/relation_generators; src/strategy/arbitrage_graph.py; src/strategy/multihop_solver.py",
+      "next": "Bind exact amount/state evaluator and qualified capacity; reuse PR118"
+    },
+    {
+      "id": "ARB-SPLIT",
+      "name": "Joint split-flow and shared-state capacity",
+      "class": "LOCAL_ATOMIC_CANDIDATE",
+      "status": "PARTIAL_OWNER",
+      "owner": "src/economics/split_flow.py; src/strategy/cpmm_split_replay.py",
+      "next": "Extend state closure across ticks/bins/books and prove no double consumption"
+    },
+    {
+      "id": "ARB-STABLE",
+      "name": "Stablecoin peg, issuer buffers and triangles",
+      "class": "LOCAL_ATOMIC_CANDIDATE",
+      "status": "PARTIAL_OWNER",
+      "owner": "src/strategies/stable_peg; src/research/correlation_ledger",
+      "next": "Prove issuer identity, reserves, rights and exact route economics"
+    },
+    {
+      "id": "TRANS-ISSUER",
+      "name": "PSM, mint/burn, redemption and flash-mint",
+      "class": "CONDITIONAL_HYPEREDGE",
+      "status": "PARTIAL_OWNER",
+      "owner": "src/strategy_evolution/primary_market.py; src/strategy_evolution/rights_lifecycle.py; flash capital graph",
+      "next": "Add flash-mint-specific eligibility/callback/repayment contract"
+    },
+    {
+      "id": "TRANS-LST",
+      "name": "LST/LRT, NAV, instant exit and queues",
+      "class": "CONDITIONAL_HYPEREDGE",
+      "status": "STUB",
+      "owner": "src/strategy_evolution/stake_queue.py; src/strategy/strategies.py",
+      "next": "Implement residual-fed shadow detectors only after exchange-rate/exit proof"
+    },
+    {
+      "id": "TRANS-VAULT",
+      "name": "Vault shares ERC-4626/7540/7575",
+      "class": "CONDITIONAL_HYPEREDGE",
+      "status": "PARTIAL_OWNER",
+      "owner": "src/strategy_evolution/rights_lifecycle.py; primary_market.py",
+      "next": "Prove preview/max withdraw/redeem, queue, fee and caller rights"
+    },
+    {
+      "id": "CLAIM-PENDLE",
+      "name": "PT/YT/SY and maturity",
+      "class": "CONDITIONAL_HYPEREDGE",
+      "status": "RESEARCH_ONLY",
+      "owner": "src/strategy_evolution/rights_lifecycle.py; incentive_epoch.py",
+      "next": "Exact market/expiry/underlying and pre-maturity exit quotes"
+    },
+    {
+      "id": "CLAIM-COMPLETE-SET",
+      "name": "Prediction market complete sets",
+      "class": "CONDITIONAL_HYPEREDGE",
+      "status": "NEW_GAP",
+      "owner": "Existing economic graph/claims owners (audit before edits)",
+      "next": "Outcome vector conservation, resolution/oracle and dispute rights"
+    },
+    {
+      "id": "CREDIT-LIQ",
+      "name": "Lending liquidation and collateral unwind",
+      "class": "LOCAL_ATOMIC_CANDIDATE",
+      "status": "FIXTURE_ONLY",
+      "owner": "src/liquidation; src/lending_indexer",
+      "next": "Rooted reserve/account/oracle state and exact repay/unwind simulation"
+    },
+    {
+      "id": "CREDIT-LLAMMA",
+      "name": "Curve LLAMMA banded liquidation",
+      "class": "CONDITIONAL_HYPEREDGE",
+      "status": "NEW_GAP",
+      "owner": "Existing Curve/strategy_evolution owners after audit",
+      "next": "Official band math, per-market state, oracle and boundary replay"
+    },
+    {
+      "id": "CREDIT-RATE",
+      "name": "Lending utilization, rate spread and refinance",
+      "class": "HEDGED_NON_ATOMIC",
+      "status": "PARTIAL_OWNER",
+      "owner": "src/lending_indexer; src/strategy_evolution/solvency_event.py; flash capital graph",
+      "next": "Separate atomic refinance from multi-period carry and collateral stress"
+    },
+    {
+      "id": "MICRO-CLOB",
+      "name": "CLOB/AMM, exact VWAP, IOC and partial fills",
+      "class": "LOCAL_ATOMIC_CANDIDATE",
+      "status": "FIXTURE_ONLY",
+      "owner": "src/providers/orderbook; src/strategy/market_graph_ingest.py",
+      "next": "Verified subscriptions, sequence/depth and fill semantics"
+    },
+    {
+      "id": "MICRO-MAKER",
+      "name": "Passive CLOB/RFQ/queue-aware market making",
+      "class": "HEDGED_NON_ATOMIC",
+      "status": "PARTIAL_OWNER",
+      "owner": "Existing orderbook/intent owners",
+      "next": "Queue/fill calibration, maker rebates, inventory and adverse-selection ledger"
+    },
+    {
+      "id": "MICRO-JIT",
+      "name": "JIT liquidity and LVR/toxic-flow",
+      "class": "HEDGED_NON_ATOMIC",
+      "status": "NEW_GAP",
+      "owner": "Existing CLMM/orderflow owners after audit",
+      "next": "Authorized event-level JIT recipe, fill-to-markout and inventory replay"
+    },
+    {
+      "id": "MICRO-OEV",
+      "name": "Oracle update auctions / OEV / keeper competition",
+      "class": "SIGNAL_ONLY",
+      "status": "NEW_GAP",
+      "owner": "Existing event/blockspace/strategy_evolution owners",
+      "next": "Protocol auction rights, keeper eligibility, timing and payment evidence"
+    },
+    {
+      "id": "MEV-BACKRUN",
+      "name": "Permitted backrun and transaction-ordering economics",
+      "class": "RESEARCH_ONLY",
+      "status": "PARTIAL_OWNER",
+      "owner": "src/strategy_evolution/blockspace_option.py; existing execution cost owners",
+      "next": "Authorized flow and deterministic auction replay; no sandwich/frontrun"
+    },
+    {
+      "id": "LP-LIFECYCLE",
+      "name": "LP position lifecycle and fee/inventory harvesting",
+      "class": "HEDGED_NON_ATOMIC",
+      "status": "NEW_GAP",
+      "owner": "Existing direct_venue and rights lifecycle owners",
+      "next": "Position state, fee claims, IL, gas and capital lock"
+    },
+    {
+      "id": "BASIS-ASYNC",
+      "name": "Cross-chain, cross-rollup and shared-sequencer basis",
+      "class": "SIGNAL_ONLY",
+      "status": "RESEARCH_ONLY",
+      "owner": "src/research_economic_graph; Dynamic Universe; TON radar",
+      "next": "Finality/settlement/failure model; prefunded inventory only"
+    },
+    {
+      "id": "PORT-CAPITAL",
+      "name": "Shared collateral, flash provider and portfolio allocator",
+      "class": "CONTROL_PLANE",
+      "status": "PARTIAL_OWNER",
+      "owner": "src/economics/flash_capital_graph; src/strategy/conflict_scheduler.py",
+      "next": "Joint capacity and portfolio allocation under shared resources"
+    },
+    {
+      "id": "INTEL-LEARN",
+      "name": "Anomaly, causal validation and context-bandit research",
+      "class": "RESEARCH_ONLY",
+      "status": "PARTIAL_OWNER",
+      "owner": "src/decision; src/research/correlation_ledger; EVO-09",
+      "next": "Nulls, holdouts, leakage, multiple-testing and negative corpus"
+    },
+    {
+      "id": "DATA-COMPUTE",
+      "name": "Verifiable data/compute procurement",
+      "class": "RESEARCH_ONLY",
+      "status": "PARTIAL_OWNER",
+      "owner": "Existing INST-01 procurement owners",
+      "next": "One verifiable task, independent recomputation, cost/latency/accuracy baseline"
+    },
+    {
+      "id": "MECHANISM-LAB",
+      "name": "Auction/fee/allocation mechanism lab",
+      "class": "RESEARCH_ONLY",
+      "status": "PARTIAL_OWNER",
+      "owner": "Existing mechanism discovery and claims owners",
+      "next": "Offline fixed-workload comparison, no deployment"
+    }
+  ],
+  "invariants": [
+    "A strategy title or symbolic pair is not a live market or an implementation.",
+    "Every amount requires fresh exact re-quote and coherent state.",
+    "No TVL-as-capacity; lender capacity and repayment must be proven.",
+    "Bridge/CEX/TON async and multi-period carry are not standard atomic flashloan legs.",
+    "Shared resources cannot be consumed twice across concurrent strategies.",
+    "Unknown remains null/blocked, never zero or synthetic success.",
+    "Models and correlations are advisory and cannot bypass evidence gates.",
+    "No sender, signer, wallet, transaction submission, live or production promotion."
+  ]
+}

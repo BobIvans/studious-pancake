@@ -159,6 +159,15 @@
       "status": "PLANNED",
       "owner": "existing MarketEpisode/decision/casual replay owners",
       "assignment": "docs/strategy-expansion/2026-11-14/tasks/W6_12_OBSERVED_PARTICIPANT_STRATEGY_INTELLIGENCE_RU.md"
+    },
+    {
+      "id": "R13-TITAN",
+      "name": "Titan Solana quote/build adapter",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owner": "existing R13-K quote/build kernel + Titan adapter",
+      "tests": "PR #647 focused contract/adapter suite",
+      "pr": 647,
+      "blocker": "offline/sender-free adapter only; live quote capture and provider entitlement remain unqualified/user-gated"
     }
   ],
   "runtime_strategy_registry": [

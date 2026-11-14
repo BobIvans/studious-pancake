@@ -125,3 +125,76 @@
 - Resource conflicts and comparison to independent baseline.
 - Positive, negative, stale, partial, rejected and no-trade examples.
 - No live/sender/signer changes; rollback and next dependency.
+
+
+---
+
+# Strategy research expansion v2 — SX-17…SX-25
+
+The detailed specification is in STRATEGY_RESEARCH_ARCHIVE_ADDENDUM_RU.md. Machine-readable acceptance is in STRATEGY_RESEARCH_ACCEPTANCE_MATRIX_V2.json. These are additive assignments; preserve SX-01…SX-16 and all historical S/OP/WG/R10 identifiers.
+
+### SX-17 — DEX-native flash accounting
+- Owner boundary: #638 quote/build kernel, existing financing/build/simulation/economics.
+- Scope: Uniswap v4 unlock/delta settlement, Balancer V3 and Ekubo internal settlement; keep distinct from lender flash loan and flash-mint.
+- Acceptance: authenticated callback, exact per-asset deltas, all liabilities settled before transaction boundary, zero residual deltas, token conservation, pinned source/deployment/ABI/licence, negative unresolved-settlement tests.
+- No second quote kernel/compiler/signer/sender.
+
+### SX-18 — Collateral-first liquidation and pre-liquidation callbacks
+- Owner boundary: existing liquidation, lending-indexer and rights/evidence owners.
+- Scope: Morpho pre-liquidation and Sky Clipper callback/auction semantics; compare against external flashloan-funded liquidation.
+- Acceptance: exact collateral/debt/callback order, caller/market/auction eligibility, debt/fee/asset postconditions, reentry/underflow/stale-state negatives and exact exit costs.
+- No second liquidation registry or sender.
+
+### SX-19 — Credit-conditioned AMM liquidity
+- Owner boundary: existing FlashCapitalGraph, direct-venue exact evaluators and #638 pool identity dedup.
+- Scope: jointly evaluate AMM and vault-credit state, borrower eligibility, collateral, utilization, caps, callback and repayment.
+- Acceptance: coherent joint state, no double use of pool or lender capacity, exact fees/repayment and stale/cap-exhausted negatives.
+- No second capital graph or pool registry.
+
+### SX-20 — Derivatives basis, funding and options
+- Owner boundary: existing market streams, decision dataset, lending/economics and risk owners.
+- Scope: spot/perp basis, funding, futures calendar/roll, put-call parity, synthetic futures, IV/skew/calendar spreads.
+- Acceptance: instrument identity, multiplier, payoff type, quote/settlement currency, expiry, funding window, margin/maintenance, partial-fill hedge lifecycle, time holdout and all-in carry cost.
+- Default class HEDGED_NON_ATOMIC / SIGNAL_ONLY. Do not describe funding or expiry as same-tx flashloan repayment.
+
+### SX-21 — Inventory-aware OMS and market making
+- Owner boundary: existing orderbook/intent paths, SX-06 queue model and AGG-05 shared-resource scheduler.
+- Scope: inventory skew, limits, hedge routing, partial fills, cancel confirmation, rebates, stale orders, venue outage and capital lock.
+- Acceptance: event-by-event order lifecycle replay, inventory conservation, conservative queue uncertainty, restart recovery, hedge residuals and taker/no-trade baselines.
+- No second orderbook store or scheduler.
+
+### SX-22 — Public trader/bot archetype intelligence
+- Owner boundary: PR-357/#541, PR-358/#542, existing decision dataset, SourceRegistry and replay.
+- Scope: licensed public source-code and public-chain fingerprints; distinguish code patterns from observed behavior.
+- Acceptance: licence/ToS/retention audit, pseudonymous observations, selection-bias controls, failures and fees included, no profitability claim from activity alone, no deanonymization or private-flow surveillance.
+- Research-only and advisory.
+
+### SX-23 — Event and protocol lifecycle research
+- Owner boundary: Dynamic Universe event lifecycle, EVO incentive/governance owners and QPR/DIN sources.
+- Scope: unlock/vesting, emissions, gauges/bribes, listings/migrations, governance, upgrades, oracle and parameter changes.
+- Acceptance: announced/effective/observed clocks, corrections/cancellations, provenance, no-lookahead replay, identity resolution and negative controls.
+- Event signals are never quotes or capacity proof.
+
+### SX-24 — Chain admission and parallel dataset expansion
+- Owner boundary: R09 dossiers, QPR/DIN, Dynamic Universe and existing multichain owners.
+- Scope: score Solana, Sui, EVM Base/Arbitrum/Ethereum, Hyperliquid, TON and later candidates by official data/state/history, finality, gaps, rights, quotas/cost, venues/lenders, builder/simulation support and maintenance.
+- Acceptance: reproducible scorecard and ADMIT_READ_ONLY/WATCH_ONLY/BLOCKED/REJECT status.
+- No second chain registry, SourceRegistry or quota ledger.
+
+### SX-25 — Opportunity half-life and competition-aware latency intelligence
+- Owner boundary: PR-357/#541, PR-358/#542, AGG-10, R13-K and existing decision/paper data.
+- Scope: PIT clocks from detection/source/quote/build/simulation to expiry/finalized observation; model decay by family, venue, size and regime.
+- Acceptance: typed missing/censored clocks, calibrated decay/survival model, time holdout, public competition proxy labelled incomplete, provider/API/compute costs included.
+- Advisory only; no uncalibrated inclusion probability or gate bypass.
+
+### Dataset streams DP-01…DP-08
+Use the v2 addendum matrix for on-chain events, direct DEX state, CEX books/trades, derivatives, lender state, lifecycle events, public bot archetypes and first-party execution outcomes. A dataset stays UNVERIFIED_UNTIL_PINNED until official schema, units, history/gaps, rights/licence, quotas/cost, freshness and PIT semantics are recorded. Hyperliquid history is not guaranteed complete/free continuous L2 history; external bot dataset rights must be checked before ingestion.
+
+### Dependency and integration order
+- SX-17/18/19: offline mechanism models may begin in parallel after ownership freeze.
+- SX-20/21/22/23: separate dataset/mechanism lanes; SX-20 and SX-22 require SX-24 admission/rights, SX-21 coordinates with SX-06 and AGG-05.
+- SX-24: read-only chain/source scorecard can proceed alongside other lanes.
+- SX-25: depends on SX-13, SX-24 and first-party candidate/quote/build/simulation/paper evidence.
+- SX-15/SX-16 consume both SX-01…SX-16 and SX-17…SX-25.
+
+Each package may close BLOCKED with exact missing source/licence/deployment/operator evidence. Parallel execution never skips proof dependencies.

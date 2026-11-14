@@ -20,7 +20,7 @@ Read next:
 2. `STRATEGY_RESEARCH_EXECUTION_ASSIGNMENTS_RU.md`
 3. `STRATEGY_RESEARCH_ACCEPTANCE_MATRIX_V2.json`
 
-It extends merged #599/#622/#631/#637 and the SX/R10 work with recovered parallel-chat strategies and Wave-6 Market Ecology. Snapshot at authoring: `d52e61f36ece249c1221c8e71d22aa29ef476e21`; #643 merged (SX-10/SX-11), #645 open (SX-12). Always re-fetch current main, open PRs and checks. Do not duplicate existing/open work. This update does not authorize live execution.
+It extends merged #599/#622/#631/#637 and the SX/R10 work with recovered parallel-chat strategies and Wave-6 Market Ecology. Snapshot at authoring: `d52e61f36ece249c1221c8e71d22aa29ef476e21`; #643 merged (SX-10/SX-11), #645 open (SX-12). Always re-fetch current main, open PRs and checks. Do not duplicate existing/open work. PAIR-00 row-level archive reconciliation is mandatory; see `PAIR_ARCHIVE_COVERAGE_AND_IMPORT_GATE_RU.md` and the preserved V6 175-pair catalog. The repository owner expressly authorized autonomous create/review/merge of in-scope campaign PRs in the ChatGPT instruction dated 2026-11-14; merges remain conditional on all CI, review, provenance, ownership and branch-protection gates. This authority does not authorize live/on-chain financial actions.
 
 # Start here — Studious Pancake
 

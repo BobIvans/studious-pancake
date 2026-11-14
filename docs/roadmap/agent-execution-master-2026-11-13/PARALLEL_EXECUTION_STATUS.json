@@ -1,109 +1,66 @@
 {
-  "schema_version": "studious-pancake.parallel-execution-status.v1",
+  "schema_version": "studious-pancake.parallel-execution-status.v2",
   "updated_at_utc": "2026-11-14",
   "current_main": {
-    "sha": "68500239",
+    "sha": "bd596f6a",
     "date": "2026-11-14",
-    "worktree_state": "coordinator clean; user's local checkout retains superseded uncommitted P0-2 scratch (superseded by merged #604; snapshot at ../sp-worktrees/_coordinator/p0-2-local.patch)",
-    "ci_state": "Repository verification GREEN on merged lane heads (mypy 0 via #611 hotfix; strict pip-audit 0 findings via #605); all workflow checks green on latest lane PRs"
+    "ci_state": "Repository verification fully GREEN (mypy 0 via #611 hotfix + #623 platform-compat; strict pip-audit 0 findings via #605)"
   },
-  "pr_reconciliation": [
-    {"number": 593, "class": "implementation", "state": "MERGED", "content": "P0-1 Solana indexed intake → Dynamic Universe (cadence, coverage, fail-closed bridge, fixtures)"},
-    {"number": 600, "class": "docs", "state": "MERGED", "content": "CURRENT_STATE.json wave-0 snapshot"},
-    {"number": 601, "class": "docs", "state": "MERGED", "content": "PARALLEL_EXECUTION_MANDATE.md landed on main"},
-    {"number": 594, "class": "docs", "state": "CLOSED_SUPERSEDED", "content": "conflicting base; mandate landed via #601"},
-    {"number": 602, "class": "implementation", "state": "MERGED", "content": "R02-CAP-A Jupiter Lend TokenReserve read-only reader (84 tests)"},
-    {"number": 603, "class": "implementation", "state": "MERGED", "content": "R11 fcntl msvcrt shim + getuid guard (457 tests fixed locally)"},
-    {"number": 604, "class": "implementation", "state": "MERGED", "content": "P0-2 Jupiter V2 order migration + 0x comparable race invariants + offline negatives"},
-    {"number": 605, "class": "implementation", "state": "MERGED", "content": "R12 dependency security: 9 advisory packages + yarl, official lock workflow, strict pip-audit 68→0"},
-    {"number": 606, "class": "implementation", "state": "MERGED", "content": "R-03 unsigned builders: contract freeze + Jupiter/NAVI-PTB BUILT_OFFLINE_UNQUALIFIED + Kamino typed BLOCKED_MISSING_PINNED_BUILDER_ABI"},
-    {"number": 609, "class": "implementation", "state": "MERGED", "content": "R02-CAP-C NAVI Sui reader (98 tests; getAllFlashLoanAssets structurally discovery-only)"},
-    {"number": 611, "class": "implementation", "state": "MERGED", "content": "R11-hotfix: mypy-clean sys.platform shim — Repository verification fully green"},
-    {"number": 612, "class": "implementation", "state": "MERGED", "content": "R02-CAP-B Kamino Reserve capacity/fee reader (94 tests; exact rational raw/2^60)"},
-    {"number": 613, "class": "implementation", "state": "MERGED", "content": "P0-3 Raydium CLMM + Meteora DLMM exact decoders/math + DLMM program-id defect fix"},
-    {"number": 614, "class": "implementation", "state": "MERGED", "content": "Stream H relation-generator tightening + 7 residual families + provenance-gated lead/lag + MAX_PATH fix"}
+  "merged_prs": [
+    {"n": 593, "lane": "A/P0-1", "what": "Solana indexed intake → Dynamic Universe (cadence, coverage, fail-closed bridge)"},
+    {"n": 600, "lane": "coord", "what": "CURRENT_STATE.json wave-0 snapshot"},
+    {"n": 601, "lane": "coord", "what": "PARALLEL_EXECUTION_MANDATE.md landed"},
+    {"n": 602, "lane": "E-A/CAP-A", "what": "Jupiter Lend TokenReserve read-only reader (84 tests)"},
+    {"n": 603, "lane": "R11", "what": "fcntl msvcrt shim + getuid guard (457 tests fixed locally)"},
+    {"n": 604, "lane": "B/P0-2", "what": "Jupiter V2 order migration + 0x comparable race invariants"},
+    {"n": 605, "lane": "R12", "what": "9 advisory packages + yarl, official lock workflow, strict pip-audit 68→0"},
+    {"n": 606, "lane": "F/R-03", "what": "unsigned_builders contract + Jupiter/NAVI-PTB builders (Kamino honestly BLOCKED_MISSING_PIN)"},
+    {"n": 609, "lane": "E-C/CAP-C", "what": "NAVI Sui reader (98 tests, API list structurally discovery-only)"},
+    {"n": 611, "lane": "R11", "what": "mypy-clean sys.platform shim — CI gate fully green"},
+    {"n": 612, "lane": "E-B/CAP-B", "what": "Kamino Reserve capacity/fee reader (94 tests, exact raw/2^60)"},
+    {"n": 613, "lane": "C/P0-3", "what": "Raydium CLMM + Meteora DLMM exact decoders/math + program-id defect fix"},
+    {"n": 614, "lane": "H", "what": "Relation-generator tightening + 7 residual families + MAX_PATH fix"},
+    {"n": 615, "lane": "coord", "what": "Dashboard v1"},
+    {"n": 616, "lane": "D/GPR-03", "what": "Sui transport/checkpoint remediation + Move decoders (130+326 tests)"},
+    {"n": 617, "lane": "J", "what": "RentSponsorPlanner 4-tier sourcing on Slumlord (36+98 tests)"},
+    {"n": 618, "lane": "L", "what": "EVM dossiers: Morpho Blue + Aave V3 RAW_OFFICIAL_SNAPSHOT + drift-test verifier"},
+    {"n": 619, "lane": "E-D/CAP-D", "what": "Project 0 wallet-free bank discovery (PR-028 layout, exact DPR/borrowed-shares)"},
+    {"n": 620, "lane": "I/TON", "what": "TON source pins + bounded Dedust/SwapCoffee ingestors + STON drift recorded"},
+    {"n": 621, "lane": "G", "what": "8 provider dossiers pinned (Titan/OKX/OpenOcean/Rango/Aftermath/Cetus/7K/FlowX) + overlap notes"},
+    {"n": 622, "lane": "R10", "what": "Strategy inventory + ranked promotion shortlist (602-test baseline)"},
+    {"n": 623, "lane": "R11-FU", "what": "Shared flock compat module + pressure-manager/sibling fixes (intelligence 49 passed; flock_live_file for SQLite/WAL)"},
+    {"n": 624, "lane": "R08", "what": "Composition audit: 0/12 wave owners runtime-reachable; wiring plan W1→W6; 21 contract tests"},
+    {"n": 594, "lane": "docs", "what": "CLOSED superseded by #601"}
   ],
-  "knowledge_base": {
-    "offline_verifiers": [
-      "docs/roadmap/r01-r02-live-capital-readers-2026-10-08/offline/verify_bundle.py PASS",
-      "docs/roadmap/r02-capacity-recovery-2026-10-08/offline/verify_offline.py PASS (live_readers_qualified=0, execution_authority=NONE)",
-      "docs/integrations/offline/solana-p0/verify_offline_bundle.py OFFLINE_DOC_BUNDLE_OK vendor_files=19"
-    ],
-    "source_pins_added_this_wave": [
-      "jupiter-lend@a484ddcf IDL v0.1.8/0.1.4 blobs (CAP-A/R03-A)",
-      "fluid-solana-programs@626b177f get_reserve PDA seeds (CAP-A)",
-      "klend-sdk@13.0.2 MIT codegen layout (CAP-B)",
-      "naviprotocol@40d971c8 / lending@2.0.12 MIT (CAP-C)",
-      "Meteora DLMM canonical program LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo + IDL blob (P0-3)",
-      "Raydium CLMM PoolState/AmmConfig/TickArrayState layouts (P0-3)"
-    ]
+  "closed": 24,
+  "workstreams_final": {
+    "P0_market_data": "P0-1/2/3 IN_MAIN_VERIFIED (offline); live captures typed BLOCKED",
+    "capital_readers": "CAP-A/B/C/D all IN_MAIN_VERIFIED offline decoders; effective capacity UNKNOWN (never zero); zero qualified edges — unchanged #585 baseline; all four typed BLOCKED on LIVE_ROOTED_RPC / LIVE_SUI_CHECKPOINT / OPERATOR_ACCOUNT",
+    "builders": "R-03 contract + Jupiter Lend + NAVI PTB BUILT_OFFLINE_UNQUALIFIED; Kamino BLOCKED_MISSING_PINNED_BUILDER_ABI; build_status ≠ capacity_status everywhere",
+    "platform": "Native Windows testing unlocked; fcntl/getuid/MAX_PATH/pressure-manager fixed; remaining pre-existing failures documented with causes",
+    "security": "strict pip-audit 0, no ignores, official workflow, idempotent",
+    "strategy": "Generators identity-proof gated; 7 residual families; lead/lag provenance-gated; correlation scheduling-only; ranked promotion shortlist in #622",
+    "composition": "R08 audit: 0/12 new owners wired; W1→W6 wiring plan gated (capital readers NO-OP until live evidence); 6 skip-if-unwired contract guards ready",
+    "providers": "Wave-1 dossiers for 8 quote/build providers; adapters next wave after quote-normalization contract freeze; OpenOcean overlap note recorded",
+    "ton_sui_evm": "TON schemas pinned + bounded adapters; Sui GPR-03 transport fixed + provider-binding contract; EVM isolated domain with Morpho/Aave pins + BSL license blocker",
+    "R04_R05_R06": "NOT_STARTED — hard-gated on user-authorized live evidence"
   },
-  "workstreams": {
-    "P0-1_solana_intake": "IN_MAIN_VERIFIED (#593)",
-    "P0-2_jupiter_v2_quote_race": "IN_MAIN_VERIFIED code, IMPLEMENTED_UNBOUND (0x live capture needs public taker + ZEROX_API_KEY; typed BLOCKED_LIVE_CAPTURE_NOT_AUTHORIZED)",
-    "P0-3_exact_venue_state": "IN_MAIN_VERIFIED offline math (Raydium CLMM + Meteora DLMM), live RPC capture qualification next; Orca BLOCKED_LICENSE_REVIEW",
-    "R02_CAP_A_jupiter_lend": "PARTIAL_DECODED proven offline; effective capacity UNKNOWN (MISSING_EFFECTIVE_FLASH_CAP); BLOCKED(LIVE_ROOTED_RPC_NOT_AUTHORIZED)",
-    "R02_CAP_B_kamino": "PARTIAL_DECODED proven offline (klend-sdk layout); effective capacity UNKNOWN; BLOCKED(LIVE_ROOTED_RPC_NOT_AUTHORIZED)",
-    "R02_CAP_C_navi": "PARTIAL_DECODED proven offline (naviprotocol pins); effective capacity UNKNOWN; BLOCKED(LIVE_SUI_CHECKPOINT_NOT_AUTHORIZED)",
-    "R02_CAP_D_project0": "IN_PROGRESS (lane active): wallet-free bank discovery reader; account-eligibility BLOCKED(OPERATOR_ACCOUNT_INPUT_REQUIRED)",
-    "R03_unsigned_builders": "IN_MAIN_VERIFIED contract + Jupiter Lend/NAVI PTB BUILT_OFFLINE_UNQUALIFIED; Kamino BLOCKED_MISSING_PINNED_BUILDER_ABI; Project0 BLOCKED(OPERATOR_ACCOUNT_INPUT_REQUIRED)",
-    "R04_route_selector": "NOT_STARTED — dependency-gated: requires qualified R-02 capacity (live rooted RPC) which is user-authorization-gated",
-    "R05_exact_simulation": "NOT_STARTED — gated on R04",
-    "R06_paper_qualification": "NOT_STARTED — gated on R05 + QPR readiness",
-    "R07_provider_expansion": "RESEARCH_IN_PROGRESS (lane G: Titan/OKX/OpenOcean/Rango + Sui Aftermath/Cetus/7K/FlowX dossiers)",
-    "R11_platform": "IN_MAIN_VERIFIED — native Windows testing unlocked (fcntl shim + getuid guard); residuals: 60 pre-existing Windows failures documented",
-    "R12_dependency_security": "IN_MAIN_VERIFIED — strict pip-audit 0 findings, no ignores, official workflow, idempotent",
-    "H_relations_correlation": "IN_MAIN_VERIFIED — generator identity-proof gates + 7 residual families + provenance-gated lead/lag + MAX_PATH fix",
-    "D_sui_gpr03": "IN_PROGRESS (lane active): transport/checkpoint remediation",
-    "I_ton_radar": "IN_PROGRESS (lane active): source pins + bounded adapters",
-    "J_rent_sponsor": "IN_PROGRESS (lane active): 4-tier rent planner on Slumlord",
-    "L_evm_dossiers": "IN_PROGRESS (lane active): Morpho Blue + Aave V3 deployment pins"
-  },
-  "live_observations": "NONE — no live provider/RPC captures were authorized this wave; all live evidence typed BLOCKED with exact reasons",
-  "capital": {
-    "jupiter_lend": "UNKNOWN (never zero) — decode proven, effective capacity unpinned",
-    "kamino": "UNKNOWN (never zero) — decode proven, borrow limits in unpinned config tail",
-    "navi": "UNKNOWN (never zero) — decode proven, API asset list demoted to discovery-only",
-    "project0_marginfi": "NOT_EVALUATED (lane in progress)",
-    "qualified_edges_total": 0,
-    "note": "zero qualified capital edges — unchanged from #585 baseline; all readers emit typed negatives, never inferred capacity"
-  },
-  "builders": {
-    "jupiter_lend": "BUILT_OFFLINE_UNQUALIFIED (golden-byte fixtures vs pinned IDL)",
-    "navi_ptb_v1_v2": "BUILT_OFFLINE_UNQUALIFIED (receipt consumed exactly once; canonical-JSON replay documented non-equivalent to BCS)",
-    "kamino": "BLOCKED_MISSING_PINNED_BUILDER_ABI (no guessed ABI — fail-closed)",
-    "project0": "BLOCKED(OPERATOR_ACCOUNT_INPUT_REQUIRED)",
-    "build_status_vs_capacity_status": "strictly separated everywhere; unsigned build ≠ qualified route"
-  },
-  "execution": {
-    "simulation": "NOT_STARTED (R05 gated)",
-    "paper": "NOT_STARTED (R06 gated)",
-    "sign_enabled": false,
-    "send_enabled": false,
-    "live_enabled": false,
-    "production_promotion": false
-  },
-  "blockers": [
-    {"id": "LIVE_AUTHORIZATION_REQUIRED", "owner": "USER", "detail": "live rooted-RPC (Solana) and governed Sui checkpoint reads require explicit user authorization + credentials names + independent quorum design; this unblocks MISSING_EFFECTIVE_FLASH_CAP for all four readers and eventually R04/R05/R06"},
-    {"id": "OPERATOR_ACCOUNT_INPUT_REQUIRED", "owner": "USER", "detail": "Project 0 eligibility path needs an operator-supplied existing public account; none supplied"},
-    {"id": "ZEROX_LIVE_CAPTURE_PREREQ", "owner": "USER", "detail": "0x comparable live quotes need configured public taker + ZEROX_API_KEY (name only) + network authorization"},
-    {"id": "KAMINO_BUILDER_ABI_PIN", "owner": "next wave lane", "detail": "pin generated klend flash instruction modules to unblock R03-B builder"},
-    {"id": "ORCA_LICENSE_REVIEW", "owner": "USER", "detail": "custom license review before any Orca source use"}
-  ],
-  "next_integration_order": [
-    "merge D-Sui (GPR-03 remediation) when CI green",
-    "merge CAP-D (Project 0 reader) when CI green",
-    "merge G/I/J/L docs+adapter lanes in submission order",
-    "user decision required: live-capture authorization workstream (typed blocker LIVE_AUTHORIZATION_REQUIRED)",
-    "after capacity qualification: R-04 for qualified subsets, then R-05/R-06 per gates"
+  "user_decision_blockers": [
+    "LIVE_AUTHORIZATION_REQUIRED: live rooted-RPC (Solana) + governed Sui checkpoint reads + 0x live quotes (public taker + ZEROX_API_KEY) — unblocks MISSING_EFFECTIVE_FLASH_CAP for all four readers → R04/R05/R06 chain",
+    "OPERATOR_ACCOUNT_INPUT_REQUIRED: existing public Project 0 account for eligibility path",
+    "ORCA_LICENSE_REVIEW: custom license review before any Orca source use"
   ],
   "safety_flags": {
-    "sign_enabled": false,
-    "send_enabled": false,
-    "live_enabled": false,
-    "no_private_keys": true,
-    "no_account_creation": true,
-    "all_unqualified_providers_disabled": true,
-    "gates_never_weakened": true
-  }
+    "sign_enabled": false, "send_enabled": false, "live_enabled": false,
+    "production_promotion": false, "no_private_keys": true, "no_account_creation": true,
+    "all_unqualified_providers_disabled": true, "gates_never_weakened": true,
+    "live_observations_this_execution": 0
+  },
+  "integration_order_next": [
+    "W1 (R08 plan): wire CAP-A→D readers into FlashCapitalGraph via CapitalEdgeGates — NO-OP until live capacity evidence; un-skip the 6 Part-B guards per owner",
+    "W2: R-03 builders → offline R-05 seam; R10 item 1: CPMM exact evaluators → bounded-cycle paper path (offline, evidence exists)",
+    "User gate: live-capture authorization workstream (typed blocker above)",
+    "Wave-2 provider adapters after quote-normalization contract freeze (Cetus V3 + 7K first; Titan + OKX for Solana)",
+    "R11-FU2: native-Windows CI wiring + remaining platform items"
+  ]
 }

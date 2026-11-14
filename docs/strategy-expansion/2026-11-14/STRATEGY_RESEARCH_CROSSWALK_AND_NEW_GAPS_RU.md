@@ -81,3 +81,24 @@ At implementation start, re-fetch current official docs, record revision/hash/li
 - EXCLUDED for user-prohibited/unauthorized mechanisms.
 
 Unknown is never zero. No TVL-as-capacity, no quote extrapolation, no duplicate pool/collateral/lender/account/quota consumption, no unlicensed source reuse, no private keys or account creation, no signing/sending/borrowing/deploying/live trading, no tokenized equities, no sandwich/frontrun/user targeting/private-flow exploitation.
+
+
+
+## Дополнение: широкая arbitrage map и data-source coverage (2026-11-14)
+
+Проведён дополнительный аудит источников, нужных для подключения архивных стратегий к боту. Результат находится в:
+- ARBITRAGE_MAP_STRATEGY_AND_DATA_SOURCE_ATLAS_RU.md
+- ARBITRAGE_DATA_SOURCE_CATALOG_V1.json
+- ARBITRAGE_MAP_DATA_SOURCE_ASSIGNMENTS_RU.md
+
+### Новые пробелы не только в alpha, но и в наблюдаемости рынка
+
+1. Нужен единый source-role map: raw chain state, direct venue state, quote router, oracle, CEX/perps, flash lender, bridge/claim, indexer и historical analytics — это разные типы данных и доказательств.
+2. Нужна strategy-to-source coverage: каждая strategy family должна иметь источник обнаружения, canonical identity, exact state, exact amount quote, funding/build/simulation requirements и replay receipt.
+3. Нельзя считать два aggregator quotes независимыми пулами, TVL flash capacity, CEX book локальной atomic liquidity, bridge flow atomic transfer, protocol SDK — deployed integration, а индексатор — source of truth для точного текущего состояния.
+4. Большой cross-chain/market universe сохраняется. TON/Cosmos/CEX/perps/oracles/bridge data могут расширять radar и inventory strategies, даже когда не подходят к flashloan critical path.
+5. Внешние условия изменяются: Balancer BIP-928 перевёл большинство pools в withdrawals-only с 2026-10-30; отдельные partner V3 pool exceptions требуют per-pool доказательства до 2026-11-30. DefiLlama free yield pools/chart endpoints отключены с 2026-11-13, GeckoTerminal high-rate on-chain access перешёл в Pro, Sui mainnet JSON-RPC отключён — новые reader-ы только на gRPC/GraphQL/checkpoints.
+
+### Что осталось подключить
+
+Выполнить DS-00…DS-11, но расширять текущих owners: P0-1/2/3, AssetResolver/DynamicUniverse, PAIR-00, direct_venue, R13-K, R02/R03, FlashCapitalGraph, PR118, AGG-05, StrategyContractV1, ExactSimulationFinalizer, paper/replay и W6. Не создавать вторые registry, graph, quote engine, source journal или execution kernel.

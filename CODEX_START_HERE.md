@@ -49,3 +49,16 @@ For Codex CLI, GLM-5.3-Flash and other coding agents:
 R-04 selector → R-05 complete unsigned transaction/PTB simulation → R-06 paper qualification remain gated by exact quotes, relevant effective capital capacity, matching builder conformance, complete same-state simulation and QPR readiness.
 
 Keep the research universe broad, while separating LOCAL_ATOMIC, CONDITIONAL_HYPEREDGE, HEDGED_NON_ATOMIC, SIGNAL_ONLY and EXCLUDED classes. Robinhood Stock Tokens and tokenized equities remain excluded. No private keys, accounts/ATAs/obligations creation, signing, sending, borrowing, spending, deployments, provider enabling or production promotion. Live stays hard-denied.
+
+
+
+## Latest strategy campaign expansion — 2026-11-14
+
+The current verified main snapshot is `9f173d7632cb30190bb8d9174ceba6d116eaec70` (after PR #654). The full archive-backed MASTER handoff is #646; exact historical relationship rows are #650; archive taxonomy is #654 (**SX-17**). Keep the full MASTER scope first.
+
+Additional assignments:
+- **SX-18 runtime parallel strategy fanout:** `docs/strategy-expansion/2026-11-14/tasks/SX18_MULTI_STRATEGY_RUNTIME_FANOUT_RU.md`. Current registry has six entries but only one real two-leg shadow detector. Reuse existing app/registry/consumer/AGG-05/paper owners; no second runtime infrastructure.
+- **W6-12 observed participant strategy intelligence:** `docs/strategy-expansion/2026-11-14/tasks/W6_12_OBSERVED_PARTICIPANT_STRATEGY_INTELLIGENCE_RU.md`. Public/authorized pseudonymous on-chain episodes, complete net attribution, replay and holdout only; no deanonymization or copy-trading.
+
+Merged since the prior snapshot: #645 SX-12, #646 master/archive handoff, #647 Titan adapter, #648 SX-08, #650 pair archive dataset, #651 SX-07, #653 SX-02 and #654 SX-17 archive taxonomy.
+Open work requiring current rebase/source review: #649 SX-03 (Curve source/license/whitepaper/unit/rooted-state blockers) and #655 R10-2 (MarginFi offline qualification bridge). #656 is the predecessor documentation PR; this clean-base successor is intended to replace it after checks. Re-fetch main/open PRs/CI before dispatch; this dated snapshot is not permanent truth.

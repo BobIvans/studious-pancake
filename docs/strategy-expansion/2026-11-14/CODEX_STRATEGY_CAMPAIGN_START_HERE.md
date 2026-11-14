@@ -125,3 +125,14 @@ No private keys, wallet/account/ATA/obligation/position creation, signing, sendi
 
 ## Definition of complete
 Not every PR title merged and not every idea given a class. Every family has one owner, truthful evidence tier, dependency, test/replay and next action. Selected implementations are merged or explicitly BLOCKED/RESEARCH_ONLY/EXCLUDED with evidence. Qualified paths are reachable in the supported shadow/paper architecture. Resource allocation is deterministic and cannot double spend. Dashboard/crosswalk match final main SHA. No claim of profitability or production readiness from documentation merges.
+
+
+
+## G. Runtime multi-strategy execution — SX-18 (new cross-cutting gap)
+Read `tasks/SX18_MULTI_STRATEGY_RUNTIME_FANOUT_RU.md`. The catalog is broad, but the installed runtime currently has six registrations and only circular_arbitrage has a real two-leg shadow detector. SX-01 is advisory, not runtime activation. Build bounded concurrent fanout only by extending existing application/StrategyRegistry/OpportunityConsumer/AGG-05/paper-shadow owners. One immutable snapshot generation, deterministic ordering, failure isolation, queue bounds, conflict-safe resource admission and installed package/capability parity are mandatory. Do not activate stubs.
+
+## H. Observed participant strategy intelligence — W6-12 (new Market Ecology lane)
+Read `tasks/W6_12_OBSERVED_PARTICIPANT_STRATEGY_INTELLIGENCE_RU.md`. Build a provenance-bound evidence path from public/authorized pseudonymous on-chain episodes to falsifiable strategy archetypes and complete net attribution. Reuse MarketEpisode/raw journal/decision dataset/causal owners. No deanonymization, real-world identity matching, private orderflow, doxxing or automatic copy-trading. Include failed/no-fill/reverted attempts, inventory/liabilities, transfers, fees/carry, drawdown, capital lock, censoring, leakage controls and held-out validation.
+
+## Current-main truth (2026-11-14, after #654)
+Merged: #645, #646, #647, #648, #650, #651, #653, #654. SX-17 is the archive detector/anomaly taxonomy PR #654; runtime fanout is SX-18. Open: #649 LLAMMA source-blocked, #655 R10-2 offline MarginFi bridge (rebase/recheck), and predecessor #656 pending clean-base supersession. Always refresh live PR/main state before dispatch.

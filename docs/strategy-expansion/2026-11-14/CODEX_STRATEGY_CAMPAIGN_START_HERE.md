@@ -121,3 +121,14 @@ No private keys, wallet/account/ATA/obligation/position creation, signing, sendi
 
 ## Definition of complete
 Not every PR title merged and not every idea given a class. Every family has one owner, truthful evidence tier, dependency, test/replay and next action. Selected implementations are merged or explicitly BLOCKED/RESEARCH_ONLY/EXCLUDED with evidence. Qualified paths are reachable in the supported shadow/paper architecture. Resource allocation is deterministic and cannot double spend. Dashboard/crosswalk match final main SHA. No claim of profitability or production readiness from documentation merges.
+
+
+
+## E. Runtime multi-strategy execution — SX-17 (new cross-cutting gap)
+Read tasks/SX17_MULTI_STRATEGY_RUNTIME_FANOUT_RU.md. The strategy atlas is broad, but the installed runtime currently registers six strategies and only circular arbitrage has a real two-leg shadow detector. SX-01 is an advisory contract, not a runtime registry. Build bounded fanout only by extending the existing StrategyRegistry/application/OpportunityConsumer/AGG-05/paper-shadow owners. Same immutable snapshot generation, deterministic order, failure isolation, per-provider quotas, queue bounds, resource conflict admission and current capability manifest parity are mandatory. Do not turn stubs into enabled strategies. R04/R05/R06 remain separate gates.
+
+## F. Observed participant strategy intelligence — W6-12 (new Market Ecology lane)
+Read tasks/W6_12_OBSERVED_PARTICIPANT_STRATEGY_INTELLIGENCE_RU.md. Add a provenance/evidence graph from public/authorized on-chain participant episodes to falsifiable strategy archetypes and complete risk-adjusted net attribution. Reuse existing MarketEpisode, raw journal/replay, episode_builder, decision dataset/ranker and causal/benchmark owners. No deanonymization, real-world identity matching, private orderflow, doxxing or auto-copy-trading. Include failed/no-fill/reverted attempts, inventory/liabilities, transfers, fees, carry, markout, drawdown, capital lock, censoring, leakage controls and held-out validation.
+
+## Current-main truth and open strategy lanes
+At the snapshot after #646/#647, current main was 73911801f12eb8c365421d5dcaea40c20a503a0a. #646 is merged (full MASTER + recovered Build Bigger Universe); #647 is merged (Titan adapter on frozen R13 kernel). #645 SX-12, #648 SX-08 and #649 SX-03 remain open and require current-base rebase/checks before merge. #649 has unresolved proprietary-source/revision/whitepaper blockers; do not claim LLAMMA is source-qualified. Re-fetch everything before each dispatch.

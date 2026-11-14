@@ -1,0 +1,215 @@
+{
+  "schema_version": "studious-pancake.ton-wave1-offline-sources.v1",
+  "wave_label": "ton-wave1-2026-11-13",
+  "prepared_at_utc": "2026-11-14",
+  "repository_base_sha_audited": "86be458a87ed3f499cc32ff56426b2866c90422a",
+  "branch": "agent/ton-radar-wave1",
+  "hash_policy": {
+    "github_blob_sha1": "Exact GitHub Git blob object ID from the upstream repository at the recorded commit. Verify with git hash-object on an identical checked-in snapshot.",
+    "sha256": "The repository verifier computes SHA-256 locally for audit output over checked-in dossier files and mirrors. It is not claimed as a provider-supplied signature.",
+    "docs_page_capture": "Docs pages are captured as technical extracts with canonical URLs and retrieval dates; they are not byte-pinned to a provider-side version unless a stable upstream file is mirrored."
+  },
+  "sources": {
+    "stonfi_dex_rest_v1": {
+      "provider": "STON.fi",
+      "canonical_urls": [
+        "https://docs.ston.fi/developer-section/dex/api",
+        "https://docs.ston.fi/developer-section/dex/api/reference",
+        "https://api.ston.fi/swagger-ui/",
+        "https://api.ston.fi/redoc",
+        "https://github.com/ston-fi/api"
+      ],
+      "retrieved_at_utc": "2026-11-14",
+      "api_version": "DEX REST API v1; docs build v1.168.0; official JS client @ston-fi/api 0.33.0",
+      "base_url": "https://api.ston.fi",
+      "endpoints_used_by_radar": {
+        "assets": "GET /v1/assets -> {\"asset_list\": [AssetInfoResponse...]}",
+        "pools": "GET /v1/pools -> {\"pool_list\": [PoolInfoResponse...]}",
+        "stats": "GET /v1/stats -> LEGACY, NOT PRESENT in current documented surface; documented stats endpoints are /v1/stats/dex, /v1/stats/pool, /v1/stats/operations, /v1/stats/fees, /v1/stats/fee_accruals, /v1/stats/fee_withdrawals"
+      },
+      "auth": "none documented for discovery endpoints",
+      "published_limits": "Docs state \"Currently, there are no limits for DEX API use.\" A no-published-limit statement is not an unlimited polling license; the radar keeps self-imposed round-robin budgets and bounds.",
+      "response_wrapper_keys": {
+        "assets": "asset_list",
+        "pools": "pool_list"
+      },
+      "verified_response_fields": {
+        "asset": "contract_address, decimals, symbol, kind, blacklisted, community, default_symbol, deprecated, display_name, image_url, dex_price_usd, third_party_price_usd, priority, taxable, wallet_address, popularity_index, tags, custom_payload_api_uri, scale, extensions; V2 variant wraps display fields in meta{decimals, symbol, display_name, image_url, custom_payload_api_uri}",
+        "pool": "address, token0_address, token1_address, reserve0, reserve1, router_address, lp_fee, protocol_fee, protocol_fee_address, ref_fee, lp_total_supply, collected_token0_protocol_fee, collected_token1_protocol_fee, deprecated, apy_1d, apy_7d, apy_30d, volume_24h_usd, tags, amp, rate, w0"
+      },
+      "snapshot_status": "OFFICIAL_CONTRACT_EXTRACT_ONLY; SDK_TYPES_MIRRORED",
+      "license_status": "Official JS client ston-fi/api is MIT at pinned commit; mirrored type files are inert reference snapshots, not runtime dependencies.",
+      "upstream_repository": "ston-fi/api",
+      "upstream_commit": "0a6113ba3aa43da2ac1c9094977e181d3881f226",
+      "upstream_pushed_at": "2026-11-05T13:30:57Z",
+      "package_version": "0.33.0",
+      "upstream_license": "MIT",
+      "local_snapshots": [
+        "vendor-reference/stonfi-api/LICENSE",
+        "vendor-reference/stonfi-api/package.json",
+        "vendor-reference/stonfi-api/asset.ts",
+        "vendor-reference/stonfi-api/pool.ts",
+        "vendor-reference/stonfi-api/apiClient.ts"
+      ],
+      "upstream_git_blob_sha1": {
+        "vendor-reference/stonfi-api/LICENSE": "97f4b94251791be7a63a9d256423e131c8df2fa7",
+        "vendor-reference/stonfi-api/package.json": "6ca8a846a825b24b4fc512eba38a792cc791d89f",
+        "vendor-reference/stonfi-api/asset.ts": "7e5846c17019f27016aaf943cc26dcfcc4a528eb",
+        "vendor-reference/stonfi-api/pool.ts": "ecc7d121f00cb4c3009459731d7d6a27cc57365f",
+        "vendor-reference/stonfi-api/apiClient.ts": "345f2b3cfd2f722d5724994d665b5a1bccec9ec1"
+      }
+    },
+    "omniston_v1beta8": {
+      "provider": "STON.fi Omniston",
+      "canonical_urls": [
+        "https://docs.ston.fi/developer-section/omniston/swap",
+        "https://docs.ston.fi/developer-section/omniston/swap/overview",
+        "https://docs.ston.fi/developer-section/omniston/swap/v1beta8",
+        "https://docs.ston.fi/developer-section/omniston/environments",
+        "https://docs.ston.fi/developer-section/omniston/how-omniston-works"
+      ],
+      "retrieved_at_utc": "2026-11-14",
+      "api_version": "stonfi.omni.v1beta8 (current API namespace per official docs); JSON-RPC 2.0 over WebSocket, plus gRPC over TLS",
+      "environments": {
+        "sandbox_ws": "wss://omni-ws-sandbox.ston.fi",
+        "production_ws": "wss://omni-ws.ston.fi",
+        "history_ws": "wss://omni-history-ws.ston.fi",
+        "history_http": "https://omni-history.ston.fi/json-rpc",
+        "history_grpc": "omni-history-grpc.ston.fi:443",
+        "grpc_tls": "omni-grpc.ston.fi:443 (production), omni-grpc-sandbox.ston.fi:443 (sandbox)"
+      },
+      "quote_rpc": "stonfi.omni.v1beta8.QuoteRpc.Quote (subscription result id; notifications ack/quote_updated/no_quote/keep_alive)",
+      "verified_request_fields": "input_asset {ton: {native|jetton}}, output_asset, input_units, settlement_params (swap.max_price_slippage_pips | order)",
+      "verified_quote_fields": "quote_id, settlementData.$case (swap or order), input_units, output_units, integrator_fee_units, protocol_fee_units, integrator_fee_pips, protocol_fee_pips (1 pip = 1/1,000,000)",
+      "auth": "none documented on the pages captured",
+      "published_limits": "none captured",
+      "snapshot_status": "OFFICIAL_CONTRACT_EXTRACT_ONLY",
+      "notes": "RFQ quotes are candidate evidence only; BuildSwap/BuildEscrowTransfer/RegisterSignedOrder/Track and all settlement flows are outside the research radar. The repo adapter keeps Omniston as an injected read-only reader interface; no socket transport is created by this owner."
+    },
+    "dedust_api_v2": {
+      "provider": "DeDust",
+      "canonical_urls": [
+        "https://docs.dedust.io/reference/getting-available-pools",
+        "https://docs.dedust.io/",
+        "https://www.npmjs.com/package/@dedust/sdk"
+      ],
+      "retrieved_at_utc": "2026-11-14",
+      "api_version": "DeDust REST API v2",
+      "base_url": "https://api.dedust.io/v2",
+      "endpoints_used_by_radar": {
+        "pools": "GET /v2/pools -> bare JSON array of pool objects; no pagination documented; 400 returns {}"
+      },
+      "verified_response_fields": {
+        "pool": "address, lt, totalSupply, type (e.g. volatile), tradeFee, assets[{type: native|jetton, address?, metadata{name, symbol, image, decimals}}], lastPrice, reserves[string, string], stats{fees[], volume[]}",
+        "numeric_encoding": "All numeric values are returned as strings; reserves/fees/volume are provider-reported and not exact chain state."
+      },
+      "auth": "none documented",
+      "published_limits": "none captured",
+      "snapshot_status": "OFFICIAL_CONTRACT_EXTRACT_ONLY",
+      "license_status": "SDK @dedust/sdk is a separate TypeScript package not mirrored here; no SDK dependency added."
+    },
+    "swapcoffee_aggregator_v1": {
+      "provider": "swap.coffee",
+      "canonical_urls": [
+        "https://docs.swap.coffee/technical-guides/aggregator-api",
+        "https://docs.swap.coffee/technical-guides/aggregator-api-openapi/entity/returns-list-of-pools-which-correspond-to-the-given-params",
+        "https://backend.swap.coffee/swagger-ui",
+        "https://docs.swap.coffee/llms.txt"
+      ],
+      "retrieved_at_utc": "2026-11-14",
+      "api_version": "Aggregator REST API v1 (OpenAPI-documented entity pages)",
+      "base_url": "https://backend.swap.coffee/",
+      "endpoints_used_by_radar": {
+        "pools": "GET /v1/pools?blockchains=ton&trusted=false&size=<1..100>&page=<1..> -> {total_count, pools: [{pool, info}]}"
+      },
+      "verified_request_params": "blockchains (enum ton), dexes (enum incl. stonfi, dedust, coffee, tonco), trusted (default true), with_active_boosts, recently_created, with_liquidity_from, search_text, order (tvl|volume|apr), descending_order, in_groups, size (int 1..100, default 10), page (int >=1, default 1)",
+      "verified_response_fields": {
+        "pool": "dex, address, type (public|private|slumbering|invalid), amm_type (constant_product|cubic_stable|curve_fi_stable|concentrated_v3|tonstakers|weighted_constant_product|weighted_stable|bidask|moon_dlmm|bidask_damm|dedust_v2), tokens[{address{blockchain, address}, metadata{name, symbol, decimals, listed, verification: whitelisted|blacklisted|community|unknown}}], reserves (doubles), fees{average_gas, divider, input, output, first_token, second_token}, amm_settings?, restrictions?, unavailable_until? (UTC unix seconds)",
+        "info": "address, tvl_usd, volume_usd, fee_usd, apr, lp_apr, boost_apr, locked_asset_amount?",
+        "errors": "{\"error\": \"...\"}"
+      },
+      "auth": "public API allows unauthorized access; heavier users request an API key (X-Api-Key header) via the official Typeform",
+      "published_limits": "\"We believe that the average load of 1 request per second per IP is more than acceptable.\" Exceeding yields 429 Too Many Requests. The radar self-imposes 1 page per poll round with bounded page size and backoff.",
+      "pagination": "page/size; size max 100",
+      "snapshot_status": "OFFICIAL_CONTRACT_EXTRACT_ONLY",
+      "notes": "Routes/pre-built-transaction endpoints are out of scope: no route/quote promotion, no transaction building."
+    },
+    "tonco": {
+      "provider": "TONCO",
+      "canonical_urls": [
+        "https://docs.tonco.io/en/",
+        "https://docs.tonco.io/en/overview/bringing-concentrated-liquidity-to-ton.html",
+        "https://github.com/cryptoalgebra/tonco-sdk/"
+      ],
+      "retrieved_at_utc": "2026-11-14",
+      "api_version": "none published",
+      "snapshot_status": "BLOCKED_MISSING_PIN",
+      "blocker": "No official REST/HTTP pool-state schema is published in the captured docs; Tonco documents a TypeScript SDK (cryptoalgebra/tonco-sdk) that reads concentrated-liquidity pool state through TON providers. Exact contract addresses and SDK generation were not pinned this wave.",
+      "notes": "swap.coffee aggregates Tonco pools via its dexes enum (verified), so Tonco pool candidates can still enter the research universe through the swap.coffee adapter without any Tonco-specific code."
+    },
+    "toncenter": {
+      "provider": "TON Center",
+      "canonical_urls": [
+        "https://toncenter.com/api/v2",
+        "https://docs.ton.org/api/rate-limit",
+        "https://toncenter.com/"
+      ],
+      "retrieved_at_utc": "2026-11-14",
+      "api_version": "v2 (swagger UI at /api/v2) and v3 (swagger at /api/v3); exact per-method schemas not pinned this wave",
+      "auth": "API key plans via TON docs \"Get API key\"; unauthenticated requests stay at 1 RPS even with a subscription",
+      "published_limits": {
+        "anonymous": "1 request per second (default rate limit without API key)",
+        "free_plan": "1 key, 10 RPS",
+        "plus_plan": "3 keys, 25 RPS (aggregated per network)",
+        "advanced_plan": "10 keys, 100 RPS (aggregated per network)",
+        "over_limit_response": "HTTP 429 with body {\"ok\": false, \"result\": \"Ratelimit exceed\", \"code\": 429}; docs recommend exponential backoff"
+      },
+      "snapshot_status": "RATE_LIMIT_AND_429_ENVELOPE_VERIFIED; METHOD_SCHEMAS_BLOCKED_MISSING_PIN",
+      "blocker": "Exact request/response schemas for state-read methods (e.g. getAccountState/getExtendedAccountInformation/runGetMethod) were not captured from the official swagger this wave; no state adapter may decode them until pinned."
+    },
+    "tonapi": {
+      "provider": "TonAPI (tonapi.io)",
+      "canonical_urls": [
+        "https://tonapi.io/",
+        "https://tonapi.io/api-v2",
+        "https://github.com/tonkeeper/tonapi"
+      ],
+      "retrieved_at_utc": "2026-11-14",
+      "api_version": "REST API v2",
+      "base_url": "https://tonapi.io/v2/",
+      "verified_endpoints": "GET /v2/accounts/{account_id} (production example on the official page), POST /v2/accounts/_bulk, GET /v2/blockchain/transactions/{transaction_id}, GET /v2/blockchain/config, POST /v2/blockchain/message, GET /v2/wallet/emulate; swagger UI at https://tonapi.io/api-v2",
+      "auth": "API key plans exist; key header name not captured this wave",
+      "published_limits": {
+        "start_free": "RPS 1",
+        "lite": "RPS 10 ($9.9)",
+        "standart": "RPS 100 ($95)",
+        "plus": "RPS 300 ($290)",
+        "heavy": "RPS 1000 ($890)",
+        "liteserver_free": "RPS 1"
+      },
+      "snapshot_status": "BASE_URL_ENDPOINTS_AND_TIERS_VERIFIED; RESPONSE_SCHEMAS_BLOCKED_MISSING_PIN",
+      "blocker": "Exact /v2/accounts/{account_id} and jetton response schemas were not captured verbatim this wave; a TonAPI state-view adapter may not decode unverified field layouts."
+    }
+  },
+  "known_contract_drift": [
+    {
+      "owner": "src/discovery/dynamic_universe/ton_radar.py::StonRadarIngestor.poll (stats endpoint)",
+      "problem": "The radar polls GET /v1/stats and decodes {\"stats\": {...}}. The current documented STON.fi surface (docs build v1.168.0) does not list plain /v1/stats; documented stats endpoints are /v1/stats/dex, /v1/stats/pool, /v1/stats/operations, /v1/stats/fees, /v1/stats/fee_accruals, /v1/stats/fee_withdrawals, and the official SDK 0.33.0 calls only /v1/stats/operations, /v1/stats/fees, /v1/stats/fee_withdrawals.",
+      "corrective_target": "Keep the legacy {\"stats\": {...}} decode contract with fail-closed SCHEMA_ERROR handling until a live capture is authorized, then either confirm the legacy endpoint or pin the exact /v1/stats/dex response schema and migrate. Do not invent a /v1/stats/dex decoder.",
+      "status": "DRIFT_RECORDED_NEEDS_LIVE_PIN"
+    },
+    {
+      "owner": "src/discovery/dynamic_universe/ton_radar.py (asset decode)",
+      "problem": "Asset rows exist in two verified variants: flat AssetInfoResponse (symbol at top level) and V2 AssetInfoV2Response (symbol/decimals inside meta{}).",
+      "corrective_target": "The existing normalizer already accepts both variants and keeps provider metadata out of on-chain decimals; keep tests covering both.",
+      "status": "HANDLED_BY_ADAPTER"
+    }
+  ],
+  "live_capture_blockers": [
+    {
+      "kind": "BLOCKED(LIVE_CAPTURE_NOT_AUTHORIZED)",
+      "scope": "All TON sources this wave: STON.fi REST, Omniston WS, DeDust API, swap.coffee API, TON Center, TonAPI. No live request was made and no live payload is claimed as evidence."
+    }
+  ],
+  "vendor_reference_manifest": null
+}

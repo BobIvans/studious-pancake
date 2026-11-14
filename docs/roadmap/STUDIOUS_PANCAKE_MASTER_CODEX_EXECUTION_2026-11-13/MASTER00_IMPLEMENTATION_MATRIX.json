@@ -1,8 +1,8 @@
 {
   "schema": "studious-pancake.master00-implementation-matrix.v1",
   "generated_at": "2026-11-14",
-  "main_sha": "a82a512b01e9bcef4c41e369ee49168e74ec1173",
-  "authority": "MASTER-00 lead refresh required by the repository owner; statuses verified against code truth at this SHA (R10 inventory #622, replay report #631, SX-00 reconciliation #639, merged PRs #638/#640/#641/#642). Lane PRs update their own rows; SX-16 performs the final reconciliation.",
+  "main_sha": "73911801f12eb8c365421d5dcaea40c20a503a0a",
+  "authority": "Refreshed after MASTER + Build Bigger Universe archive handoff #646 and R13 Titan adapter #647. Current runtime truth rechecked against src/strategy/strategies.py and SX-01/R08 owners; SX-17/W6-12 are newly identified, unimplemented work packages.",
   "status_vocabulary": {
     "IMPLEMENTED": "implemented and verified in main at its own evidence tier (offline tests/verifiers pass); no runtime promotion implied",
     "IMPLEMENTED_UNQUALIFIED": "real implementation with tests in main, but not qualified to promote: missing exact venue binding, capacity, build conformance, simulation or paper evidence",
@@ -15,94 +15,646 @@
     "EXCLUDED": "permanently out of the universe by owner policy or safety rule"
   },
   "workstreams": [
-    {"id": "P0-1", "name": "Solana indexed intake -> Dynamic Universe", "status": "IMPLEMENTED", "owner": "src/discovery/dynamic_universe/", "tests": "tests/test_pr056_runtime_discovery.py", "pr": 593, "blocker": "live captures typed BLOCKED (LIVE_AUTHORIZATION_REQUIRED)"},
-    {"id": "P0-2", "name": "Jupiter V2 + 0x comparable quote capture", "status": "IMPLEMENTED", "owner": "src/providers/jupiter/, GPR-02 quote owners", "tests": "P0-2 suites", "pr": 604, "blocker": "ZEROX_LIVE_CAPTURE_PREREQ (user opt-in)"},
-    {"id": "P0-3", "name": "Raydium CPMM/CLMM + Meteora DLMM exact decoders/math", "status": "IMPLEMENTED", "owner": "src/providers/raydium_cpmm_native.py, raydium_clmm_native.py, meteora_dlmm_native.py, src/strategy/exact_cpmm_capacity.py", "tests": "test_exact_cpmm_capacity.py (24), test_cpmm_split_replay.py (3), test_cpmm_fee_accounting.py (5)", "pr": 613, "note": "LEN receipt #634 re-verified TickState=168/TickArrayState=10240; CLMM/DLMM math not yet bound as graph evaluator (R10-1 binds CPMM cycles)"},
-    {"id": "CAP-A", "name": "Jupiter Lend TokenReserve reader", "status": "IMPLEMENTED_UNQUALIFIED", "owner": "src/providers/jupiter/ (lend reserve reader)", "tests": "84", "pr": 602, "blocker": "LIVE_ROOTED_RPC (user-gated); zero qualified capital edges"},
-    {"id": "CAP-B", "name": "Kamino Reserve capacity/fee reader", "status": "IMPLEMENTED_UNQUALIFIED", "owner": "src/providers/ (kamino reserve reader)", "tests": "94", "pr": 612, "blocker": "LIVE_ROOTED_RPC"},
-    {"id": "CAP-C", "name": "NAVI Sui reader", "status": "IMPLEMENTED_UNQUALIFIED", "owner": "NAVI Sui reader owners", "tests": "98", "pr": 609, "blocker": "LIVE_SUI_CHECKPOINT"},
-    {"id": "CAP-D", "name": "Project 0 wallet-free bank discovery + MarginFi bank captures", "status": "IMPLEMENTED_UNQUALIFIED", "owner": "src/providers/marginfi/bank_discovery.py", "tests": "CAP-D suite + test_mpr2602_marginfi_raw_decoder.py", "pr": 619, "blocker": "OPERATOR_ACCOUNT_INPUT_REQUIRED (operator-supplied existing public account); live get_program_accounts enumeration typed blocked", "note": "R10-2 lane builds FlashCapitalProvider over pinned captures"},
-    {"id": "R03-00", "name": "Unsigned financing builders (Jupiter/NAVI/Kamino)", "status": "IMPLEMENTED_UNQUALIFIED", "owner": "src/lending/unsigned_builders/", "tests": "74 (Kamino #633)", "pr": 606, "note": "Kamino BUILT_OFFLINE_UNQUALIFIED with vendored klend-sdk@3c3a38d4 (MIT); wired into AtomicMarginfiJupiterPlanner as instruction references (#640); BUILT_OFFLINE_UNQUALIFIED != sendable"},
-    {"id": "R13-K", "name": "Quote/build kernel freeze + pool-identity dedup", "status": "IMPLEMENTED", "owner": "src/execution/quote_build_kernel.py", "tests": "33", "pr": 638, "note": "r13.quote-build-kernel.v1 frozen contract: refuse_amount_extrapolation, PoolIdentityDeduplicator, BuildHandoff"},
-    {"id": "R08", "name": "Runtime composition audit", "status": "IMPLEMENTED_UNQUALIFIED", "owner": "docs/roadmap reports + contract tests", "tests": "25 combined", "pr": 627, "note": "15/27 owner groups wired, 12 library-only; INTEGRATION_GAP_* typed; wiring plan W1->W6"},
-    {"id": "R09", "name": "TON/Sui/EVM source dossiers + feeds", "status": "IMPLEMENTED_UNQUALIFIED", "owner": "docs dossiers + bounded ingestors", "pr": 635, "note": "TON atomicity = typed negative (no native flash loans); Euler BSL 1.1 = typed license blocker"},
-    {"id": "R11", "name": "Platform/reproducibility shims", "status": "IMPLEMENTED", "owner": "src/platform_compat/", "pr": 623, "note": "fcntl/flock shims; residual 60 documented failures tracked"},
-    {"id": "R12", "name": "Dependency security", "status": "IMPLEMENTED", "owner": "lock workflow", "pr": 605, "note": "strict pip-audit 0, no ignores"},
-    {"id": "R14", "name": "Rent economics (RentSponsorPlanner/Slumlord)", "status": "IMPLEMENTED_UNQUALIFIED", "owner": "rent sponsor owners", "tests": "36+98", "pr": 617, "note": "Kamino wiring follow-up merged #640"},
-    {"id": "R04_R05_R06", "name": "Route selection -> exact simulation -> paper qualification", "status": "BLOCKED", "blocker": "LIVE_AUTHORIZATION_REQUIRED + qualified capital edges (zero current) + builder conformance + QPR readiness", "note": "hard-gated chain; offline R-05 seam work may proceed on merged builders"}
+    {
+      "id": "P0-1",
+      "name": "Solana indexed intake -> Dynamic Universe",
+      "status": "IMPLEMENTED",
+      "owner": "src/discovery/dynamic_universe/",
+      "tests": "tests/test_pr056_runtime_discovery.py",
+      "pr": 593,
+      "blocker": "live captures typed BLOCKED (LIVE_AUTHORIZATION_REQUIRED)"
+    },
+    {
+      "id": "P0-2",
+      "name": "Jupiter V2 + 0x comparable quote capture",
+      "status": "IMPLEMENTED",
+      "owner": "src/providers/jupiter/, GPR-02 quote owners",
+      "tests": "P0-2 suites",
+      "pr": 604,
+      "blocker": "ZEROX_LIVE_CAPTURE_PREREQ (user opt-in)"
+    },
+    {
+      "id": "P0-3",
+      "name": "Raydium CPMM/CLMM + Meteora DLMM exact decoders/math",
+      "status": "IMPLEMENTED",
+      "owner": "src/providers/raydium_cpmm_native.py, raydium_clmm_native.py, meteora_dlmm_native.py, src/strategy/exact_cpmm_capacity.py",
+      "tests": "test_exact_cpmm_capacity.py (24), test_cpmm_split_replay.py (3), test_cpmm_fee_accounting.py (5)",
+      "pr": 613,
+      "note": "LEN receipt #634 re-verified TickState=168/TickArrayState=10240; CLMM/DLMM math not yet bound as graph evaluator (R10-1 binds CPMM cycles)"
+    },
+    {
+      "id": "CAP-A",
+      "name": "Jupiter Lend TokenReserve reader",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owner": "src/providers/jupiter/ (lend reserve reader)",
+      "tests": "84",
+      "pr": 602,
+      "blocker": "LIVE_ROOTED_RPC (user-gated); zero qualified capital edges"
+    },
+    {
+      "id": "CAP-B",
+      "name": "Kamino Reserve capacity/fee reader",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owner": "src/providers/ (kamino reserve reader)",
+      "tests": "94",
+      "pr": 612,
+      "blocker": "LIVE_ROOTED_RPC"
+    },
+    {
+      "id": "CAP-C",
+      "name": "NAVI Sui reader",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owner": "NAVI Sui reader owners",
+      "tests": "98",
+      "pr": 609,
+      "blocker": "LIVE_SUI_CHECKPOINT"
+    },
+    {
+      "id": "CAP-D",
+      "name": "Project 0 wallet-free bank discovery + MarginFi bank captures",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owner": "src/providers/marginfi/bank_discovery.py",
+      "tests": "CAP-D suite + test_mpr2602_marginfi_raw_decoder.py",
+      "pr": 619,
+      "blocker": "OPERATOR_ACCOUNT_INPUT_REQUIRED (operator-supplied existing public account); live get_program_accounts enumeration typed blocked",
+      "note": "R10-2 lane builds FlashCapitalProvider over pinned captures"
+    },
+    {
+      "id": "R03-00",
+      "name": "Unsigned financing builders (Jupiter/NAVI/Kamino)",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owner": "src/lending/unsigned_builders/",
+      "tests": "74 (Kamino #633)",
+      "pr": 606,
+      "note": "Kamino BUILT_OFFLINE_UNQUALIFIED with vendored klend-sdk@3c3a38d4 (MIT); wired into AtomicMarginfiJupiterPlanner as instruction references (#640); BUILT_OFFLINE_UNQUALIFIED != sendable"
+    },
+    {
+      "id": "R13-K",
+      "name": "Quote/build kernel freeze + pool-identity dedup",
+      "status": "IMPLEMENTED",
+      "owner": "src/execution/quote_build_kernel.py",
+      "tests": "33",
+      "pr": 638,
+      "note": "r13.quote-build-kernel.v1 frozen contract: refuse_amount_extrapolation, PoolIdentityDeduplicator, BuildHandoff"
+    },
+    {
+      "id": "R08",
+      "name": "Runtime composition audit",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owner": "docs/roadmap reports + contract tests",
+      "tests": "25 combined",
+      "pr": 627,
+      "note": "15/27 owner groups wired, 12 library-only; INTEGRATION_GAP_* typed; wiring plan W1->W6"
+    },
+    {
+      "id": "R09",
+      "name": "TON/Sui/EVM source dossiers + feeds",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owner": "docs dossiers + bounded ingestors",
+      "pr": 635,
+      "note": "TON atomicity = typed negative (no native flash loans); Euler BSL 1.1 = typed license blocker"
+    },
+    {
+      "id": "R11",
+      "name": "Platform/reproducibility shims",
+      "status": "IMPLEMENTED",
+      "owner": "src/platform_compat/",
+      "pr": 623,
+      "note": "fcntl/flock shims; residual 60 documented failures tracked"
+    },
+    {
+      "id": "R12",
+      "name": "Dependency security",
+      "status": "IMPLEMENTED",
+      "owner": "lock workflow",
+      "pr": 605,
+      "note": "strict pip-audit 0, no ignores"
+    },
+    {
+      "id": "R14",
+      "name": "Rent economics (RentSponsorPlanner/Slumlord)",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owner": "rent sponsor owners",
+      "tests": "36+98",
+      "pr": 617,
+      "note": "Kamino wiring follow-up merged #640"
+    },
+    {
+      "id": "R04_R05_R06",
+      "name": "Route selection -> exact simulation -> paper qualification",
+      "status": "BLOCKED",
+      "blocker": "LIVE_AUTHORIZATION_REQUIRED + qualified capital edges (zero current) + builder conformance + QPR readiness",
+      "note": "hard-gated chain; offline R-05 seam work may proceed on merged builders"
+    },
+    {
+      "id": "SX17",
+      "name": "Runtime multi-strategy fanout",
+      "status": "PLANNED",
+      "owner": "existing app/registry/consumer/AGG-05/paper composition",
+      "assignment": "docs/strategy-expansion/2026-11-14/tasks/SX17_MULTI_STRATEGY_RUNTIME_FANOUT_RU.md"
+    },
+    {
+      "id": "W6-12",
+      "name": "Observed participant strategy intelligence",
+      "status": "PLANNED",
+      "owner": "existing MarketEpisode/decision/casual replay owners",
+      "assignment": "docs/strategy-expansion/2026-11-14/tasks/W6_12_OBSERVED_PARTICIPANT_STRATEGY_INTELLIGENCE_RU.md"
+    }
   ],
   "runtime_strategy_registry": [
-    {"name": "circular_arbitrage", "status": "IMPLEMENTED_UNQUALIFIED", "evidence": "two-leg detector shadow-only; ShadowOnlyOpportunityHandler; live hard-denied", "promotion_blockers": "R04 qualified route candidates + PAPER-R06 24h paper pass"},
-    {"name": "lst_depeg", "status": "STUB", "note": "residual-fed detector bodies = R10-3 lane in flight; deliverable lands as IMPLEMENTED_UNBOUND, capability stays disabled"},
-    {"name": "lst_unstake", "status": "STUB", "note": "same as lst_depeg"},
-    {"name": "kamino_liquidation", "status": "FIXTURE_ONLY", "evidence": "quarantined; PR-020 shadow planner sender-free", "promotion_blockers": "rooted reserve/account/oracle state, exact unwind simulation, reviewed IDL + human review (CAP-R02 set)"},
-    {"name": "pump_fun_migration", "status": "PLANNED", "evidence": "detector yields nothing by construction; discovery-only until exact token/program/pool proof"},
-    {"name": "orderbook_amm_arbitrage", "status": "FIXTURE_ONLY", "promotion_blockers": "verified market subscriptions (R07 lane)"}
+    {
+      "name": "circular_arbitrage",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "evidence": "two-leg detector shadow-only; ShadowOnlyOpportunityHandler; live hard-denied",
+      "promotion_blockers": "R04 qualified route candidates + PAPER-R06 24h paper pass"
+    },
+    {
+      "name": "lst_depeg",
+      "status": "STUB",
+      "note": "residual-fed detector bodies = R10-3 lane in flight; deliverable lands as IMPLEMENTED_UNBOUND, capability stays disabled"
+    },
+    {
+      "name": "lst_unstake",
+      "status": "STUB",
+      "note": "same as lst_depeg"
+    },
+    {
+      "name": "kamino_liquidation",
+      "status": "FIXTURE_ONLY",
+      "evidence": "quarantined; PR-020 shadow planner sender-free",
+      "promotion_blockers": "rooted reserve/account/oracle state, exact unwind simulation, reviewed IDL + human review (CAP-R02 set)"
+    },
+    {
+      "name": "pump_fun_migration",
+      "status": "PLANNED",
+      "evidence": "detector yields nothing by construction; discovery-only until exact token/program/pool proof"
+    },
+    {
+      "name": "orderbook_amm_arbitrage",
+      "status": "FIXTURE_ONLY",
+      "promotion_blockers": "verified market subscriptions (R07 lane)"
+    }
   ],
   "strategy_families": [
-    {"id": "ARB-CORE", "class": "LOCAL_ATOMIC_CANDIDATE", "status": "IMPLEMENTED_UNQUALIFIED", "owner": "src/strategy/relation_generators/; src/strategy/arbitrage_graph.py; src/strategy/multihop_solver.py; src/strategy/exact_cpmm_capacity.py", "tests": "test_shadow_arbitrage_graph.py (45); test_agg05_multihop_solver.py (8); test_relation_h_generators.py (13); test_exact_cpmm_capacity.py (24)", "sx_package": null, "next": "R10-1 lane binds graph cycle candidates -> ExactCpmmRoutePlan -> per-amount exact evaluation -> PR118 ledger (CPMM only); CLMM/DLMM evaluator binding open; ROUTE-R04 + PAPER-R06 owned by R04/R06 lanes", "disposition": "KEEP"},
-    {"id": "ARB-SPLIT", "class": "LOCAL_ATOMIC_CANDIDATE", "status": "IMPLEMENTED_UNQUALIFIED", "owner": "src/economics/split_flow.py; src/strategy/cpmm_split_replay.py", "tests": "test_cpmm_split_replay.py (3)", "next": "state closure across ticks/bins/books after exact evaluators bind; SX-12 consumes", "disposition": "KEEP"},
-    {"id": "ARB-STABLE", "class": "LOCAL_ATOMIC_CANDIDATE", "status": "RESEARCH_ONLY", "owner": "src/strategies/stable_peg/; src/research/correlation_ledger/ (stable_redemption_residual)", "blocker": "redemption_anchor_unproven", "next": "issuer anchor dossier (GPR/UNIVERSE lane)", "disposition": "KEEP"},
-    {"id": "TRANS-ISSUER", "class": "CONDITIONAL_HYPEREDGE", "status": "RESEARCH_ONLY", "owner": "src/strategy_evolution/primary_market.py; src/strategy_evolution/rights_lifecycle.py; src/economics/flash_capital_graph/", "sx_package": "SX-02", "next": "SX-02 flash-mint vs lender flashloan option model on FlashCapitalGraph vocabulary", "disposition": "EXTEND"},
-    {"id": "TRANS-LST", "class": "CONDITIONAL_HYPEREDGE", "status": "STUB", "owner": "src/strategy_evolution/stake_queue.py; src/strategy/strategies.py (lst shells)", "sx_package": "R10-3 (lead lane)", "next": "residual-fed shadow detector bodies consuming lst_premium_residual + LST_FAIR_VALUE; lands IMPLEMENTED_UNBOUND; typed blockers lst_exchange_rate_unproven / instant_exit_unproven remain", "disposition": "EXTEND"},
-    {"id": "TRANS-VAULT", "class": "CONDITIONAL_HYPEREDGE", "status": "RESEARCH_ONLY", "owner": "src/strategy_evolution/rights_lifecycle.py; src/strategy_evolution/primary_market.py", "next": "R10-D lane continues; no SX re-ownership", "disposition": "KEEP"},
-    {"id": "CLAIM-PENDLE", "class": "CONDITIONAL_HYPEREDGE", "status": "RESEARCH_ONLY", "owner": "src/strategy_evolution/rights_lifecycle.py; src/strategy_evolution/incentive_epoch.py", "next": "R10-D lane; maturity non-atomic already classified", "disposition": "KEEP"},
-    {"id": "CLAIM-COMPLETE-SET", "class": "CONDITIONAL_HYPEREDGE", "status": "STUB", "owner": "StrategyFamily.COMPLETE_SET enum label only", "sx_package": "SX-07", "next": "typed vector-claim + complete-set conservation model (research only; one protocol after official settlement semantics pinned)", "disposition": "EXTEND"},
-    {"id": "CREDIT-LIQ", "class": "LOCAL_ATOMIC_CANDIDATE", "status": "FIXTURE_ONLY", "owner": "src/liquidation/; src/lending_indexer/", "blocker": "user-gated provider evidence (CAP-R02 set)", "next": "R02/R-03 lanes; SX does not touch", "disposition": "KEEP"},
-    {"id": "CREDIT-LLAMMA", "class": "CONDITIONAL_HYPEREDGE", "status": "STUB", "owner": "src/cross_chain/agg12.py shells; additive src/strategy_evolution/llamma_band_math.py", "sx_package": "SX-03", "next": "official-source dossier + exact band arithmetic replay; typed BLOCKED if primary source cannot be pinned", "disposition": "EXTEND"},
-    {"id": "CREDIT-RATE", "class": "HEDGED_NON_ATOMIC", "status": "RESEARCH_ONLY", "owner": "src/lending_indexer/; src/strategy_evolution/solvency_event.py", "sx_package": "SX-08", "next": "offline rate-curve + refinance evaluation model; atomic refinance vs multi-period carry separation", "disposition": "EXTEND"},
-    {"id": "MICRO-CLOB", "class": "LOCAL_ATOMIC_CANDIDATE", "status": "FIXTURE_ONLY", "owner": "src/providers/orderbook/; src/strategy/market_graph_ingest.py", "blocker": "market_subscriptions_unverified", "next": "R07/provider lane", "disposition": "KEEP"},
-    {"id": "MICRO-MAKER", "class": "HEDGED_NON_ATOMIC", "status": "STUB", "owner": "additive src/research/microstructure/maker_queue_ledger.py", "sx_package": "SX-06", "next": "queue/fill calibration + rebate/cancel-latency ledger (measurement model, no detector wiring)", "disposition": "EXTEND"},
-    {"id": "MICRO-JIT", "class": "HEDGED_NON_ATOMIC", "status": "STUB", "owner": "additive src/research/microstructure/lvr.py + jit_fill_replay.py", "sx_package": "SX-05", "next": "fill-to-markout replay + LVR decomposition; JIT never enabled without proven transaction rights; no sandwich/frontrun", "disposition": "EXTEND"},
-    {"id": "MICRO-OEV", "class": "SIGNAL_ONLY", "status": "STUB", "owner": "additive src/strategy_evolution/oev_auction_replay.py", "sx_package": "SX-04", "next": "official oracle-auction source pin + deterministic auction replay; oracle price never an executable quote", "disposition": "EXTEND"},
-    {"id": "MEV-BACKRUN", "class": "RESEARCH_ONLY", "status": "RESEARCH_ONLY", "owner": "src/strategy_evolution/blockspace_option.py (EVO-07)", "sx_package": "SX-10", "next": "permitted-backrun auction replay (public/authorized flow only; no Jito enablement); no probability claims without observed calibration", "disposition": "EXTEND"},
-    {"id": "LP-LIFECYCLE", "class": "HEDGED_NON_ATOMIC", "status": "IMPLEMENTED_UNQUALIFIED", "owner": "src/research/lp_lifecycle/position_lifecycle.py", "tests": "tests/test_sx09_lp_lifecycle.py", "evidence_pr": 642, "sx_package": "SX-09 (MERGED)", "next": "venue-specific provenance adapters only after their own evidence gates; persistent capital fail-closed (PersistentLpNotFlashFinancable)", "disposition": "EXTEND (MERGED)"},
-    {"id": "BASIS-ASYNC", "class": "SIGNAL_ONLY", "status": "RESEARCH_ONLY", "owner": "src/research_economic_graph/ transformations V2.2; src/discovery/dynamic_universe/ton_radar.py", "sx_package": "SX-11", "next": "settlement-state machine + fault injection (TON radar owner untouched); no atomic classification without protocol-semantics proof", "disposition": "EXTEND"},
-    {"id": "PORT-CAPITAL", "class": "CONTROL_PLANE", "status": "STUB", "owner": "src/economics/flash_capital_graph/; src/strategy/conflict_scheduler.py (AGG-05)", "sx_package": "SX-12", "next": "additive portfolio optimizer consuming AGG-05 + SX-01 manifests; 1/2/4/8 worker determinism; no resource double spend", "disposition": "EXTEND"},
-    {"id": "INTEL-LEARN", "class": "RESEARCH_ONLY", "status": "IMPLEMENTED_UNQUALIFIED", "owner": "src/decision/; src/research/correlation_ledger/; src/strategy_evolution/residual_discovery.py (EVO-09)", "sx_package": "SX-13", "next": "per-family null/control framework, multiple-testing correction, negative/no-trade corpus on existing owners (no second feature store)", "disposition": "EXTEND"},
-    {"id": "DATA-COMPUTE", "class": "RESEARCH_ONLY", "status": "RESEARCH_ONLY", "owner": "src/research/pr359_wave15_institution.py (INST-01); additive src/research/verifiable_procurement.py", "sx_package": "SX-14", "next": "one verifiable task + task hash + independent recomputation + fixed-workload comparison", "disposition": "EXTEND"},
-    {"id": "MECHANISM-LAB", "class": "RESEARCH_ONLY", "status": "RESEARCH_ONLY", "owner": "additive mechanism comparison surface in src/research/verifiable_procurement.py", "sx_package": "SX-14", "next": "fixed-workload rule comparison; no deployment, no real payments", "disposition": "EXTEND"},
-    {"id": "STRAT-RWA-EQUITY-EXCLUSION", "class": "EXCLUDED", "status": "EXCLUDED", "owner": [], "note": "Robinhood Stock Tokens / tokenized equities - never import/enable; other RWA references need separate legal/evidence classification", "disposition": "KEEP EXCLUDED"}
+    {
+      "id": "ARB-CORE",
+      "class": "LOCAL_ATOMIC_CANDIDATE",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owner": "src/strategy/relation_generators/; src/strategy/arbitrage_graph.py; src/strategy/multihop_solver.py; src/strategy/exact_cpmm_capacity.py",
+      "tests": "test_shadow_arbitrage_graph.py (45); test_agg05_multihop_solver.py (8); test_relation_h_generators.py (13); test_exact_cpmm_capacity.py (24)",
+      "sx_package": null,
+      "next": "R10-1 lane binds graph cycle candidates -> ExactCpmmRoutePlan -> per-amount exact evaluation -> PR118 ledger (CPMM only); CLMM/DLMM evaluator binding open; ROUTE-R04 + PAPER-R06 owned by R04/R06 lanes",
+      "disposition": "KEEP"
+    },
+    {
+      "id": "ARB-SPLIT",
+      "class": "LOCAL_ATOMIC_CANDIDATE",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owner": "src/economics/split_flow.py; src/strategy/cpmm_split_replay.py",
+      "tests": "test_cpmm_split_replay.py (3)",
+      "next": "state closure across ticks/bins/books after exact evaluators bind; SX-12 consumes",
+      "disposition": "KEEP"
+    },
+    {
+      "id": "ARB-STABLE",
+      "class": "LOCAL_ATOMIC_CANDIDATE",
+      "status": "RESEARCH_ONLY",
+      "owner": "src/strategies/stable_peg/; src/research/correlation_ledger/ (stable_redemption_residual)",
+      "blocker": "redemption_anchor_unproven",
+      "next": "issuer anchor dossier (GPR/UNIVERSE lane)",
+      "disposition": "KEEP"
+    },
+    {
+      "id": "TRANS-ISSUER",
+      "class": "CONDITIONAL_HYPEREDGE",
+      "status": "RESEARCH_ONLY",
+      "owner": "src/strategy_evolution/primary_market.py; src/strategy_evolution/rights_lifecycle.py; src/economics/flash_capital_graph/",
+      "sx_package": "SX-02",
+      "next": "SX-02 flash-mint vs lender flashloan option model on FlashCapitalGraph vocabulary",
+      "disposition": "EXTEND"
+    },
+    {
+      "id": "TRANS-LST",
+      "class": "CONDITIONAL_HYPEREDGE",
+      "status": "STUB",
+      "owner": "src/strategy_evolution/stake_queue.py; src/strategy/strategies.py (lst shells)",
+      "sx_package": "R10-3 (lead lane)",
+      "next": "residual-fed shadow detector bodies consuming lst_premium_residual + LST_FAIR_VALUE; lands IMPLEMENTED_UNBOUND; typed blockers lst_exchange_rate_unproven / instant_exit_unproven remain",
+      "disposition": "EXTEND"
+    },
+    {
+      "id": "TRANS-VAULT",
+      "class": "CONDITIONAL_HYPEREDGE",
+      "status": "RESEARCH_ONLY",
+      "owner": "src/strategy_evolution/rights_lifecycle.py; src/strategy_evolution/primary_market.py",
+      "next": "R10-D lane continues; no SX re-ownership",
+      "disposition": "KEEP"
+    },
+    {
+      "id": "CLAIM-PENDLE",
+      "class": "CONDITIONAL_HYPEREDGE",
+      "status": "RESEARCH_ONLY",
+      "owner": "src/strategy_evolution/rights_lifecycle.py; src/strategy_evolution/incentive_epoch.py",
+      "next": "R10-D lane; maturity non-atomic already classified",
+      "disposition": "KEEP"
+    },
+    {
+      "id": "CLAIM-COMPLETE-SET",
+      "class": "CONDITIONAL_HYPEREDGE",
+      "status": "STUB",
+      "owner": "StrategyFamily.COMPLETE_SET enum label only",
+      "sx_package": "SX-07",
+      "next": "typed vector-claim + complete-set conservation model (research only; one protocol after official settlement semantics pinned)",
+      "disposition": "EXTEND"
+    },
+    {
+      "id": "CREDIT-LIQ",
+      "class": "LOCAL_ATOMIC_CANDIDATE",
+      "status": "FIXTURE_ONLY",
+      "owner": "src/liquidation/; src/lending_indexer/",
+      "blocker": "user-gated provider evidence (CAP-R02 set)",
+      "next": "R02/R-03 lanes; SX does not touch",
+      "disposition": "KEEP"
+    },
+    {
+      "id": "CREDIT-LLAMMA",
+      "class": "CONDITIONAL_HYPEREDGE",
+      "status": "STUB",
+      "owner": "src/cross_chain/agg12.py shells; additive src/strategy_evolution/llamma_band_math.py",
+      "sx_package": "SX-03",
+      "next": "official-source dossier + exact band arithmetic replay; typed BLOCKED if primary source cannot be pinned",
+      "disposition": "EXTEND"
+    },
+    {
+      "id": "CREDIT-RATE",
+      "class": "HEDGED_NON_ATOMIC",
+      "status": "RESEARCH_ONLY",
+      "owner": "src/lending_indexer/; src/strategy_evolution/solvency_event.py",
+      "sx_package": "SX-08",
+      "next": "offline rate-curve + refinance evaluation model; atomic refinance vs multi-period carry separation",
+      "disposition": "EXTEND"
+    },
+    {
+      "id": "MICRO-CLOB",
+      "class": "LOCAL_ATOMIC_CANDIDATE",
+      "status": "FIXTURE_ONLY",
+      "owner": "src/providers/orderbook/; src/strategy/market_graph_ingest.py",
+      "blocker": "market_subscriptions_unverified",
+      "next": "R07/provider lane",
+      "disposition": "KEEP"
+    },
+    {
+      "id": "MICRO-MAKER",
+      "class": "HEDGED_NON_ATOMIC",
+      "status": "STUB",
+      "owner": "additive src/research/microstructure/maker_queue_ledger.py",
+      "sx_package": "SX-06",
+      "next": "queue/fill calibration + rebate/cancel-latency ledger (measurement model, no detector wiring)",
+      "disposition": "EXTEND"
+    },
+    {
+      "id": "MICRO-JIT",
+      "class": "HEDGED_NON_ATOMIC",
+      "status": "STUB",
+      "owner": "additive src/research/microstructure/lvr.py + jit_fill_replay.py",
+      "sx_package": "SX-05",
+      "next": "fill-to-markout replay + LVR decomposition; JIT never enabled without proven transaction rights; no sandwich/frontrun",
+      "disposition": "EXTEND"
+    },
+    {
+      "id": "MICRO-OEV",
+      "class": "SIGNAL_ONLY",
+      "status": "STUB",
+      "owner": "additive src/strategy_evolution/oev_auction_replay.py",
+      "sx_package": "SX-04",
+      "next": "official oracle-auction source pin + deterministic auction replay; oracle price never an executable quote",
+      "disposition": "EXTEND"
+    },
+    {
+      "id": "MEV-BACKRUN",
+      "class": "RESEARCH_ONLY",
+      "status": "RESEARCH_ONLY",
+      "owner": "src/strategy_evolution/blockspace_option.py (EVO-07)",
+      "sx_package": "SX-10",
+      "next": "permitted-backrun auction replay (public/authorized flow only; no Jito enablement); no probability claims without observed calibration",
+      "disposition": "EXTEND"
+    },
+    {
+      "id": "LP-LIFECYCLE",
+      "class": "HEDGED_NON_ATOMIC",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owner": "src/research/lp_lifecycle/position_lifecycle.py",
+      "tests": "tests/test_sx09_lp_lifecycle.py",
+      "evidence_pr": 642,
+      "sx_package": "SX-09 (MERGED)",
+      "next": "venue-specific provenance adapters only after their own evidence gates; persistent capital fail-closed (PersistentLpNotFlashFinancable)",
+      "disposition": "EXTEND (MERGED)"
+    },
+    {
+      "id": "BASIS-ASYNC",
+      "class": "SIGNAL_ONLY",
+      "status": "RESEARCH_ONLY",
+      "owner": "src/research_economic_graph/ transformations V2.2; src/discovery/dynamic_universe/ton_radar.py",
+      "sx_package": "SX-11",
+      "next": "settlement-state machine + fault injection (TON radar owner untouched); no atomic classification without protocol-semantics proof",
+      "disposition": "EXTEND"
+    },
+    {
+      "id": "PORT-CAPITAL",
+      "class": "CONTROL_PLANE",
+      "status": "STUB",
+      "owner": "src/economics/flash_capital_graph/; src/strategy/conflict_scheduler.py (AGG-05)",
+      "sx_package": "SX-12",
+      "next": "additive portfolio optimizer consuming AGG-05 + SX-01 manifests; 1/2/4/8 worker determinism; no resource double spend",
+      "disposition": "EXTEND"
+    },
+    {
+      "id": "INTEL-LEARN",
+      "class": "RESEARCH_ONLY",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owner": "src/decision/; src/research/correlation_ledger/; src/strategy_evolution/residual_discovery.py (EVO-09)",
+      "sx_package": "SX-13",
+      "next": "per-family null/control framework, multiple-testing correction, negative/no-trade corpus on existing owners (no second feature store)",
+      "disposition": "EXTEND"
+    },
+    {
+      "id": "DATA-COMPUTE",
+      "class": "RESEARCH_ONLY",
+      "status": "RESEARCH_ONLY",
+      "owner": "src/research/pr359_wave15_institution.py (INST-01); additive src/research/verifiable_procurement.py",
+      "sx_package": "SX-14",
+      "next": "one verifiable task + task hash + independent recomputation + fixed-workload comparison",
+      "disposition": "EXTEND"
+    },
+    {
+      "id": "MECHANISM-LAB",
+      "class": "RESEARCH_ONLY",
+      "status": "RESEARCH_ONLY",
+      "owner": "additive mechanism comparison surface in src/research/verifiable_procurement.py",
+      "sx_package": "SX-14",
+      "next": "fixed-workload rule comparison; no deployment, no real payments",
+      "disposition": "EXTEND"
+    },
+    {
+      "id": "STRAT-RWA-EQUITY-EXCLUSION",
+      "class": "EXCLUDED",
+      "status": "EXCLUDED",
+      "owner": [],
+      "note": "Robinhood Stock Tokens / tokenized equities - never import/enable; other RWA references need separate legal/evidence classification",
+      "disposition": "KEEP EXCLUDED"
+    },
+    {
+      "id": "PORT-RUNTIME-FANOUT",
+      "class": "CONTROL_PLANE",
+      "status": "PLANNED",
+      "owner": "src/application.py; src/strategy/registry.py; src/strategy/consumer.py; AGG-05; paper/shadow composition",
+      "sx_package": "SX-17",
+      "next": "bounded deterministic fanout over immutable snapshot generation; no second registry/queue/scheduler"
+    },
+    {
+      "id": "INTEL-PARTICIPANT",
+      "class": "RESEARCH_ONLY",
+      "status": "PLANNED",
+      "owner": "MarketEpisode/raw journal/episode_builder/decision dataset/causal owners",
+      "sx_package": "W6-12",
+      "next": "pseudonymous public on-chain episodes, full lifecycle net attribution, counterfactual replay and held-out validation"
+    }
   ],
   "sx_packages": [
-    {"id": "SX-00", "title": "assignment reconciliation gate", "status": "IMPLEMENTED", "pr": 639},
-    {"id": "SX-01", "title": "canonical typed strategy contract", "status": "IMPLEMENTED", "pr": 641, "owner": "src/strategy/strategy_contract.py"},
-    {"id": "SX-02", "title": "flash-mint and lender-selection economics", "status": "PLANNED", "branch": "agent/sx02-flashmint-lender-economics", "session": "parallel"},
-    {"id": "SX-03", "title": "Curve LLAMMA dossier + band math", "status": "PLANNED", "branch": "agent/sx03-llamma-dossier-band-math", "session": "parallel", "typed_blocker": "official source pin required"},
-    {"id": "SX-04", "title": "OEV/oracle auction + keeper strategy", "status": "PLANNED", "branch": "agent/sx04-oev-auction-replay", "session": "parallel", "typed_blocker": "official source pin required"},
-    {"id": "SX-05+06", "title": "JIT/LVR + CLOB/RFQ maker microstructure", "status": "PLANNED", "branch": "agent/sx05-sx06-microstructure-lvr-maker", "session": "parallel"},
-    {"id": "SX-07", "title": "prediction-market complete sets", "status": "PLANNED", "branch": "agent/sx07-conditional-claims-complete-set", "session": "parallel"},
-    {"id": "SX-08", "title": "lending rates, refinance, collateral optimizer", "status": "PLANNED", "branch": "agent/sx08-lending-rates-refinance", "session": "parallel"},
-    {"id": "SX-09", "title": "LP lifecycle + fee/IL harvesting", "status": "IMPLEMENTED", "pr": 642, "owner": "src/research/lp_lifecycle/"},
-    {"id": "SX-10+11", "title": "permitted backrun + async settlement", "status": "PLANNED", "branch": "agent/sx10-sx11-backrun-async-settlement", "session": "parallel"},
-    {"id": "SX-12", "title": "portfolio optimizer + conflict scheduler", "status": "PLANNED", "branch": "agent/sx12-portfolio-optimizer", "session": "parallel", "depends_on": "SX-01 (merged)"},
-    {"id": "SX-13", "title": "strategy learning + causal evaluation", "status": "PLANNED", "branch": "agent/sx13-causal-eval-framework", "session": "parallel"},
-    {"id": "SX-14", "title": "verifiable procurement + mechanism lab", "status": "PLANNED", "branch": "agent/sx14-mechanism-lab", "session": "parallel"},
-    {"id": "SX-15", "title": "portfolio observability + release matrix", "status": "PLANNED", "session": "coordinator"},
-    {"id": "SX-16", "title": "final integration + evidence reconciliation", "status": "PLANNED", "session": "coordinator"}
+    {
+      "id": "SX-00",
+      "title": "assignment reconciliation gate",
+      "status": "IMPLEMENTED",
+      "pr": 639
+    },
+    {
+      "id": "SX-01",
+      "title": "canonical typed strategy contract",
+      "status": "IMPLEMENTED",
+      "pr": 641,
+      "owner": "src/strategy/strategy_contract.py"
+    },
+    {
+      "id": "SX-02",
+      "title": "flash-mint and lender-selection economics",
+      "status": "PLANNED",
+      "branch": "agent/sx02-flashmint-lender-economics",
+      "session": "parallel"
+    },
+    {
+      "id": "SX-03",
+      "title": "Curve LLAMMA dossier + band math",
+      "status": "OPEN_PR_REBASE_REQUIRED_SOURCE_LICENSE_BLOCKED",
+      "branch": "agent/sx03-llamma-dossier-band-math",
+      "session": "parallel",
+      "typed_blocker": "Curve source is proprietary/all-rights-reserved; source commit SHA and whitepaper/market-state/unit proof remain missing; no source copied.",
+      "pr": 649
+    },
+    {
+      "id": "SX-04",
+      "title": "OEV/oracle auction + keeper strategy",
+      "status": "PLANNED",
+      "branch": "agent/sx04-oev-auction-replay",
+      "session": "parallel",
+      "typed_blocker": "official source pin required"
+    },
+    {
+      "id": "SX-05+06",
+      "title": "JIT/LVR + CLOB/RFQ maker microstructure",
+      "status": "PLANNED",
+      "branch": "agent/sx05-sx06-microstructure-lvr-maker",
+      "session": "parallel"
+    },
+    {
+      "id": "SX-07",
+      "title": "prediction-market complete sets",
+      "status": "PLANNED",
+      "branch": "agent/sx07-conditional-claims-complete-set",
+      "session": "parallel"
+    },
+    {
+      "id": "SX-08",
+      "title": "lending rates, refinance, collateral optimizer",
+      "status": "OPEN_PR_REBASE_REQUIRED",
+      "branch": "agent/sx08-lending-rates-refinance",
+      "session": "parallel",
+      "pr": 648,
+      "note": "Offline Fraction rate/refinance model and tests; no live protocol curves or official parameter pins."
+    },
+    {
+      "id": "SX-09",
+      "title": "LP lifecycle + fee/IL harvesting",
+      "status": "IMPLEMENTED",
+      "pr": 642,
+      "owner": "src/research/lp_lifecycle/"
+    },
+    {
+      "id": "SX-10+11",
+      "title": "permitted backrun + async settlement",
+      "status": "IMPLEMENTED_RESEARCH_ONLY",
+      "pr": 643,
+      "note": "Offline deterministic auction replay and async settlement model; no private flow/Jito/live execution; TON remains non-atomic."
+    },
+    {
+      "id": "SX-12",
+      "title": "portfolio optimizer + conflict scheduler",
+      "status": "OPEN_PR_REBASE_REQUIRED",
+      "branch": "agent/sx12-portfolio-optimizer",
+      "session": "parallel",
+      "depends_on": "SX-01 (merged)",
+      "pr": 645,
+      "note": "Deterministic portfolio optimizer consumes SX-01 ResourceManifest + AGG-05; open code PR, not merged or live allocation."
+    },
+    {
+      "id": "SX-13",
+      "title": "strategy learning + causal evaluation",
+      "status": "PLANNED",
+      "branch": "agent/sx13-causal-eval-framework",
+      "session": "parallel"
+    },
+    {
+      "id": "SX-14",
+      "title": "verifiable procurement + mechanism lab",
+      "status": "PLANNED",
+      "branch": "agent/sx14-mechanism-lab",
+      "session": "parallel"
+    },
+    {
+      "id": "SX-15",
+      "title": "portfolio observability + release matrix",
+      "status": "PLANNED",
+      "session": "coordinator"
+    },
+    {
+      "id": "SX-16",
+      "title": "final integration + evidence reconciliation",
+      "status": "PLANNED",
+      "session": "coordinator"
+    },
+    {
+      "id": "SX-17",
+      "title": "runtime multi-strategy fanout and evidence-gated composition",
+      "status": "PLANNED",
+      "assignment": "docs/strategy-expansion/2026-11-14/tasks/SX17_MULTI_STRATEGY_RUNTIME_FANOUT_RU.md",
+      "depends_on": "SX-01 + R08 + R10 detector owners + AGG-05 + SX-12; R04/R05/R06 for promotion"
+    }
   ],
   "r10_lanes": [
-    {"id": "R10-A", "disposition": "EXTEND", "sx_link": "SX-02", "status": "PLANNED"},
-    {"id": "R10-B", "disposition": "KEEP", "sx_link": null, "status": "IMPLEMENTED_UNQUALIFIED (residual/anchor owners); detector bodies = R10-3"},
-    {"id": "R10-C", "disposition": "EXTEND", "sx_link": "SX-03", "status": "STUB"},
-    {"id": "R10-D", "disposition": "KEEP", "sx_link": null, "status": "RESEARCH_ONLY (kernels in main)"},
-    {"id": "R10-E", "disposition": "KEEP", "sx_link": "SX-06 (measure only)", "status": "FIXTURE_ONLY"},
-    {"id": "R10-F", "disposition": "EXTEND", "sx_link": "SX-07", "status": "STUB"},
-    {"id": "R10-G", "disposition": "EXTEND", "sx_link": "SX-04, SX-05, SX-10", "status": "STUB/RESEARCH_ONLY"},
-    {"id": "R10-H", "disposition": "EXTEND", "sx_link": "SX-11", "status": "RESEARCH_ONLY"},
-    {"id": "R10-I", "disposition": "EXTEND", "sx_link": "SX-13", "status": "IMPLEMENTED_UNQUALIFIED (decision stack); framework = SX-13"}
+    {
+      "id": "R10-A",
+      "disposition": "EXTEND",
+      "sx_link": "SX-02",
+      "status": "PLANNED"
+    },
+    {
+      "id": "R10-B",
+      "disposition": "KEEP",
+      "sx_link": null,
+      "status": "IMPLEMENTED_UNQUALIFIED (residual/anchor owners); detector bodies = R10-3"
+    },
+    {
+      "id": "R10-C",
+      "disposition": "EXTEND",
+      "sx_link": "SX-03",
+      "status": "STUB"
+    },
+    {
+      "id": "R10-D",
+      "disposition": "KEEP",
+      "sx_link": null,
+      "status": "RESEARCH_ONLY (kernels in main)"
+    },
+    {
+      "id": "R10-E",
+      "disposition": "KEEP",
+      "sx_link": "SX-06 (measure only)",
+      "status": "FIXTURE_ONLY"
+    },
+    {
+      "id": "R10-F",
+      "disposition": "EXTEND",
+      "sx_link": "SX-07",
+      "status": "STUB"
+    },
+    {
+      "id": "R10-G",
+      "disposition": "EXTEND",
+      "sx_link": "SX-04, SX-05, SX-10",
+      "status": "STUB/RESEARCH_ONLY"
+    },
+    {
+      "id": "R10-H",
+      "disposition": "EXTEND",
+      "sx_link": "SX-11",
+      "status": "RESEARCH_ONLY"
+    },
+    {
+      "id": "R10-I",
+      "disposition": "EXTEND",
+      "sx_link": "SX-13",
+      "status": "IMPLEMENTED_UNQUALIFIED (decision stack); framework = SX-13"
+    }
   ],
   "r10_implementation_wave": [
-    {"id": "R10-1", "title": "ExactCpmmEdgeEvaluation bound to CircularGraphCandidateDetector + PR118 per-amount sizing", "status": "PLANNED", "branch": "agent/r10-cpmm-cycle-binding", "session": "lead", "files": ["src/strategy/cpmm_cycle_binding.py", "tests/test_sxr1_cpmm_cycle_binding.py"], "blockers_after": "CLMM/DLMM evaluator binding open; PAPER-R06"},
-    {"id": "R10-2", "title": "MarginFi FlashCapitalProvider over pinned captures", "status": "PLANNED", "branch": "agent/r10-marginfi-capital-edges", "session": "lead", "files": ["src/providers/marginfi/capital_edges.py", "tests/test_sxr2_marginfi_capital_edges.py"], "blockers_after": "live capacity stays LIVE_ROOTED_RPC BLOCKED (CAP-R02); zero qualified edges until user-gated evidence"},
-    {"id": "R10-3", "title": "residual-fed LST shadow detector bodies", "status": "PLANNED", "branch": "agent/r10-lst-residual-detectors", "session": "lead", "files": ["src/strategy/detectors.py (additive)", "src/strategy/strategies.py (LST shells only)", "tests/test_sxr3_lst_residual_detectors.py"], "blockers_after": "lst_exchange_rate_unproven / instant_exit_unproven; capability flip separately gated (lands IMPLEMENTED_UNBOUND)"}
+    {
+      "id": "R10-1",
+      "title": "ExactCpmmEdgeEvaluation bound to CircularGraphCandidateDetector + PR118 per-amount sizing",
+      "status": "PLANNED",
+      "branch": "agent/r10-cpmm-cycle-binding",
+      "session": "lead",
+      "files": [
+        "src/strategy/cpmm_cycle_binding.py",
+        "tests/test_sxr1_cpmm_cycle_binding.py"
+      ],
+      "blockers_after": "CLMM/DLMM evaluator binding open; PAPER-R06"
+    },
+    {
+      "id": "R10-2",
+      "title": "MarginFi FlashCapitalProvider over pinned captures",
+      "status": "PLANNED",
+      "branch": "agent/r10-marginfi-capital-edges",
+      "session": "lead",
+      "files": [
+        "src/providers/marginfi/capital_edges.py",
+        "tests/test_sxr2_marginfi_capital_edges.py"
+      ],
+      "blockers_after": "live capacity stays LIVE_ROOTED_RPC BLOCKED (CAP-R02); zero qualified edges until user-gated evidence"
+    },
+    {
+      "id": "R10-3",
+      "title": "residual-fed LST shadow detector bodies",
+      "status": "PLANNED",
+      "branch": "agent/r10-lst-residual-detectors",
+      "session": "lead",
+      "files": [
+        "src/strategy/detectors.py (additive)",
+        "src/strategy/strategies.py (LST shells only)",
+        "tests/test_sxr3_lst_residual_detectors.py"
+      ],
+      "blockers_after": "lst_exchange_rate_unproven / instant_exit_unproven; capability flip separately gated (lands IMPLEMENTED_UNBOUND)"
+    }
   ],
   "user_decision_blockers": [
-    {"id": "LIVE_AUTHORIZATION_REQUIRED", "detail": "live rooted-RPC (Solana) + governed Sui checkpoint reads + EVM fork/RPC reads: user opt-in"},
-    {"id": "OPERATOR_ACCOUNT_INPUT_REQUIRED", "detail": "Project 0 eligibility path needs operator-supplied existing public account"},
-    {"id": "ZEROX_LIVE_CAPTURE_PREREQ", "detail": "0x comparable live quotes need public taker + ZEROX_API_KEY"},
-    {"id": "ORCA_LICENSE_REVIEW", "detail": "custom license review before any Orca source use"},
-    {"id": "EULER_BSL_BLOCKED", "detail": "Euler v2 BSL 1.1 has no Additional Use Grant (change 2029-04-24)"}
+    {
+      "id": "LIVE_AUTHORIZATION_REQUIRED",
+      "detail": "live rooted-RPC (Solana) + governed Sui checkpoint reads + EVM fork/RPC reads: user opt-in"
+    },
+    {
+      "id": "OPERATOR_ACCOUNT_INPUT_REQUIRED",
+      "detail": "Project 0 eligibility path needs operator-supplied existing public account"
+    },
+    {
+      "id": "ZEROX_LIVE_CAPTURE_PREREQ",
+      "detail": "0x comparable live quotes need public taker + ZEROX_API_KEY"
+    },
+    {
+      "id": "ORCA_LICENSE_REVIEW",
+      "detail": "custom license review before any Orca source use"
+    },
+    {
+      "id": "EULER_BSL_BLOCKED",
+      "detail": "Euler v2 BSL 1.1 has no Additional Use Grant (change 2029-04-24)"
+    }
   ],
   "invariants": [
     "live/signer/sender/wallet/borrow/submission hard-denied; no production promotion",
@@ -111,6 +663,8 @@
     "every amount requires a fresh exact re-quote (refuse_amount_extrapolation)",
     "models/correlation are advisory only and cannot bypass gates",
     "no duplicate graph/solver/registry/ledger/journal/quote-plane/scheduler/capital-graph",
-    "R10 shortlist items 1-3 are owned by R04/R06, R02-CAP and R10 follow-up lanes respectively"
+    "R10 shortlist items 1-3 are owned by R04/R06, R02-CAP and R10 follow-up lanes respectively",
+    "Catalog presence or SX-01 contract presence is not installed runtime reachability; every strategy needs a real detector/evaluator and supported composition evidence.",
+    "Participant intelligence uses public/authorized pseudonymous on-chain data only; no deanonymization, doxxing, private orderflow or copy-trading."
   ]
 }

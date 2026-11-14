@@ -65,6 +65,6 @@ Place this directory in the repository as-is. Agents should start from `CODEX_ST
 - **SX-18** — runtime multi-strategy fanout: провести доказуемую границу между каталогом стратегий и реальным installed runtime. Сейчас шесть registrations, но только circular_arbitrage имеет реальный two-leg shadow detector. Использовать существующие owners, не создавать второй registry/queue/scheduler.
 - **W6-12** — public/authorized pseudonymous on-chain participant strategy intelligence: полные эпизоды, net attribution, failed/censored events, replay и holdout. Без deanonymization, doxxing, private flow или auto-copy-trading.
 
-Открытые workstreams в текущем snapshot: #649 SX-03 LLAMMA (proprietary source / primary evidence blockers) и #655 R10-2 MarginFi offline bridge (rebase/review требуется). Старый #656 — predecessor документации, его следует заменить clean-base successor после CI/review.
+Открытые workstreams в текущем snapshot: #649 SX-03 LLAMMA (proprietary source / primary evidence blockers), #655 R10-2 MarginFi offline bridge (rebase/review требуется) и #657 SX-18/W6-12 documentation handoff (CI/review). Старый #656 закрыт как superseded.
 
 ID ownership: **SX-17 = archive taxonomy (#654); SX-18 = runtime fanout; W6-12 = participant intelligence.** Не менять исторические W6-00…W6-11 / W6F-001…096 IDs.

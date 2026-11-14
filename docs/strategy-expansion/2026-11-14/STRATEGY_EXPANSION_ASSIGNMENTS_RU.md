@@ -125,3 +125,20 @@
 - Resource conflicts and comparison to independent baseline.
 - Positive, negative, stale, partial, rejected and no-trade examples.
 - No live/sender/signer changes; rollback and next dependency.
+
+
+
+### SX-18 — Runtime multi-strategy fanout and evidence-gated composition
+- **Assignment:** tasks/SX18_MULTI_STRATEGY_RUNTIME_FANOUT_RU.md
+- Close the gap between the strategy catalog/library modules and the actual installed runtime. The audited registry has six registrations, but only circular_arbitrage has a real two-leg shadow detector. SX-01 is an advisory contract, not a runtime registry; R08 #627 found 15/27 owner groups wired and 12 library-only.
+- Reuse StrategyContractV1, current StrategyRegistry/build_application, OpportunityConsumer/queue/tracker, R08 composition, QPR/DIN, AGG-05 WorkResourceSet/conflict scheduler, merged SX-12 #645 and the sender-free paper/shadow root.
+- Implement bounded concurrent evaluation over one immutable MarketSnapshotGeneration, deterministic ordering, worker cancellation/deadline/backpressure/failure isolation, duplicate idempotency and shared-resource conflict admission.
+- Do not create another registry, runner, queue, scheduler, ledger, graph or paper authority. Do not activate stubs. Only independently proven detector bodies with their own source/state/quote/capacity/build/paper evidence enter shadow.
+- Dependencies: SX-01 #641, SX-12 #645, R08 #624/#627, AGG-05 and R10 detector owners; R04/R05/R06 remain promotion gates.
+
+### W6-12 — Observed participant strategy intelligence and evidence graph
+- **Assignment:** tasks/W6_12_OBSERVED_PARTICIPANT_STRATEGY_INTELLIGENCE_RU.md
+- Extend W6-01/02/05/06 with a complete evidence path from public/authorized on-chain participant episodes to falsifiable strategy archetypes, complete net attribution, counterfactual replay and held-out evaluation.
+- Reuse MarketEpisode, raw journal/replay, episode_builder, decision dataset/ranker, correlation ledger, research-quality and causal benchmark owners; no second wallet graph, event store, feature store or registry.
+- Public account addresses remain pseudonymous technical keys; no real-world identity resolution, doxxing, private orderflow or automatic copy-trading.
+- Acceptance covers transfers, inventory, liabilities, fees/gas/funding, failed/reverted attempts, mark-to-market, drawdown, capital lock, censoring, sample independence and leakage-resistant holdout.

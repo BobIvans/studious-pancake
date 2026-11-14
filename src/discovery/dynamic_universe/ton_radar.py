@@ -3,6 +3,12 @@
 REST and RFQ payloads are candidate evidence only. A syntactically valid TON
 address is not a proven jetton identity, and none of these records can be used
 as a local atomic flash-capital edge.
+
+Schema-pinned sources (docs/integrations/offline/ton-wave1-2026-11-13/):
+STON.fi DEX REST v1 (assets/pools/stats), DeDust API v2 pools, and the
+swap.coffee aggregator v1 pools read path. Omniston RFQ stays an injected
+read-only reader. TON is asynchronous and multi-contract; no single aggregator
+enumerates the whole TON universe, and a failed page never retires a market.
 """
 
 from __future__ import annotations
@@ -25,6 +31,9 @@ from src.routing.transport import SanitizedTransportError, Transport
 
 TON_EXECUTION_CLASS = "TON_ASYNC_MULTI_CONTRACT"
 _ENDPOINTS = ("assets", "pools", "stats")
+# DeDust native-coin asset rows carry no address ({"type": "native"}); this
+# reserved marker is a display identity, never a chain address claim.
+TON_NATIVE_ASSET = "ton:native"
 
 
 class TonSchemaError(ValueError):
@@ -260,8 +269,175 @@ def normalize_ston_payload(
     return _deduplicate(records)
 
 
-class StonRadarIngestor:
-    """Poll a bounded round-robin prefix of STON's whole-universe REST lists.
+def _dedust_asset_identity(asset: Any) -> str:
+    if not isinstance(asset, dict):
+        raise TonSchemaError("asset is not an object")
+    asset_type = asset.get("type")
+    if asset_type == "native":
+        return TON_NATIVE_ASSET
+    if asset_type == "jetton":
+        return canonical_ton_address(asset.get("address"))
+    raise TonSchemaError("unverified asset type")
+
+
+def normalize_dedust_payload(
+    payload: Any, *, max_records: int = 50_000
+) -> tuple[dict[str, Any], ...]:
+    """Decode the verified DeDust `GET /v2/pools` bare array fail-closed.
+
+    The documented contract is a JSON array (no pagination; a documented 400
+    returns `{}`, which lands here as a schema error, never an empty universe).
+    Reserves/lastPrice/totalSupply stay verbatim provider metadata: unknown is
+    not zero and indexed values are not exact chain state.
+    """
+    records: list[dict[str, Any]] = []
+    if not isinstance(payload, list):
+        raise TonSchemaError("missing pool array")
+    if len(payload) > max_records:
+        raise TonSchemaError("provider record budget exceeded")
+    if any(not isinstance(row, dict) for row in payload):
+        raise TonSchemaError("provider row is not an object")
+    for row in payload:
+        address = canonical_ton_address(row.get("address"))
+        assets = row.get("assets")
+        if not isinstance(assets, list) or len(assets) != 2:
+            raise TonSchemaError("pool must have exactly two assets")
+        asset_a, asset_b = (_dedust_asset_identity(asset) for asset in assets)
+        if asset_a == asset_b:
+            raise TonSchemaError("pool has identical asset addresses")
+        reserves = row.get("reserves")
+        if (
+            not isinstance(reserves, list)
+            or len(reserves) != 2
+            or any(not isinstance(value, str) for value in reserves)
+        ):
+            raise TonSchemaError("pool reserves must be two provider strings")
+        pool_type = row.get("type")
+        if not isinstance(pool_type, str) or not pool_type:
+            raise TonSchemaError("pool type is not display text")
+        provider_metadata = {
+            key: row[key]
+            for key in (
+                "lt",
+                "totalSupply",
+                "type",
+                "tradeFee",
+                "lastPrice",
+                "reserves",
+                "stats",
+            )
+            if key in row
+        }
+        records.append(
+            _research_record(
+                "market",
+                record_id=f"ton:dedust:{address}",
+                market_id=address,
+                venue="dedust",
+                asset_a=asset_a,
+                asset_b=asset_b,
+                underlying_resources=[f"ton:dedust-pool:{address}"],
+                # Same underlying pool address seen through any TON aggregator
+                # is shared liquidity, never independent confirmation.
+                correlation_group=f"ton:pool:{address}",
+                provider_metadata=provider_metadata,
+            )
+        )
+    return _deduplicate(records)
+
+
+def _swap_coffee_token_address(token: Any) -> str:
+    if not isinstance(token, dict) or not isinstance(token.get("address"), dict):
+        raise TonSchemaError("token lacks an address object")
+    token_address = token["address"]
+    if token_address.get("blockchain") != "ton":
+        raise TonSchemaError("pool row is outside the TON universe")
+    return canonical_ton_address(token_address.get("address"))
+
+
+def normalize_swap_coffee_payload(
+    payload: Any, *, max_records: int = 50_000
+) -> tuple[dict[str, Any], ...]:
+    """Decode the verified swap.coffee `GET /v1/pools` page fail-closed.
+
+    `dex` is an aggregator label (stonfi/dedust/coffee/tonco/...), recorded
+    verbatim, never treated as a chain identity or as independent venue
+    confirmation. Route/transaction endpoints are outside this decoder.
+    """
+    records: list[dict[str, Any]] = []
+    if not isinstance(payload, dict) or not isinstance(payload.get("pools"), list):
+        raise TonSchemaError("missing pools array")
+    total_count = payload.get("total_count")
+    if (
+        not isinstance(total_count, int)
+        or isinstance(total_count, bool)
+        or total_count < 0
+    ):
+        raise TonSchemaError("total_count is not a bounded provider count")
+    rows = payload["pools"]
+    if len(rows) > max_records:
+        raise TonSchemaError("provider record budget exceeded")
+    if any(not isinstance(row, dict) for row in rows):
+        raise TonSchemaError("provider row is not an object")
+    for row in rows:
+        pool = row.get("pool")
+        info = row.get("info")
+        if not isinstance(pool, dict) or not isinstance(info, dict):
+            raise TonSchemaError("pool row lacks pool/info objects")
+        address = canonical_ton_address(pool.get("address"))
+        dex = pool.get("dex")
+        if not isinstance(dex, str) or not dex:
+            raise TonSchemaError("pool dex is not display text")
+        tokens = pool.get("tokens")
+        if not isinstance(tokens, list) or len(tokens) != 2:
+            raise TonSchemaError("pool must have exactly two tokens")
+        asset_a, asset_b = (_swap_coffee_token_address(token) for token in tokens)
+        if asset_a == asset_b:
+            raise TonSchemaError("pool has identical asset addresses")
+        reserves = pool.get("reserves")
+        if not isinstance(reserves, list) or len(reserves) != 2:
+            raise TonSchemaError("pool reserves must be two provider values")
+        provider_metadata = {
+            "dex": dex,
+            "pool": {
+                key: pool[key]
+                for key in ("type", "amm_type", "reserves", "fees")
+                if key in pool
+            },
+            "info": {
+                key: info[key]
+                for key in (
+                    "address",
+                    "tvl_usd",
+                    "volume_usd",
+                    "fee_usd",
+                    "apr",
+                    "lp_apr",
+                    "boost_apr",
+                )
+                if key in info
+            },
+            "tokens": tokens,
+        }
+        records.append(
+            _research_record(
+                "market",
+                record_id=f"ton:swapcoffee:{address}",
+                market_id=address,
+                venue="swap.coffee",
+                provider_dex=dex,
+                asset_a=asset_a,
+                asset_b=asset_b,
+                underlying_resources=[f"ton:swapcoffee-pool:{address}"],
+                correlation_group=f"ton:pool:{address}",
+                provider_metadata=provider_metadata,
+            )
+        )
+    return _deduplicate(records)
+
+
+class _BoundedRadarIngestor:
+    """Shared bounded whole-universe capture plumbing for TON REST sources.
 
     No published rate limit is treated as a priority hint, never an unbounded
     polling license. The shared transport owns TLS, response bounds and host
@@ -276,7 +452,6 @@ class StonRadarIngestor:
         max_records: int = 50_000,
         request_timeout_seconds: float = 10.0,
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
-        omniston: OmnistonReader | None = None,
         journal_path: Path | None = None,
     ) -> None:
         if not campaign_generation or type(max_records) is not int or max_records <= 0:
@@ -293,9 +468,7 @@ class StonRadarIngestor:
         self.max_records = max_records
         self.request_timeout_seconds = request_timeout_seconds
         self.clock = clock
-        self.omniston = omniston
         self.journal_path = journal_path
-        self.next_cursor = 0
 
     async def _capture(
         self,
@@ -303,7 +476,8 @@ class StonRadarIngestor:
         request: Mapping[str, Any],
         call: Callable[[], Awaitable[Any]],
         *,
-        source: str = "ston.fi",
+        source: str,
+        normalizer: Callable[[Any], tuple[dict[str, Any], ...]],
     ) -> TonDiscoveryEnvelope:
         payload: Any = None
         records: tuple[dict[str, Any], ...] = ()
@@ -314,19 +488,17 @@ class StonRadarIngestor:
         try:
             async with asyncio.timeout(self.request_timeout_seconds):
                 response = await call()
-            if source == "ston.fi":
+            if source == "omniston":
+                payload = response
+            else:
                 status, headers, payload = response
                 retry_after = headers.get("retry-after")
                 if status == 429:
                     negative = ("RATE_LIMIT",)
                 elif not 200 <= status < 300:
                     negative = ("HTTP_ERROR",)
-            else:
-                payload = response
             if not negative:
-                records = normalize_ston_payload(
-                    resource, payload, max_records=self.max_records
-                )
+                records = normalizer(payload)
         except asyncio.CancelledError:
             raise
         except (TimeoutError, asyncio.TimeoutError):
@@ -367,6 +539,38 @@ class StonRadarIngestor:
                 os.fsync(stream.fileno())
         return envelope
 
+
+class StonRadarIngestor(_BoundedRadarIngestor):
+    """Poll a bounded round-robin prefix of STON's whole-universe REST lists.
+
+    Pinned contracts: GET /v1/assets -> {"asset_list": [...]}, GET /v1/pools ->
+    {"pool_list": [...]}. GET /v1/stats is a documented-legacy endpoint kept on
+    the {"stats": {...}} decode contract with fail-closed schema errors; the
+    current docs surface /v1/stats/dex instead (drift recorded in the dossier).
+    """
+
+    def __init__(
+        self,
+        transport: Transport,
+        *,
+        campaign_generation: str,
+        max_records: int = 50_000,
+        request_timeout_seconds: float = 10.0,
+        clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+        omniston: OmnistonReader | None = None,
+        journal_path: Path | None = None,
+    ) -> None:
+        super().__init__(
+            transport,
+            campaign_generation=campaign_generation,
+            max_records=max_records,
+            request_timeout_seconds=request_timeout_seconds,
+            clock=clock,
+            journal_path=journal_path,
+        )
+        self.omniston = omniston
+        self.next_cursor = 0
+
     async def poll(
         self, cursor: int | None = None, budget: int = 3
     ) -> tuple[TonDiscoveryEnvelope, ...]:
@@ -385,6 +589,10 @@ class StonRadarIngestor:
                     resource,
                     {"method": "GET", "url": url},
                     partial(self.transport.request, "GET", url),
+                    source="ston.fi",
+                    normalizer=partial(
+                        normalize_ston_payload, resource, max_records=self.max_records
+                    ),
                 )
             )
         self.next_cursor = (start + len(result)) % len(_ENDPOINTS)
@@ -410,9 +618,123 @@ class StonRadarIngestor:
                             reader.discover_routes, markets, max_routes=self.max_records
                         ),
                         source="omniston",
+                        normalizer=partial(
+                            normalize_ston_payload,
+                            "routes",
+                            max_records=self.max_records,
+                        ),
                     )
                 )
         return tuple(result)
+
+
+class DedustRadarIngestor(_BoundedRadarIngestor):
+    """Bounded DeDust `GET /v2/pools` whole-universe capture.
+
+    The verified contract has no documented pagination, so one call returns the
+    full pool list and each poll is a single bounded blind window. Provider
+    reserves/lastPrice stay verbatim metadata; they are never exact chain state.
+    """
+
+    _URL = "https://api.dedust.io/v2/pools"
+
+    async def poll(self, budget: int = 1) -> tuple[TonDiscoveryEnvelope, ...]:
+        if type(budget) is not int or not 0 <= budget <= 1:
+            raise ValueError(
+                "DeDust discovery is a single whole-universe capture per poll; "
+                "budget must be zero or one"
+            )
+        if budget == 0:
+            return ()
+        return (
+            await self._capture(
+                "pools",
+                {"method": "GET", "url": self._URL},
+                partial(self.transport.request, "GET", self._URL),
+                source="dedust.io",
+                normalizer=partial(
+                    normalize_dedust_payload, max_records=self.max_records
+                ),
+            ),
+        )
+
+
+class SwapCoffeeRadarIngestor(_BoundedRadarIngestor):
+    """Bounded swap.coffee `GET /v1/pools` page capture for the TON universe.
+
+    Verified pagination is page/size with size <= 100; the adapter requests
+    `blockchains=ton` and `trusted=false` to preserve the maximum research
+    universe and keeps provider verification labels verbatim. Query parameters
+    pass through the injected transport interface: a repository policy with
+    allow_url_query=False must be explicitly widened for backend.swap.coffee by
+    the operator; this owner never smuggles a query string past the policy.
+    """
+
+    _URL = "https://backend.swap.coffee/v1/pools"
+
+    def __init__(
+        self,
+        transport: Transport,
+        *,
+        campaign_generation: str,
+        max_records: int = 50_000,
+        request_timeout_seconds: float = 10.0,
+        clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+        journal_path: Path | None = None,
+        page_size: int = 100,
+        max_pages: int = 250,
+    ) -> None:
+        super().__init__(
+            transport,
+            campaign_generation=campaign_generation,
+            max_records=max_records,
+            request_timeout_seconds=request_timeout_seconds,
+            clock=clock,
+            journal_path=journal_path,
+        )
+        if type(page_size) is not int or not 1 <= page_size <= 100:
+            raise ValueError("swap.coffee page size must be between 1 and 100")
+        if type(max_pages) is not int or not 1 <= max_pages <= 25_000:
+            raise ValueError("swap.coffee page cursor must stay bounded")
+        self.page_size = page_size
+        self.max_pages = max_pages
+        self.next_page = 1
+
+    async def poll(self, budget: int = 1) -> tuple[TonDiscoveryEnvelope, ...]:
+        """Budget counts pages fetched this poll (0..4), cursor rotates."""
+        if type(budget) is not int or not 0 <= budget <= 4:
+            raise ValueError("TON request budget must be between zero and four")
+        result: list[TonDiscoveryEnvelope] = []
+        for offset in range(budget):
+            page = 1 + ((self.next_page - 1 + offset) % self.max_pages)
+            params = {
+                "blockchains": "ton",
+                "trusted": "false",
+                "size": str(self.page_size),
+                "page": str(page),
+            }
+            result.append(
+                await self._capture(
+                    "pools",
+                    {"method": "GET", "url": self._URL, "params": params},
+                    partial(self.transport.request, "GET", self._URL, params=params),
+                    source="swap.coffee",
+                    normalizer=partial(
+                        normalize_swap_coffee_payload, max_records=self.max_records
+                    ),
+                )
+            )
+        if result:
+            self.next_page = 1 + ((self.next_page - 1 + len(result)) % self.max_pages)
+        return tuple(result)
+
+
+_REPLAY_SOURCES = {
+    "ston.fi": ("assets", "pools", "stats", "routes"),
+    "omniston": ("routes",),
+    "dedust.io": ("pools",),
+    "swap.coffee": ("pools",),
+}
 
 
 def replay_ton_journal(path: Path) -> tuple[TonDiscoveryEnvelope, ...]:
@@ -422,9 +744,17 @@ def replay_ton_journal(path: Path) -> tuple[TonDiscoveryEnvelope, ...]:
         for line in stream:
             envelope = TonDiscoveryEnvelope.from_dict(json.loads(line))
             if not envelope.negative_evidence:
-                normalized = normalize_ston_payload(
-                    envelope.resource, json.loads(envelope.payload_json)
-                )
+                payload = json.loads(envelope.payload_json)
+                if envelope.resource not in _REPLAY_SOURCES.get(envelope.source, ("",)):
+                    raise ValueError("unknown TON replay source/resource")
+                if envelope.source in ("ston.fi", "omniston"):
+                    normalized = normalize_ston_payload(envelope.resource, payload)
+                elif envelope.source == "dedust.io":
+                    normalized = normalize_dedust_payload(payload)
+                elif envelope.source == "swap.coffee":
+                    normalized = normalize_swap_coffee_payload(payload)
+                else:
+                    raise ValueError("unknown TON replay source")
                 if _canonical_json(normalized) != envelope.records_json:
                     raise ValueError("TON replay normalized records disagree")
             elif envelope.records:

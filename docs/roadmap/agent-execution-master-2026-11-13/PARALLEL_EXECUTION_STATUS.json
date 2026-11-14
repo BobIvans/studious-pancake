@@ -2,65 +2,254 @@
   "schema_version": "studious-pancake.parallel-execution-status.v2",
   "updated_at_utc": "2026-11-14",
   "current_main": {
-    "sha": "bd596f6a",
+    "sha": "c87f5d31",
     "date": "2026-11-14",
-    "ci_state": "Repository verification fully GREEN (mypy 0 via #611 hotfix + #623 platform-compat; strict pip-audit 0 findings via #605)"
+    "ci_state": "Repository verification GREEN at c87f5d31 (all workflows success except one still-running at report time); strict pip-audit stays 0; local wave suite 193 passed / 6 skipped / 0 failed on Windows native",
+    "note": "user authorized merge-all in chat 2026-11-14: #632/#633/#634/#635/#599 merged by lead session after green CI + mergeability checks"
   },
   "merged_prs": [
-    {"n": 593, "lane": "A/P0-1", "what": "Solana indexed intake → Dynamic Universe (cadence, coverage, fail-closed bridge)"},
-    {"n": 600, "lane": "coord", "what": "CURRENT_STATE.json wave-0 snapshot"},
-    {"n": 601, "lane": "coord", "what": "PARALLEL_EXECUTION_MANDATE.md landed"},
-    {"n": 602, "lane": "E-A/CAP-A", "what": "Jupiter Lend TokenReserve read-only reader (84 tests)"},
-    {"n": 603, "lane": "R11", "what": "fcntl msvcrt shim + getuid guard (457 tests fixed locally)"},
-    {"n": 604, "lane": "B/P0-2", "what": "Jupiter V2 order migration + 0x comparable race invariants"},
-    {"n": 605, "lane": "R12", "what": "9 advisory packages + yarl, official lock workflow, strict pip-audit 68→0"},
-    {"n": 606, "lane": "F/R-03", "what": "unsigned_builders contract + Jupiter/NAVI-PTB builders (Kamino honestly BLOCKED_MISSING_PIN)"},
-    {"n": 609, "lane": "E-C/CAP-C", "what": "NAVI Sui reader (98 tests, API list structurally discovery-only)"},
-    {"n": 611, "lane": "R11", "what": "mypy-clean sys.platform shim — CI gate fully green"},
-    {"n": 612, "lane": "E-B/CAP-B", "what": "Kamino Reserve capacity/fee reader (94 tests, exact raw/2^60)"},
-    {"n": 613, "lane": "C/P0-3", "what": "Raydium CLMM + Meteora DLMM exact decoders/math + program-id defect fix"},
-    {"n": 614, "lane": "H", "what": "Relation-generator tightening + 7 residual families + MAX_PATH fix"},
-    {"n": 615, "lane": "coord", "what": "Dashboard v1"},
-    {"n": 616, "lane": "D/GPR-03", "what": "Sui transport/checkpoint remediation + Move decoders (130+326 tests)"},
-    {"n": 617, "lane": "J", "what": "RentSponsorPlanner 4-tier sourcing on Slumlord (36+98 tests)"},
-    {"n": 618, "lane": "L", "what": "EVM dossiers: Morpho Blue + Aave V3 RAW_OFFICIAL_SNAPSHOT + drift-test verifier"},
-    {"n": 619, "lane": "E-D/CAP-D", "what": "Project 0 wallet-free bank discovery (PR-028 layout, exact DPR/borrowed-shares)"},
-    {"n": 620, "lane": "I/TON", "what": "TON source pins + bounded Dedust/SwapCoffee ingestors + STON drift recorded"},
-    {"n": 621, "lane": "G", "what": "8 provider dossiers pinned (Titan/OKX/OpenOcean/Rango/Aftermath/Cetus/7K/FlowX) + overlap notes"},
-    {"n": 622, "lane": "R10", "what": "Strategy inventory + ranked promotion shortlist (602-test baseline)"},
-    {"n": 623, "lane": "R11-FU", "what": "Shared flock compat module + pressure-manager/sibling fixes (intelligence 49 passed; flock_live_file for SQLite/WAL)"},
-    {"n": 624, "lane": "R08", "what": "Composition audit: 0/12 wave owners runtime-reachable; wiring plan W1→W6; 21 contract tests"},
-    {"n": 594, "lane": "docs", "what": "CLOSED superseded by #601"}
+    {
+      "n": 593,
+      "lane": "A/P0-1",
+      "what": "Solana indexed intake → Dynamic Universe (cadence, coverage, fail-closed bridge)"
+    },
+    {
+      "n": 600,
+      "lane": "coord",
+      "what": "CURRENT_STATE.json wave-0 snapshot"
+    },
+    {
+      "n": 601,
+      "lane": "coord",
+      "what": "PARALLEL_EXECUTION_MANDATE.md landed"
+    },
+    {
+      "n": 602,
+      "lane": "E-A/CAP-A",
+      "what": "Jupiter Lend TokenReserve read-only reader (84 tests)"
+    },
+    {
+      "n": 603,
+      "lane": "R11",
+      "what": "fcntl msvcrt shim + getuid guard (457 tests fixed locally)"
+    },
+    {
+      "n": 604,
+      "lane": "B/P0-2",
+      "what": "Jupiter V2 order migration + 0x comparable race invariants"
+    },
+    {
+      "n": 605,
+      "lane": "R12",
+      "what": "9 advisory packages + yarl, official lock workflow, strict pip-audit 68→0"
+    },
+    {
+      "n": 606,
+      "lane": "F/R-03",
+      "what": "unsigned_builders contract + Jupiter/NAVI-PTB builders (Kamino honestly BLOCKED_MISSING_PIN)"
+    },
+    {
+      "n": 609,
+      "lane": "E-C/CAP-C",
+      "what": "NAVI Sui reader (98 tests, API list structurally discovery-only)"
+    },
+    {
+      "n": 611,
+      "lane": "R11",
+      "what": "mypy-clean sys.platform shim — CI gate fully green"
+    },
+    {
+      "n": 612,
+      "lane": "E-B/CAP-B",
+      "what": "Kamino Reserve capacity/fee reader (94 tests, exact raw/2^60)"
+    },
+    {
+      "n": 613,
+      "lane": "C/P0-3",
+      "what": "Raydium CLMM + Meteora DLMM exact decoders/math + program-id defect fix"
+    },
+    {
+      "n": 614,
+      "lane": "H",
+      "what": "Relation-generator tightening + 7 residual families + MAX_PATH fix"
+    },
+    {
+      "n": 615,
+      "lane": "coord",
+      "what": "Dashboard v1"
+    },
+    {
+      "n": 616,
+      "lane": "D/GPR-03",
+      "what": "Sui transport/checkpoint remediation + Move decoders (130+326 tests)"
+    },
+    {
+      "n": 617,
+      "lane": "J",
+      "what": "RentSponsorPlanner 4-tier sourcing on Slumlord (36+98 tests)"
+    },
+    {
+      "n": 618,
+      "lane": "L",
+      "what": "EVM dossiers: Morpho Blue + Aave V3 RAW_OFFICIAL_SNAPSHOT + drift-test verifier"
+    },
+    {
+      "n": 619,
+      "lane": "E-D/CAP-D",
+      "what": "Project 0 wallet-free bank discovery (PR-028 layout, exact DPR/borrowed-shares)"
+    },
+    {
+      "n": 620,
+      "lane": "I/TON",
+      "what": "TON source pins + bounded Dedust/SwapCoffee ingestors + STON drift recorded"
+    },
+    {
+      "n": 621,
+      "lane": "G",
+      "what": "8 provider dossiers pinned (Titan/OKX/OpenOcean/Rango/Aftermath/Cetus/7K/FlowX) + overlap notes"
+    },
+    {
+      "n": 622,
+      "lane": "R10",
+      "what": "Strategy inventory + ranked promotion shortlist (602-test baseline)"
+    },
+    {
+      "n": 623,
+      "lane": "R11-FU",
+      "what": "Shared flock compat module + pressure-manager/sibling fixes (intelligence 49 passed; flock_live_file for SQLite/WAL)"
+    },
+    {
+      "n": 624,
+      "lane": "R08",
+      "what": "Composition audit: 0/12 wave owners runtime-reachable; wiring plan W1→W6; 21 contract tests"
+    },
+    {
+      "n": 594,
+      "lane": "docs",
+      "what": "CLOSED superseded by #601"
+    },
+    {
+      "n": 621,
+      "lane": "R07/R13-G-recovery",
+      "what": "Recovered lane-G wave-1 provider dossiers (8 sources/14 acquisitions, verifier OK)"
+    },
+    {
+      "n": 622,
+      "lane": "R10-alt",
+      "what": "Strategy coverage inventory (docs; parallel lane, reconciled with #631)"
+    },
+    {
+      "n": 625,
+      "lane": "docs",
+      "what": "CLOSED superseded by #626+#628 (reconciliation note on PR)"
+    },
+    {
+      "n": 626,
+      "lane": "docs",
+      "what": "Canonical dashboard v2 (bd596f6a truth)"
+    },
+    {
+      "n": 627,
+      "lane": "R08",
+      "what": "Owner-injection matrix: 15/27 wired vs 12 library-only; INTEGRATION_GAP_*; 8-step composition plan; 10 invariant tests (complements #624)"
+    },
+    {
+      "n": 628,
+      "lane": "platform",
+      "what": ".gitattributes R-02 vendor CRLF guard (blob-SHA1-pinned snapshots)"
+    },
+    {
+      "n": 629,
+      "lane": "R13-A",
+      "what": "Quote/build race audit: 13 providers documented-vs-implemented-vs-wired; UXE-00 kernel NOT one owner; R13_GAP_NO_KERNEL top risk; 25 contract tests"
+    },
+    {
+      "n": 630,
+      "lane": "R09-TON-w2",
+      "what": "Tonco reclassified CLAMM (not orderbook); TON Center v2.1.17 + TonAPI spec pins; TON atomicity = typed negative (no native flash loans); 6 tests"
+    },
+    {
+      "n": 631,
+      "lane": "R10",
+      "what": "Offline replay experiments: multihop shortlist != profit (NON_POSITIVE_NET), fail-closed gates confirmed; 8 tests; reconciled with #622"
+    },
+    {
+      "n": 632,
+      "lane": "platform",
+      "what": ".gitattributes sha256-pinned contracts/** CRLF guard (fixes 'sha256 drift' false alarms on Windows)"
+    },
+    {
+      "n": 633,
+      "lane": "R03-B",
+      "what": "Kamino builder UNBLOCKED: vendored generated flashBorrow/flashRepay from klend-sdk@3c3a38d4 (MIT); discs 87e734a70734d4c1 / b97500cb60f5b4ba+u8; BUILT_OFFLINE_UNQUALIFIED; KAMINO_BUILDER_ABI_PIN removed; 74 passed / mypy 0"
+    },
+    {
+      "n": 634,
+      "lane": "P0-3-verify",
+      "what": "CLMM LEN receipt: TickState=168 / TickArrayState=10240 re-derived from pinned snapshot; main correct; #613's 10720 wrong"
+    },
+    {
+      "n": 635,
+      "lane": "R09-EVM+SUI-w2",
+      "what": "EVM wave-2 (Aave V3 deployments, Fluid, Euler BSL-blocked, Spark PSM3=negative) + Sui wave-2 (Cetus/Aftermath/FlowX/DeepBook V3 flash PINNED, PTB atomicity) — docs-only"
+    },
+    {
+      "n": 599,
+      "lane": "MASTER-00",
+      "what": "Strategy atlas V3-V6 + pair/source crosswalk + orchestration entry rewrite (user-approved merge 2026-11-14)"
+    }
   ],
   "closed": 24,
   "workstreams_final": {
     "P0_market_data": "P0-1/2/3 IN_MAIN_VERIFIED (offline); live captures typed BLOCKED",
     "capital_readers": "CAP-A/B/C/D all IN_MAIN_VERIFIED offline decoders; effective capacity UNKNOWN (never zero); zero qualified edges — unchanged #585 baseline; all four typed BLOCKED on LIVE_ROOTED_RPC / LIVE_SUI_CHECKPOINT / OPERATOR_ACCOUNT",
-    "builders": "R-03 contract + Jupiter Lend + NAVI PTB BUILT_OFFLINE_UNQUALIFIED; Kamino BLOCKED_MISSING_PINNED_BUILDER_ABI; build_status ≠ capacity_status everywhere",
-    "platform": "Native Windows testing unlocked; fcntl/getuid/MAX_PATH/pressure-manager fixed; remaining pre-existing failures documented with causes",
+    "builders": "R-03 contract IN_MAIN_VERIFIED; Jupiter Lend + NAVI BUILT_OFFLINE_UNQUALIFIED; Kamino BUILT_OFFLINE_UNQUALIFIED (real pinned ABI, #633 — KAMINO_BUILDER_ABI_PIN blocker REMOVED); Project0 BLOCKED(OPERATOR_ACCOUNT_INPUT_REQUIRED). Follow-up: wire Kamino plans into planner (retarget_borrow_index/assemble_kamino_flash_message exposed)",
+    "platform": "fcntl shim (#603/#611) + shared flock module (#623) + .gitattributes guards for R-02 vendor snapshots (#628) and sha256-pinned contracts (#632); remaining: native-Windows CI wiring, residual 60 documented failures",
     "security": "strict pip-audit 0, no ignores, official workflow, idempotent",
-    "strategy": "Generators identity-proof gated; 7 residual families; lead/lag provenance-gated; correlation scheduling-only; ranked promotion shortlist in #622",
-    "composition": "R08 audit: 0/12 new owners wired; W1→W6 wiring plan gated (capital readers NO-OP until live evidence); 6 skip-if-unwired contract guards ready",
-    "providers": "Wave-1 dossiers for 8 quote/build providers; adapters next wave after quote-normalization contract freeze; OpenOcean overlap note recorded",
-    "ton_sui_evm": "TON schemas pinned + bounded adapters; Sui GPR-03 transport fixed + provider-binding contract; EVM isolated domain with Morpho/Aave pins + BSL license blocker",
+    "strategy": "Registry 6 families (2 shadow-ready) + brief families 1-13 inventoried; 12 relation kinds with #614 gates; offline replay: shortlist!=profit, gates fail-closed (#631); MASTER-00 atlas merged (#599)",
+    "composition": "Two complementary audits merged (#624+#627): 15/27 owner groups wired, 12 library-only; INTEGRATION_GAP_DRAFT_SOURCE/_QUOTE/_CAPACITY/_BUILDER/_RENT/_RPC/_STAGE_SUITE typed; 8-step composition-only plan; 25 passed/6 skipped combined",
+    "providers": "13 providers documented (6 Solana + 7 Sui); Titan+Rango lack adapters; Sui swap-quote adapters 0/7; R13-K kernel-freeze lane dispatched (quote/build kernel contract + pool-identity dedup, additive)",
+    "ton_sui_evm": "TON: DISCOVERY_ONLY + typed negative atomicity (no native flash loans; Tonco=CLAMM); Sui: market wave-2 pinned (Cetus/Aftermath/FlowX/DeepBook V3 flash PINNED); EVM: wave-2 dossiers (Aave V3 flashLoanSimple deployments pinned; Euler BSL 1.1 license-blocked; Spark PSM3 swap-only negative; Fluid PARTIAL_PIN); all capacity UNKNOWN; providers disabled",
     "R04_R05_R06": "NOT_STARTED — hard-gated on user-authorized live evidence"
   },
   "user_decision_blockers": [
-    "LIVE_AUTHORIZATION_REQUIRED: live rooted-RPC (Solana) + governed Sui checkpoint reads + 0x live quotes (public taker + ZEROX_API_KEY) — unblocks MISSING_EFFECTIVE_FLASH_CAP for all four readers → R04/R05/R06 chain",
-    "OPERATOR_ACCOUNT_INPUT_REQUIRED: existing public Project 0 account for eligibility path",
-    "ORCA_LICENSE_REVIEW: custom license review before any Orca source use"
+    {
+      "id": "LIVE_AUTHORIZATION_REQUIRED",
+      "detail": "live rooted-RPC (Solana) + governed Sui checkpoint reads + EVM fork/RPC reads: user opt-in; unblocks effective capacity for all readers and R04/R05/R06"
+    },
+    {
+      "id": "OPERATOR_ACCOUNT_INPUT_REQUIRED",
+      "detail": "Project 0 eligibility path needs operator-supplied existing public account"
+    },
+    {
+      "id": "ZEROX_LIVE_CAPTURE_PREREQ",
+      "detail": "0x comparable live quotes need public taker + ZEROX_API_KEY (name only)"
+    },
+    {
+      "id": "ORCA_LICENSE_REVIEW",
+      "detail": "custom license review before any Orca source use"
+    },
+    {
+      "id": "EULER_BSL_BLOCKED",
+      "detail": "Euler v2 BSL 1.1 has no Additional Use Grant (change 2029-04-24) — typed license blocker from #635"
+    }
   ],
   "safety_flags": {
-    "sign_enabled": false, "send_enabled": false, "live_enabled": false,
-    "production_promotion": false, "no_private_keys": true, "no_account_creation": true,
-    "all_unqualified_providers_disabled": true, "gates_never_weakened": true,
+    "sign_enabled": false,
+    "send_enabled": false,
+    "live_enabled": false,
+    "production_promotion": false,
+    "no_private_keys": true,
+    "no_account_creation": true,
+    "all_unqualified_providers_disabled": true,
+    "gates_never_weakened": true,
     "live_observations_this_execution": 0
   },
   "integration_order_next": [
-    "W1 (R08 plan): wire CAP-A→D readers into FlashCapitalGraph via CapitalEdgeGates — NO-OP until live capacity evidence; un-skip the 6 Part-B guards per owner",
-    "W2: R-03 builders → offline R-05 seam; R10 item 1: CPMM exact evaluators → bounded-cycle paper path (offline, evidence exists)",
-    "User gate: live-capture authorization workstream (typed blocker above)",
-    "Wave-2 provider adapters after quote-normalization contract freeze (Cetus V3 + 7K first; Titan + OKX for Solana)",
-    "R11-FU2: native-Windows CI wiring + remaining platform items"
+    "R13-K (in flight): freeze quote/build kernel contract + pool-identity dedup (additive, offline) — closes R13_GAP_NO_KERNEL + R13_GAP_NO_POOL_DEDUP design debt",
+    "W2: R-03 builders (incl. Kamino #633) -> offline R-05 seam; R10 item 1: CPMM exact evaluators -> bounded-cycle paper path (offline)",
+    "Kamino follow-up: wire plans into AtomicMarginfiJupiterPlanner using retarget_borrow_index + assemble_kamino_flash_message",
+    "Provider adapter wave after kernel freeze: Cetus V3 + 7K first (Sui); Titan + OKX (Solana) — one PR per provider",
+    "User gate: live-capture authorization (LIVE_AUTHORIZATION_REQUIRED) — unblocks R02 effective capacity, then R04 -> R05 -> R06"
   ]
 }

@@ -11,7 +11,7 @@ Refresh current main, PRs, CI, branch protection and exact owners. Reconcile S01
 - Merged: SX-00 #639, SX-01 #641, SX-02 #653, SX-07 #651, SX-08 #648, SX-09 #642, SX-10/SX-11 #643, SX-12 #645. Do not repeat these offline/research/contract packages.
 - SX-17 archive detector/anomaly taxonomy #654 is merged; exact pair archive dataset #650 is merged separately. Preserve SX-17 for taxonomy; runtime fanout is SX-18.
 - SX-03 #649 remains open and source/evidence blocked. R10-2 #655 is open for an offline MarginFi bridge and needs current-main rebase/review. Check current heads/CI before dispatch.
-- SX-02 flash-mint/lender comparison; SX-04 OEV; SX-05 JIT/LVR; SX-06 CLOB/RFQ/queue; SX-07 complete-set claims; SX-13 causal/learning; SX-14 verifiable procurement/mechanism lab; SX-15 observability; SX-16 coordinator integration.
+- Remaining: SX-04 OEV; SX-05 JIT/LVR; SX-06 CLOB/RFQ/queue; SX-13 causal/learning; SX-14 verifiable procurement/mechanism lab; SX-15 observability; SX-16 coordinator integration. SX-02 and SX-07 are already merged; only evidence-backed follow-up gaps may be added.
 - #646 Build Bigger Universe master recovery is merged. #650 is the separate exact archival relationship dataset follow-up; check its status and do not duplicate its rows.
 - SX-12 depends on SX-01+AGG-05; SX-15 consumes evidence from completed lanes; SX-16 runs last.
 

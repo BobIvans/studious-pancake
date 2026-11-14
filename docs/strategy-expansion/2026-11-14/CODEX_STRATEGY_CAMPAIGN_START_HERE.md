@@ -54,7 +54,7 @@ Refresh the current state and execute only the remaining packages:
 - SX-06 CLOB/RFQ/queue/rebate: exact sequence/depth/partial fills/cancel latency; quote does not imply fill.
 - SX-07 prediction-market complete sets: outcome vectors, split/merge, resolution/dispute and conservation; non-atomic maturity remains non-atomic.
 - SX-08 lending rate/refinance: utilization/APR curves, caps, health-factor transitions; separate atomic refinance from multi-period carry.
-- SX-12 portfolio allocator: only if #645 is not already merged; consume SX-01 ResourceManifest and AGG-05, deterministic 1/2/4/8 workers, no double consumption.
+- SX-12 portfolio allocator: #645 is merged; consume SX-01 ResourceManifest + AGG-05. It is an offline CONTROL_PLANE selector only, not a live allocation or capital reservation.
 - SX-13 causal evaluation/context bandit: nulls, controls, time holdouts, leakage, multiple-testing and negative/no-trade corpus.
 - SX-14 verifiable compute/data procurement and offline mechanism lab; extend INST-01, no second marketplace/payment authority.
 - SX-15 per-family observability/release evidence; consume existing receipts.
@@ -131,4 +131,4 @@ Read tasks/SX17_MULTI_STRATEGY_RUNTIME_FANOUT_RU.md. The strategy atlas is broad
 Read tasks/W6_12_OBSERVED_PARTICIPANT_STRATEGY_INTELLIGENCE_RU.md. Add a provenance/evidence graph from public/authorized on-chain participant episodes to falsifiable strategy archetypes and complete risk-adjusted net attribution. Reuse existing MarketEpisode, raw journal/replay, episode_builder, decision dataset/ranker and causal/benchmark owners. No deanonymization, real-world identity matching, private orderflow, doxxing or auto-copy-trading. Include failed/no-fill/reverted attempts, inventory/liabilities, transfers, fees, carry, markout, drawdown, capital lock, censoring, leakage controls and held-out validation.
 
 ## Current-main truth and open strategy lanes
-At the snapshot after #646/#647, current main was 73911801f12eb8c365421d5dcaea40c20a503a0a. #646 is merged (full MASTER + recovered Build Bigger Universe); #647 is merged (Titan adapter on frozen R13 kernel). #645 SX-12, #648 SX-08 and #649 SX-03 remain open and require current-base rebase/checks before merge. #649 has unresolved proprietary-source/revision/whitepaper blockers; do not claim LLAMMA is source-qualified. Re-fetch everything before each dispatch.
+At the snapshot after #645/#646/#647/#648, current main was c9ed36b6902502fc4dc51610f0094d27a50fd6fb. #645 SX-12 and #648 SX-08 are merged as offline/research models; #646 is merged (full MASTER + recovered Build Bigger Universe); #647 is merged (Titan adapter on frozen R13 kernel). #649 SX-03 remains open with source commit SHA/whitepaper/unit-scale/rooted state blockers. Re-fetch everything before each dispatch.

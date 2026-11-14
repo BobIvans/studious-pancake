@@ -81,3 +81,15 @@ At implementation start, re-fetch current official docs, record revision/hash/li
 - EXCLUDED for user-prohibited/unauthorized mechanisms.
 
 Unknown is never zero. No TVL-as-capacity, no quote extrapolation, no duplicate pool/collateral/lender/account/quota consumption, no unlicensed source reuse, no private keys or account creation, no signing/sending/borrowing/deploying/live trading, no tokenized equities, no sandwich/frontrun/user targeting/private-flow exploitation.
+
+
+
+## Дополнительные пробелы, найденные аудитом runtime и participant-learning (2026-11-14)
+
+### Gap A — стратегия в каталоге vs параллельное выполнение в установленном runtime
+Каталог, SX-01 StrategyContractV1 и библиотечные detector/evaluator модули не образуют многопоточный runtime автоматически. На проверенном коде `src/strategy/strategies.py` есть шесть регистраций: circular_arbitrage (единственный реальный two-leg shadow detector), lst_depeg/lst_unstake (STUB), kamino_liquidation/orderbook_amm_arbitrage (disabled/fixture-only) и pump_fun_migration (boundary-only disabled). SX-01 — advisory schema, не runtime registry. R08 #627 фиксирует 15/27 wired и 12 library-only.
+**Решение: SX-18.** Bounded runtime fanout через существующие application/StrategyRegistry/OpportunityConsumer/AGG-05/paper owners; одна immutable snapshot generation, deterministic merge, timeout/cancellation, queue backpressure, failure isolation, per-strategy status and resource conflicts. Не создавать второй registry/consumer/queue/scheduler и не активировать stubs.
+
+### Gap B — knowledge graph стратегий успешных публичных on-chain участников
+W6-01/02 задают archetype IR/population calibration, W6-05/06 — competition/survival и PSRO/self-play, но отсутствует полный путь public participant episodes -> archetypes -> full net attribution -> counterfactual replay -> held-out evidence.
+**Решение: W6-12.** Использовать публичные/разрешённые on-chain источники, псевдонимные адреса без deanonymization и существующие MarketEpisode/raw journal/decision/causal owners. Учесть transfers, inventory, liabilities, fees, funding, failed attempts, mark-to-market, drawdown, capital lock и censored history. Никакого doxxing, private flow или auto-copy-trading; только research hypotheses.

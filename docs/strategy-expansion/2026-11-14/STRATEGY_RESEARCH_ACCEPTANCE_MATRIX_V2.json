@@ -1,6 +1,6 @@
 {
   "schema": "studious-pancake.strategy-research-acceptance.v2",
-  "snapshot_main": "73911801f12eb8c365421d5dcaea40c20a503a0a",
+  "snapshot_main": "9f173d7632cb30190bb8d9174ceba6d116eaec70",
   "snapshot_utc": "2026-11-14",
   "predecessor_prs": [
     599,
@@ -14,27 +14,35 @@
     642,
     643,
     645,
-    646
+    646,
+    647,
+    648,
+    650,
+    651,
+    653,
+    654
   ],
   "dispositions": {
-    "SX00": "MERGED_HISTORICAL_RECEIPT_REFRESH_REQUIRED",
-    "SX01": "MERGED_SCHEMA_ONLY",
-    "SX09": "MERGED_OFFLINE_GENERIC_LP_MODEL",
-    "SX10": "MERGED_OFFLINE_RESEARCH_ONLY",
-    "SX11": "MERGED_OFFLINE_SIGNAL_ONLY",
-    "SX12": "OPEN_PR_645_REVIEW_NOT_DUPLICATE",
-    "SX02": "PLANNED",
-    "SX03": "PLANNED",
+    "SX00": "MERGED_PR_639",
+    "SX01": "MERGED_SCHEMA_ONLY_PR_641",
+    "SX02": "MERGED_OFFLINE_FINANCING_MODEL_PR_653",
+    "SX03": "OPEN_PR_649_SOURCE_LICENSE_AND_PRIMARY_EVIDENCE_BLOCKED",
     "SX04": "PLANNED",
     "SX05": "PLANNED",
     "SX06": "PLANNED",
-    "SX07": "PLANNED",
-    "SX08": "PLANNED",
+    "SX07": "MERGED_OFFLINE_CONDITIONAL_CLAIMS_PR_651",
+    "SX08": "MERGED_OFFLINE_RATE_REFINANCE_MODEL_PR_648",
+    "SX09": "MERGED_OFFLINE_GENERIC_LP_MODEL_PR_642",
+    "SX10": "MERGED_OFFLINE_RESEARCH_ONLY_PR_643",
+    "SX11": "MERGED_OFFLINE_SIGNAL_ONLY_PR_643",
+    "SX12": "MERGED_OFFLINE_PORTFOLIO_OPTIMIZER_PR_645",
     "SX13": "PLANNED",
     "SX14": "PLANNED",
-    "SX15": "PLANNED",
+    "SX15": "PLANNED_COORDINATOR",
     "SX16": "COORDINATOR_INTEGRATION",
-    "SX17": "PLANNED"
+    "SX17": "MERGED_ARCHIVE_DETECTOR_TAXONOMY_PR_654",
+    "SX18": "PLANNED_RUNTIME_FANOUT_GAP",
+    "W6_12": "PLANNED_OBSERVED_PARTICIPANT_INTELLIGENCE"
   },
   "additional_packages": [
     {
@@ -185,6 +193,47 @@
         "Negative/stale/ambiguous/no-pool/no-capacity/partial-fill/queue/hook-mismatch cases are represented.",
         "No duplicate graph, solver, registry, source store, quote kernel, capital graph, ledger, journal, scheduler or release authority."
       ]
+    },
+    {
+      "id": "SX-18",
+      "family": "RUNTIME_MULTI_STRATEGY_FANOUT",
+      "class": "CONTROL_PLANE",
+      "owner": "existing src/application.py + StrategyRegistry + OpportunityConsumer + AGG-05 + paper/shadow composition",
+      "dependencies": [
+        "SX-01 #641",
+        "SX-12 #645",
+        "R08 #624/#627",
+        "R10 detector owners",
+        "AGG-05",
+        "R04/R05/R06 promotion gates"
+      ],
+      "acceptance": [
+        "audit six current registrations and actual detector bodies",
+        "same immutable snapshot generation across all workers",
+        "bounded 1/2/4/8-worker deterministic fanout",
+        "deadline/cancellation/backpressure/failure isolation",
+        "StrategyContractV1/resource manifest bound to existing Opportunity flow",
+        "AGG-05 no-double-consumption and deterministic replay",
+        "installed package/capability parity; no stub activation"
+      ]
+    },
+    {
+      "id": "W6-12",
+      "family": "OBSERVED_PARTICIPANT_STRATEGY_INTELLIGENCE",
+      "class": "RESEARCH_ONLY",
+      "owner": "existing MarketEpisode/raw journal/episode_builder/decision dataset/ranker/causal owners",
+      "dependencies": [
+        "W6-01/02/05/06",
+        "SX-01 StrategyContractV1"
+      ],
+      "acceptance": [
+        "public/authorized source and license/quota pins",
+        "pseudonymous public account identifiers; no deanonymization",
+        "full lifecycle net attribution incl fees, inventory, liabilities, failed trades and censoring",
+        "actor/pool/protocol/time leakage-resistant holdout",
+        "nulls, negative corpus, confidence/effective sample size and local replay",
+        "advisory archetype graph; no auto-copy-trading"
+      ]
     }
   ],
   "ecology": [
@@ -247,6 +296,14 @@
       "id": "W6-11",
       "function_ids": "W6F-089..W6F-096",
       "status": "PLANNED"
+    },
+    {
+      "id": "W6-12",
+      "function_ids": "W6F-097..W6F-104",
+      "status": "PLANNED_NEW_EXTENSION",
+      "name": "Observed participant strategy intelligence and evidence graph",
+      "owner": "existing MarketEpisode/decision/causal/replay owners",
+      "note": "New extension after original W6-00..11; not part of historical archive counts."
     }
   ],
   "global_gates": [
@@ -257,9 +314,12 @@
     "Models/correlation/ecology are advisory only; synthetic data stays synthetic.",
     "No wallet/account/ATA/obligation creation, private keys, signing, sending, borrowing, spending, deploying, provider activation, live trading or production promotion.",
     "No tokenized equities, sandwich/frontrun, user targeting or unauthorized private flow.",
-    "SX-17 archive taxonomy crosswalk preserves 64 V3 anomaly IDs, 25 V4 detector templates, 19 V3 route families, 36 V6 route candidates, 12 V6 hyperedges and 4 funding primitive references without granting execution permission."
+    "SX-17 archive taxonomy crosswalk preserves 64 V3 anomaly IDs, 25 V4 detector templates, 19 V3 route families, 36 V6 route candidates, 12 V6 hyperedges and 4 funding primitive references without granting execution permission.",
+    "SX-17 is the merged V3/V4/V6 archive detector/anomaly taxonomy (#654); runtime fanout owns SX-18, do not reuse the SX-17 ID.",
+    "SX-18 must prove installed runtime fanout over immutable snapshot generations; catalog or SX-01 contract presence is not runtime reachability.",
+    "W6-12 uses public/authorized pseudonymous on-chain evidence only; no deanonymization, private orderflow, doxxing or automated copy trading."
   ],
-  "completion_rule": "Every family has one owner, truthful evidence tier, dependencies, replay/tests and next gate. Selected work is merged or explicitly BLOCKED/RESEARCH_ONLY/EXCLUDED with evidence. Documentation-only merge is not strategy implementation or profitability proof.",
+  "completion_rule": "Every strategy family and runtime worker has one canonical owner, truthful implementation/evidence tier, dependencies, replay/tests and next gate. Runtime reachability requires supported installed composition and independently qualified detector evidence. Documentation-only merge is not strategy implementation or profitability proof.",
   "archive_detector_taxonomy": {
     "path": "ARCHIVE_DETECTOR_TAXONOMY_CROSSWALK_V1.json",
     "counts": {
@@ -270,6 +330,6 @@
       "v6_conditional_hyperedges": 12,
       "v6_flash_funding_models": 4
     },
-    "status": "ARCHIVE_ONLY_NO_EXECUTION_PERMISSION"
+    "status": "MERGED_PR_654_ARCHIVE_ONLY_NO_EXECUTION_PERMISSION"
   }
 }

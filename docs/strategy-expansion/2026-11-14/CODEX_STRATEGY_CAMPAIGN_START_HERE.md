@@ -26,7 +26,7 @@ Repository: BobIvans/studious-pancake
 5. Новые документы этой кампании: STRATEGY_RESEARCH_CROSSWALK_AND_NEW_GAPS_RU.md, STRATEGY_RESEARCH_EXECUTION_ASSIGNMENTS_RU.md, STRATEGY_RESEARCH_ACCEPTANCE_MATRIX_V2.json.
 6. SX-17 archive taxonomy: ARCHIVE_DETECTOR_TAXONOMY_COVERAGE_GATE_RU.md and ARCHIVE_DETECTOR_TAXONOMY_CROSSWALK_V1.json.
 
-Сначала проверь все open/merged PR и их текущие head/base SHA. При snapshot d52e61f36ece249c1221c8e71d22aa29ef476e21 PR #641 (SX-01), #642 (SX-09) и #643 (SX-10/SX-11) уже merged; #645 (SX-12) был открыт и уже содержал portfolio optimizer по SX-01 ResourceManifest + AGG-05. Это только исторический срез — проверь статусы заново. Не создавай повторно SX-00, SX-01, SX-09, SX-10, SX-11 или SX-12, если их PR уже merged/open. #639 — historical receipt на старом SHA, а не текущий dashboard.
+Исторический snapshot d52e61f36ece249c1221c8e71d22aa29ef476e21: #641/#642/#643 были merged, #645 тогда был открыт. Текущий статус приведён в конце этого файла и в `PARALLEL_EXECUTION_STATUS.json`; перед dispatch всегда перепроверяй main/PR/checks. На latest snapshot #645/#648/#651/#653 уже merged; #654 закрепил SX-17 archive taxonomy. Не дублируй эти ID.
 
 ## Существующие owners — reuse, do not replace
 
@@ -125,3 +125,14 @@ No private keys, wallet/account/ATA/obligation/position creation, signing, sendi
 
 ## Definition of complete
 Not every PR title merged and not every idea given a class. Every family has one owner, truthful evidence tier, dependency, test/replay and next action. Selected implementations are merged or explicitly BLOCKED/RESEARCH_ONLY/EXCLUDED with evidence. Qualified paths are reachable in the supported shadow/paper architecture. Resource allocation is deterministic and cannot double spend. Dashboard/crosswalk match final main SHA. No claim of profitability or production readiness from documentation merges.
+
+
+
+## G. Runtime multi-strategy execution — SX-18 (new cross-cutting gap)
+Read `tasks/SX18_MULTI_STRATEGY_RUNTIME_FANOUT_RU.md`. The catalog is broad, but the installed runtime currently has six registrations and only circular_arbitrage has a real two-leg shadow detector. SX-01 is advisory, not runtime activation. Build bounded concurrent fanout only by extending existing application/StrategyRegistry/OpportunityConsumer/AGG-05/paper-shadow owners. One immutable snapshot generation, deterministic ordering, failure isolation, queue bounds, conflict-safe resource admission and installed package/capability parity are mandatory. Do not activate stubs.
+
+## H. Observed participant strategy intelligence — W6-12 (new Market Ecology lane)
+Read `tasks/W6_12_OBSERVED_PARTICIPANT_STRATEGY_INTELLIGENCE_RU.md`. Build a provenance-bound evidence path from public/authorized pseudonymous on-chain episodes to falsifiable strategy archetypes and complete net attribution. Reuse MarketEpisode/raw journal/decision dataset/causal owners. No deanonymization, real-world identity matching, private orderflow, doxxing or automatic copy-trading. Include failed/no-fill/reverted attempts, inventory/liabilities, transfers, fees/carry, drawdown, capital lock, censoring, leakage controls and held-out validation.
+
+## Current-main truth (2026-11-14, after #654)
+Merged: #645, #646, #647, #648, #650, #651, #653, #654. SX-17 is the archive detector/anomaly taxonomy PR #654; runtime fanout is SX-18. Open: #649 LLAMMA source-blocked, #655 R10-2 offline MarginFi bridge (rebase/recheck), and predecessor #656 is closed as superseded by clean-base #657. Always refresh live PR/main state before dispatch.

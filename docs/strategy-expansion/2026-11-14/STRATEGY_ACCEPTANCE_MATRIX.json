@@ -1,17 +1,33 @@
 {
   "schema": "studious-pancake.strategy-expansion-acceptance.v1",
   "date": "2026-11-14",
-  "scope": "Additive strategy knowledge and assignment overlay; not a runtime capability manifest",
-  "source_baseline": [
-    "docs/web3-market-scale/design-input/04_STRATEGIES_RU.md",
-    "docs/web3-market-scale/design-input/25_OPPORTUNITY_ATLAS_RU.md",
-    "docs/web3-market-scale/design-input/data/tasks.json",
-    "docs/roadmap/STUDIOUS_PANCAKE_MASTER_CODEX_EXECUTION_2026-11-13/STRATEGY_UNIVERSE_ATLAS.md",
-    "docs/roadmap/STUDIOUS_PANCAKE_MASTER_CODEX_EXECUTION_2026-11-13/STRATEGY_CROSSWALK.json",
-    "docs/roadmap/agent-execution-master-2026-11-13/tasks/R10_STRATEGIES_AND_INTELLIGENCE.md",
-    "docs/roadmap/agent-execution-master-2026-11-13/tasks/R10_STRATEGY_INVENTORY_2026-11-14.md",
-    "docs/roadmap/agent-execution-master-2026-11-13/reports/R10_STRATEGY_REPLAY_EXPERIMENTS_2026-11-14.md"
-  ],
+  "scope": "Additive strategy knowledge and assignment overlay; not a runtime capability manifest Additive runtime fanout (SX-18) and observed public participant intelligence (W6-12) gaps identified by current runtime reachability audit; not a replacement for archive taxonomy SX-17.",
+  "source_baseline": {
+    "0": "docs/web3-market-scale/design-input/04_STRATEGIES_RU.md",
+    "1": "docs/web3-market-scale/design-input/25_OPPORTUNITY_ATLAS_RU.md",
+    "2": "docs/web3-market-scale/design-input/data/tasks.json",
+    "3": "docs/roadmap/STUDIOUS_PANCAKE_MASTER_CODEX_EXECUTION_2026-11-13/STRATEGY_UNIVERSE_ATLAS.md",
+    "4": "docs/roadmap/STUDIOUS_PANCAKE_MASTER_CODEX_EXECUTION_2026-11-13/STRATEGY_CROSSWALK.json",
+    "5": "docs/roadmap/agent-execution-master-2026-11-13/tasks/R10_STRATEGIES_AND_INTELLIGENCE.md",
+    "6": "docs/roadmap/agent-execution-master-2026-11-13/tasks/R10_STRATEGY_INVENTORY_2026-11-14.md",
+    "7": "docs/roadmap/agent-execution-master-2026-11-13/reports/R10_STRATEGY_REPLAY_EXPERIMENTS_2026-11-14.md",
+    "current_main": "9f173d7632cb30190bb8d9174ceba6d116eaec70",
+    "merged_prs": [
+      645,
+      646,
+      647,
+      648,
+      650,
+      651,
+      653,
+      654
+    ],
+    "open_prs": [
+      649,
+      655,
+      657
+    ]
+  },
   "statuses": [
     "EXISTING_RESEARCH",
     "PARTIAL_OWNER",
@@ -208,6 +224,22 @@
       "status": "PARTIAL_OWNER",
       "owner": "Existing mechanism discovery and claims owners",
       "next": "Offline fixed-workload comparison, no deployment"
+    },
+    {
+      "id": "PORT-RUNTIME-FANOUT",
+      "name": "Installed multi-strategy runtime fanout and evidence-gated composition",
+      "class": "CONTROL_PLANE",
+      "status": "NEW_GAP",
+      "owner": "src/application.py; src/strategy/registry.py; src/strategy/consumer.py; AGG-05; existing paper/shadow composition",
+      "next": "SX-18: bounded deterministic workers on one immutable snapshot, StrategyContractV1 evidence binding, AGG-05 resource admission, failure isolation and installed-package parity"
+    },
+    {
+      "id": "INTEL-PARTICIPANT",
+      "name": "Observed public on-chain participant strategy intelligence",
+      "class": "RESEARCH_ONLY",
+      "status": "NEW_GAP",
+      "owner": "MarketEpisode/raw journal/episode_builder/decision dataset/causal owners",
+      "next": "W6-12: pseudonymous public episodes, full lifecycle net attribution, counterfactual replay and leakage-resistant held-out archetypes"
     }
   ],
   "invariants": [

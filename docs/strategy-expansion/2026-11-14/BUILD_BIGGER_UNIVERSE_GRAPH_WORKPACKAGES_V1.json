@@ -2,7 +2,7 @@
   "schema": "studious-pancake.build-bigger-universe-graph-workpackages.v1",
   "snapshot_date": "2026-11-14",
   "archive_baseline": "2026-10-03_to_2026-10-08",
-  "note": "Historical research inventory. No pair/venue/lender is live qualified by appearance here.",
+  "note": "Historical research inventory. No pair/venue/lender is live qualified by appearance here. Historical archive counts are immutable research snapshots. Current-main strategy extensions are recorded separately and are not counted as historical ZIP work packages.",
   "counts": {
     "original_pair_seeds": 519,
     "v3_total_pair_candidates": 1147,
@@ -1584,5 +1584,50 @@
     },
     "classification": "HISTORICAL_DISCOVERY_ONLY",
     "missing_ids_note": "Input claims #1-224 but does not provide #217-224. Do not invent."
-  }
+  },
+  "current_main_extension_snapshot": {
+    "main_sha": "9f173d7632cb30190bb8d9174ceba6d116eaec70",
+    "date": "2026-11-14",
+    "merged_prs": [
+      645,
+      646,
+      647,
+      648,
+      650,
+      651,
+      653,
+      654
+    ],
+    "open_prs": [
+      649,
+      655,
+      657
+    ],
+    "note": "SX-17 archive taxonomy is merged (#654); SX-18 runtime fanout and W6-12 participant intelligence are new current-repo gaps. Original 40 historical work packages and V1/V3/V4/V6 counts are preserved."
+  },
+  "extension_work_packages": [
+    {
+      "id": "SX-18",
+      "scope": "Runtime multi-strategy fanout and evidence-gated composition",
+      "owner": "Existing application/StrategyRegistry/OpportunityConsumer/AGG-05/paper-shadow composition",
+      "dependencies": [
+        "SX-01",
+        "SX-12",
+        "R08",
+        "R10 detector owners",
+        "R04/R05/R06"
+      ],
+      "gate": "one immutable snapshot generation; bounded deterministic fanout; no second registry/scheduler/consumer; no stub activation"
+    },
+    {
+      "id": "W6-12",
+      "scope": "Observed participant strategy intelligence and evidence graph",
+      "owner": "Existing MarketEpisode/raw journal/episode_builder/decision dataset/causal owners",
+      "dependencies": [
+        "W6-01/02/05/06",
+        "SX-01"
+      ],
+      "gate": "public/authorized data; pseudonymous account keys; complete net attribution; anti-survivorship and actor/pool/time holdouts; research-only"
+    }
+  ]
 }

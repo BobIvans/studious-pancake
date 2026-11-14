@@ -22,7 +22,7 @@ Read next:
 4. `ARCHIVE_DETECTOR_TAXONOMY_COVERAGE_GATE_RU.md` and `ARCHIVE_DETECTOR_TAXONOMY_CROSSWALK_V1.json` (SX-17)
 5. `ARCHIVE_SOURCE_MATERIALIZATION_RU.md` (verify original source archives before PAIR-00 completion)
 
-It extends merged #599/#622/#631/#637 and the SX/R10 work with recovered parallel-chat strategies and Wave-6 Market Ecology. Snapshot at authoring: `d52e61f36ece249c1221c8e71d22aa29ef476e21`; #643 merged (SX-10/SX-11), #645 open (SX-12). Always re-fetch current main, open PRs and checks. Do not duplicate existing/open work. PAIR-00 row-level archive reconciliation is mandatory; see `PAIR_ARCHIVE_COVERAGE_AND_IMPORT_GATE_RU.md` and the preserved V6 175-pair catalog. SX-17 separately reconciles 64 V3 anomalies, 25 V4 detectors, 19 V3 routes, 36 V6 routes, 12 V6 hyperedges and 4 funding primitive references. The repository owner expressly authorized autonomous create/review/merge of in-scope campaign PRs in the ChatGPT instruction dated 2026-11-14; merges remain conditional on all CI, review, provenance, ownership and branch-protection gates. This authority does not authorize live/on-chain financial actions.
+It extends merged #599/#622/#631/#637 and the SX/R10 work with recovered parallel-chat strategies and Wave-6 Market Ecology. The d52e61f snapshot in the earlier handoff is historical only. PAIR-00 row-level archive reconciliation remains mandatory; see `PAIR_ARCHIVE_COVERAGE_AND_IMPORT_GATE_RU.md` and the preserved V6 175-pair catalog. SX-17 now separately reconciles 64 V3 anomalies, 25 V4 detectors, 19 V3 routes, 36 V6 routes, 12 V6 hyperedges and 4 funding primitive references (#654). Runtime fanout is SX-18. The repository owner expressly authorized autonomous create/review/merge of in-scope campaign PRs in the ChatGPT instruction dated 2026-11-14; merges remain conditional on all CI, review, provenance, ownership and branch-protection gates. This authority does not authorize live/on-chain financial actions.
 
 # Start here — Studious Pancake
 
@@ -49,3 +49,16 @@ For Codex CLI, GLM-5.3-Flash and other coding agents:
 R-04 selector → R-05 complete unsigned transaction/PTB simulation → R-06 paper qualification remain gated by exact quotes, relevant effective capital capacity, matching builder conformance, complete same-state simulation and QPR readiness.
 
 Keep the research universe broad, while separating LOCAL_ATOMIC, CONDITIONAL_HYPEREDGE, HEDGED_NON_ATOMIC, SIGNAL_ONLY and EXCLUDED classes. Robinhood Stock Tokens and tokenized equities remain excluded. No private keys, accounts/ATAs/obligations creation, signing, sending, borrowing, spending, deployments, provider enabling or production promotion. Live stays hard-denied.
+
+
+
+## Latest strategy campaign expansion — 2026-11-14
+
+The current verified main snapshot is `9f173d7632cb30190bb8d9174ceba6d116eaec70` (after PR #654). The full archive-backed MASTER handoff is #646; exact historical relationship rows are #650; archive taxonomy is #654 (**SX-17**). Keep the full MASTER scope first.
+
+Additional assignments:
+- **SX-18 runtime parallel strategy fanout:** `docs/strategy-expansion/2026-11-14/tasks/SX18_MULTI_STRATEGY_RUNTIME_FANOUT_RU.md`. Current registry has six entries but only one real two-leg shadow detector. Reuse existing app/registry/consumer/AGG-05/paper owners; no second runtime infrastructure.
+- **W6-12 observed participant strategy intelligence:** `docs/strategy-expansion/2026-11-14/tasks/W6_12_OBSERVED_PARTICIPANT_STRATEGY_INTELLIGENCE_RU.md`. Public/authorized pseudonymous on-chain episodes, complete net attribution, replay and holdout only; no deanonymization or copy-trading.
+
+Merged since the prior snapshot: #645 SX-12, #646 master/archive handoff, #647 Titan adapter, #648 SX-08, #650 pair archive dataset, #651 SX-07, #653 SX-02 and #654 SX-17 archive taxonomy.
+Current snapshot after #654: merged #645/#646/#647/#648/#650/#651/#653/#654. Open work: #649 SX-03 (Curve source/license/whitepaper/unit/rooted-state blockers), #655 R10-2 (offline MarginFi qualification bridge, rebase/review), and #656 predecessor handoff is closed as superseded by #657. Runtime work is SX-18; participant learning is W6-12. Re-fetch main/open PRs/CI before dispatch.

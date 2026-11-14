@@ -27,7 +27,7 @@ At a prior verified snapshot:
 - P0-1 #593, P0-2 #604, P0-3 #613 and R01 #584 were merged baselines.
 - R02 CAP-A #602, CAP-B #612, CAP-C #609 and R03 #606 were merged as partial/offline readers/builders; effective live capital remained UNKNOWN.
 - #614 added seven evidence-gated residual families; reuse its relation/correlation owners.
-- #639 SX-00, #641 SX-01, #642 SX-09 and #643 SX-10/SX-11 were merged by the later audit. #645 SX-12 and #646 documentation expansion were open at the last checked snapshot.
+- Historical checkpoint only: #639 SX-00, #641 SX-01, #642 SX-09, #643 SX-10/SX-11 were merged; #645/#646 were open at that older checkpoint. Current merged state after #654 is recorded in the root `CODEX_START_HERE.md` and `PARALLEL_EXECUTION_STATUS.json`.
 These are historical checkpoints only. Re-fetch every PR before assigning or merging.
 
 ## 1. Preserve the original MASTER FLASHLOAN MARKET INTEGRATION scope
@@ -382,3 +382,18 @@ To inspect locally:
 python -c "import gzip,pathlib; p=pathlib.Path('docs/strategy-expansion/2026-11-14/BUILD_BIGGER_UNIVERSE_GRAPH_ARCHIVE_CANDIDATES_2026-10-06.json.gz'); pathlib.Path(str(p)[:-3]).write_bytes(gzip.decompress(p.read_bytes()))"
 \`\`\`
 The resulting JSON is a historical seed list, not an authoritative registry. Re-resolve all canonical mints/types, current market/pool/book identity, state, exact quotes and capacity before promotion. Historical HOT/WARM/RSRCH/EVENT labels are not current heat scores.
+
+
+
+## 20. Runtime-wide parallel strategy execution and observed participant intelligence
+
+The archive contains many strategies, venues, funding sources and graph relations. That is a research universe, not proof the installed bot runs them. The current strategy registry has six registrations, but only circular_arbitrage has a real two-leg shadow detector; LST remains stubbed, liquidation/orderbook are disabled or fixture-only, and Pump remains boundary-only. SX-01 StrategyContractV1 is advisory and does not create a runtime registry; R08 #627 reports 15/27 owner groups wired and 12 library-only.
+
+Two additive child packages close the newly verified gaps without replacing the MASTER/GPR/DV/F/F6 programme:
+
+1. **SX-18 — bounded runtime multi-strategy fanout:** extend the current application/StrategyRegistry/OpportunityConsumer/queue/AGG-05/paper-shadow composition. Evaluate independently proven detector workers against one immutable market snapshot generation with deterministic output, bounded concurrency, failure isolation and conflict-safe resources. Assignment: `tasks/SX18_MULTI_STRATEGY_RUNTIME_FANOUT_RU.md`.
+2. **W6-12 — observed participant strategy intelligence:** public/authorized pseudonymous on-chain episodes -> strategy archetypes -> full net economics -> counterfactual replay -> held-out validation. Reuse MarketEpisode/raw journal/decision/causal owners; no real-world identity resolution, private flow or copy-trading. Assignment: `tasks/W6_12_OBSERVED_PARTICIPANT_STRATEGY_INTELLIGENCE_RU.md`.
+
+**ID ownership:** SX-17 is already owned by merged #654 (archive detector/anomaly taxonomy across V3/V4/V6). Runtime fanout is SX-18. W6-12 is new and does not alter historical W6-00…W6-11 or W6F-001…096 identities.
+
+Do not create a second registry, event store, wallet graph, feature store, scheduler, queue, consumer or release authority. Each strategy retains independent source/state/quote/capacity/build/paper gates. Parallel fanout does not promote stubs or grant transaction authority. W6-12 outputs only research archetypes and evidence-bound hypotheses.

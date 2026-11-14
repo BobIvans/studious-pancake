@@ -44,3 +44,27 @@ R10 inventory/replay explicitly states that it made no `src/` strategy-owner cha
 ## How to use
 
 Place this directory in the repository as-is. Agents should start from `CODEX_STRATEGY_EXPANSION_START_HERE.md`, read the source files above, refresh all statuses against current main and active PRs, then execute independent work packages in parallel only where ownership/dependencies permit. The pack must remain an additive overlay: the active market-integration assignment is owned by its existing agents.
+
+
+
+## Актуализация стратегии и runtime — 2026-11-14
+
+Проверенная основная ветка на момент этого handoff: \`9f173d7632cb30190bb8d9174ceba6d116eaec70\`.
+
+С момента предыдущей матрицы объединены:
+- #645 SX-12 — deterministic offline portfolio optimizer над SX-01 ResourceManifest + AGG-05;
+- #646 — полный MASTER FLASHLOAN + Build Bigger Universe archive recovery;
+- #647 — Titan adapter на frozen R13-K kernel, offline/sender-free;
+- #648 SX-08 — exact Fraction rate/refinance research model;
+- #650 — точный архивный dataset исторических pair/relationship rows, hash-pinned;
+- #651 SX-07 — conditional outcome vector / complete-set conservation research model;
+- #653 SX-02 — flash-mint vs lender economics research model;
+- #654 SX-17 — V3/V4/V6 archive detector/anomaly taxonomy, archive-only.
+
+Новые work packages:
+- **SX-18** — runtime multi-strategy fanout: провести доказуемую границу между каталогом стратегий и реальным installed runtime. Сейчас шесть registrations, но только circular_arbitrage имеет реальный two-leg shadow detector. Использовать существующие owners, не создавать второй registry/queue/scheduler.
+- **W6-12** — public/authorized pseudonymous on-chain participant strategy intelligence: полные эпизоды, net attribution, failed/censored events, replay и holdout. Без deanonymization, doxxing, private flow или auto-copy-trading.
+
+Открытые workstreams в текущем snapshot: #649 SX-03 LLAMMA (proprietary source / primary evidence blockers), #655 R10-2 MarginFi offline bridge (rebase/review требуется) и #657 SX-18/W6-12 documentation handoff (CI/review). Старый #656 закрыт как superseded.
+
+ID ownership: **SX-17 = archive taxonomy (#654); SX-18 = runtime fanout; W6-12 = participant intelligence.** Не менять исторические W6-00…W6-11 / W6F-001…096 IDs.

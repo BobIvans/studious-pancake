@@ -1223,6 +1223,14 @@
       "status": "RECONCILE_CURRENT_MAIN_BEFORE_DISPATCH"
     },
     {
+      "id": "PAIR-00",
+      "scope": "Exhaustive row-level import/reconciliation of the first 519-pair archive, V3 1,147-row universe, V4 838 symbolic records, V5 routes and V6 175-pair delta into the existing AssetResolver/Dynamic Universe; publish per-row IDs, duplicates, collisions, verified identities/markets, negative discoveries and typed proof disposition.",
+      "owner": "MASTER-00 coordinator + Assets/Dynamic Universe owners",
+      "dependency": "Original archive ZIPs and immutable manifest; current main + GPR registry + current provider/source evidence",
+      "gate": "Archive candidates are NOT executable. Zero canonical IDs/market_identity in the first 519/V3, V4 canonical_count=0, and all 175 V6 rows pair_is_executable=false with no exact quote/capital. Do not promote by ticker, TVL or documentation.",
+      "status": "REQUIRED_BEFORE_PAIR_UNIVERSE_COMPLETION"
+    },
+    {
       "id": "GPR-01A",
       "scope": "Canonical asset resolver and versioned identity evidence",
       "owner": "Assets resolver owner",
@@ -1538,5 +1546,29 @@
     "All data-source rights, quotas, source version and licensing must be current.",
     "Live signing/sending/borrowing/spending/deployments/provider activation remain prohibited.",
     "Robinhood Stock Tokens, xStocks and tokenized-equity strategies are EXCLUDED by current user policy."
-  ]
+  ],
+  "pair_archive_audit": {
+    "snapshot_date": "2026-11-14",
+    "source_counts": {
+      "first_universal_market_graph_rows": 519,
+      "v3_full_universe_rows": 1147,
+      "v3_unified_seed_rows": 693,
+      "v3_additional_seed_rows": 454,
+      "v3_high_value_family_seeds_subset": 162,
+      "v4_symbolic_rows": 838,
+      "v4_additions": 175,
+      "v5_route_hypotheses": 39,
+      "v6_pair_delta": 175,
+      "current_gpr_placeholder_relations": 268,
+      "current_asset_registry_identities": 92
+    },
+    "key_facts": [
+      "First 519 archive rows: 0 canonical_a, 0 canonical_b, 0 market_identity; all READ_ONLY.",
+      "V3 full universe: 0 canonical_a, 0 canonical_b, 0 market_identity; 693 READ_ONLY and 454 NONE.",
+      "V4: canonical_count=0; all 838 SYMBOLIC_UNVERIFIED and execution_permission=NONE.",
+      "V6: all 175 pair_is_executable=false, MUST_VERIFY_ON_CHAIN, NO_EXACT_QUOTE, flash capacity NOT_READ and pool liquidity NOT_READ.",
+      "Current GPR 268 rows are placeholders with runtime_enabled=false; 92 identity records are R&D registry entries, not runtime qualification."
+    ],
+    "note": "Counts overlap across source generations; never sum them into a unique live market count. See PAIR_ARCHIVE_COVERAGE_AND_IMPORT_GATE_RU.md for the evidence and PAIR-00 acceptance contract."
+  }
 }

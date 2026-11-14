@@ -125,3 +125,17 @@ No private keys, wallet/account/ATA/obligation/position creation, signing, sendi
 
 ## Definition of complete
 Not every PR title merged and not every idea given a class. Every family has one owner, truthful evidence tier, dependency, test/replay and next action. Selected implementations are merged or explicitly BLOCKED/RESEARCH_ONLY/EXCLUDED with evidence. Qualified paths are reachable in the supported shadow/paper architecture. Resource allocation is deterministic and cannot double spend. Dashboard/crosswalk match final main SHA. No claim of profitability or production readiness from documentation merges.
+
+
+
+## G. Broad arbitrage strategy + data-source integration map
+
+Before implementing another strategy, read:
+- ARBITRAGE_MAP_STRATEGY_AND_DATA_SOURCE_ATLAS_RU.md
+- ARBITRAGE_DATA_SOURCE_CATALOG_V1.json
+- ARBITRAGE_MAP_DATA_SOURCE_ASSIGNMENTS_RU.md
+- CODEX_ARBITRAGE_MAP_START_HERE.md
+
+These extend the existing 25 strategy families, 33 direct venues, 17 flash-funding candidates, 19 route templates, 64/25/36/12/4 taxonomy structures and EXP/SX/W6 work. DS-00…DS-11 covers source pins, raw chain intake, identity, direct venue state, quote/build providers, CEX/perps, oracle/redemption, capital/liquidation, bridges, launch/migration, indexers/replay and full strategy wiring.
+
+Do not expand only by adding tickers or router names. Every new strategy/source must map to canonical identity, exact state, exact amount quote, capital and builder where applicable, economic costs, execution class, evidence lineage, negative tests and replay. Keep the maximum research universe; execution eligibility is a separate subset. Data-source additions are to be wired through current P0/GPR/DV/R02/R03/R13 and existing graph/economics/paper owners, not a parallel system.

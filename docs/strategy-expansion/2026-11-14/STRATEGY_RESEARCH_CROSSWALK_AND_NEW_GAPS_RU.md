@@ -81,3 +81,21 @@ At implementation start, re-fetch current official docs, record revision/hash/li
 - EXCLUDED for user-prohibited/unauthorized mechanisms.
 
 Unknown is never zero. No TVL-as-capacity, no quote extrapolation, no duplicate pool/collateral/lender/account/quota consumption, no unlicensed source reuse, no private keys or account creation, no signing/sending/borrowing/deploying/live trading, no tokenized equities, no sandwich/frontrun/user targeting/private-flow exploitation.
+
+
+
+## Дополнительные пробелы, найденные при runtime-аудите (2026-11-14)
+
+### Gap A — от стратегии в каталоге до параллельного запуска в установленном runtime
+Strategy catalog, SX-01 StrategyContractV1 и библиотечные detector/evaluator модули не создают многопоточный runtime автоматически. На проверенном main в src/strategy/strategies.py остаются шесть регистраций: circular_arbitrage (единственный реальный two-leg shadow detector), lst_depeg и lst_unstake (STUB), kamino_liquidation и orderbook_amm_arbitrage (FIXTURE_ONLY/disabled shell), pump_fun_migration (boundary-only, detector не реализован). SX-01 сам описывает себя как advisory schema without runtime registry. R08 #624/#627 показали 15/27 owner groups wired и 12 library-only.
+**Решение:** SX-17 — bounded multi-strategy fanout через existing application/StrategyRegistry/OpportunityConsumer/AGG-05/paper composition. Не создавать второй registry, consumer, queue, scheduler или runtime. Стратегии запускаются параллельно только как bounded shadow research workers над одной immutable snapshot generation; failure isolation, deterministic merge, deadline/cancellation, fairness/backpressure и resource conflict gates обязательны. Это отдельная работа от исследования новых alpha families.
+
+### Gap B — knowledge graph стратегий успешных публичных on-chain участников
+W6-01/02 уже описывают archetype IR и population calibration, W6-05/06 — competition/survival и PSRO/self-play, но не было отдельного пакета полного цикла public participant episodes → strategy archetypes → net outcome attribution → counterfactual replay → held-out validation.
+**Решение:** W6-12, отдельное расширение Market Ecology. Использовать публичные/разрешённые on-chain данные, псевдонимные адреса как технические ключи без deanonymization, существующие MarketEpisode/raw journal/decision dataset/causal owners. Не считать gross balance changes прибылью: нужны transfers, liabilities, residual inventory, fees/gas/funding, failed/reverted transactions, mark-to-market, drawdown, capital lock и censoring. Результат — исследовательские гипотезы/арchetypes, не auto-copy-trading и не разрешение исполнения.
+
+Оба пакета добавлены как tasks:
+- tasks/SX17_MULTI_STRATEGY_RUNTIME_FANOUT_RU.md
+- tasks/W6_12_OBSERVED_PARTICIPANT_STRATEGY_INTELLIGENCE_RU.md
+
+Они расширяют SX/W6 IDs, не изменяя исторические W6-00…W6-11 / W6F-001…096; новый W6-12 использует W6F-097…104.

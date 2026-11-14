@@ -2234,6 +2234,24 @@
       ],
       "tier": "ASYNC_REFERENCE_OR_INVENTORY",
       "limits": "Asynchronous message/attestation; not same-transaction flash capital"
+    },
+    {
+      "id": "SRC-MEV-01",
+      "name": "Jito block engine / bundle and auction research surfaces",
+      "domain": "Solana",
+      "role": "OWN_TRANSACTION_LANDING_AND_PERMITTED_ORDERING",
+      "official_docs": "https://jito-labs.gitbook.io/mev/searcher-resources",
+      "data": [
+        "bundle submission/auction metadata where publicly documented",
+        "tip accounts and bundle simulation concepts",
+        "own transaction inclusion outcomes"
+      ],
+      "strategy_use": [
+        "SX-10 permitted own-transaction ordering research",
+        "execution cost/landing probability"
+      ],
+      "tier": "EXECUTION_INFRASTRUCTURE_NOT_PUBLIC_LIQUIDITY",
+      "limits": "Do not use private orderflow, sandwich, front-run or target third-party user transactions; submission remains disabled; pin current API and entitlement"
     }
   ],
   "integration_assignments": [
@@ -2788,5 +2806,242 @@
       "effective_date": "2026-07-27",
       "migration": "Use gRPC, GraphQL RPC, checkpoints and archive store."
     }
-  ]
+  ],
+  "sx_source_requirements": [
+    {
+      "id": "SX-02",
+      "source_ids": [
+        "SRC-LEND-01",
+        "SRC-LEND-04",
+        "SRC-LEND-05",
+        "SRC-LEND-07",
+        "SRC-LEND-08",
+        "SRC-CLAIM-03"
+      ],
+      "note": "Flash-mint and lender crossover; prove mint/burn/callback and current capacity."
+    },
+    {
+      "id": "SX-03",
+      "source_ids": [
+        "SRC-EVM-01",
+        "SRC-ORACLE-01",
+        "SRC-ORACLE-02",
+        "SRC-DEX-09"
+      ],
+      "note": "LLAMMA band model; current Curve primary sources/license/whitepaper remain gate."
+    },
+    {
+      "id": "SX-04",
+      "source_ids": [
+        "SRC-ORACLE-01",
+        "SRC-ORACLE-02",
+        "SRC-ORACLE-03",
+        "SRC-LEND-01",
+        "SRC-LEND-07",
+        "SRC-LEND-08"
+      ],
+      "note": "OEV/keeper data and lending eligibility; do not infer keeper rights."
+    },
+    {
+      "id": "SX-05",
+      "source_ids": [
+        "SRC-SOL-01",
+        "SRC-DEX-01",
+        "SRC-DEX-02",
+        "SRC-DEX-03",
+        "SRC-DEX-07",
+        "SRC-CEX-01"
+      ],
+      "note": "JIT/LVR/adverse selection; inventory and trade-flow requirements."
+    },
+    {
+      "id": "SX-06",
+      "source_ids": [
+        "SRC-DEX-04",
+        "SRC-DEX-05",
+        "SRC-CEX-01",
+        "SRC-CEX-02",
+        "SRC-CEX-03",
+        "SRC-INTENT-01"
+      ],
+      "note": "CLOB/RFQ/queue and market making."
+    },
+    {
+      "id": "SX-07",
+      "source_ids": [
+        "SRC-CLAIM-04",
+        "SRC-EVM-01",
+        "SRC-INDEX-01"
+      ],
+      "note": "Complete sets and conditional claims."
+    },
+    {
+      "id": "SX-08",
+      "source_ids": [
+        "SRC-LEND-01",
+        "SRC-LEND-02",
+        "SRC-LEND-03",
+        "SRC-LEND-04",
+        "SRC-LEND-07",
+        "SRC-LEND-08",
+        "SRC-ORACLE-01"
+      ],
+      "note": "Rates, utilization and refinance are typically multi-period, not instantaneous flash PnL."
+    },
+    {
+      "id": "SX-09",
+      "source_ids": [
+        "SRC-DEX-01",
+        "SRC-DEX-02",
+        "SRC-DEX-03",
+        "SRC-DEX-05",
+        "SRC-DEX-07",
+        "SRC-CLAIM-01"
+      ],
+      "note": "LP lifecycle, fee accrual, inventory and exit rights."
+    },
+    {
+      "id": "SX-10",
+      "source_ids": [
+        "SRC-SOL-01",
+        "SRC-SOL-02",
+        "SRC-MEV-01",
+        "SRC-QUOTE-01",
+        "SRC-QUOTE-02"
+      ],
+      "note": "Permitted own-transaction ordering/landing research only."
+    },
+    {
+      "id": "SX-11",
+      "source_ids": [
+        "SRC-BRIDGE-01",
+        "SRC-BRIDGE-02",
+        "SRC-SUI-01",
+        "SRC-EVM-01"
+      ],
+      "note": "Asynchronous rollup/bridge state; inventory or signal only."
+    },
+    {
+      "id": "SX-12",
+      "source_ids": [
+        "SRC-LEND-01",
+        "SRC-LEND-02",
+        "SRC-LEND-04",
+        "SRC-LEND-07",
+        "SRC-LEND-08",
+        "SRC-DEX-01",
+        "SRC-DEX-05"
+      ],
+      "note": "Portfolio allocation requires shared underlying resource lineage and existing AGG-05."
+    },
+    {
+      "id": "SX-13",
+      "source_ids": [
+        "SRC-INDEX-01",
+        "SRC-INDEX-02",
+        "SRC-INDEX-03",
+        "SRC-CEX-01",
+        "SRC-CEX-04"
+      ],
+      "note": "Historical and public observation sources; maintain censoring and leakage controls."
+    },
+    {
+      "id": "SX-14",
+      "source_ids": [
+        "SRC-INDEX-01",
+        "SRC-INDEX-02",
+        "SRC-INDEX-03"
+      ],
+      "note": "Data/compute procurement and mechanism lab are research/control plane."
+    },
+    {
+      "id": "SX-15",
+      "source_ids": [
+        "SRC-SOL-01",
+        "SRC-SUI-01",
+        "SRC-EVM-01",
+        "SRC-QUOTE-01",
+        "SRC-LEND-01",
+        "SRC-INDEX-01"
+      ],
+      "note": "Source freshness, coverage, replay divergence and negative outcome observability."
+    },
+    {
+      "id": "SX-16",
+      "source_ids": [
+        "SRC-SOL-01",
+        "SRC-SOL-02",
+        "SRC-SOL-03",
+        "SRC-SOL-04",
+        "SRC-SUI-01",
+        "SRC-SUI-02",
+        "SRC-SUI-03",
+        "SRC-EVM-01",
+        "SRC-EVM-02",
+        "SRC-EVM-03",
+        "SRC-QUOTE-01",
+        "SRC-QUOTE-02",
+        "SRC-QUOTE-03",
+        "SRC-QUOTE-04",
+        "SRC-DEX-01",
+        "SRC-DEX-02",
+        "SRC-DEX-03",
+        "SRC-DEX-04",
+        "SRC-DEX-05",
+        "SRC-DEX-06",
+        "SRC-DEX-07",
+        "SRC-DEX-08",
+        "SRC-DEX-09",
+        "SRC-DEX-10",
+        "SRC-DEX-11",
+        "SRC-DEX-12",
+        "SRC-LEND-01",
+        "SRC-LEND-02",
+        "SRC-LEND-03",
+        "SRC-LEND-04",
+        "SRC-LEND-05",
+        "SRC-LEND-06",
+        "SRC-LEND-07",
+        "SRC-LEND-08",
+        "SRC-LEND-09",
+        "SRC-LEND-10",
+        "SRC-ORACLE-01",
+        "SRC-ORACLE-02",
+        "SRC-ORACLE-03",
+        "SRC-CEX-01",
+        "SRC-CEX-02",
+        "SRC-CEX-03",
+        "SRC-CEX-04",
+        "SRC-CEX-05",
+        "SRC-INTENT-01",
+        "SRC-INDEX-01",
+        "SRC-INDEX-02",
+        "SRC-INDEX-03",
+        "SRC-BRIDGE-01",
+        "SRC-CLAIM-01",
+        "SRC-QUOTE-05",
+        "SRC-CLAIM-02",
+        "SRC-CLAIM-03",
+        "SRC-CLAIM-04",
+        "SRC-BRIDGE-02",
+        "SRC-MEV-01"
+      ],
+      "note": "Coordinator crosswalk; all source families and owner receipts reconciled."
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "EXCL-TOKENIZED-EQUITIES",
+      "name": "Tokenized equities / xStocks / Robinhood-linked asset focus",
+      "status": "OUT_OF_SCOPE_BY_USER_PROJECT_CONSTRAINT",
+      "allowed_use": "No strategy or source expansion specifically targeting these assets. Do not reintroduce them as execution candidates through an RWA taxonomy row."
+    }
+  ],
+  "strategy_source_map_summary": {
+    "archived_strat_families": 25,
+    "strat_mappings": 25,
+    "EXP_families": 10,
+    "EXP_mappings": 10,
+    "SX_assignments": 15
+  }
 }

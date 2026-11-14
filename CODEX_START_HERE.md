@@ -1,3 +1,15 @@
+## Strategy campaign update — 2026-11-14
+
+The expanded all-project strategy campaign now lives at:
+`docs/strategy-expansion/2026-11-14/CODEX_STRATEGY_CAMPAIGN_START_HERE.md`
+
+Read next:
+1. `STRATEGY_RESEARCH_CROSSWALK_AND_NEW_GAPS_RU.md`
+2. `STRATEGY_RESEARCH_EXECUTION_ASSIGNMENTS_RU.md`
+3. `STRATEGY_RESEARCH_ACCEPTANCE_MATRIX_V2.json`
+
+It extends merged #599/#622/#631/#637 and the SX/R10 work with recovered parallel-chat strategies and Wave-6 Market Ecology. Snapshot at authoring: `d52e61f36ece249c1221c8e71d22aa29ef476e21`; #643 merged (SX-10/SX-11), #645 open (SX-12). Always re-fetch current main, open PRs and checks. Do not duplicate existing/open work. This update does not authorize live execution.
+
 # Start here — Studious Pancake
 
 For Codex CLI, GLM-5.3-Flash and other coding agents:

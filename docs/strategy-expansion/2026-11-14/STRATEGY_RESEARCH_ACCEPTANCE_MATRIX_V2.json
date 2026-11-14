@@ -1,0 +1,239 @@
+{
+  "schema": "studious-pancake.strategy-research-acceptance.v2",
+  "snapshot_main": "d52e61f36ece249c1221c8e71d22aa29ef476e21",
+  "snapshot_utc": "2026-11-14",
+  "predecessor_prs": [
+    599,
+    622,
+    631,
+    637,
+    638,
+    639,
+    640,
+    641,
+    642,
+    643,
+    645
+  ],
+  "dispositions": {
+    "SX00": "MERGED_HISTORICAL_RECEIPT_REFRESH_REQUIRED",
+    "SX01": "MERGED_SCHEMA_ONLY",
+    "SX09": "MERGED_OFFLINE_GENERIC_LP_MODEL",
+    "SX10": "MERGED_OFFLINE_RESEARCH_ONLY",
+    "SX11": "MERGED_OFFLINE_SIGNAL_ONLY",
+    "SX12": "OPEN_PR_645_REVIEW_NOT_DUPLICATE",
+    "SX02": "PLANNED",
+    "SX03": "PLANNED",
+    "SX04": "PLANNED",
+    "SX05": "PLANNED",
+    "SX06": "PLANNED",
+    "SX07": "PLANNED",
+    "SX08": "PLANNED",
+    "SX13": "PLANNED",
+    "SX14": "PLANNED",
+    "SX15": "PLANNED",
+    "SX16": "COORDINATOR_INTEGRATION"
+  },
+  "additional_packages": [
+    {
+      "id": "EXP-01",
+      "family": "POST_STATE_DISLOCATION",
+      "class": "LOCAL_ATOMIC_CANDIDATE",
+      "owner": "Dynamic Universe + MarketObservation + #614 residuals + exact graph evaluator",
+      "acceptance": [
+        "confirmed coherent state only",
+        "fresh exact quote per amount",
+        "pool correlation dedup",
+        "stale/reorg/incomplete/no-trade negatives",
+        "held-out lifetime metrics"
+      ]
+    },
+    {
+      "id": "EXP-02",
+      "family": "DBC_GRADUATION_MIGRATION",
+      "class": "CONDITIONAL_HYPEREDGE",
+      "owner": "Meteora DBC official dossier + existing Pump/Dynamic Universe/direct venue",
+      "acceptance": [
+        "versioned config/curve/fee/threshold/keeper pins",
+        "pre/post pool identity",
+        "migration and fee/transfer vectors",
+        "exact post-migration quote"
+      ]
+    },
+    {
+      "id": "EXP-03",
+      "family": "CLMM_DLMM_LIQUIDITY_CLIFF",
+      "class": "LOCAL_ATOMIC_CANDIDATE",
+      "owner": "P0-3 native Raydium/Meteora + R13-K + PR118 + R04",
+      "acceptance": [
+        "tick/bin boundary vectors",
+        "bitmap/array closure",
+        "consumed input/partial fill/dynamic fee",
+        "exact per-size evaluation",
+        "shared resource replay"
+      ]
+    },
+    {
+      "id": "EXP-04",
+      "family": "TOKEN2022_TRANSFER_ECONOMICS",
+      "class": "CONTROL_PLANE",
+      "owner": "AssetResolver + token extension parsing + firewall/compiler/simulator",
+      "acceptance": [
+        "epoch fee activation",
+        "bps/max/rounding/withheld accounting",
+        "hook extras and privileges",
+        "unsupported extension typed reject"
+      ]
+    },
+    {
+      "id": "EXP-05",
+      "family": "LIQUIDATION_FORECAST_CASCADE",
+      "class": "LOCAL_ATOMIC_CANDIDATE",
+      "owner": "lending_indexer + liquidation + R02/R03 + AGG-05",
+      "acceptance": [
+        "rooted public position state",
+        "threshold/partial liquidation replay",
+        "exact capacity and unwind proof",
+        "competition/cascade samples",
+        "monitor only"
+      ]
+    },
+    {
+      "id": "EXP-06",
+      "family": "PROTOCOL_INVARIANT_ANOMALY",
+      "class": "RESEARCH_ONLY",
+      "owner": "MarketObservation + GPR + EVO + causal twin/benchmark",
+      "acceptance": [
+        "versioned normal state transitions",
+        "invariant/counterexample tests",
+        "explainable evidence",
+        "held-out precision/recall",
+        "synthetic/real separation"
+      ]
+    },
+    {
+      "id": "EXP-07",
+      "family": "OPPORTUNITY_SURVIVAL_CROWDING",
+      "class": "RESEARCH_ONLY",
+      "owner": "AGG-10 + decision dataset/ranker + #614",
+      "acceptance": [
+        "empirical event labels",
+        "censoring/unknown denominator",
+        "pool/provider leakage controls",
+        "time holdout/calibration",
+        "advisory only"
+      ]
+    },
+    {
+      "id": "EXP-08",
+      "family": "INTENT_RFQ_COW_BATCH_AUCTION",
+      "class": "HEDGED_NON_ATOMIC",
+      "owner": "intent governance + SX-01 contract + EVM dossier/simulation",
+      "acceptance": [
+        "official signed intent constraints",
+        "full/partial CoW",
+        "solver auction/fairness/surplus",
+        "expiry/stale/revert vectors",
+        "EVM-specific settlement"
+      ]
+    },
+    {
+      "id": "EXP-09",
+      "family": "DERIVATIVES_INVENTORY_BASIS",
+      "class": "HEDGED_NON_ATOMIC",
+      "owner": "R10-F + economic graph + credit/risk + source governance",
+      "acceptance": [
+        "contract multiplier/index/funding timestamps",
+        "hedge/margin/liquidation",
+        "expiry/settlement/exit",
+        "carry and capital lock",
+        "no duration finance claim"
+      ]
+    },
+    {
+      "id": "EXP-10",
+      "family": "UNISWAP_V4_HOOKED_AMM",
+      "class": "LOCAL_ATOMIC_CANDIDATE",
+      "owner": "EVM dossier + multichain + exact quote/build/sim",
+      "acceptance": [
+        "deployed hook bytecode/permission pin",
+        "callback order",
+        "LP/hook/protocol fee separation",
+        "custom accounting vectors",
+        "exact simulation/revert/gas"
+      ]
+    }
+  ],
+  "ecology": [
+    {
+      "id": "W6-00",
+      "function_ids": "W6F-001..W6F-008",
+      "status": "PLANNED"
+    },
+    {
+      "id": "W6-01",
+      "function_ids": "W6F-009..W6F-016",
+      "status": "PLANNED"
+    },
+    {
+      "id": "W6-02",
+      "function_ids": "W6F-017..W6F-024",
+      "status": "PLANNED"
+    },
+    {
+      "id": "W6-03",
+      "function_ids": "W6F-025..W6F-032",
+      "status": "PLANNED"
+    },
+    {
+      "id": "W6-04",
+      "function_ids": "W6F-033..W6F-040",
+      "status": "PLANNED"
+    },
+    {
+      "id": "W6-05",
+      "function_ids": "W6F-041..W6F-048",
+      "status": "PLANNED"
+    },
+    {
+      "id": "W6-06",
+      "function_ids": "W6F-049..W6F-056",
+      "status": "PLANNED"
+    },
+    {
+      "id": "W6-07",
+      "function_ids": "W6F-057..W6F-064",
+      "status": "PLANNED"
+    },
+    {
+      "id": "W6-08",
+      "function_ids": "W6F-065..W6F-072",
+      "status": "PLANNED"
+    },
+    {
+      "id": "W6-09",
+      "function_ids": "W6F-073..W6F-080",
+      "status": "PLANNED"
+    },
+    {
+      "id": "W6-10",
+      "function_ids": "W6F-081..W6F-088",
+      "status": "PLANNED"
+    },
+    {
+      "id": "W6-11",
+      "function_ids": "W6F-089..W6F-096",
+      "status": "PLANNED"
+    }
+  ],
+  "global_gates": [
+    "Preserve S01-S07, OP-01..OP-28, WG-01..WG-28, R10-A..I, SX-00..SX-16, W6F-001..096 IDs.",
+    "No new graph, solver, registry, source store, quote kernel, capital graph, ledger, journal, feature store, scheduler or release authority.",
+    "Every amount requires fresh exact quote; unknown != zero; no TVL capacity.",
+    "No shared pool, collateral, lender capacity, inventory, depth, tick/bin, account lock or quota double consumption.",
+    "Models/correlation/ecology are advisory only; synthetic data stays synthetic.",
+    "No wallet/account/ATA/obligation creation, private keys, signing, sending, borrowing, spending, deploying, provider activation, live trading or production promotion.",
+    "No tokenized equities, sandwich/frontrun, user targeting or unauthorized private flow."
+  ],
+  "completion_rule": "Every family has one owner, truthful evidence tier, dependencies, replay/tests and next gate. Selected work is merged or explicitly BLOCKED/RESEARCH_ONLY/EXCLUDED with evidence. Documentation-only merge is not strategy implementation or profitability proof."
+}

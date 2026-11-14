@@ -1,0 +1,115 @@
+{
+  "schema": "studious-pancake.sx00-reconciliation.v1",
+  "generated_at": "2026-11-14",
+  "baseline_main_sha": "5769b074ea2963ae893aecd9aa749dafe6ee91a7",
+  "worktree_clean": true,
+  "ci_main": "green (CI/linter verify, AGG-14 research system, read-only qualification campaign, release authority all success at baseline)",
+  "open_prs_count": 31,
+  "open_prs_overlap_with_sx": false,
+  "frozen_contracts_to_honor": [
+    {
+      "name": "R13-K quote/build kernel",
+      "owner": "src/execution/quote_build_kernel.py",
+      "version": "r13.quote-build-kernel.v1",
+      "invariants": ["refuse_amount_extrapolation (fresh exact quote per amount)", "pool-identity dedup (same pool/lineage/operator group is correlated, never independent liquidity)", "None=UNKNOWN never zero", "BuildHandoff typed seam, kernel never builds instructions"]
+    },
+    {
+      "name": "PR118 sizing owner",
+      "owner": "src/economics/non_monotonic_sizing.py",
+      "invariants": ["finite amount grids", "exact route cost ledger", "no alternate sizing solver"]
+    }
+  ],
+  "status_vocabulary_note": "statuses use the repo vocabulary from PROJECT_STATUS.json / STRATEGY_CROSSWALK.json; disposition vocabulary for prior assignment systems: KEEP | EXTEND | BLOCKED | DUPLICATE | RETIRED",
+  "families": [
+    {"id": "ARB-CORE", "name": "Direct, fragmentation, synthetic and bounded cycles", "execution_class": "LOCAL_ATOMIC_CANDIDATE", "status": "IMPLEMENTED_UNQUALIFIED", "owner": "src/strategy/relation_generators; src/strategy/arbitrage_graph.py; src/strategy/multihop_solver.py", "exact": "CPMM-only exact evaluator (src/strategy/exact_cpmm_capacity.py)", "missing_acceptance": ["CLMM/DLMM exact evaluator binding behind graph", "ROUTE-R04 qualified route candidates", "PAPER-R06 current 24h paper pass"], "next": "owned by R04/R06 lanes (not SX); SX-12 consumes their outputs", "dependency": "R04/R06 lanes", "sx_package": null, "disposition": "KEEP"},
+    {"id": "ARB-SPLIT", "name": "Joint split-flow and shared-state capacity", "execution_class": "LOCAL_ATOMIC_CANDIDATE", "status": "IMPLEMENTED_UNQUALIFIED", "owner": "src/economics/split_flow.py; src/strategy/cpmm_split_replay.py", "missing_acceptance": ["state closure across ticks/bins/books", "joint no-double-consumption proof on non-CPMM venues"], "next": "extend shared-state closure after exact evaluators bind (R04/R06)", "dependency": "ARB-CORE exact evaluator binding", "sx_package": "SX-12", "disposition": "KEEP"},
+    {"id": "ARB-STABLE", "name": "Stablecoin peg, issuer buffers and triangles", "execution_class": "LOCAL_ATOMIC_CANDIDATE", "status": "RESEARCH_ONLY_VERIFIED", "owner": "src/strategies/stable_peg; src/research/correlation_ledger (stable_redemption_residual)", "missing_acceptance": ["issuer redemption anchor proof (redemption_anchor_unproven)", "exact venue edges"], "next": "issuer anchor dossier (GPR/UNIVERSE lane, not R10/SX)", "dependency": "anchor dossier + exact venue state", "sx_package": null, "disposition": "KEEP"},
+    {"id": "TRANS-ISSUER", "name": "PSM, mint/burn, redemption and flash-mint", "execution_class": "CONDITIONAL_HYPEREDGE", "status": "PARTIAL_OWNER", "owner": "src/strategy_evolution/primary_market.py; src/strategy_evolution/rights_lifecycle.py; src/economics/flash_capital_graph", "missing_acceptance": ["flash-mint eligibility/callback/fee/repay contract", "caller eligibility evidence", "provider capacity proof"], "next": "SX-02 flash-mint financing option model vs lender flashloan on FlashCapitalGraph vocabulary", "dependency": "none (offline model)", "sx_package": "SX-02", "disposition": "EXTEND"},
+    {"id": "TRANS-LST", "name": "LST/LRT, NAV, instant exit and queues", "execution_class": "CONDITIONAL_HYPEREDGE", "status": "STUB", "owner": "src/strategy_evolution/stake_queue.py; src/strategy/strategies.py (lst_depeg/lst_unstake shells)", "missing_acceptance": ["detector bodies consuming lst_premium_residual + LST_FAIR_VALUE", "lst_exchange_rate_unproven / instant_exit_unproven proofs"], "next": "residual-fed shadow detectors = R10 follow-up lane (shortlist item 3), NOT SX", "dependency": "exchange-rate/instant-exit anchor proofs", "sx_package": null, "disposition": "KEEP"},
+    {"id": "TRANS-VAULT", "name": "Vault shares ERC-4626/7540/7575", "execution_class": "CONDITIONAL_HYPEREDGE", "status": "PARTIAL_OWNER", "owner": "src/strategy_evolution/rights_lifecycle.py; src/strategy_evolution/primary_market.py", "missing_acceptance": ["preview/max withdraw/redeem proofs", "queue/fee/caller rights evidence"], "next": "R10-D lane continues; no SX re-ownership", "dependency": "protocol-specific rights dossier", "sx_package": null, "disposition": "KEEP"},
+    {"id": "CLAIM-PENDLE", "name": "PT/YT/SY and maturity", "execution_class": "CONDITIONAL_HYPEREDGE", "status": "RESEARCH_ONLY", "owner": "src/strategy_evolution/rights_lifecycle.py; src/strategy_evolution/incentive_epoch.py", "missing_acceptance": ["exact market/expiry/underlying", "pre-maturity exit quotes"], "next": "R10-D lane", "dependency": "Pendle market dossier", "sx_package": null, "disposition": "KEEP"},
+    {"id": "CLAIM-COMPLETE-SET", "name": "Prediction market complete sets", "execution_class": "CONDITIONAL_HYPEREDGE", "status": "STUB", "owner": "src/inventory/research.py (enum label only) -> additive: src/strategy_evolution/conditional_claims.py", "missing_acceptance": ["outcome vector conservation model", "resolution/oracle/dispute rights", "collateral split/merge economics"], "next": "SX-07 typed vector-claim + complete-set conservation model (research only)", "dependency": "none (offline model; one protocol only after official settlement semantics pinned)", "sx_package": "SX-07", "disposition": "EXTEND"},
+    {"id": "CREDIT-LIQ", "name": "Lending liquidation and collateral unwind", "execution_class": "LOCAL_ATOMIC_CANDIDATE", "status": "FIXTURE_ONLY", "owner": "src/liquidation; src/lending_indexer; src/strategy/strategies.py (kamino_liquidation quarantined)", "missing_acceptance": ["rooted reserve/account/oracle state", "exact repay/unwind simulation", "reviewed IDL + human review (CAP-R02 set)"], "next": "R02/R-03 lanes; SX does not touch", "dependency": "user-gated provider evidence", "sx_package": null, "disposition": "KEEP"},
+    {"id": "CREDIT-LLAMMA", "name": "Curve LLAMMA banded liquidation", "execution_class": "CONDITIONAL_HYPEREDGE", "status": "STUB", "owner": "src/cross_chain/agg12.py (admission shells); src/mega8_08/pr287.py (stubs) -> additive: src/strategy_evolution/llamma_band_math.py", "missing_acceptance": ["official band/oracle/collateral transition math", "per-market state requirements", "boundary replay vectors"], "next": "SX-03 official-source dossier + exact band arithmetic replay (research/shadow only; typed BLOCKED if primary source cannot be pinned)", "dependency": "official Curve LLAMMA whitepaper/contract revision pin", "sx_package": "SX-03", "disposition": "EXTEND"},
+    {"id": "CREDIT-RATE", "name": "Lending utilization, rate spread and refinance", "execution_class": "HEDGED_NON_ATOMIC", "status": "PARTIAL_OWNER", "owner": "src/lending_indexer; src/strategy_evolution/solvency_event.py; src/economics/flash_capital_graph", "missing_acceptance": ["utilization/APR curve model", "atomic refinance vs multi-period carry separation", "health-factor transition proofs"], "next": "SX-08 offline rate-curve + refinance evaluation model", "dependency": "none (offline model)", "sx_package": "SX-08", "disposition": "EXTEND"},
+    {"id": "MICRO-CLOB", "name": "CLOB/AMM, exact VWAP, IOC and partial fills", "execution_class": "LOCAL_ATOMIC_CANDIDATE", "status": "FIXTURE_ONLY", "owner": "src/providers/orderbook; src/strategy/market_graph_ingest.py", "missing_acceptance": ["verified market subscriptions", "sequence/depth/fill semantics"], "next": "R07/provider lane", "dependency": "market_subscriptions_unverified", "sx_package": null, "disposition": "KEEP"},
+    {"id": "MICRO-MAKER", "name": "Passive CLOB/RFQ/queue-aware market making", "execution_class": "HEDGED_NON_ATOMIC", "status": "PARTIAL_OWNER", "owner": "src/providers/orderbook (planner); intent owners -> additive: src/research/microstructure/maker_queue_ledger.py", "missing_acceptance": ["queue/fill calibration", "maker rebate + cancel latency ledger", "adverse-selection ledger"], "next": "SX-06 measurement model (no detector wiring)", "dependency": "none (offline model)", "sx_package": "SX-06", "disposition": "EXTEND"},
+    {"id": "MICRO-JIT", "name": "JIT liquidity and LVR/toxic-flow", "execution_class": "HEDGED_NON_ATOMIC", "status": "STUB", "owner": "additive: src/research/microstructure/lvr.py + jit_fill_replay.py", "missing_acceptance": ["authorized event-level JIT recipe", "fill-to-markout replay", "LVR decomposition", "inventory/capital lock model"], "next": "SX-05 research models; JIT never enabled without proven transaction rights; no sandwich/frontrun", "dependency": "none (offline model)", "sx_package": "SX-05", "disposition": "EXTEND"},
+    {"id": "MICRO-OEV", "name": "Oracle update auctions / OEV / keeper competition", "execution_class": "SIGNAL_ONLY", "status": "STUB", "owner": "additive: src/strategy_evolution/oev_auction_replay.py", "missing_acceptance": ["auction rights/keeper eligibility evidence", "event timeline replay", "bid/payment economics"], "next": "SX-04 dossier + deterministic auction replay (oracle price never an executable quote)", "dependency": "official oracle-auction source pin", "sx_package": "SX-04", "disposition": "EXTEND"},
+    {"id": "MEV-BACKRUN", "name": "Permitted backrun and transaction-ordering economics", "execution_class": "RESEARCH_ONLY", "status": "PARTIAL_OWNER", "owner": "src/strategy_evolution/blockspace_option.py (EVO-07) -> additive: src/strategy_evolution/backrun_auction_replay.py", "missing_acceptance": ["deterministic auction replay", "inclusion-probability calibration rule (no uncalibrated probability claims)", "revert/tip cost ledger"], "next": "SX-10 permitted-backrun auction replay (public/authorized flow only; no Jito enablement)", "dependency": "none (offline model)", "sx_package": "SX-10", "disposition": "EXTEND"},
+    {"id": "LP-LIFECYCLE", "name": "LP position lifecycle and fee/inventory harvesting", "execution_class": "HEDGED_NON_ATOMIC", "status": "STUB", "owner": "additive: src/research/lp_lifecycle/position_lifecycle.py", "missing_acceptance": ["position state/fee claim model", "IL + markout after fees", "persistent capital lock (never flashloan-financed)"], "next": "SX-09 lifecycle model reusing CLMM/DLMM math concepts", "dependency": "none (offline model)", "sx_package": "SX-09", "disposition": "EXTEND"},
+    {"id": "BASIS-ASYNC", "name": "Cross-chain, cross-rollup and shared-sequencer basis", "execution_class": "SIGNAL_ONLY", "status": "RESEARCH_ONLY", "owner": "src/research_economic_graph (transformations V2.2); src/discovery/dynamic_universe/ton_radar.py -> additive: src/strategy_evolution/async_settlement.py", "missing_acceptance": ["finality/settlement-state machine", "fault injection", "timeout/stranded-inventory model"], "next": "SX-11 settlement-state machine + fault injection (TON radar owner untouched)", "dependency": "none (offline model)", "sx_package": "SX-11", "disposition": "EXTEND"},
+    {"id": "PORT-CAPITAL", "name": "Shared collateral, flash provider and portfolio allocator", "execution_class": "CONTROL_PLANE", "status": "PARTIAL_OWNER", "owner": "src/economics/flash_capital_graph; src/strategy/conflict_scheduler.py (AGG-05)", "missing_acceptance": ["joint capacity/portfolio allocation", "independent-baseline comparison", "worker determinism 1/2/4/8"], "next": "SX-12 portfolio optimizer as additive consumer of AGG-05 (wave 2, stacked on SX-01)", "dependency": "SX-01 resource manifests + AGG-05", "sx_package": "SX-12", "disposition": "EXTEND"},
+    {"id": "INTEL-LEARN", "name": "Anomaly, causal validation and context-bandit research", "execution_class": "RESEARCH_ONLY", "status": "PARTIAL_OWNER", "owner": "src/decision; src/research/correlation_ledger; src/strategy_evolution/residual_discovery.py (EVO-09)", "missing_acceptance": ["per-family null/control framework", "multiple-testing correction", "negative/no-trade corpus integration", "source ablation"], "next": "SX-13 causal evaluation framework on existing owners (no second feature store)", "dependency": "none (offline model)", "sx_package": "SX-13", "disposition": "EXTEND"},
+    {"id": "DATA-COMPUTE", "name": "Verifiable data/compute procurement", "execution_class": "RESEARCH_ONLY", "status": "PARTIAL_OWNER", "owner": "src/research/pr359_wave15_institution.py (INST-01); src/research/shadow_calculation_market.py -> additive: src/research/verifiable_procurement.py", "missing_acceptance": ["one verifiable task definition + task hash", "independent recomputation", "cost/latency/accuracy baseline", "duplicate-task idempotency"], "next": "SX-14 verifiable task model + fixed offline workload comparison", "dependency": "none (offline model)", "sx_package": "SX-14", "disposition": "EXTEND"},
+    {"id": "MECHANISM-LAB", "name": "Auction/fee/allocation mechanism lab", "execution_class": "RESEARCH_ONLY", "status": "PARTIAL_OWNER", "owner": "INST-01 / Market-of-Markets owners -> additive: src/research/verifiable_procurement.py (mechanism comparison surface)", "missing_acceptance": ["fixed-workload rule comparison", "surplus-ownership reporting", "manipulation-resistance checks"], "next": "SX-14 mechanism lab surface (no deployment, no real payments)", "dependency": "none (offline model)", "sx_package": "SX-14", "disposition": "EXTEND"}
+  ],
+  "r10_lanes": [
+    {"id": "R10-A", "disposition": "EXTEND", "sx_link": "SX-02", "evidence": "flash-mint contract absent in strategy_evolution/primary_market.py + flash_capital_graph; CAP-R02 zero qualified edges"},
+    {"id": "R10-B", "disposition": "KEEP", "sx_link": null, "evidence": "residual/anchor owners verified; detector follow-up owned by R10, not SX"},
+    {"id": "R10-C", "disposition": "EXTEND", "sx_link": "SX-03", "evidence": "only admission shells + deterministic stubs; no band math or dossier"},
+    {"id": "R10-D", "disposition": "KEEP", "sx_link": null, "evidence": "rights_lifecycle/incentive_epoch kernels in main; maturity non-atomic already classified"},
+    {"id": "R10-E", "disposition": "KEEP", "sx_link": "SX-06 (measure only)", "evidence": "orderbook owners fixture-gated; detector wiring awaits verified subscriptions"},
+    {"id": "R10-F", "disposition": "EXTEND", "sx_link": "SX-07", "evidence": "only StrategyFamily.COMPLETE_SET enum label exists"},
+    {"id": "R10-G", "disposition": "EXTEND", "sx_link": "SX-04, SX-05, SX-10", "evidence": "OEV/JIT/LVR absent; backrun = offline EVO-07 contract only"},
+    {"id": "R10-H", "disposition": "EXTEND", "sx_link": "SX-11", "evidence": "no settlement-state machine; TON radar discovery-only (owner untouched)"},
+    {"id": "R10-I", "disposition": "EXTEND", "sx_link": "SX-13", "evidence": "decision stack lacks per-family null/control/multiple-testing framework"}
+  ],
+  "wg_status": {
+    "PARTIALLY_IMPLEMENTED_REMAINDER_PLANNED": ["WG-02", "WG-06", "WG-07", "WG-10", "WG-11"],
+    "PLANNED_NOT_IMPLEMENTED": ["WG-01", "WG-03", "WG-04", "WG-05", "WG-08", "WG-09", "WG-12", "WG-13", "WG-14", "WG-15", "WG-16", "WG-17", "WG-18", "WG-19", "WG-20", "WG-21", "WG-22", "WG-23", "WG-24", "WG-25", "WG-26", "WG-27", "WG-28"],
+    "slice_pr": 562,
+    "disposition": "KEEP all; SX adds acceptance/economics layers, never re-implements WGs"
+  },
+  "op_status": {
+    "p0_queue": ["OP-01", "OP-02"],
+    "p1_queue": ["OP-03", "OP-04", "OP-05", "OP-06", "OP-11", "OP-12", "OP-28", "OP-23 (P1_DISCOVERY_ONLY)"],
+    "excluded": ["Robinhood Stock Tokens / tokenized equities (OP-19 equity subset, user policy)"],
+    "disposition": "KEEP all 28; SX-07 covers OP-09 gap, SX-12 covers OP-25 portfolio comparison, SX-14 covers OP-26/27 lab surfaces"
+  },
+  "s_families": {
+    "mapping": "S01->WG-11+12, S02->WG-13, S03->WG-14, S04->WG-15, S05->WG-16, S06->WG-17+26, S07->WG-18+19+20",
+    "disposition": "KEEP; adapters remain future work per 04_STRATEGIES_RU.md; no SX re-ownership"
+  },
+  "conflicts": {
+    "shared_integrator_files_do_not_edit_in_lanes": ["src/strategy/strategies.py", "config/capabilities.json", "src/resources/capabilities.json", "config/format_targets.txt", "scripts/verify_repo.py", "scripts/quality_gate.py", "docs/roadmap/agent-execution-master-2026-11-13/PARALLEL_EXECUTION_STATUS.json", "docs/roadmap/STUDIOUS_PANCAKE_MASTER_CODEX_EXECUTION_2026-11-13/STRATEGY_CROSSWALK.json"],
+    "active_master_assignment_branches": ["agent/r03b-kamino-builder (src/lending/unsigned_builders)", "agent/r14-kamino-wiring", "agent/r13-quote-build-audit (src/execution/quote_build_kernel.py area)", "agent/evm-sui-dossiers-wave2", "agent/ton-radar-wave2 (src/discovery/dynamic_universe/ton_radar.py)", "agent/r02-cap-d-project0", "agent/provider-dossiers-wave1", "agent/r08-runtime-composition-audit", "agent/clmm-len-verification-receipt"],
+    "stale_open_prs": "31 PRs from Jul-Oct 2026 roadmap/platform branches; no file overlap with SX additive paths; not blockers; not merged here",
+    "dashboard_caveat": "PARALLEL_EXECUTION_STATUS.json snapshot (c87f5d31) is stale vs 5769b074 and lacks an SX lane; refresh is lead/coordinator-only, deferred to SX-16"
+  },
+  "duplicates_retired": [
+    "V3 archive 34 casefold-collision excess rows (never resurrect)",
+    "V6 3-overlap removals (never re-add)",
+    "never sum per-generation archive metrics into coverage claims",
+    "do-not-create list: second graph/solver/sizing/split-flow/capital-graph/correlation-ledger/feature-store/conflict-scheduler/quote-plane/runtime-registry/paper-composition-root/release-authority",
+    "R10 shortlist items 1-3 belong to R04/R06, R02-CAP, R10 follow-up lanes",
+    "WG-02/06/07/10/11 partial slices (PR 562) are canonical; no SX reimplementation"
+  ],
+  "execution_plan": {
+    "wave_1_parallel_lanes": [
+      {"package": "SX-01", "branch": "agent/sx01-strategy-contract", "files": ["src/strategy/strategy_contract.py", "tests/test_sx01_strategy_contract.py"]},
+      {"package": "SX-02", "branch": "agent/sx02-flashmint-lender-economics", "files": ["src/economics/flash_capital_graph/flash_mint_options.py", "tests/test_sx02_flash_mint_options.py"]},
+      {"package": "SX-03", "branch": "agent/sx03-llamma-dossier-band-math", "files": ["src/strategy_evolution/llamma_band_math.py", "docs/strategy-expansion/2026-11-14/dossiers/SX03_CURVE_LLAMMA_DOSSIER.md", "tests/test_sx03_llamma_band_math.py"]},
+      {"package": "SX-04", "branch": "agent/sx04-oev-auction-replay", "files": ["src/strategy_evolution/oev_auction_replay.py", "docs/strategy-expansion/2026-11-14/dossiers/SX04_OEV_ORACLE_AUCTIONS_DOSSIER.md", "tests/test_sx04_oev_auction_replay.py"]},
+      {"package": "SX-05+06", "branch": "agent/sx05-sx06-microstructure-lvr-maker", "files": ["src/research/microstructure/__init__.py", "src/research/microstructure/lvr.py", "src/research/microstructure/jit_fill_replay.py", "src/research/microstructure/maker_queue_ledger.py", "tests/test_sx05_microstructure_lvr.py", "tests/test_sx06_maker_queue_ledger.py"]},
+      {"package": "SX-07", "branch": "agent/sx07-conditional-claims-complete-set", "files": ["src/strategy_evolution/conditional_claims.py", "tests/test_sx07_conditional_claims.py"]},
+      {"package": "SX-08", "branch": "agent/sx08-lending-rates-refinance", "files": ["src/lending_indexer/rate_curves.py", "tests/test_sx08_rate_curves.py"]},
+      {"package": "SX-09", "branch": "agent/sx09-lp-lifecycle", "files": ["src/research/lp_lifecycle/__init__.py", "src/research/lp_lifecycle/position_lifecycle.py", "tests/test_sx09_lp_lifecycle.py"]},
+      {"package": "SX-10+11", "branch": "agent/sx10-sx11-backrun-async-settlement", "files": ["src/strategy_evolution/backrun_auction_replay.py", "src/strategy_evolution/async_settlement.py", "tests/test_sx10_backrun_auction.py", "tests/test_sx11_async_settlement.py"]},
+      {"package": "SX-13", "branch": "agent/sx13-causal-eval-framework", "files": ["src/decision/hypothesis_eval.py", "tests/test_sx13_hypothesis_eval.py"]},
+      {"package": "SX-14", "branch": "agent/sx14-mechanism-lab", "files": ["src/research/verifiable_procurement.py", "tests/test_sx14_verifiable_procurement.py"]}
+    ],
+    "wave_2": [
+      {"package": "SX-12", "branch": "agent/sx12-portfolio-optimizer", "depends_on": "SX-01 (stacked PR)" },
+      {"package": "SX-15", "branch": "docs/sx15-observability-matrix", "depends_on": "wave-1 receipts" },
+      {"package": "SX-16", "branch": "docs/sx16-final-reconciliation", "depends_on": "all lanes; coordinator-only" }
+    ]
+  },
+  "invariants": [
+    "live/signer/sender/wallet/borrow/submission hard-denied",
+    "unknown is never zero; fixtures are never live evidence",
+    "no TVL-as-capacity; no shared-pool double counting (R13-K PoolIdentityDeduplicator semantics)",
+    "models/correlation advisory only; cannot bypass gates",
+    "no merge without explicit human approval"
+  ]
+}

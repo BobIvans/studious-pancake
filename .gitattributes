@@ -2,3 +2,7 @@
 # See config/jupiter_endpoint_quarantine.json review hashes.
 src/solana_parallel_radar/cli.py -text
 src/solana_parallel_radar/probes.py -text
+# R-02 offline vendor snapshots (blob-SHA1-pinned in VENDOR_MANIFEST.json):
+# no EOL conversion, ever. core.autocrlf=true on Windows otherwise smudges
+# them to CRLF and verify_offline.py fails with "vendor content modified".
+docs/roadmap/r02-capacity-recovery-2026-10-08/offline/vendor/** -text

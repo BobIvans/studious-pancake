@@ -1,7 +1,7 @@
 {
   "schema_version": "studious-pancake.strategy-crosswalk.v1",
   "generated_at": "2026-11-14",
-  "main_sha": "a82a512b01e9bcef4c41e369ee49168e74ec1173",
+  "main_sha": "9f173d7632cb30190bb8d9174ceba6d116eaec70",
   "archive_generations": [
     "V3",
     "V4",
@@ -23,20 +23,31 @@
       "SX-01": "IMPLEMENTED (#641)",
       "SX-09": "IMPLEMENTED (#642)",
       "SX-02": "IN_FLIGHT parallel session",
-      "SX-03": "IN_FLIGHT parallel session",
+      "SX-03": "OPEN_PR_649_RESEARCH_ONLY_SOURCE_GATED",
       "SX-04": "IN_FLIGHT parallel session",
       "SX-05+06": "IN_FLIGHT parallel session",
       "SX-07": "IN_FLIGHT parallel session",
-      "SX-08": "IN_FLIGHT parallel session",
+      "SX-08": "MERGED_PR_648_OFFLINE_RATE_CURVE",
       "SX-10+11": "IN_FLIGHT parallel session",
-      "SX-12": "IN_FLIGHT parallel session (stacked on merged SX-01)",
+      "SX-12": "MERGED_PR_645_OFFLINE_PORTFOLIO_OPTIMIZER",
       "SX-13": "IN_FLIGHT parallel session",
       "SX-14": "IN_FLIGHT parallel session",
       "R10-1": "IN_FLIGHT lead session (CPMM cycle binding)",
       "R10-2": "IN_FLIGHT lead session (MarginFi capital edges)",
       "R10-3": "IN_FLIGHT lead session (LST residual-fed detectors)",
       "SX-15": "PLANNED coordinator",
-      "SX-16": "PLANNED coordinator"
+      "SX-16": "PLANNED coordinator",
+      "SX-17": "MERGED_PR_654_ARCHIVE_TAXONOMY_CROSSWALK"
+    },
+    "data_source_map": {
+      "atlas": "docs/strategy-expansion/2026-11-14/ARBITRAGE_MAP_STRATEGY_AND_DATA_SOURCE_ATLAS_RU.md",
+      "catalogue": "docs/strategy-expansion/2026-11-14/ARBITRAGE_DATA_SOURCE_CATALOG_V1.json",
+      "assignments": "docs/strategy-expansion/2026-11-14/ARBITRAGE_MAP_DATA_SOURCE_ASSIGNMENTS_RU.md",
+      "source_rows": 55,
+      "strat_family_mappings": 25,
+      "EXP_mappings": 10,
+      "DS_assignments": 12,
+      "status": "DOCUMENTED_RESEARCH_AND_WIRE_UP_PLAN"
     }
   },
   "families": [
@@ -665,6 +676,34 @@
         "manipulation-resistance checks"
       ],
       "next": "SX-14 mechanism lab surface; no deployment, no real payments."
+    },
+    {
+      "id": "STRAT-DATA-SOURCE-MAP",
+      "name": "Cross-family strategy to source coverage and installed bot wire-up",
+      "archive_sources": [
+        "MASTER archive 25 strategy families/33 venues/17 funding candidates",
+        "V3/V4/V6 detector and route taxonomy #654",
+        "P0/GPR/DV/R02/R03/R13 source tasks"
+      ],
+      "owners": [
+        "AssetResolver",
+        "DynamicUniverse",
+        "market observations/raw journal",
+        "direct_venue",
+        "R13-K quote/build",
+        "FlashCapitalGraph",
+        "PR118",
+        "AGG-05",
+        "ExactSimulationFinalizer",
+        "paper/replay"
+      ],
+      "status": "DOCUMENTED_NOT_YET_FULLY_WIRED",
+      "missing": [
+        "55-source machine catalogue needs current source pins and entitlements",
+        "each strategy family needs exact live source/state/quote/capital/build/replay mapping",
+        "indexer/aggregator/CEX/oracle/bridge roles must remain distinct"
+      ],
+      "next": "Execute DS-00..DS-11, reuse current owners, report WIRED_SHADOW vs LIBRARY_ONLY/BLOCKED_SOURCE/BLOCKED_CAPACITY per strategy"
     }
   ]
 }

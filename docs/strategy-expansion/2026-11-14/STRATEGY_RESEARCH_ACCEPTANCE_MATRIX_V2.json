@@ -1,6 +1,6 @@
 {
   "schema": "studious-pancake.strategy-research-acceptance.v2",
-  "snapshot_main": "73911801f12eb8c365421d5dcaea40c20a503a0a",
+  "snapshot_main": "c9ed36b6902502fc4dc51610f0094d27a50fd6fb",
   "snapshot_utc": "2026-11-14",
   "predecessor_prs": [
     599,
@@ -15,7 +15,8 @@
     643,
     645,
     646,
-    647
+    647,
+    648
   ],
   "dispositions": {
     "SX00": "MERGED_PR_639",
@@ -23,14 +24,14 @@
     "SX09": "MERGED_OFFLINE_GENERIC_LP_MODEL_PR_642",
     "SX10": "MERGED_OFFLINE_RESEARCH_ONLY_PR_643",
     "SX11": "MERGED_OFFLINE_SIGNAL_ONLY_PR_643",
-    "SX12": "OPEN_PR_645_REBASE_REQUIRED_NOT_MERGED",
+    "SX12": "MERGED_PR_645_OFFLINE_CONTROL_PLANE_ONLY",
     "SX02": "PLANNED",
-    "SX03": "OPEN_PR_649_REBASE_REQUIRED_AND_SOURCE_LICENSE_BLOCKED",
+    "SX03": "OPEN_PR_649_SOURCE_PIN_LICENSE_WHITEPAPER_UNIT_BLOCKED",
     "SX04": "PLANNED",
     "SX05": "PLANNED",
     "SX06": "PLANNED",
     "SX07": "PLANNED",
-    "SX08": "OPEN_PR_648_REBASE_REQUIRED_NOT_MERGED",
+    "SX08": "MERGED_PR_648_OFFLINE_RATE_MODEL_ONLY",
     "SX13": "PLANNED",
     "SX14": "PLANNED",
     "SX15": "PLANNED",
@@ -291,5 +292,5 @@
     "SX-17 must prove runtime fanout over immutable snapshot generations; a strategy catalog entry or SX-01 contract is not runtime reachability.",
     "W6-12 uses public/authorized pseudonymous on-chain evidence only; no deanonymization, private orderflow, doxxing or automated copy trading."
   ],
-  "completion_rule": "Every family and runtime strategy has one canonical owner, truthful implementation/evidence tier, dependencies, replay/tests and next gate. Strategies are runtime reachable only when connected through the supported installed composition and independently gated. Documentation-only merge is not strategy implementation or profitability proof."
+  "completion_rule": "Every family has a canonical owner, truthful implementation/evidence tier, dependencies, replay/tests and next gate. SX-12 and SX-08 are merged offline/research models, not live strategies. SX-03 remains open/source-blocked. SX-17 closes runtime fanout; W6-12 builds public/authorized participant-intelligence research. Docs and offline models are not profitability or production proof."
 }

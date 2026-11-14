@@ -2,7 +2,7 @@
   "schema": "studious-pancake.build-bigger-universe-graph-workpackages.v1",
   "snapshot_date": "2026-11-14",
   "archive_baseline": "2026-10-03_to_2026-10-08",
-  "note": "Historical research inventory. No pair/venue/lender is live qualified by appearance here.",
+  "note": "Historical research inventory. No pair/venue/lender is live qualified by appearance here. Historical archive counts above remain unchanged. Current-main extensions are recorded separately and are not added to historical ZIP totals.",
   "counts": {
     "original_pair_seeds": 519,
     "v3_total_pair_candidates": 1147,
@@ -1570,5 +1570,44 @@
       "Current GPR 268 rows are placeholders with runtime_enabled=false; 92 identity records are R&D registry entries, not runtime qualification."
     ],
     "note": "Counts overlap across source generations; never sum them into a unique live market count. See PAIR_ARCHIVE_COVERAGE_AND_IMPORT_GATE_RU.md for the evidence and PAIR-00 acceptance contract."
+  },
+  "extension_work_packages": [
+    {
+      "id": "SX-17",
+      "scope": "Runtime multi-strategy fanout and evidence-gated composition",
+      "owner": "Existing application/StrategyRegistry/OpportunityConsumer/AGG-05/paper-shadow composition",
+      "dependencies": [
+        "SX-01",
+        "R08",
+        "R10 detector owners",
+        "SX-12",
+        "R04/R05/R06"
+      ],
+      "gate": "one immutable snapshot generation; bounded deterministic fanout; no second registry/scheduler/consumer; only qualified detector bodies"
+    },
+    {
+      "id": "W6-12",
+      "scope": "Observed participant strategy intelligence and evidence graph",
+      "owner": "Existing MarketEpisode/raw journal/episode_builder/decision dataset/causal owners",
+      "dependencies": [
+        "W6-01/02/05/06",
+        "SX-01"
+      ],
+      "gate": "public/authorized data; pseudonymous account keys; complete net outcome attribution; anti-survivorship and actor/pool/time holdouts; research-only"
+    }
+  ],
+  "current_main_extension_snapshot": {
+    "main_sha": "73911801f12eb8c365421d5dcaea40c20a503a0a",
+    "date": "2026-11-14",
+    "merged_prs": [
+      646,
+      647
+    ],
+    "open_prs": [
+      645,
+      648,
+      649
+    ],
+    "note": "The 39 archive work packages and historic V1/V3/V4/V6 counts are preserved. SX-17/W6-12 are additive current-repo gaps, not historical archive items."
   }
 }

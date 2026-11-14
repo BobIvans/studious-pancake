@@ -1,7 +1,7 @@
 {
   "schema": "studious-pancake.master00-implementation-matrix.v1",
   "generated_at": "2026-11-14",
-  "main_sha": "73911801f12eb8c365421d5dcaea40c20a503a0a",
+  "main_sha": "c9ed36b6902502fc4dc51610f0094d27a50fd6fb",
   "authority": "Refreshed after MASTER + Build Bigger Universe archive handoff #646 and R13 Titan adapter #647. Current runtime truth rechecked against src/strategy/strategies.py and SX-01/R08 owners; SX-17/W6-12 are newly identified, unimplemented work packages.",
   "status_vocabulary": {
     "IMPLEMENTED": "implemented and verified in main at its own evidence tier (offline tests/verifiers pass); no runtime promotion implied",
@@ -168,6 +168,22 @@
       "tests": "PR #647 focused contract/adapter suite",
       "pr": 647,
       "blocker": "offline/sender-free adapter only; live quote capture and provider entitlement remain unqualified/user-gated"
+    },
+    {
+      "id": "SX-12",
+      "name": "Portfolio optimizer over shared strategy resources",
+      "status": "IMPLEMENTED_RESEARCH_ONLY",
+      "owner": "src/strategy/portfolio_optimizer.py + SX-01 ResourceManifest + AGG-05",
+      "pr": 645,
+      "blocker": "No live allocation; candidates need independent exact quote/capacity/build/paper proof"
+    },
+    {
+      "id": "SX-08",
+      "name": "Utilization/rate-curve and refinance model",
+      "status": "IMPLEMENTED_RESEARCH_ONLY",
+      "owner": "src/lending_indexer/rate_curves.py",
+      "pr": 648,
+      "blocker": "No official current protocol parameter pins or real rate observations"
     }
   ],
   "runtime_strategy_registry": [
@@ -297,10 +313,10 @@
     {
       "id": "CREDIT-RATE",
       "class": "HEDGED_NON_ATOMIC",
-      "status": "RESEARCH_ONLY",
+      "status": "IMPLEMENTED_RESEARCH_ONLY",
       "owner": "src/lending_indexer/; src/strategy_evolution/solvency_event.py",
       "sx_package": "SX-08",
-      "next": "offline rate-curve + refinance evaluation model; atomic refinance vs multi-period carry separation",
+      "next": "SX-08 #648 merged; bind current official per-protocol curve/fee/capacity pins before interpreting live rates or refinance.",
       "disposition": "EXTEND"
     },
     {
@@ -371,10 +387,10 @@
     {
       "id": "PORT-CAPITAL",
       "class": "CONTROL_PLANE",
-      "status": "STUB",
+      "status": "IMPLEMENTED_RESEARCH_ONLY",
       "owner": "src/economics/flash_capital_graph/; src/strategy/conflict_scheduler.py (AGG-05)",
       "sx_package": "SX-12",
-      "next": "additive portfolio optimizer consuming AGG-05 + SX-01 manifests; 1/2/4/8 worker determinism; no resource double spend",
+      "next": "SX-12 #645 merged; review conflict/portfolio selection over candidate ResourceManifest; not a live capital allocator.",
       "disposition": "EXTEND"
     },
     {
@@ -453,10 +469,10 @@
     {
       "id": "SX-03",
       "title": "Curve LLAMMA dossier + band math",
-      "status": "OPEN_PR_REBASE_REQUIRED_SOURCE_LICENSE_BLOCKED",
+      "status": "OPEN_PR_SOURCE_BLOCKED",
       "branch": "agent/sx03-llamma-dossier-band-math",
       "session": "parallel",
-      "typed_blocker": "Curve source is proprietary/all-rights-reserved; source commit SHA and whitepaper/market-state/unit proof remain missing; no source copied.",
+      "typed_blocker": "Curve source commit pin and whitepaper remain pending; proprietary source is not copied; on-chain units/per-market state unproven.",
       "pr": 649
     },
     {
@@ -484,11 +500,12 @@
     {
       "id": "SX-08",
       "title": "lending rates, refinance, collateral optimizer",
-      "status": "OPEN_PR_REBASE_REQUIRED",
+      "status": "IMPLEMENTED_RESEARCH_ONLY",
       "branch": "agent/sx08-lending-rates-refinance",
       "session": "parallel",
       "pr": 648,
-      "note": "Offline Fraction rate/refinance model and tests; no live protocol curves or official parameter pins."
+      "note": "Merged exact Fraction utilization/refinance research model; no live protocol curve pins or proven savings.",
+      "owner": "src/lending_indexer/rate_curves.py"
     },
     {
       "id": "SX-09",
@@ -507,12 +524,13 @@
     {
       "id": "SX-12",
       "title": "portfolio optimizer + conflict scheduler",
-      "status": "OPEN_PR_REBASE_REQUIRED",
+      "status": "IMPLEMENTED_RESEARCH_ONLY",
       "branch": "agent/sx12-portfolio-optimizer",
       "session": "parallel",
       "depends_on": "SX-01 (merged)",
       "pr": 645,
-      "note": "Deterministic portfolio optimizer consumes SX-01 ResourceManifest + AGG-05; open code PR, not merged or live allocation."
+      "note": "Merged additive CONTROL_PLANE model consuming SX-01 ResourceManifest + AGG-05; deterministic 1/2/4/8-worker selection, no live allocation.",
+      "owner": "src/strategy/portfolio_optimizer.py"
     },
     {
       "id": "SX-13",
@@ -545,7 +563,7 @@
       "title": "runtime multi-strategy fanout and evidence-gated composition",
       "status": "PLANNED",
       "assignment": "docs/strategy-expansion/2026-11-14/tasks/SX17_MULTI_STRATEGY_RUNTIME_FANOUT_RU.md",
-      "depends_on": "SX-01 + R08 + R10 detector owners + AGG-05 + SX-12; R04/R05/R06 for promotion"
+      "depends_on": "SX-01 + R08 + R10 detector owners + AGG-05; R04/R05/R06 for promotion"
     }
   ],
   "r10_lanes": [
@@ -674,6 +692,7 @@
     "no duplicate graph/solver/registry/ledger/journal/quote-plane/scheduler/capital-graph",
     "R10 shortlist items 1-3 are owned by R04/R06, R02-CAP and R10 follow-up lanes respectively",
     "Catalog presence or SX-01 contract presence is not installed runtime reachability; every strategy needs a real detector/evaluator and supported composition evidence.",
-    "Participant intelligence uses public/authorized pseudonymous on-chain data only; no deanonymization, doxxing, private orderflow or copy-trading."
+    "Participant intelligence uses public/authorized pseudonymous on-chain data only; no deanonymization, doxxing, private orderflow or copy-trading.",
+    "Merged SX-08/SX-12 models are offline/research-only; they do not create live provider capacity, route execution or profitability evidence."
   ]
 }

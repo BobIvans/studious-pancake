@@ -1,0 +1,233 @@
+{
+  "schema_version": "studious-pancake.ton-wave2-offline-sources.v1",
+  "wave_label": "ton-wave2-2026-11-14",
+  "prepared_at_utc": "2026-11-14",
+  "repository_base_sha_audited": "e2b65c0ceefdc6f9f99cdc0187ff23dc7815acc8",
+  "branch": "agent/ton-radar-wave2",
+  "wave1_baseline": "docs/integrations/offline/ton-wave1-2026-11-13/SOURCE_MANIFEST.json (schema_version studious-pancake.ton-wave1-offline-sources.v1)",
+  "hash_policy": {
+    "git_blob_sha1": "Exact GitHub Git blob object ID from the upstream repository at the recorded commit. Verify with git hash-object on an identical checked-in snapshot.",
+    "sha256": "SHA-256 computed locally over the exact upstream artifact bytes and recorded here; the offline verifier recomputes it over the checked-in mirror.",
+    "docs_page_capture": "Docs pages are captured as technical extracts with canonical URLs and retrieval dates; they are not byte-pinned to a provider-side version unless a stable upstream file is mirrored."
+  },
+  "sources": {
+    "tonco": {
+      "provider": "TONCO (Algebra / concentrated liquidity)",
+      "status": "MISSING_PIN",
+      "status_scope": "GraphQL indexer schema and any pool-discovery REST schema are unpinned; official docs pages themselves are pinned",
+      "canonical_urls": [
+        "https://docs.tonco.io/en/",
+        "https://docs.tonco.io/en/technical-reference/integration-faq.html",
+        "https://github.com/cryptoalgebra/tonco-sdk"
+      ],
+      "retrieved_at_utc": "2026-11-14",
+      "api_version": "GraphQL indexer https://indexer.tonco.io (mainnet) / https://testnet-indexer.tonco.io (testnet); farming REST GET https://api-farming.tonco.io/apr?pool=<address>; on-chain get-methods via @toncodex/sdk@mainnet (DEX_VERSION.v1 / v1_6)",
+      "sdk_pin": {
+        "repository": "https://github.com/cryptoalgebra/tonco-sdk",
+        "default_branch": "main",
+        "head_commit": "a7f2c9c60d5599a941da1a5ea4ca4b786e1a48ee",
+        "head_commit_date": "2025-10-24",
+        "pushed_at": "2026-08-04T09:37:39Z",
+        "license": "MIT",
+        "npm_dist_tag_install": "npm install @toncodex/sdk@mainnet",
+        "npm_releases": "none (no versioned release pin exists)"
+      },
+      "classification_correction": "Official docs describe TONCO as a concentrated-liquidity AMM ('First CLAMM DEX on TON', 'Developed by Algebra Team'), not an orderbook DEX.",
+      "missing_pins": [
+        "GraphQL indexer schema (no schema document captured; introspection/live calls not authorized)",
+        "no versioned SDK release pin (dist-tag only)",
+        "no published rate limits or auth on captured pages"
+      ],
+      "radar": "no adapter; MISSING_PIN typed seam in src/discovery/dynamic_universe/ton_radar.py; candidates arrive via swap.coffee dexes enum (decoded fail-closed)"
+    },
+    "omniston": {
+      "provider": "STON.fi Omniston RFQ",
+      "status": "PINNED_CURRENT",
+      "canonical_urls": [
+        "https://docs.ston.fi/llms.txt",
+        "https://docs.ston.fi/developer-section/omniston/swap/v1beta8",
+        "https://docs.ston.fi/developer-section/omniston/environments"
+      ],
+      "retrieved_at_utc": "2026-11-14",
+      "api_version": "stonfi.omni.v1beta8 — still 'the current API namespace' per official docs; v1beta7 listed as Legacy; no v1beta9/v1 stable page exists",
+      "environments_unchanged_vs_wave1": {
+        "production_websocket": "wss://omni-ws.ston.fi",
+        "production_grpc": "omni-grpc.ston.fi:443",
+        "sandbox_websocket": "wss://omni-ws-sandbox.ston.fi",
+        "sandbox_grpc": "omni-grpc-sandbox.ston.fi:443"
+      },
+      "missing_pins": [
+        "official Omniston SDK package/version (docs list TypeScript/Node.js and React SDK pages; version not captured)"
+      ],
+      "radar": "OmnistonReader injected read-only route reader unchanged from wave 1; no sockets in the radar owner"
+    },
+    "stonfi_dex_rest": {
+      "provider": "STON.fi DEX REST API",
+      "status": "PINNED_CURRENT",
+      "canonical_urls": [
+        "https://docs.ston.fi/llms.txt",
+        "https://docs.ston.fi/developer-section/dex/api.md",
+        "https://docs.ston.fi/developer-section/dex/api/reference.md",
+        "https://registry.npmjs.org/@ston-fi/api",
+        "https://github.com/ston-fi/api"
+      ],
+      "retrieved_at_utc": "2026-11-14",
+      "api_version": "REST surface still all /v1/ paths; no REST v2 exists ('v2' appears as dex_v2 filter param and DEX v2 on-chain contract docs only); 'Currently, there are no limits for DEX API use.' unchanged",
+      "sdk_pin": {
+        "npm_package": "@ston-fi/api",
+        "npm_latest": "0.33.0",
+        "npm_latest_published": "2026-10-30",
+        "license": "MIT",
+        "repo_head_commit": "0a6113ba3aa43da2ac1c9094977e181d3881f226",
+        "repo_head_commit_date": "2026-11-05",
+        "equal_to_wave1_pin": true
+      },
+      "drift_records": [
+        "GET /v1/stats/stake newly documented in the Statistics family (additive; radar unaffected)",
+        "reference now documents POST /v1/assets/query, POST /v1/assets/search, POST /v1/pools/query ('/v1/pool/query remains for backward compatibility'); npm deprecation note for 0.27.0 corroborates POST for /v1/assets/query (radar calls none of these)",
+        "plain GET /v1/stats remains undocumented -> wave-1 DRIFT_RECORDED_NEEDS_LIVE_PIN still stands",
+        "current docs pages no longer expose a build number (wave-1 recorded docs build v1.168.0) -> docs-build pin recorded as MISSING_PIN; currency established via SDK commit + npm dist-tag"
+      ],
+      "radar": "StonRadarIngestor surface unchanged; wave-1 vendor snapshots byte-current"
+    },
+    "toncenter": {
+      "provider": "TON Center",
+      "status": "PINNED_CURRENT",
+      "status_scope": "spec-pinned machine-readable method contracts; no state adapter enabled (live capture still not authorized)",
+      "canonical_urls": [
+        "https://toncenter.com/api/v2/",
+        "https://toncenter.com/api/v2/openapi.json",
+        "https://docs.ton.org/api/rate-limit"
+      ],
+      "retrieved_at_utc": "2026-11-14",
+      "spec_pin": {
+        "url": "https://toncenter.com/api/v2/openapi.json",
+        "spec_title": "TON HTTP API C++",
+        "spec_version": "v2.1.17-7e98895",
+        "openapi_version": "3.1.1",
+        "sha256": "5e5ee5641c6cdbcb9b3d8436a865aec61a2e87e7ae4c544beb7427c2c0ce999b",
+        "bytes": 261206,
+        "mirrored_at": "vendor-reference/toncenter-v2/openapi.json",
+        "license": "not stated in spec file; provider terms apply"
+      },
+      "auth": "X-API-Key header ('API key header of the form X-API-Key: <token>') or ?api_key= query ('Equivalent to the header method.') per spec securitySchemes APIKeyHeader/APIKeyQuery; keys per-network",
+      "rate_limits_unchanged_vs_wave1": "anonymous 1 RPS; Free 10 RPS; Plus 25 RPS aggregated; Advanced 100 RPS; 429 body {\"ok\": false, \"result\": \"Ratelimit exceed\", \"code\": 429}",
+      "method_contracts_resolved": [
+        "envelope TonlibResponse required [ok, result, @extra] (+optional jsonrpc,id); TonlibErrorResponse required [ok(false), error, code] with documented code values 404/409/422/429/500/504/542",
+        "POST /api/v2/getAddressInformation -> raw.fullAccountState (AddressInformation required [@type, balance, extra_currencies, code, data, last_transaction_id, block_id, frozen_hash, sync_utime, state]; balance Int256 nanoton decimal string)",
+        "POST /api/v2/runGetMethod request {address, method: string|int32, stack: [[type,value]...], seqno?} -> RunGetMethodResult {@type, gas_used, stack, exit_code, block_id, last_transaction_id}; runGetMethodStd variant exists",
+        "37 paths total incl. getExtendedAddressInformation, getWalletInformation, getTokenData, jsonRPC"
+      ],
+      "drift_records": [
+        "live spec path is /api/v2/openapi.json; wave-1 probed swagger.json (404)"
+      ],
+      "radar": "no state adapter; wave-1 BLOCKED_MISSING_PIN on method schemas resolved at spec level; live-capture authorization still outstanding"
+    },
+    "tonapi": {
+      "provider": "TonAPI (tonapi.io)",
+      "status": "PINNED_CURRENT",
+      "status_scope": "spec-pinned machine-readable method contracts; no state adapter enabled (live capture still not authorized)",
+      "canonical_urls": [
+        "https://docs.tonapi.io/tonapi/rest-api",
+        "https://docs.tonapi.io/tonapi/dapp/free-limits",
+        "https://raw.githubusercontent.com/tonkeeper/opentonapi/master/api/openapi.yml",
+        "https://github.com/tonkeeper/opentonapi",
+        "https://github.com/tonkeeper/tonapi"
+      ],
+      "retrieved_at_utc": "2026-11-14",
+      "spec_pin": {
+        "url": "https://raw.githubusercontent.com/tonkeeper/opentonapi/master/api/openapi.yml",
+        "spec_title": "REST api to TON blockchain explorer",
+        "spec_version": "2.0.0",
+        "openapi_version": "3.0.0",
+        "servers": ["https://tonapi.io", "https://testnet.tonapi.io"],
+        "sha256": "c42e755ccf0e99fb798224da8a2b7a3400c568f18579b81a51bbd8edf0c87880",
+        "bytes": 292623,
+        "upstream_git_blob_sha1": "ec4d5d4cd40aef6df52acef3228c05e66c5ae77b",
+        "upstream_repo": "tonkeeper/opentonapi",
+        "upstream_commit": "acd5268222651503ef048a86b446aa345c5934f9",
+        "upstream_commit_date": "2026-10-19",
+        "mirrored_at": "vendor-reference/opentonapi/openapi.yml",
+        "license": "MIT (mirrored vendor-reference/opentonapi/LICENSE, upstream blob fdb7079858d6a7302ef6b49fd1c3068899b9743d)"
+      },
+      "auth": "Authorization: Bearer <token> per official tonkeeper/tonapi README ('an Authorization header should be passed to access the method'); resolves wave-1 missing auth-header pin",
+      "rate_limits": "free tier default '1 request per second (1 RPS)' per docs.tonapi.io/tonapi/dapp/free-limits (valid key required even when proxied); paid tiers Start 1 / Lite 10 / Standart 100 / Plus 300 / Heavy 1000 RPS per wave-1 official pricing capture (unchanged)",
+      "method_contracts_resolved": [
+        "GET /v2/accounts/{account_id} -> Account required [address, balance, status, last_activity, get_methods, is_wallet] (+extra_balance, currencies_balance, interfaces, name, is_scam, icon, memo_required, is_suspended; balance int64)",
+        "GET /v2/accounts/{account_id}/jettons -> JettonsBalances required [balances]; JettonBalance {balance, price, wallet_address, jetton, defi_asset, extensions, balance_lt, lock}",
+        "GET /v2/blockchain/accounts/{account_id}/transactions -> Transactions; pagination parameters after_lt, before_lt, limit, sort_order (logical-time cursor); resolves wave-1 pagination MISSING_PIN"
+      ],
+      "radar": "no state adapter; wave-1 BLOCKED_MISSING_PIN records (a) response schema (b) auth header (c) pagination resolved at spec level; live-capture authorization still outstanding"
+    },
+    "ton_atomicity": {
+      "provider": "TON blockchain semantics (negative claim)",
+      "status": "PINNED_CURRENT",
+      "status_scope": "architectural negative evidence pinned; verbatim 'no flash loans' statement remains MISSING_PIN",
+      "note": "ATOMICITY_RESEARCH note TON_ATOMICITY_RESEARCH.md: TON transaction touches one account; actions phase + bounce phase (no whole-chain rollback); multi-contract operations are multi-transaction traces (n transactions >= n-1 messages); Omniston exposes escrow/order settlement, not an atomic borrow primitive",
+      "canonical_urls": [
+        "https://docs.ton.org/from-ethereum",
+        "https://docs.ton.org/llms/foundations/phases/content.md",
+        "https://docs.ton.org/llms/foundations/messages/overview/content.md",
+        "https://docs.ston.fi/developer-section/omniston/swap/v1beta8"
+      ],
+      "retrieved_at_utc": "2026-11-14",
+      "typed_gaps": [
+        "MISSING_PIN: no official page states verbatim 'flash loans are not supported' — claim is a structural consequence of pinned architecture",
+        "MISSING_PIN: docs.ton.org pages are URL+date captures without version numbers; upstream change would invalidate the note"
+      ],
+      "radar": "frozen TON_ASYNC_MULTI_CONTRACT / DISCOVERY_ONLY / executable=False remains correct; no flash-capital edge may be created for TON"
+    }
+  },
+  "known_contract_drift": [
+    {
+      "owner": "docs/integrations/offline/ton-wave1-2026-11-13/STONFI_REST_V1.md (stats endpoints list)",
+      "problem": "The current STON.fi reference additionally documents GET /v1/stats/stake and documents the query/search endpoints as POST (/v1/assets/query, /v1/assets/search, /v1/pools/query).",
+      "corrective_target": "Additive drift record in STONFI_SCHEMA_VERIFY_WAVE2.md; no radar decoder is affected (radar calls none of these endpoints). Wave-1 file intentionally not overwritten."
+    },
+    {
+      "owner": "docs/integrations/offline/ton-wave1-2026-11-13/TON_STATE_PROVIDERS.md (TON Center spec probe)",
+      "problem": "Wave-1 probed https://toncenter.com/api/v2/swagger.json (404). The official swagger UI loads /api/v2/openapi.json.",
+      "corrective_target": "Resolved in wave 2: spec downloaded, hashed, mirrored, and method contracts extracted. No code change."
+    },
+    {
+      "owner": "docs/integrations/offline/ton-wave1-2026-11-13/TON_STATE_PROVIDERS.md (TonAPI missing pins)",
+      "problem": "Wave-1 recorded MISSING_PIN for TonAPI response schemas, API-key header name and pagination semantics.",
+      "corrective_target": "Resolved in wave 2 from the official OpenAPI spec and the official tonkeeper/tonapi README (Authorization: Bearer; lt-cursor pagination). No state adapter enabled."
+    }
+  ],
+  "live_capture_blockers": [
+    {
+      "kind": "BLOCKED(LIVE_CAPTURE_NOT_AUTHORIZED)",
+      "scope": "All TON sources in wave 2: Tonco indexer/farming, Omniston WS, STON.fi REST, TON Center, TonAPI. Wave 2 is a documentation/specification verification wave only; no live provider request was made from repository code or tests and no live payload is claimed as evidence."
+    },
+    {
+      "kind": "MISSING_PIN",
+      "scope": "Tonco GraphQL indexer schema; versioned Tonco SDK release; official Omniston SDK package version; verbatim official 'no flash loans' statement; docs.ton.org page version pins (URL+date only)."
+    }
+  ],
+  "vendor_reference_manifest": {
+    "toncenter_v2_openapi_json": {
+      "upstream_url": "https://toncenter.com/api/v2/openapi.json",
+      "sha256": "5e5ee5641c6cdbcb9b3d8436a865aec61a2e87e7ae4c544beb7427c2c0ce999b",
+      "bytes": 261206,
+      "mirrored_at": "vendor-reference/toncenter-v2/openapi.json",
+      "note": "Served over HTTPS without a Git pin; SHA-256 + retrieval date is the strongest available pin."
+    },
+    "opentonapi_openapi_yml": {
+      "upstream_url": "https://raw.githubusercontent.com/tonkeeper/opentonapi/master/api/openapi.yml",
+      "sha256": "c42e755ccf0e99fb798224da8a2b7a3400c568f18579b81a51bbd8edf0c87880",
+      "bytes": 292623,
+      "mirrored_at": "vendor-reference/opentonapi/openapi.yml",
+      "upstream_git_blob_sha1": "ec4d5d4cd40aef6df52acef3228c05e66c5ae77b",
+      "upstream_commit": "acd5268222651503ef048a86b446aa345c5934f9"
+    },
+    "opentonapi_license": {
+      "upstream_url": "https://raw.githubusercontent.com/tonkeeper/opentonapi/master/LICENSE",
+      "sha256": "71f2cf298612000fc8ea5f16b88623e5ca863009a0c39a629614ef21cb4e95c3",
+      "bytes": 1164,
+      "mirrored_at": "vendor-reference/opentonapi/LICENSE",
+      "upstream_git_blob_sha1": "fdb7079858d6a7302ef6b49fd1c3068899b9743d",
+      "license": "MIT"
+    }
+  }
+}

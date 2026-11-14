@@ -49,3 +49,17 @@ Run 4–8 independent workers as a soft target, each with its own current-main w
 
 ## Merge and safety
 The repository owner explicitly authorized autonomous engineering PR creation, review and merge for this Studious Pancake strategy / Build Bigger Universe / flashloan campaign in the direct instruction dated 2026-11-14. This is the human approval required by AGENTS.md for in-scope campaign PRs; no new confirmation is needed for those PRs. Merge only after current required checks are green, source/license evidence is reviewed, clean rebase and owner-overlap audit pass, all review threads are resolved, the PR is mergeable and branch protection allows it. Never bypass checks, fake statuses or force-push main. This authority is limited to this engineering campaign, not unrelated PRs or any on-chain/financial action. No keys/accounts/wallets, signing, sending, borrowing, spending, deployments, live enablement or production promotion. No tokenized equities, sandwich/frontrun, user targeting or unauthorized private flow. Unknown is not zero; every amount needs a fresh exact quote; TVL is not capacity.
+
+
+
+## SX-18 — Runtime multi-strategy fanout (NEW CROSS-CUTTING GAP)
+See `tasks/SX18_MULTI_STRATEGY_RUNTIME_FANOUT_RU.md`. Strategy inventory/library coverage is not installed runtime coverage. Audit the six current registrations and single real two-leg shadow detector. Reuse SX-01, merged SX-12 #645, R08, OpportunityConsumer, AGG-05 and existing paper/shadow root. Build bounded deterministic fanout over one immutable snapshot, with deadline/cancellation, failure isolation, backpressure and conflict-safe resource admission. Do not add a second registry/runner/scheduler or enable stubs. R04/R05/R06 remain promotion gates.
+
+## W6-12 — Observed participant strategy intelligence (NEW MARKET ECOLOGY GAP)
+See `tasks/W6_12_OBSERVED_PARTICIPANT_STRATEGY_INTELLIGENCE_RU.md`. Extend W6-01/02/05/06 using public/authorized pseudonymous on-chain participant episodes and existing MarketEpisode/replay/decision/causal owners. Evaluate full net outcomes, failed attempts, inventory, liabilities, fees, capital lock, censoring and held-out generalization. No deanonymization, doxxing, private flow or automatic copy-trading; research only.
+
+## Latest verified campaign snapshot
+- Main: `9f173d7632cb30190bb8d9174ceba6d116eaec70` after #654.
+- Merged: #645 SX-12, #646 MASTER + Build Bigger Universe archive handoff, #647 Titan adapter, #648 SX-08 rate/refinance, #650 exact archived pair/relationship seed dataset, #651 SX-07 complete-set claims, #653 SX-02 flash-mint economics, #654 SX-17 archive detector/anomaly taxonomy.
+- Open: #649 SX-03 LLAMMA (research-only; source license/commit/whitepaper/unit and rooted market-state blockers); #655 R10-2 MarginFi offline qualification bridge (requires current main rebase/recheck); #656 is the stale runtime/W6 handoff predecessor and must be replaced by this clean-base PR after review.
+- Preserve SX-17 for the archive taxonomy. Runtime fanout is SX-18. W6-12 is a new child of Market Ecology; it does not renumber W6-00…W6-11 or historical W6F-001…096.

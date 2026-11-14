@@ -42,3 +42,14 @@ R10 inventory/replay explicitly states that it made no `src/` strategy-owner cha
 ## How to use
 
 Place this directory in the repository as-is. Agents should start from `CODEX_STRATEGY_EXPANSION_START_HERE.md`, read the source files above, refresh all statuses against current main and active PRs, then execute independent work packages in parallel only where ownership/dependencies permit. The pack must remain an additive overlay: the active market-integration assignment is owned by its existing agents.
+
+
+
+## Дополнительный аудит полноты стратегии и runtime — 2026-11-14
+
+В основной кампейн добавлены два новых задания, найденных после проверки фактической runtime reachability и предыдущих запросов о knowledge graph успешных on-chain участников:
+
+- [SX-17 — Runtime multi-strategy fanout](tasks/SX17_MULTI_STRATEGY_RUNTIME_FANOUT_RU.md): подключить множество независимо квалифицированных стратегий к существующему установленному shadow/paper runtime через текущие application/registry/consumer/AGG-05 owners. Сейчас зарегистрировано шесть стратегий, но реальный non-empty shadow detector только один (circular two-leg). SX-01 остаётся advisory schema; это не runtime activation.
+- [W6-12 — Observed participant strategy intelligence](tasks/W6_12_OBSERVED_PARTICIPANT_STRATEGY_INTELLIGENCE_RU.md): public/authorized on-chain participant episodes → strategy archetypes → полная net attribution → counterfactual replay → held-out validation. Данные остаются псевдонимными; deanonymization, private flow и auto-copy-trading запрещены.
+
+Машинная матрица и master crosswalk обновлены на main snapshot 73911801f12eb8c365421d5dcaea40c20a503a0a. Исторические 519/1147/838 pair seeds, 33 venue families и 17 funding candidates не являются live-qualified markets/capacity. Не суммируйте версии как уникальные рынки.

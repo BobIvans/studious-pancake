@@ -33,8 +33,17 @@ class TestClassifyPoolType(unittest.TestCase):
         self.assertEqual(classify_pool_type("CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C"), "constant_product")
         self.assertEqual(classify_pool_type("whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"), "clmm")
         self.assertEqual(classify_pool_type("CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK"), "clmm")
-        self.assertEqual(classify_pool_type("LBUZKhRxPF3XUpBCjp4YzTKgLLjggiJWUna9LZJRQD3"), "dlmm")
+        self.assertEqual(classify_pool_type("LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo"), "dlmm")
         self.assertEqual(classify_pool_type("SSwpkEEcbUqx4uweEw4KsK9cZ4cwvJj2w2mYbFXM7Yr"), "stableswap")
+
+    def test_unpinned_variant_program_ids_fail_closed(self):
+        # P0-3 defect fix: fabricated "variant" ids are no longer admitted.
+        for bogus in (
+            "whirLbMi2tG34uFp881tua2RZBY9oXKVvVf9xrq7Rqi",
+            "LbS9W8ioppRE44Yfczz7Spx3SJJ86VNoX8s6iF5K1nL",
+        ):
+            with self.assertRaisesRegex(ValueError, "UNKNOWN_VENUE_OR_POOL"):
+                classify_pool_type(bogus)
 
     def test_unknown_and_empty(self):
         # None / empty remain explicit CPMM aliases for legacy callers; unknown program ids fail closed.
@@ -45,7 +54,7 @@ class TestClassifyPoolType(unittest.TestCase):
 
     def test_method_on_dispatcher_class(self):
         self.assertEqual(
-            AmmMathDispatcher.classify_pool_type("LBUZKhRxPF3XUpBCjp4YzTKgLLjggiJWUna9LZJRQD3"),
+            AmmMathDispatcher.classify_pool_type("LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo"),
             "dlmm",
         )
 
@@ -204,7 +213,7 @@ class TestBackwardCompat(unittest.TestCase):
 
 class TestHopHelper(unittest.TestCase):
     def test_hop_via_program_id(self):
-        hop = {"programId": "LBUZKhRxPF3XUpBCjp4YzTKgLLjggiJWUna9LZJRQD3", "fee_bps": 25}
+        hop = {"programId": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo", "fee_bps": 25}
         out = AmmMathDispatcher.get_amount_out_for_hop(
             1_000_000, 1_000_000_000, 1_000_000_000, hop,
         )

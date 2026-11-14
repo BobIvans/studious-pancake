@@ -1,0 +1,4 @@
+# Byte-hash-pinned research-reference files: no EOL conversion, ever.
+# See config/jupiter_endpoint_quarantine.json review hashes.
+src/solana_parallel_radar/cli.py -text
+src/solana_parallel_radar/probes.py -text

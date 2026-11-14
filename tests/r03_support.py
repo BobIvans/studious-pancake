@@ -13,6 +13,7 @@ from solders.pubkey import Pubkey
 
 from src.lending.jupiter_lend import JupiterLendFlashloanAccounts
 from src.lending.unsigned_builders.contract import SequenceItem
+from src.lending.unsigned_builders.kamino_builder import KaminoFlashAccounts
 from src.multichain.sui import SuiObjectKind, SuiObjectRef, SuiStateFrame
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures" / "r03"
@@ -42,6 +43,18 @@ SYNTHETIC = {
 }
 
 JUPITER_AMOUNT = 1_000_000
+
+
+def kamino_flash_accounts() -> KaminoFlashAccounts:
+    """Synthetic Kamino flash-bracket binding from the golden fixture.
+
+    Purely offline synthetic pubkeys; one supply vault + one user liquidity
+    account are reused by both bookends (flash bracket).  Referrer slots stay
+    on the pinned codegen ``None`` branch (program address, readonly).
+    """
+
+    raw = load_fixture("kamino_flash_abi_golden.json")["accounts"]
+    return KaminoFlashAccounts(**raw)
 
 
 def jupiter_accounts(

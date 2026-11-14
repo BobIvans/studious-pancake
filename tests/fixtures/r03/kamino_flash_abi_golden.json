@@ -1,0 +1,51 @@
+{
+  "schema": "r03.kamino.flashabi.golden.v1",
+  "date": "2026-11-14",
+  "note": "deterministic golden bytes from the pinned klend-sdk@13.0.2 generated flashBorrowReserveLiquidity/flashRepayReserveLiquidity modules (docs/integrations/offline/kamino-flash-builder-2026-11-14). Accounts are synthetic offline pubkeys; the flash bracket reuses one supply vault and one user liquidity account for both bookends. liquidityAmount is u64 little-endian; repay data appends the u8 borrowInstructionIndex. The onchain flash fee to reserveLiquidityFeeReceiver is program-settled and is NOT encoded in instruction data (unknown is not zero).",
+  "source_pin": {
+    "commit": "3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8",
+    "sdk_version": "13.0.2",
+    "repository": "https://github.com/Kamino-Finance/klend-sdk",
+    "license": "MIT",
+    "flash_borrow_blob_sha1": "d3e4062acbfac32d9fdb48604832762c33f31c0e",
+    "flash_repay_blob_sha1": "369cd6ac39e4f160d6482790050c469a6d10d811",
+    "program_id_blob_sha1": "e41d81b7d076e2c85c24bc3b45803c2b974a9b2c"
+  },
+  "program_id": "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD",
+  "borrow_discriminator_hex": "87e734a70734d4c1",
+  "repay_discriminator_hex": "b97500cb60f5b4ba",
+  "liquidity_amount": 1000000,
+  "flash_loan_fee_sf": 300000,
+  "expected_required_repayment_base_units": 1000001,
+  "repay_borrow_instruction_index": 2,
+  "borrow_data_hex": "87e734a70734d4c140420f0000000000",
+  "repay_data_hex": "b97500cb60f5b4ba40420f000000000002",
+  "accounts": {
+    "user_transfer_authority": "BNLTJbBBeyYhcwasAnuEAjPK76yBZk1ZwYsKw4ZJfhyR",
+    "lending_market_authority": "FQznDf3XnvY97s5DbkJVFZExUJVUAN4wsGGjuuJ9BVY3",
+    "lending_market": "9pjPuaBhWhAaPwscA7tmdmtj6WtZjputHWC1iLnKAg6J",
+    "reserve": "AWkTdvQC6fNUgMorRH1w5WeotC6m2TAe6QtwEgtw9dy1",
+    "reserve_liquidity_mint": "FkVqWtvrCQ6kcEhLRLTECLGyXaoXvVQRfiKacTe4s1CG",
+    "reserve_liquidity_vault": "6VVAXJJoUBqTzrCgX3cSzUvPD1q1UWJCUnN3goSXUsV7",
+    "user_liquidity_account": "3n52TLaErCV7gLZkiyTw2jkqhX787aVzEyjw8zngmuJF",
+    "reserve_liquidity_fee_receiver": "FZL3L6JdGofx3zimbpL9tHfufiUxcSButmWjPtecvU4C",
+    "instructions_sysvar": "8Z69WCM9Mm4SH7zx4iRUaV4E5iWKX4MXTAnpcg2LTKaY",
+    "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+    "referrer_token_state": null,
+    "referrer_account": null
+  },
+  "expected_metas": [
+    {"pubkey": "BNLTJbBBeyYhcwasAnuEAjPK76yBZk1ZwYsKw4ZJfhyR", "is_signer": true, "is_writable": false},
+    {"pubkey": "FQznDf3XnvY97s5DbkJVFZExUJVUAN4wsGGjuuJ9BVY3", "is_signer": false, "is_writable": false},
+    {"pubkey": "9pjPuaBhWhAaPwscA7tmdmtj6WtZjputHWC1iLnKAg6J", "is_signer": false, "is_writable": false},
+    {"pubkey": "AWkTdvQC6fNUgMorRH1w5WeotC6m2TAe6QtwEgtw9dy1", "is_signer": false, "is_writable": true},
+    {"pubkey": "FkVqWtvrCQ6kcEhLRLTECLGyXaoXvVQRfiKacTe4s1CG", "is_signer": false, "is_writable": false},
+    {"pubkey": "6VVAXJJoUBqTzrCgX3cSzUvPD1q1UWJCUnN3goSXUsV7", "is_signer": false, "is_writable": true},
+    {"pubkey": "3n52TLaErCV7gLZkiyTw2jkqhX787aVzEyjw8zngmuJF", "is_signer": false, "is_writable": true},
+    {"pubkey": "FZL3L6JdGofx3zimbpL9tHfufiUxcSButmWjPtecvU4C", "is_signer": false, "is_writable": true},
+    {"pubkey": "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD", "is_signer": false, "is_writable": false},
+    {"pubkey": "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD", "is_signer": false, "is_writable": false},
+    {"pubkey": "8Z69WCM9Mm4SH7zx4iRUaV4E5iWKX4MXTAnpcg2LTKaY", "is_signer": false, "is_writable": false},
+    {"pubkey": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", "is_signer": false, "is_writable": false}
+  ]
+}

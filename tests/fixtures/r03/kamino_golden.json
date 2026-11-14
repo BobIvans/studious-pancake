@@ -58,14 +58,14 @@
     }
   ],
   "lending_program_id": "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD",
-  "note": "generated flashBorrowReserveLiquidity/flashRepayReserveLiquidity modules are absent from the pinned kit; instruction bytes are never fabricated",
+  "note": "fee/index vectors from the pinned kit; the generated flash instruction modules are now pinned separately in docs/integrations/offline/kamino-flash-builder-2026-11-14 with golden bytes in kamino_flash_abi_golden.json",
   "reserve_fees_borsh_payload_hex": "0000000000000000e0930400000000000000000000000000",
   "retarget_vector": {
     "expected": 3,
     "inserted_before": 2,
     "original_index": 1
   },
-  "schema": "r03.kamino.golden.v1",
+  "schema": "r03.kamino.golden.v2",
   "source_pin": {
     "commit": "3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8",
     "fraction_blob_sha1": "0020a1293fd0bced5987b2429a6b5ed8e2f693e8",

@@ -1,3 +1,27 @@
+# Главный coding-agent trigger — MASTER FLASHLOAN MARKET INTEGRATION + Build Bigger Universe Graph
+
+**Это основное задание для полного market-universe / flashloan проекта.** Не использовать короткий Strategy Expansion trigger вместо него.
+
+Read first:
+1. docs/strategy-expansion/2026-11-14/MASTER_FLASHLOAN_MARKET_INTEGRATION_AND_BUILD_BIGGER_UNIVERSE_RU.md
+2. docs/strategy-expansion/2026-11-14/BUILD_BIGGER_UNIVERSE_GRAPH_ARCHIVE_RECONCILIATION_RU.md
+3. docs/strategy-expansion/2026-11-14/BUILD_BIGGER_UNIVERSE_GRAPH_WORKPACKAGES_V1.json
+4. docs/strategy-expansion/2026-11-14/BUILD_BIGGER_UNIVERSE_GRAPH_ARCHIVE_MANIFEST_V1.json
+
+Сохраняй полный исходный MASTER scope: MASTER-00 → P0 → Sui → CLOB → EVM → additional economic integrations. Новый архивный crosswalk дополняет, а не заменяет master roadmap. Strategy Expansion SX/EXP/W6 остаётся связанным дочерним workstream.
+
+## Strategy campaign update — 2026-11-14
+
+The expanded all-project strategy campaign now lives at:
+`docs/strategy-expansion/2026-11-14/CODEX_STRATEGY_CAMPAIGN_START_HERE.md`
+
+Read next:
+1. `STRATEGY_RESEARCH_CROSSWALK_AND_NEW_GAPS_RU.md`
+2. `STRATEGY_RESEARCH_EXECUTION_ASSIGNMENTS_RU.md`
+3. `STRATEGY_RESEARCH_ACCEPTANCE_MATRIX_V2.json`
+
+It extends merged #599/#622/#631/#637 and the SX/R10 work with recovered parallel-chat strategies and Wave-6 Market Ecology. Snapshot at authoring: `d52e61f36ece249c1221c8e71d22aa29ef476e21`; #643 merged (SX-10/SX-11), #645 open (SX-12). Always re-fetch current main, open PRs and checks. Do not duplicate existing/open work. PAIR-00 row-level archive reconciliation is mandatory; see `PAIR_ARCHIVE_COVERAGE_AND_IMPORT_GATE_RU.md` and the preserved V6 175-pair catalog. The repository owner expressly authorized autonomous create/review/merge of in-scope campaign PRs in the ChatGPT instruction dated 2026-11-14; merges remain conditional on all CI, review, provenance, ownership and branch-protection gates. This authority does not authorize live/on-chain financial actions.
+
 # Start here — Studious Pancake
 
 For Codex CLI, GLM-5.3-Flash and other coding agents:

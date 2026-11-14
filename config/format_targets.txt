@@ -431,3 +431,5 @@ src/market_data_evolution/qualification_dataset.py
 src/research/occ_qualification.py
 scripts/run_research_qualification.py
 tests/market_data_evolution/test_occ_research_qualification.py
+src/providers/marginfi/capital_edges.py
+tests/test_sxr2_marginfi_capital_edges.py

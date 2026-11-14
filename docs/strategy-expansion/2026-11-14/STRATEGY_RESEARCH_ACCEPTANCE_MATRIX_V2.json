@@ -1,0 +1,479 @@
+{
+  "schema": "studious-pancake.strategy-research-expansion.v2",
+  "generated_at": "2026-11-14",
+  "baseline_main_sha": "03b80389dd6d30d0c6eb7124b4bddb8d2e518aec",
+  "parent_packs": {
+    "strategy_expansion_pr": 637,
+    "sx00_reconciliation_pr": 639,
+    "kamino_planner_wiring_pr": 640,
+    "quote_build_kernel_pr": 638,
+    "master_strategy_atlas_pr": 599,
+    "r10_inventory_pr": 622,
+    "r10_replay_pr": 631,
+    "relation_generators_pr": 614,
+    "research_foundations_prs": [
+      498,
+      500,
+      502,
+      541,
+      542
+    ]
+  },
+  "scope": "Additive SX-17..SX-25 overlay; preserve SX-01..SX-16 and all S/OP/WG/R10 identities",
+  "families": [
+    {
+      "id": "MECH-DEX-FLASH-ACCOUNTING",
+      "sx_task": "SX-17",
+      "name": "DEX-native flash swaps, flash accounting and internal settlement",
+      "execution_class": "CONDITIONAL_HYPEREDGE",
+      "status": "NEW_GAP",
+      "owners": [
+        "src/execution/quote_build_kernel.py",
+        "existing financing/build/simulation contracts"
+      ],
+      "next": "Pin Uniswap v4, Balancer V3 and Ekubo independently; add exact liability/delta settlement replay.",
+      "acceptance": [
+        "Authenticated callback caller",
+        "Exact per-asset delta ledger",
+        "All obligations settled before transaction boundary",
+        "Token conservation and no shared pool double count",
+        "Missing settlement, stale state and wrong callback fail closed",
+        "Pinned deployment, ABI and source licence"
+      ],
+      "dependencies": [
+        "SX-01",
+        "PR-638",
+        "R05 simulation seam"
+      ],
+      "not_to_create": [
+        "quote kernel",
+        "transaction compiler",
+        "signer",
+        "sender"
+      ]
+    },
+    {
+      "id": "CREDIT-COLLATERAL-FIRST",
+      "sx_task": "SX-18",
+      "name": "Collateral-first settlement and pre-liquidation callbacks",
+      "execution_class": "CONDITIONAL_HYPEREDGE",
+      "status": "NEW_GAP",
+      "owners": [
+        "src/liquidation/",
+        "src/lending_indexer/",
+        "existing rights/evidence owners"
+      ],
+      "next": "Pin Morpho pre-liquidation and Sky Clipper callback semantics; model exact collateral/debt settlement ordering.",
+      "acceptance": [
+        "Exact callback/transfer/debt order",
+        "Caller, market and auction eligibility",
+        "Exact debt, collateral, fee and auction postconditions",
+        "Reentry, underflow and stale-state negatives",
+        "Compare with external flashloan-funded path"
+      ],
+      "dependencies": [
+        "official source/deployment pins",
+        "rooted market state",
+        "exact exit quote"
+      ],
+      "not_to_create": [
+        "second liquidation registry",
+        "liquidation sender",
+        "generic callback abstraction erasing protocol semantics"
+      ]
+    },
+    {
+      "id": "CREDIT-CONDITIONED-AMM",
+      "sx_task": "SX-19",
+      "name": "Credit-conditioned liquidity and lender-aware AMM execution",
+      "execution_class": "CONDITIONAL_HYPEREDGE",
+      "status": "NEW_GAP",
+      "owners": [
+        "src/economics/flash_capital_graph/",
+        "existing direct venue evaluators",
+        "src/execution/quote_build_kernel.py"
+      ],
+      "next": "Jointly bind AMM and credit vault state; test EulerSwap-like credit-dependent liquidity.",
+      "acceptance": [
+        "Borrower eligibility and cap",
+        "Joint market/vault state generation",
+        "No double-use of pool reserves or credit capacity",
+        "Exact repayment and fees",
+        "Cap exhaustion and stale credit state fail closed"
+      ],
+      "dependencies": [
+        "SX-01 resource manifest",
+        "PR-638 pool dedup",
+        "R02 capacity evidence for live claims"
+      ],
+      "not_to_create": [
+        "capital graph",
+        "pool identity registry"
+      ]
+    },
+    {
+      "id": "DERIVATIVES-BASIS-OPTIONS",
+      "sx_task": "SX-20",
+      "name": "Spot-perpetual basis, funding, futures term structure and options relationships",
+      "execution_class": "HEDGED_NON_ATOMIC",
+      "status": "NEW_GAP",
+      "owners": [
+        "existing market streams",
+        "src/decision/",
+        "existing market dataset and economics owners"
+      ],
+      "next": "Add offline instrument/payoff contracts and admit permissioned funding, OI, book and options datasets.",
+      "acceptance": [
+        "Instrument identity and multiplier",
+        "Linear/inverse payoff and quote currency",
+        "Expiry, funding window and settlement semantics",
+        "Margin and maintenance rules",
+        "Partial-fill/hedge lifecycle",
+        "PIT holdout and all-in carry cost"
+      ],
+      "dependencies": [
+        "SX-24",
+        "official instrument/API schema pins"
+      ],
+      "not_to_create": [
+        "atomic flashloan claim for multi-period funding",
+        "market database"
+      ]
+    },
+    {
+      "id": "MARKET-INVENTORY-OMS",
+      "sx_task": "SX-21",
+      "name": "Inventory-aware OMS and cross-venue market making",
+      "execution_class": "HEDGED_NON_ATOMIC",
+      "status": "PARTIAL_OWNER",
+      "owners": [
+        "existing orderbook/intent owners",
+        "AGG-05 conflict scheduler",
+        "existing inventory/capital owners"
+      ],
+      "next": "Extend SX-06 queue model with portfolio inventory, quote skew, hedge and partial-fill/cancel lifecycle.",
+      "acceptance": [
+        "Quote, ack, fill, partial, cancel and cancel-confirmation are distinct",
+        "Conservative queue uncertainty",
+        "Per-asset/per-venue inventory conservation",
+        "Hedge residual and position limits",
+        "Restart recovery",
+        "Net comparison vs taker/no-trade baseline"
+      ],
+      "dependencies": [
+        "SX-06",
+        "AGG-05",
+        "verified subscriptions for live evidence"
+      ],
+      "not_to_create": [
+        "scheduler",
+        "orderbook store"
+      ]
+    },
+    {
+      "id": "PUBLIC-TRADER-ARCHETYPES",
+      "sx_task": "SX-22",
+      "name": "Public trader and bot archetype intelligence",
+      "execution_class": "RESEARCH_ONLY",
+      "status": "NEW_GAP",
+      "owners": [
+        "PR-357/358 research fabric",
+        "existing decision dataset",
+        "SourceRegistry and replay"
+      ],
+      "next": "Build a licensed, pseudonymous public fingerprint corpus and implementation-grounded archetypes.",
+      "acceptance": [
+        "Separate code patterns from chain behavior",
+        "Licence/ToS/retention audit",
+        "Selection bias and failed attempts represented",
+        "No profitability claim from activity alone",
+        "No deanonymization or private-flow surveillance",
+        "Advisory outputs only"
+      ],
+      "dependencies": [
+        "SX-13",
+        "SX-24",
+        "dataset rights review"
+      ],
+      "not_to_create": [
+        "feature store",
+        "person-level reputation",
+        "private bot surveillance"
+      ]
+    },
+    {
+      "id": "EVENT-LIFECYCLE-SIGNALS",
+      "sx_task": "SX-23",
+      "name": "Token and protocol lifecycle event research",
+      "execution_class": "SIGNAL_ONLY",
+      "status": "PARTIAL_OWNER",
+      "owners": [
+        "Dynamic Universe event lifecycle",
+        "existing EVO incentive/governance owners",
+        "QPR/DIN sources"
+      ],
+      "next": "Add PIT-safe event contracts for unlocks, emissions, incentives, listings, migrations, upgrades and parameter changes.",
+      "acceptance": [
+        "Announced/effective/observed times distinct",
+        "Event provenance and corrections/cancellations",
+        "No-lookahead replay",
+        "Affected asset/market identity",
+        "Signals cannot masquerade as quotes or capacity"
+      ],
+      "dependencies": [
+        "SX-24",
+        "existing event/source owners"
+      ],
+      "not_to_create": [
+        "event bus",
+        "strategy registry"
+      ]
+    },
+    {
+      "id": "CHAIN-DATASET-ADMISSION",
+      "sx_task": "SX-24",
+      "name": "Chain admission and parallel dataset expansion",
+      "execution_class": "CONTROL_PLANE",
+      "status": "PARTIAL_OWNER",
+      "owners": [
+        "R09 source dossiers",
+        "QPR/DIN",
+        "Dynamic Universe",
+        "existing multichain owners"
+      ],
+      "next": "Rank candidate chains and data sources by state/history, finality, rights, quota/cost and venue/lender/build support.",
+      "acceptance": [
+        "Official API/schema and freshness/finality",
+        "Historical range, retention and gaps",
+        "Quota, cost and rights",
+        "Identity and decoder availability",
+        "Venue/lender/simulation compatibility",
+        "Maintenance and owner overlap",
+        "ADMIT_READ_ONLY/WATCH_ONLY/BLOCKED/REJECT scorecard"
+      ],
+      "dependencies": [
+        "R09 dossiers",
+        "source rights review"
+      ],
+      "not_to_create": [
+        "chain registry",
+        "SourceRegistry",
+        "quota ledger"
+      ]
+    },
+    {
+      "id": "OPPORTUNITY-HALF-LIFE-COMPETITION",
+      "sx_task": "SX-25",
+      "name": "Opportunity decay, half-life and execution competition",
+      "execution_class": "RESEARCH_ONLY",
+      "status": "NEW_GAP",
+      "owners": [
+        "PR-357/358",
+        "AGG-10",
+        "R13-K",
+        "existing decision/paper data owners"
+      ],
+      "next": "Join detection/source/quote/build/simulation/expiry timestamps and estimate decay by family, venue and size.",
+      "acceptance": [
+        "PIT-safe clocks",
+        "Typed missing/censored outcomes",
+        "Decay by family/regime/venue/size",
+        "Calibration and time holdout",
+        "Public competition proxy labelled incomplete",
+        "Source/compute cost included",
+        "Advisory only"
+      ],
+      "dependencies": [
+        "SX-13",
+        "SX-24",
+        "first-party opportunity and paper evidence"
+      ],
+      "not_to_create": [
+        "journal",
+        "quote plane",
+        "uncalibrated inclusion probability"
+      ]
+    }
+  ],
+  "datasets": [
+    {
+      "id": "DP-01",
+      "name": "Chain events, transactions, account/object and block/checkpoint state",
+      "status": "UNVERIFIED_UNTIL_PINNED",
+      "fields": [
+        "event_time",
+        "observed_time",
+        "available_time",
+        "chain/genesis",
+        "finality/root",
+        "decoder revision",
+        "reorg/retraction"
+      ]
+    },
+    {
+      "id": "DP-02",
+      "name": "Direct DEX pool, tick, bin and orderbook state",
+      "status": "PARTIAL_OWNER_EXISTING",
+      "fields": [
+        "venue",
+        "pool/book identity",
+        "state generation",
+        "sequence",
+        "depth",
+        "fees",
+        "consumed resources"
+      ]
+    },
+    {
+      "id": "DP-03",
+      "name": "CEX trades and public orderbook aggregates",
+      "status": "UNVERIFIED_UNTIL_PINNED",
+      "fields": [
+        "exchange",
+        "instrument",
+        "sequence",
+        "depth level",
+        "timestamp semantics",
+        "terms/licence"
+      ]
+    },
+    {
+      "id": "DP-04",
+      "name": "Perpetual/futures funding, OI, basis and options surface",
+      "status": "UNVERIFIED_UNTIL_PINNED",
+      "fields": [
+        "instrument",
+        "multiplier",
+        "expiry",
+        "settlement",
+        "funding timestamp/rate",
+        "OI",
+        "margin currency",
+        "IV/greeks"
+      ]
+    },
+    {
+      "id": "DP-05",
+      "name": "Lender/vault reserve, debt, collateral and liquidation state",
+      "status": "PARTIAL_DECODED_CAPACITY_UNKNOWN",
+      "fields": [
+        "protocol/deployment",
+        "resource id",
+        "asset",
+        "borrow cap",
+        "utilization",
+        "fee",
+        "caller eligibility",
+        "freshness"
+      ]
+    },
+    {
+      "id": "DP-06",
+      "name": "Unlock, emission, incentive, listing, migration and governance events",
+      "status": "UNVERIFIED_UNTIL_PINNED",
+      "fields": [
+        "event id",
+        "announced/effective/observed times",
+        "source rights",
+        "affected identities",
+        "correction status"
+      ]
+    },
+    {
+      "id": "DP-07",
+      "name": "Public bot source code and public transaction fingerprints",
+      "status": "RIGHTS_REVIEW_REQUIRED",
+      "fields": [
+        "source URL/hash",
+        "licence/ToS",
+        "collection methodology",
+        "pseudonymization",
+        "selection bias",
+        "cost/failure evidence"
+      ]
+    },
+    {
+      "id": "DP-08",
+      "name": "First-party opportunity, quote, build, simulation and paper outcomes",
+      "status": "EXISTING_OWNERS_TO_RECONCILE",
+      "fields": [
+        "candidate identity",
+        "source generation",
+        "amount",
+        "timestamps",
+        "rejection",
+        "no-trade",
+        "simulation",
+        "paper/finalized outcome"
+      ]
+    }
+  ],
+  "references": [
+    {
+      "id": "SRC-UNIV4",
+      "url": "https://developers.uniswap.org/docs/protocols/v4/concepts/flash-accounting",
+      "retrieved": "2026-11-14",
+      "status": "OFFICIAL_DOC_REVIEWED"
+    },
+    {
+      "id": "SRC-UNIV4-DELTA",
+      "url": "https://developers.uniswap.org/docs/protocols/v4/guides/unlock-callback-and-deltas",
+      "retrieved": "2026-11-14",
+      "status": "OFFICIAL_DOC_REVIEWED"
+    },
+    {
+      "id": "SRC-MORPHO-PRELIQ",
+      "url": "https://github.com/morpho-org/pre-liquidation",
+      "retrieved": "2026-11-14",
+      "status": "PIN_EXACT_COMMIT_AND_LICENCE"
+    },
+    {
+      "id": "SRC-SKY-LIQ",
+      "url": "https://developers.skyeco.com/protocol/vaults/collateral-liquidation/",
+      "retrieved": "2026-11-14",
+      "status": "OFFICIAL_DOC_REVIEWED"
+    },
+    {
+      "id": "SRC-HYPERLIQUID-WS",
+      "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/websocket/subscriptions",
+      "retrieved": "2026-11-14",
+      "status": "VERIFY_TERMS_QUOTAS"
+    },
+    {
+      "id": "SRC-HYPERLIQUID-HISTORY",
+      "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/historical-data",
+      "retrieved": "2026-11-14",
+      "status": "REQUESTER_PAYS_COMPLETENESS_NOT_GUARANTEED"
+    },
+    {
+      "id": "SRC-DERIBIT",
+      "url": "https://docs.deribit.com/",
+      "retrieved": "2026-11-14",
+      "status": "PIN_EXACT_METHODS_AND_TERMS"
+    },
+    {
+      "id": "SRC-SOLANA-BOTS-PAPER",
+      "url": "https://arxiv.org/abs/2607.28424",
+      "retrieved": "2026-11-14",
+      "status": "PAPER_REUSE_PERMISSIONS_NOT_DATASET_LICENCE"
+    },
+    {
+      "id": "SRC-SOLANA-BOTS-DATA",
+      "url": "https://zenodo.org/records/21359451",
+      "retrieved": "2026-11-14",
+      "status": "DATASET_LICENCE_UNKNOWN_UNTIL_VERIFIED"
+    }
+  ],
+  "invariants": [
+    "Additive only; preserve all historical strategy IDs.",
+    "No duplicate graph, solver, sizing, quote plane, capital graph, scheduler, registry, journal, feature store, paper authority or release authority.",
+    "Every tested amount needs a fresh exact quote; no quote extrapolation.",
+    "Pool, lender, collateral, book, tick/bin, account lock, inventory and quota cannot be double-counted.",
+    "Unknown is null/UNKNOWN, never zero or synthetic success.",
+    "Oracle, event, CEX, bot fingerprint and correlation signals are not executable quote or capacity proof.",
+    "Cross-chain, CEX settlement, TON async, delayed redemption and multi-period carry are non-atomic unless protocol semantics prove otherwise.",
+    "No live signer/sender/borrow/submission, account creation or production promotion.",
+    "No governance attacks, sandwich, frontrun, deanonymization or unauthorized private order flow.",
+    "Merged does not mean implemented; implemented does not mean qualified; qualified does not mean live authorized."
+  ]
+}

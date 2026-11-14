@@ -1,0 +1,33 @@
+{
+  "schema_version": "studious-pancake.master-00-receipt.v1",
+  "status": "TEMPLATE_NOT_EXECUTED",
+  "repository": "BobIvans/studious-pancake",
+  "main_sha": "86be458a87ed3f499cc32ff56426b2866c90422a",
+  "archives_reviewed": [
+    "V3",
+    "V4",
+    "V4.1",
+    "V5",
+    "V6",
+    "Maximum Direct Data Graph V3",
+    "Direct Venue Audit",
+    "prior-chat delta notes"
+  ],
+  "outputs_required": [
+    "MASTER_PAIR_DELTA_SUMMARY.json",
+    "STRATEGY_CROSSWALK.json",
+    "DIRECT_VENUE_CROSSWALK.json",
+    "MASTER_PR_DEPENDENCY_INVENTORY.json",
+    "OWNER_INTERFACE_FREEZE.md"
+  ],
+  "tests": "NOT_RUN_BY_DOCUMENTATION_UPDATE",
+  "live_rpc": "NOT_RUN_BY_DOCUMENTATION_UPDATE",
+  "live_markets": "NOT_RUN_BY_DOCUMENTATION_UPDATE",
+  "strategy_candidates_promoted": 0,
+  "qualified_flash_capital_edges": 0,
+  "enabled_providers": 0,
+  "sign_enabled": false,
+  "send_enabled": false,
+  "execution_authority": "NONE",
+  "owner_review_required": true
+}

@@ -1,0 +1,510 @@
+{
+  "schema_version": "studious-pancake.strategy-crosswalk.v1",
+  "generated_at": "2026-11-13",
+  "main_sha": "86be458a87ed3f499cc32ff56426b2866c90422a",
+  "archive_generations": [
+    "V3",
+    "V4",
+    "V4.1",
+    "V5",
+    "V6",
+    "prior-chat-strategy-delta",
+    "direct-venue-audit"
+  ],
+  "all_rows": "Research crosswalk. A family may be partially implemented in shared owners and still disabled/unqualified. No automatic strategy registration or execution grant.",
+  "families": [
+    {
+      "id": "STRAT-DIRECT-2LEG",
+      "name": "direct two-leg / cross-venue arbitrage",
+      "archive_sources": [
+        "V3 route templates",
+        "V4 graph motifs",
+        "V4.1 cycle motifs",
+        "prior chat delta"
+      ],
+      "owners": [
+        "src/strategy/relation_generators/",
+        "src/strategy/arbitrage_graph.py",
+        "src/strategy/strategies.py"
+      ],
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "missing": [
+        "current exact venue-bound quotes",
+        "same-state pool resource independence",
+        "full lender/build/simulation"
+      ],
+      "next": "Reuse DIRECT_MARKET and VENUE_FRAGMENTATION relation generators; add missing adapters only."
+    },
+    {
+      "id": "STRAT-VENUE-FRAGMENTATION",
+      "name": "DEX fragmentation / router quote overlap",
+      "archive_sources": [
+        "V3",
+        "V4",
+        "prior chat delta"
+      ],
+      "owners": [
+        "src/strategy/relation_generators/generators.py",
+        "src/research/correlation_ledger/",
+        "src/solana_parallel_radar/"
+      ],
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "missing": [
+        "physical underlying pool/resource identity across Jupiter/Titan/0x/etc",
+        "independent operator evidence",
+        "amount quotes"
+      ],
+      "next": "Add source correlation/resource joins to existing ledger; do not treat each aggregator as a venue."
+    },
+    {
+      "id": "STRAT-BOUNDED-CYCLE",
+      "name": "2–5 hop local cycles / universal graph shortlist",
+      "archive_sources": [
+        "V3 route templates",
+        "V4 1,399 motifs",
+        "V4.1 19 cycles",
+        "V5 39 routes",
+        "V6 36 routes"
+      ],
+      "owners": [
+        "src/strategy/multihop_solver.py",
+        "src/strategy/arbitrage_graph.py",
+        "src/economics/non_monotonic_sizing.py"
+      ],
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "missing": [
+        "exact amount quote each leg",
+        "per-size re-quote",
+        "route resource/correlation checks",
+        "capital and full-message proof"
+      ],
+      "next": "Add route candidates only via existing exact evaluator and PR118 sizing."
+    },
+    {
+      "id": "STRAT-STABLE-PEG",
+      "name": "stablecoin peg/depeg/triangles",
+      "archive_sources": [
+        "V3",
+        "V4",
+        "V4.1",
+        "V5",
+        "V6",
+        "USD0/USDT0 chat research"
+      ],
+      "owners": [
+        "src/strategies/stable_peg/",
+        "src/strategy/relation_generators/",
+        "src/strategy_evolution/residual_discovery.py"
+      ],
+      "status": "PARTIAL_MATH_AND_RESEARCH",
+      "missing": [
+        "issuer/asset identity",
+        "current reserves and dynamic fees",
+        "mint/redeem/PSM rights, caps, same-tx eligibility"
+      ],
+      "next": "Extend stable_peg existing math with evidence-backed venue and protocol edges."
+    },
+    {
+      "id": "STRAT-ISSUER-REDEMPTION",
+      "name": "PSM / mint-burn / redemption / buffers",
+      "archive_sources": [
+        "V4 conditional conversions",
+        "V5/V6 non-swap hyperedges",
+        "prior chat delta"
+      ],
+      "owners": [
+        "src/strategy_evolution/primary_market.py",
+        "src/strategy_evolution/rights_lifecycle.py",
+        "src/strategies/stable_peg/"
+      ],
+      "status": "RESEARCH_AND_PARTIAL_OWNER",
+      "missing": [
+        "issuer permission and caller eligibility",
+        "buffer inventory",
+        "fee/cap/clock/settlement atomicity"
+      ],
+      "next": "Represent as conditional hyperedge; no ordinary swap edge until exact proof."
+    },
+    {
+      "id": "STRAT-LST-LRT-NAV",
+      "name": "LST/LRT relative value, NAV and instant exit",
+      "archive_sources": [
+        "V3 detector extensions",
+        "V4/V5/V6 seeds",
+        "prior chat delta"
+      ],
+      "owners": [
+        "src/discovery/dynamic_universe/ingestors.py",
+        "src/strategy_evolution/stake_queue.py",
+        "src/strategy/relation_generators/",
+        "src/strategy/strategies.py"
+      ],
+      "status": "PARTIAL_DISCOVERY_DISABLED",
+      "missing": [
+        "canonical LST ids",
+        "exchange rate state",
+        "instant exit vs cooldown/epoch",
+        "slashing and redeem cap"
+      ],
+      "next": "Separate tradable pool legs from reference NAV and delayed redemption; LST detector shells remain disabled."
+    },
+    {
+      "id": "STRAT-BTC-WRAPPER",
+      "name": "BTC wrapper / bridged representation basis",
+      "archive_sources": [
+        "V3/V4/V5/V6 pair seeds",
+        "prior chat delta"
+      ],
+      "owners": [
+        "src/assets/resolution/",
+        "src/research_economic_graph/",
+        "src/strategy/relation_generators/"
+      ],
+      "status": "RESEARCH_ONLY",
+      "missing": [
+        "issuer/custody/origin/bridge identities",
+        "current local pools and quote amounts",
+        "cross-chain rights"
+      ],
+      "next": "Use canonical representation edges; do not equate cbBTC/WBTC/xBTC/tBTC/cirBTC/kBTC by ticker."
+    },
+    {
+      "id": "STRAT-CLOB-AMM",
+      "name": "CLOB-vs-AMM and orderbook microstructure",
+      "archive_sources": [
+        "V3 direct venues",
+        "V4.1",
+        "V5/V6 WAL/NS/DEEP/Kuru routes"
+      ],
+      "owners": [
+        "src/providers/orderbook/",
+        "src/strategy/strategies.py",
+        "src/strategy/market_graph_ingest.py",
+        "src/market/streams.py"
+      ],
+      "status": "IMPLEMENTED_FIXTURE_GATED",
+      "missing": [
+        "live sequence/book replay",
+        "lot/tick and taker fee math",
+        "IOC fill/partial fill",
+        "current subscriptions and market resource proofs"
+      ],
+      "next": "Enable only through existing orderbook adapter and verified subscriptions; orderbook_amm strategy stays disabled."
+    },
+    {
+      "id": "STRAT-CLMM-DLMM",
+      "name": "CLMM/DLMM/hooks/bin liquidity and dynamic fee",
+      "archive_sources": [
+        "V3 direct data graph",
+        "V4.1 F-01/F-08",
+        "direct venue audit"
+      ],
+      "owners": [
+        "src/direct_venue/mpr2617.py",
+        "src/direct_venue/super03.py",
+        "src/ingest/amm_math.py",
+        "src/providers/raydium_cpmm_native.py"
+      ],
+      "status": "PARTIAL_CONFORMANCE_BLOCKED",
+      "missing": [
+        "full tick/bin dependency closure and official SDK quote parity",
+        "Token-2022 fee/hooks",
+        "program/deployment/rooted state"
+      ],
+      "next": "P0-3 Raydium CLMM and Meteora DLMM; Orca license approval gate."
+    },
+    {
+      "id": "STRAT-MIGRATION-EVENT",
+      "name": "new pool/token migration and event-driven liquidity",
+      "archive_sources": [
+        "V3 anomaly taxonomy",
+        "V4 detectors",
+        "prior chat delta"
+      ],
+      "owners": [
+        "src/strategy/strategies.py",
+        "src/solana_parallel_radar/",
+        "src/discovery/dynamic_universe/",
+        "src/strategy_evolution/residual_discovery.py"
+      ],
+      "status": "DISABLED_OR_DISCOVERY_ONLY",
+      "missing": [
+        "identity/pool owner and lifecycle evidence",
+        "event order/clock/finality",
+        "adverse selection and liquidity survival"
+      ],
+      "next": "Maintain radar; no graduation/backrun heuristics as opportunities."
+    },
+    {
+      "id": "STRAT-LIQUIDATION",
+      "name": "liquidation and health-factor state transitions",
+      "archive_sources": [
+        "prior chat delta",
+        "V3 lender/capital research"
+      ],
+      "owners": [
+        "src/liquidation/",
+        "src/lending_indexer/",
+        "src/strategy/strategies.py"
+      ],
+      "status": "SHADOW_PLANNER_NOT_LIVE",
+      "missing": [
+        "current account/reserve/oracle/risk data",
+        "protocol borrow/repay and collateral seizure simulation",
+        "competition/gas economics"
+      ],
+      "next": "Use shadow eligibility/planner/reconciler; keep legacy Kamino shell disabled."
+    },
+    {
+      "id": "STRAT-FUNDING-CARRY",
+      "name": "funding, rate, basis and lending carry",
+      "archive_sources": [
+        "prior chat delta",
+        "V4 learning features",
+        "V6 funding matrix"
+      ],
+      "owners": [
+        "src/strategy_evolution/incentive_epoch.py",
+        "src/strategy_evolution/solvency_event.py",
+        "src/economics/"
+      ],
+      "status": "RESEARCH_ONLY",
+      "missing": [
+        "time-horizon PnL/financing and inventory funding",
+        "funding rate oracle and history",
+        "capital lock duration and tail risk"
+      ],
+      "next": "Separate multi-period strategies from flashloan atomic PnL."
+    },
+    {
+      "id": "STRAT-VAULT-SHARE-NAV",
+      "name": "ERC-4626 vault/share NAV and redemption",
+      "archive_sources": [
+        "V3 detector extension",
+        "V4/V5/V6 hyperedges"
+      ],
+      "owners": [
+        "src/strategy_evolution/rights_lifecycle.py",
+        "src/strategy_evolution/primary_market.py",
+        "src/research_economic_graph/"
+      ],
+      "status": "RESEARCH_PARTIAL",
+      "missing": [
+        "previewRedeem/maxRedeem/maxWithdraw/current fee/queue",
+        "same-block liquidity and sender eligibility",
+        "share decimals/rate provider"
+      ],
+      "next": "Represent conversion and redemption with rights/capacity hyperedges."
+    },
+    {
+      "id": "STRAT-PENDLE-MATURITY",
+      "name": "Pendle PT/YT, maturity and yield residual",
+      "archive_sources": [
+        "V3",
+        "V4",
+        "V4.1",
+        "V5/V6"
+      ],
+      "owners": [
+        "src/strategy_evolution/rights_lifecycle.py",
+        "src/strategy_evolution/incentive_epoch.py",
+        "src/research_economic_graph/"
+      ],
+      "status": "REFERENCE_OR_RESEARCH_ONLY",
+      "missing": [
+        "market/expiry/underlying identity",
+        "current PT/YT quotes",
+        "maturity timing; pre-maturity liquidity and fees"
+      ],
+      "next": "A maturity claim is not an instant redemption; route only via verified live market trade."
+    },
+    {
+      "id": "STRAT-CONDITIONAL-HYPEREDGE",
+      "name": "split/combine/mint/redeem/claims and other non-swap conversions",
+      "archive_sources": [
+        "V4 world graph",
+        "V5 11 hyperedges",
+        "V6 12 conditional hyperedges"
+      ],
+      "owners": [
+        "src/research_economic_graph/",
+        "src/strategy_evolution/rights_lifecycle.py",
+        "src/strategy_evolution/primary_market.py"
+      ],
+      "status": "PARTIAL_RESEARCH_MODEL",
+      "missing": [
+        "protocol-specific caller rights and resource requirements",
+        "hot-potato/receipt or callback semantics",
+        "same-transaction postconditions"
+      ],
+      "next": "Use hyperedges, not fake swap pairs; keep separate from pool graph."
+    },
+    {
+      "id": "STRAT-GOV-INCENTIVE",
+      "name": "governance, incentive, reward, epoch and rights changes",
+      "archive_sources": [
+        "V3/V4 anomaly detectors",
+        "prior chats"
+      ],
+      "owners": [
+        "src/strategy_evolution/governance_transition.py",
+        "src/strategy_evolution/incentive_epoch.py",
+        "src/strategy_evolution/rights_lifecycle.py"
+      ],
+      "status": "OFFLINE_CONTRACT_DISABLED",
+      "missing": [
+        "event source/finality",
+        "reward/fee state history",
+        "governance execution/eligibility and effect windows"
+      ],
+      "next": "Use strategy-evolution event contracts and replay; no external source copy before license review."
+    },
+    {
+      "id": "STRAT-BLOCKSPACE",
+      "name": "blockspace, transaction ordering, priority fee/tip and MEV cost option",
+      "archive_sources": [
+        "V3 detector extension",
+        "PR-353 strategy evolution"
+      ],
+      "owners": [
+        "src/strategy_evolution/blockspace_option.py",
+        "src/provider_governance/",
+        "src/strategy/"
+      ],
+      "status": "OFFLINE_CONTRACT_DISABLED",
+      "missing": [
+        "current fee market samples and compute-unit/gas simulation",
+        "source clock and auction/landing data"
+      ],
+      "next": "Model as cost/risk feature first; no Jito/live sender path."
+    },
+    {
+      "id": "STRAT-INTENT",
+      "name": "intent/RFQ/solver residual and quote TTL",
+      "archive_sources": [
+        "prior chats",
+        "V3 correlation research"
+      ],
+      "owners": [
+        "src/strategy_evolution/intent_rescue.py",
+        "src/strategy_evolution/residual_discovery.py",
+        "src/strategy/"
+      ],
+      "status": "OFFLINE_CONTRACT_DISABLED",
+      "missing": [
+        "firm quote authenticity/TTL and fill rules",
+        "solver/settlement permissions and on-chain solver execution"
+      ],
+      "next": "Treat as quote/signal evidence; no solver route execution assumption."
+    },
+    {
+      "id": "STRAT-CEX-LEADLAG",
+      "name": "CEX/DEX orderflow lead-lag and inventory basis",
+      "archive_sources": [
+        "prior chat delta",
+        "V4/V5/V6"
+      ],
+      "owners": [
+        "src/strategy_evolution/residual_discovery.py",
+        "src/research/correlation_ledger/",
+        "R09 feeds"
+      ],
+      "status": "SIGNAL_ONLY_PLANNED",
+      "missing": [
+        "sequence/checksum/gap recovery and clock skew",
+        "inventory funding and hedge settlement",
+        "walk-forward data with leakage control"
+      ],
+      "next": "R09 CEX feed lane; not local flash atomicity."
+    },
+    {
+      "id": "STRAT-ORACLE-RESIDUAL",
+      "name": "oracle/reference vs DEX price residual",
+      "archive_sources": [
+        "V3 detector extension",
+        "prior chats"
+      ],
+      "owners": [
+        "src/qualification_campaign/",
+        "src/research/correlation_ledger/",
+        "src/strategy_evolution/residual_discovery.py"
+      ],
+      "status": "REFERENCE_SIGNAL_ONLY",
+      "missing": [
+        "oracle authentication/confidence/staleness",
+        "venue amount quote and market freshness"
+      ],
+      "next": "Oracle is never an executable quote or flash capacity."
+    },
+    {
+      "id": "STRAT-CROSSCHAIN-FLOW",
+      "name": "CCTP/USDT0/OFT/IBC bridge-flow leading local market imbalance",
+      "archive_sources": [
+        "V3/V4.1/V5/V6",
+        "prior chat delta"
+      ],
+      "owners": [
+        "src/discovery/dynamic_universe/",
+        "src/research/correlation_ledger/",
+        "R09 feeds"
+      ],
+      "status": "SIGNAL_OR_REBALANCE_ONLY",
+      "missing": [
+        "bridge message finality and source/destination dedup",
+        "local exact market state after flow",
+        "prefunded inventory model"
+      ],
+      "next": "Bridge flow may rank local watchlist but cannot be a local atomic flash leg."
+    },
+    {
+      "id": "STRAT-FX-GOLD-REFERENCE",
+      "name": "FX, gold, macro and session-hours residuals",
+      "archive_sources": [
+        "V3/V4/V5/V6"
+      ],
+      "owners": [
+        "src/strategy_evolution/residual_discovery.py",
+        "src/research/correlation_ledger/",
+        "R09 reference feeds"
+      ],
+      "status": "REFERENCE_ONLY",
+      "missing": [
+        "trusted oracle/reference source, session windows, denomination and issuer rights"
+      ],
+      "next": "No gold/FX reference becomes swap liquidity without an exact same-chain pool."
+    },
+    {
+      "id": "STRAT-RWA-EQUITY-EXCLUSION",
+      "name": "tokenized equities / Robinhood Stock Tokens",
+      "archive_sources": [
+        "older RWA research archives"
+      ],
+      "owners": [],
+      "status": "EXCLUDED_BY_USER_POLICY",
+      "missing": [],
+      "next": "Never import/enable or include in route universe. Other RWA references require separate legal/evidence classification."
+    },
+    {
+      "id": "STRAT-LEARNING",
+      "name": "anomaly detection, ML and context-bandit data-source allocation",
+      "archive_sources": [
+        "V3 43 anomaly classes/18 extensions",
+        "V4 25 detectors/30 features",
+        "strategy-evolution PR-353"
+      ],
+      "owners": [
+        "src/strategy_evolution/core.py",
+        "src/strategy_evolution/",
+        "docs/strategy_evolution/",
+        "src/research/correlation_ledger/"
+      ],
+      "status": "OFFLINE_CONTRACT_DISABLED",
+      "missing": [
+        "time-aware labeled data and holdouts",
+        "sample size/confidence/null controls/multiple-testing correction",
+        "no provider/pool identity leakage"
+      ],
+      "next": "Deterministic baselines first; ML remains advisory and cannot skip hard gates."
+    }
+  ]
+}

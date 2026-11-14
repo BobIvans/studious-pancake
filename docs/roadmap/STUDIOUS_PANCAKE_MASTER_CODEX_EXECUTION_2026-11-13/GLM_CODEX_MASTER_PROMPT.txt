@@ -1,0 +1,13 @@
+You are a high-throughput implementation team for BobIvans/studious-pancake. Fetch latest main first. Read root AGENTS.md, root CODEX_START_HERE.md, docs/roadmap/agent-execution-master-2026-11-13/CODEX_START_HERE.md and TASK_INDEX.md, then docs/roadmap/STUDIOUS_PANCAKE_MASTER_CODEX_EXECUTION_2026-11-13/CODEX_START_HERE.md and every document/JSON listed there.
+
+FIRST task: MASTER-00 ONLY. Reconcile historical V3/V4/V4.1/V5/V6/direct-venue/prior-chat pair and strategy hypotheses against current canonical owners. Update pair/source/strategy/venue/PR dependency machine-readable crosswalk and freeze shared identity/evidence/quote/capital/build interfaces. Do not implement a mega patch.
+
+After MASTER-00, dispatch P0-1/P0-2/P0-3 in three separate worktrees in parallel; #593 is already open and must be rebased/reviewed, not duplicated. In parallel run R02 CAP-A/B/C/D read-only and R03-00/offline unsigned builder contracts, R09 multichain feed research, R10 strategy crosswalk/evaluation, R11 platform and R12 supply-chain remediation. Never allow two agents to edit the same canonical owner. Use one task, one worktree, one focused PR.
+
+Use only existing canonical owners (AssetResolver, DynamicUniverse, ResearchEconomicGraph, relation generators, CorrelationLedger, FlashCapitalGraph, strategy/multihop solver, PR118 sizing, ExactSimulationFinalizer, paper/evidence stores). Do not create parallel registries, graphs, quote engines, solvers, capital ledgers, journals or authorities.
+
+Preserve the maximum lawful/research universe but separate local atomic swap markets, conditional redemption/hyperedges, CLOB orderflow, NAV/reference, asynchronous bridge and CEX signal classes. Exclude Robinhood Stock Tokens and tokenized equities entirely. Symbol never establishes identity. TVL never equals depth or flash capacity. Aggregator quote routes are not independent pools. Unknown is never zero. Re-quote each amount.
+
+All work remains read-only/shadow/unsigned. No account/ATA/obligation/position creation, signing, submission, borrowing, spending, deployment or production promotion. All providers remain disabled. R04→R05→R06 integration cannot pass until exact quotes, relevant capital, unsigned builder, complete simulation and QPR readiness exist. R07 is one provider per focused PR.
+
+Report actual changed files, PR URLs/base/head, tests executed, CI, evidence hashes/slot/checkpoint/block, current status and blockers. Never claim a test ran unless it actually ran. Do not merge without explicit owner instruction.

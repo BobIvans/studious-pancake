@@ -350,3 +350,17 @@ Every PR:
 - blocker IDs, rollback, next dependency and PR URL.
 
 Definition of complete: every archive family/market/source/strategy has a truthful owner and disposition; selected work is merged or evidence-backed BLOCKED/RESEARCH_ONLY/EXCLUDED; market discovery feeds the supported shadow graph without bypassing verification; strategy candidates reach the existing paper pipeline when gates pass; shared-resource parallel portfolio scheduling is deterministic; final crosswalk/dashboard matches latest main. A merged strategy heading or symbolic pair list is not implementation, profitability or production readiness.
+
+## 19. Owner-authorized autonomous engineering scope
+
+The repository owner authorizes the coding agent to carry this assignment through as an autonomous engineering campaign within the repository's granted GitHub permissions:
+- Read the complete repository, source, tests, history, PR diffs, archived ZIP lineage and current project documentation; search official protocol documentation and source repositories.
+- Perform source/version/license/entitlement research, inspect SDK/IDL/ABI/deployments, and update the knowledge base and machine-readable crosswalk.
+- Create isolated branches/worktrees, write and refactor production/research code, tests, fixtures, docs and bounded CI tooling; run local tests, type/format/security/repository checks.
+- Split work across independent agents/worktrees where the execution environment supports it, coordinate shared owners, create focused PRs, rebase to current main, resolve conflicts in its own PR branches and continue independent work when another lane is blocked.
+- Merge its own PRs only after the current required checks are green, tests and source/license evidence are reviewed, there are no unresolved owner overlaps/conflicts, the PR is mergeable and branch protection permits the merge. It may not bypass required checks, fake statuses or force-push main.
+- Maintain a current PR/task/evidence ledger and keep working through all unblocked work packages rather than stopping after writing assignments.
+
+This grants broad repository engineering autonomy, **not unrestricted infrastructure or financial authority**. It does not grant access to secrets/private keys, creation or use of wallets/accounts/ATAs/obligations/positions, signing, broadcasting, submitting, borrowing, spending, deploying, provider activation, live market interaction, QPR/DIN override or production promotion. Use only already-approved read-only sources and public evidence. When a credential, paid access, operator approval, private account address or user authorization is required, report the exact missing item as BLOCKED and continue independent work.
+
+No agent may enable live capabilities by editing environment flags, config, feature flags or CI policy. A coding agent may prepare unsigned plans and sender-free simulations only under the existing project's authorization/evidence gates. Production/live execution remains a separate explicit operator decision after paper qualification and all security/economic gates.

@@ -1,7 +1,7 @@
 {
   "schema_version": "studious-pancake.strategy-crosswalk.v1",
   "generated_at": "2026-11-14",
-  "main_sha": "a82a512b01e9bcef4c41e369ee49168e74ec1173",
+  "main_sha": "73911801f12eb8c365421d5dcaea40c20a503a0a",
   "archive_generations": [
     "V3",
     "V4",
@@ -21,22 +21,24 @@
     "sx_status": {
       "SX-00": "IMPLEMENTED (#639)",
       "SX-01": "IMPLEMENTED (#641)",
-      "SX-09": "IMPLEMENTED (#642)",
-      "SX-02": "IN_FLIGHT parallel session",
-      "SX-03": "IN_FLIGHT parallel session",
-      "SX-04": "IN_FLIGHT parallel session",
-      "SX-05+06": "IN_FLIGHT parallel session",
-      "SX-07": "IN_FLIGHT parallel session",
-      "SX-08": "IN_FLIGHT parallel session",
-      "SX-10+11": "IN_FLIGHT parallel session",
-      "SX-12": "IN_FLIGHT parallel session (stacked on merged SX-01)",
-      "SX-13": "IN_FLIGHT parallel session",
-      "SX-14": "IN_FLIGHT parallel session",
+      "SX-09": "IMPLEMENTED_OFFLINE_RESEARCH (#642)",
+      "SX-02": "PLANNED",
+      "SX-03": "OPEN_PR_649_REBASE_REQUIRED_SOURCE_LICENSE_BLOCKED",
+      "SX-04": "PLANNED",
+      "SX-05+06": "PLANNED",
+      "SX-07": "PLANNED",
+      "SX-08": "OPEN_PR_648_REBASE_REQUIRED",
+      "SX-10+11": "IMPLEMENTED_OFFLINE_RESEARCH (#643)",
+      "SX-12": "OPEN_PR_645_REBASE_REQUIRED",
+      "SX-13": "PLANNED",
+      "SX-14": "PLANNED",
       "R10-1": "IN_FLIGHT lead session (CPMM cycle binding)",
       "R10-2": "IN_FLIGHT lead session (MarginFi capital edges)",
       "R10-3": "IN_FLIGHT lead session (LST residual-fed detectors)",
-      "SX-15": "PLANNED coordinator",
-      "SX-16": "PLANNED coordinator"
+      "SX-15": "PLANNED",
+      "SX-16": "COORDINATOR_INTEGRATION",
+      "SX-17": "PLANNED_RUNTIME_FANOUT_GAP",
+      "W6-12": "PLANNED_PARTICIPANT_INTELLIGENCE_GAP"
     }
   },
   "families": [
@@ -665,6 +667,49 @@
         "manipulation-resistance checks"
       ],
       "next": "SX-14 mechanism lab surface; no deployment, no real payments."
+    },
+    {
+      "id": "STRAT-RUNTIME-MULTI-FANOUT",
+      "name": "evidence-gated parallel strategy runtime fanout",
+      "archive_sources": [
+        "2026-11-14 runtime reachability audit",
+        "R08 composition reports #624/#627",
+        "SX-01 StrategyContractV1"
+      ],
+      "owners": [
+        "src/application.py",
+        "src/strategy/registry.py",
+        "src/strategy/consumer.py",
+        "src/strategy/conflict_scheduler.py",
+        "existing paper/shadow composition"
+      ],
+      "status": "PLANNED_RUNTIME_GAP",
+      "missing": [
+        "six registrations do not mean six implemented detectors",
+        "only circular two-leg detector currently has real detect_once path",
+        "SX-01 is advisory schema only; R08 reports 12/27 owner groups library-only",
+        "bounded deterministic fanout and immutable snapshot/resource binding absent as complete installed path"
+      ],
+      "next": "SX-17; extend current owners only, one snapshot generation, AGG-05 conflict admission, no stub activation"
+    },
+    {
+      "id": "STRAT-OBSERVED-PARTICIPANT-INTELLIGENCE",
+      "name": "observed public participant strategy intelligence",
+      "archive_sources": [
+        "W6-01/02/05/06 Market Ecology",
+        "prior conversation research: strategy knowledge graph of successful public on-chain participants"
+      ],
+      "owners": [
+        "src/market_data_evolution/contracts.py",
+        "src/intelligence/episode_builder.py",
+        "existing raw journal/decision dataset/causal owners"
+      ],
+      "status": "PLANNED_RESEARCH_GAP",
+      "missing": [
+        "no complete explicit path from public participant episodes to attributed strategy archetypes and held-out learning",
+        "net outcomes must account for inventory, liabilities, fees, transfers, failed attempts and censoring"
+      ],
+      "next": "W6-12; public/authorized and pseudonymous only; no deanonymization or copy trading"
     }
   ]
 }

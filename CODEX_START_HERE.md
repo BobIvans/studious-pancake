@@ -49,3 +49,15 @@ For Codex CLI, GLM-5.3-Flash and other coding agents:
 R-04 selector → R-05 complete unsigned transaction/PTB simulation → R-06 paper qualification remain gated by exact quotes, relevant effective capital capacity, matching builder conformance, complete same-state simulation and QPR readiness.
 
 Keep the research universe broad, while separating LOCAL_ATOMIC, CONDITIONAL_HYPEREDGE, HEDGED_NON_ATOMIC, SIGNAL_ONLY and EXCLUDED classes. Robinhood Stock Tokens and tokenized equities remain excluded. No private keys, accounts/ATAs/obligations creation, signing, sending, borrowing, spending, deployments, provider enabling or production promotion. Live stays hard-denied.
+
+
+
+## Broad arbitrage map and data-source integration
+
+For the expanded strategy/data-source inventory and the assignments to wire it into existing bot components, read:
+- docs/strategy-expansion/2026-11-14/CODEX_ARBITRAGE_MAP_START_HERE.md
+- docs/strategy-expansion/2026-11-14/ARBITRAGE_MAP_STRATEGY_AND_DATA_SOURCE_ATLAS_RU.md
+- docs/strategy-expansion/2026-11-14/ARBITRAGE_DATA_SOURCE_CATALOG_V1.json
+- docs/strategy-expansion/2026-11-14/ARBITRAGE_MAP_DATA_SOURCE_ASSIGNMENTS_RU.md
+
+This is an extension of MASTER/GPR/DV/R02/R03/R13/SX/EXP/W6. Preserve the full discovery universe; use existing identity, graph, capital, quote, sizing, simulation, conflict and paper owners. Do not confuse research coverage with installed strategy runtime or live execution readiness.

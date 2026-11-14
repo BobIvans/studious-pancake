@@ -27,7 +27,7 @@ At a prior verified snapshot:
 - P0-1 #593, P0-2 #604, P0-3 #613 and R01 #584 were merged baselines.
 - R02 CAP-A #602, CAP-B #612, CAP-C #609 and R03 #606 were merged as partial/offline readers/builders; effective live capital remained UNKNOWN.
 - #614 added seven evidence-gated residual families; reuse its relation/correlation owners.
-- #639 SX-00, #641 SX-01, #642 SX-09 and #643 SX-10/SX-11 were merged by the later audit. #645 SX-12 and #646 documentation expansion were open at the last checked snapshot.
+- Historical checkpoint only: #639 SX-00, #641 SX-01, #642 SX-09, #643 SX-10/SX-11 were merged; #645/#646 were open at that older checkpoint. Current merged state after #654 is recorded in the root `CODEX_START_HERE.md` and `PARALLEL_EXECUTION_STATUS.json`.
 These are historical checkpoints only. Re-fetch every PR before assigning or merging.
 
 ## 1. Preserve the original MASTER FLASHLOAN MARKET INTEGRATION scope

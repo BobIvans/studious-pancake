@@ -61,5 +61,5 @@ See `tasks/W6_12_OBSERVED_PARTICIPANT_STRATEGY_INTELLIGENCE_RU.md`. Extend W6-01
 ## Latest verified campaign snapshot
 - Main: `9f173d7632cb30190bb8d9174ceba6d116eaec70` after #654.
 - Merged: #645 SX-12, #646 MASTER + Build Bigger Universe archive handoff, #647 Titan adapter, #648 SX-08 rate/refinance, #650 exact archived pair/relationship seed dataset, #651 SX-07 complete-set claims, #653 SX-02 flash-mint economics, #654 SX-17 archive detector/anomaly taxonomy.
-- Open: #649 SX-03 LLAMMA (research-only; source license/commit/whitepaper/unit and rooted market-state blockers); #655 R10-2 MarginFi offline qualification bridge (requires current main rebase/recheck); #656 is the stale runtime/W6 handoff predecessor and must be replaced by this clean-base PR after review.
+- Open: #649 SX-03 LLAMMA (research-only; source license/commit/whitepaper/unit and rooted market-state blockers); #655 R10-2 MarginFi offline qualification bridge (requires current main rebase/recheck); #657 is the clean-base SX-18/W6-12 successor. Predecessor #656 is closed as superseded.
 - Preserve SX-17 for the archive taxonomy. Runtime fanout is SX-18. W6-12 is a new child of Market Ecology; it does not renumber W6-00…W6-11 or historical W6F-001…096.

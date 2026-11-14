@@ -2,75 +2,292 @@
   "schema_version": "studious-pancake.parallel-execution-status.v2",
   "updated_at_utc": "2026-11-14",
   "current_main": {
-    "sha": "a82a512b01e9bcef4c41e369ee49168e74ec1173",
+    "sha": "73911801f12eb8c365421d5dcaea40c20a503a0a",
     "date": "2026-11-14",
-    "ci_state": "Repository verification GREEN at a82a512b (all six-plus workflows success on each merged PR chain 5769b074 -> 77d57e94 -> 03b80389 -> 76f0bb84 -> a82a512b); strict pip-audit stays 0",
-    "note": "MASTER-00 refresh 2026-11-14: re-fetched main, reconciled every merged PR against current tree, SX-00 gate verified and merged (#639), SX-01 (#641) and SX-09 (#642) merged by lead after independent review; strategy expansion execution is in flight"
+    "ci_state": "GREEN on PR #646 (repository verification, wheel/console, non-root image, secret scan) and PR #647 (release authority, read-only qualification, full CI); R12 strict pip-audit zero remains established after #605",
+    "note": "Main refreshed after #646 full MASTER + Build Bigger Universe archive handoff and #647 Titan adapter. Docs status and PR lanes below reflect this main snapshot."
   },
   "merged_prs": [
-    {"n": 565, "lane": "research/OCC", "what": "OCC research owner merged last on the pre-SX baseline (+1622 lines); complements #622/#631 evidence"},
-    {"n": 593, "lane": "A/P0-1", "what": "Solana indexed intake -> Dynamic Universe (cadence, coverage, fail-closed bridge)"},
-    {"n": 599, "lane": "MASTER-00", "what": "Strategy atlas V3-V6 + pair/source crosswalk + orchestration entry rewrite"},
-    {"n": 600, "lane": "coord", "what": "CURRENT_STATE.json wave-0 snapshot"},
-    {"n": 601, "lane": "coord", "what": "PARALLEL_EXECUTION_MANDATE.md landed"},
-    {"n": 602, "lane": "E-A/CAP-A", "what": "Jupiter Lend TokenReserve read-only reader (84 tests)"},
-    {"n": 603, "lane": "R11", "what": "fcntl msvcrt shim + getuid guard"},
-    {"n": 604, "lane": "B/P0-2", "what": "Jupiter V2 order migration + 0x comparable race invariants"},
-    {"n": 605, "lane": "R12", "what": "9 advisory packages + yarl, official lock workflow, strict pip-audit 68->0"},
-    {"n": 606, "lane": "F/R-03", "what": "unsigned_builders contract + Jupiter/NAVI-PTB builders"},
-    {"n": 609, "lane": "E-C/CAP-C", "what": "NAVI Sui reader (98 tests)"},
-    {"n": 611, "lane": "R11", "what": "mypy-clean sys.platform shim - CI gate fully green"},
-    {"n": 612, "lane": "E-B/CAP-B", "what": "Kamino Reserve capacity/fee reader (94 tests, exact raw/2^60)"},
-    {"n": 613, "lane": "C/P0-3", "what": "Raydium CLMM + Meteora DLMM exact decoders/math"},
-    {"n": 614, "lane": "H", "what": "Relation-generator tightening + 7 residual families + MAX_PATH fix"},
-    {"n": 615, "lane": "coord", "what": "Dashboard v1"},
-    {"n": 616, "lane": "D/GPR-03", "what": "Sui transport/checkpoint remediation + Move decoders"},
-    {"n": 617, "lane": "J", "what": "RentSponsorPlanner 4-tier sourcing on Slumlord"},
-    {"n": 618, "lane": "L", "what": "EVM dossiers: Morpho Blue + Aave V3 RAW_OFFICIAL_SNAPSHOT + drift-test verifier"},
-    {"n": 619, "lane": "E-D/CAP-D", "what": "Project 0 wallet-free bank discovery (PR-028 layout, exact DPR/borrowed-shares)"},
-    {"n": 620, "lane": "I/TON", "what": "TON source pins + bounded Dedust/SwapCoffee ingestors + STON drift recorded"},
-    {"n": 621, "lane": "G/R13-G", "what": "8 provider dossiers pinned (Titan/OKX/OpenOcean/Rango/Aftermath/Cetus/7K/FlowX)"},
-    {"n": 622, "lane": "R10", "what": "Strategy inventory + ranked promotion shortlist (602-test baseline)"},
-    {"n": 623, "lane": "R11-FU", "what": "Shared flock compat module + pressure-manager/sibling fixes"},
-    {"n": 624, "lane": "R08", "what": "Composition audit: 0/12 wave owners runtime-reachable; wiring plan W1->W6; 21 contract tests"},
-    {"n": 626, "lane": "docs", "what": "Canonical dashboard v2"},
-    {"n": 627, "lane": "R08", "what": "Owner-injection matrix: 15/27 wired vs 12 library-only; 8-step composition plan; 10 invariant tests"},
-    {"n": 628, "lane": "platform", "what": ".gitattributes R-02 vendor CRLF guard"},
-    {"n": 629, "lane": "R13-A", "what": "Quote/build race audit: 13 providers documented-vs-implemented-vs-wired; R13_GAP_NO_KERNEL top risk; 25 contract tests"},
-    {"n": 630, "lane": "R09-TON-w2", "what": "Tonco reclassified CLAMM; TON atomicity = typed negative; 6 tests"},
-    {"n": 631, "lane": "R10", "what": "Offline replay experiments: multihop shortlist != profit (NON_POSITIVE_NET), fail-closed gates confirmed; 8 tests"},
-    {"n": 632, "lane": "platform", "what": ".gitattributes sha256-pinned contracts/** CRLF guard"},
-    {"n": 633, "lane": "R03-B", "what": "Kamino builder UNBLOCKED: vendored flashBorrow/flashRepay from klend-sdk@3c3a38d4 (MIT); BUILT_OFFLINE_UNQUALIFIED; 74 passed / mypy 0"},
-    {"n": 634, "lane": "P0-3-verify", "what": "CLMM LEN receipt: TickState=168 / TickArrayState=10240 re-derived from pinned snapshot; main correct"},
-    {"n": 635, "lane": "R09-EVM+SUI-w2", "what": "EVM wave-2 (Aave V3 deployments, Fluid, Euler BSL-blocked, Spark PSM3=negative) + Sui wave-2 (Cetus/Aftermath/FlowX/DeepBook V3 flash PINNED) - docs-only"},
-    {"n": 636, "lane": "coord", "what": "Final wave-2 dashboard (was authoritative at c87f5d31; superseded by this refresh)"},
-    {"n": 637, "lane": "strategy-expansion", "what": "Strategy Expansion Pack docs (SX assignments, acceptance matrix, catalog, architecture)"},
-    {"n": 638, "lane": "R13-K", "what": "Quote/build kernel freeze: src/execution/quote_build_kernel.py r13.quote-build-kernel.v1 - NormalizedProviderQuote/QuoteRaceResult/PoolIdentityDeduplicator/BuildHandoff, refuse_amount_extrapolation; 33 tests, mypy 0"},
-    {"n": 639, "lane": "SX-00", "what": "Strategy assignment reconciliation map (S/OP/WG/R10 -> statuses, owners, deltas; SX00_RECONCILIATION.json+md) - SX gate PR"},
-    {"n": 640, "lane": "R14-K", "what": "Kamino unsigned plans wired into AtomicMarginfiJupiterPlanner as instruction references (retarget_borrow_index/assemble_kamino_flash_message)"},
-    {"n": 641, "lane": "SX-01", "what": "Canonical typed strategy contract schema (src/strategy/strategy_contract.py, additive, fail-closed parsing, no runtime registry)"},
-    {"n": 642, "lane": "SX-09", "what": "LP position lifecycle + fee/IL harvesting research model (src/research/lp_lifecycle/, persistent-capital fail-closed)"}
+    {
+      "n": 565,
+      "lane": "research/OCC",
+      "what": "OCC research owner merged last on the pre-SX baseline (+1622 lines); complements #622/#631 evidence"
+    },
+    {
+      "n": 593,
+      "lane": "A/P0-1",
+      "what": "Solana indexed intake -> Dynamic Universe (cadence, coverage, fail-closed bridge)"
+    },
+    {
+      "n": 599,
+      "lane": "MASTER-00",
+      "what": "Strategy atlas V3-V6 + pair/source crosswalk + orchestration entry rewrite"
+    },
+    {
+      "n": 600,
+      "lane": "coord",
+      "what": "CURRENT_STATE.json wave-0 snapshot"
+    },
+    {
+      "n": 601,
+      "lane": "coord",
+      "what": "PARALLEL_EXECUTION_MANDATE.md landed"
+    },
+    {
+      "n": 602,
+      "lane": "E-A/CAP-A",
+      "what": "Jupiter Lend TokenReserve read-only reader (84 tests)"
+    },
+    {
+      "n": 603,
+      "lane": "R11",
+      "what": "fcntl msvcrt shim + getuid guard"
+    },
+    {
+      "n": 604,
+      "lane": "B/P0-2",
+      "what": "Jupiter V2 order migration + 0x comparable race invariants"
+    },
+    {
+      "n": 605,
+      "lane": "R12",
+      "what": "9 advisory packages + yarl, official lock workflow, strict pip-audit 68->0"
+    },
+    {
+      "n": 606,
+      "lane": "F/R-03",
+      "what": "unsigned_builders contract + Jupiter/NAVI-PTB builders"
+    },
+    {
+      "n": 609,
+      "lane": "E-C/CAP-C",
+      "what": "NAVI Sui reader (98 tests)"
+    },
+    {
+      "n": 611,
+      "lane": "R11",
+      "what": "mypy-clean sys.platform shim - CI gate fully green"
+    },
+    {
+      "n": 612,
+      "lane": "E-B/CAP-B",
+      "what": "Kamino Reserve capacity/fee reader (94 tests, exact raw/2^60)"
+    },
+    {
+      "n": 613,
+      "lane": "C/P0-3",
+      "what": "Raydium CLMM + Meteora DLMM exact decoders/math"
+    },
+    {
+      "n": 614,
+      "lane": "H",
+      "what": "Relation-generator tightening + 7 residual families + MAX_PATH fix"
+    },
+    {
+      "n": 615,
+      "lane": "coord",
+      "what": "Dashboard v1"
+    },
+    {
+      "n": 616,
+      "lane": "D/GPR-03",
+      "what": "Sui transport/checkpoint remediation + Move decoders"
+    },
+    {
+      "n": 617,
+      "lane": "J",
+      "what": "RentSponsorPlanner 4-tier sourcing on Slumlord"
+    },
+    {
+      "n": 618,
+      "lane": "L",
+      "what": "EVM dossiers: Morpho Blue + Aave V3 RAW_OFFICIAL_SNAPSHOT + drift-test verifier"
+    },
+    {
+      "n": 619,
+      "lane": "E-D/CAP-D",
+      "what": "Project 0 wallet-free bank discovery (PR-028 layout, exact DPR/borrowed-shares)"
+    },
+    {
+      "n": 620,
+      "lane": "I/TON",
+      "what": "TON source pins + bounded Dedust/SwapCoffee ingestors + STON drift recorded"
+    },
+    {
+      "n": 621,
+      "lane": "G/R13-G",
+      "what": "8 provider dossiers pinned (Titan/OKX/OpenOcean/Rango/Aftermath/Cetus/7K/FlowX)"
+    },
+    {
+      "n": 622,
+      "lane": "R10",
+      "what": "Strategy inventory + ranked promotion shortlist (602-test baseline)"
+    },
+    {
+      "n": 623,
+      "lane": "R11-FU",
+      "what": "Shared flock compat module + pressure-manager/sibling fixes"
+    },
+    {
+      "n": 624,
+      "lane": "R08",
+      "what": "Composition audit: 0/12 wave owners runtime-reachable; wiring plan W1->W6; 21 contract tests"
+    },
+    {
+      "n": 626,
+      "lane": "docs",
+      "what": "Canonical dashboard v2"
+    },
+    {
+      "n": 627,
+      "lane": "R08",
+      "what": "Owner-injection matrix: 15/27 wired vs 12 library-only; 8-step composition plan; 10 invariant tests"
+    },
+    {
+      "n": 628,
+      "lane": "platform",
+      "what": ".gitattributes R-02 vendor CRLF guard"
+    },
+    {
+      "n": 629,
+      "lane": "R13-A",
+      "what": "Quote/build race audit: 13 providers documented-vs-implemented-vs-wired; R13_GAP_NO_KERNEL top risk; 25 contract tests"
+    },
+    {
+      "n": 630,
+      "lane": "R09-TON-w2",
+      "what": "Tonco reclassified CLAMM; TON atomicity = typed negative; 6 tests"
+    },
+    {
+      "n": 631,
+      "lane": "R10",
+      "what": "Offline replay experiments: multihop shortlist != profit (NON_POSITIVE_NET), fail-closed gates confirmed; 8 tests"
+    },
+    {
+      "n": 632,
+      "lane": "platform",
+      "what": ".gitattributes sha256-pinned contracts/** CRLF guard"
+    },
+    {
+      "n": 633,
+      "lane": "R03-B",
+      "what": "Kamino builder UNBLOCKED: vendored flashBorrow/flashRepay from klend-sdk@3c3a38d4 (MIT); BUILT_OFFLINE_UNQUALIFIED; 74 passed / mypy 0"
+    },
+    {
+      "n": 634,
+      "lane": "P0-3-verify",
+      "what": "CLMM LEN receipt: TickState=168 / TickArrayState=10240 re-derived from pinned snapshot; main correct"
+    },
+    {
+      "n": 635,
+      "lane": "R09-EVM+SUI-w2",
+      "what": "EVM wave-2 (Aave V3 deployments, Fluid, Euler BSL-blocked, Spark PSM3=negative) + Sui wave-2 (Cetus/Aftermath/FlowX/DeepBook V3 flash PINNED) - docs-only"
+    },
+    {
+      "n": 636,
+      "lane": "coord",
+      "what": "Final wave-2 dashboard (was authoritative at c87f5d31; superseded by this refresh)"
+    },
+    {
+      "n": 637,
+      "lane": "strategy-expansion",
+      "what": "Strategy Expansion Pack docs (SX assignments, acceptance matrix, catalog, architecture)"
+    },
+    {
+      "n": 638,
+      "lane": "R13-K",
+      "what": "Quote/build kernel freeze: src/execution/quote_build_kernel.py r13.quote-build-kernel.v1 - NormalizedProviderQuote/QuoteRaceResult/PoolIdentityDeduplicator/BuildHandoff, refuse_amount_extrapolation; 33 tests, mypy 0"
+    },
+    {
+      "n": 639,
+      "lane": "SX-00",
+      "what": "Strategy assignment reconciliation map (S/OP/WG/R10 -> statuses, owners, deltas; SX00_RECONCILIATION.json+md) - SX gate PR"
+    },
+    {
+      "n": 640,
+      "lane": "R14-K",
+      "what": "Kamino unsigned plans wired into AtomicMarginfiJupiterPlanner as instruction references (retarget_borrow_index/assemble_kamino_flash_message)"
+    },
+    {
+      "n": 641,
+      "lane": "SX-01",
+      "what": "Canonical typed strategy contract schema (src/strategy/strategy_contract.py, additive, fail-closed parsing, no runtime registry)"
+    },
+    {
+      "n": 642,
+      "lane": "SX-09",
+      "what": "LP position lifecycle + fee/IL harvesting research model (src/research/lp_lifecycle/, persistent-capital fail-closed)"
+    },
+    {
+      "n": 646,
+      "lane": "MASTER/BUILD-BIGGER-UNIVERSE",
+      "what": "Preserve MASTER FLASHLOAN scope and recover Build Bigger Universe archive: 25 historical strategy families, 33 venue families, 17 funding candidates, 39 original work packages, V3-V6 archive reconciliation; docs-only"
+    },
+    {
+      "n": 647,
+      "lane": "R13-TITAN",
+      "what": "Titan quote adapter on frozen R13-K quote/build kernel; sender-free/offline, live capture not authorized"
+    }
   ],
   "closed": 24,
-  "open_prs_at_refresh": "0 at refresh time (all legacy Jul-Oct backlog closed); parallel SX session opens lane PRs continuously - lead reviews/merges them as they land",
+  "open_prs_at_refresh": [
+    {
+      "n": 645,
+      "lane": "SX-12",
+      "status": "OPEN_REBASE_REQUIRED",
+      "head": "c802e59e",
+      "note": "Portfolio optimizer over SX-01 ResourceManifest + AGG-05; 20 deterministic tests reported, but not mergeable against latest main."
+    },
+    {
+      "n": 648,
+      "lane": "SX-08",
+      "status": "OPEN_REBASE_REQUIRED",
+      "head": "ed7abadf",
+      "note": "Offline utilization/rate/refinance model; 15 tests reported; no live protocol parameter pins."
+    },
+    {
+      "n": 649,
+      "lane": "SX-03",
+      "status": "OPEN_REBASE_REQUIRED_SOURCE_BLOCKED",
+      "head": "4ffffddc",
+      "note": "LLAMMA research math; Curve source proprietary/all-rights-reserved, source commit SHA and whitepaper/state unit proof pending; no code copied."
+    }
+  ],
   "workstreams_final": {
     "P0_market_data": "P0-1/2/3 IN_MAIN_VERIFIED (offline); live captures typed BLOCKED",
     "capital_readers": "CAP-A/B/C/D all IN_MAIN_VERIFIED offline decoders; effective capacity UNKNOWN (never zero); zero qualified edges - unchanged #585 baseline; all four typed BLOCKED on LIVE_ROOTED_RPC / LIVE_SUI_CHECKPOINT / OPERATOR_ACCOUNT",
     "builders": "R-03 contract IN_MAIN_VERIFIED; Jupiter Lend + NAVI BUILT_OFFLINE_UNQUALIFIED; Kamino BUILT_OFFLINE_UNQUALIFIED (#633) and wired into AtomicMarginfiJupiterPlanner as instruction references (#640); Project0 BLOCKED(OPERATOR_ACCOUNT_INPUT_REQUIRED)",
     "platform": "fcntl shim + shared flock module + .gitattributes guards; remaining: native-Windows CI wiring, residual 60 documented failures",
     "security": "strict pip-audit 0, no ignores, official workflow, idempotent",
-    "strategy": "Registry 6 families (2 shadow-ready); 12 relation kinds with #614 gates; offline replay shortlist!=profit (#631); MASTER atlas #599; R13-K kernel frozen #638; SX-00 reconciliation #639; SX-01 contract #641; SX-09 LP lifecycle #642",
+    "strategy": "Six registrations exist; only circular_arbitrage has a real two-leg shadow detector. LST depeg/unstake are STUB; Kamino liquidation/orderbook are FIXTURE_ONLY/quarantined; Pump is boundary-only disabled. SX-01 contract is advisory, not runtime registry. 12/27 owner groups were library-only in R08 audit #627.",
     "composition": "Audits #624+#627: 15/27 owner groups wired, 12 library-only; INTEGRATION_GAP_* typed; 8-step composition plan",
     "providers": "13 providers documented (6 Solana + 7 Sui); R13-K quote/build kernel frozen (#638) - adapter wave (Titan/Aftermath/7K/Cetus) proceeds on the frozen kernel, one PR per provider",
     "ton_sui_evm": "TON DISCOVERY_ONLY + typed negative atomicity; Sui wave-2 pinned; EVM wave-2 dossiers (Euler BSL-blocked); all capacity UNKNOWN; providers disabled",
-    "strategy_expansion": "SX-00 gate MERGED (#639). Merged lanes: SX-01 (#641), SX-09 (#642). In flight (parallel session, isolated worktrees/branches): SX-02 flash-mint economics, SX-03 LLAMMA, SX-04 OEV, SX-05+06 microstructure, SX-07 claims, SX-08 rate curves, SX-10+11 backrun/async, SX-12 portfolio (stacked on SX-01), SX-13 causal eval, SX-14 mechanism lab. R10 implementation wave (lead session): R10-1 CPMM cycle binding, R10-2 MarginFi capital edges, R10-3 LST residual-fed detectors. Coordinator closeout after lanes: SX-15 observability matrix, SX-16 final reconciliation. Machine-readable matrix: STUDIOUS_PANCAKE_MASTER_CODEX_EXECUTION_2026-11-13/MASTER00_IMPLEMENTATION_MATRIX.json"
+    "strategy_expansion": "Full master/archive handoff #646 merged; R13 Titan adapter #647 merged on frozen kernel #638. SX-00 #639, SX-01 #641, SX-09 #642, SX-10/SX-11 #643 merged. Open: SX-12 #645 (rebase), SX-08 #648 (rebase), SX-03 #649 (rebase + source/rights blocker). Newly assigned: SX-17 runtime multi-strategy fanout, W6-12 participant strategy intelligence. Remaining SX-02/04/05+06/07/13/14/15/16 and R10-1/2/3 follow-through.",
+    "runtime_parallelism": "SX-17 PLANNED: extend existing application/StrategyRegistry/OpportunityConsumer/AGG-05/paper root; one immutable snapshot generation; deterministic bounded workers; no second registry/scheduler/consumer; no stub activation.",
+    "participant_intelligence": "W6-12 PLANNED: public/authorized pseudonymous on-chain participant episodes to evidence-backed strategy archetypes, full net attribution, censoring and leakage-resistant holdout; no deanonymization or copy-trading."
   },
   "user_decision_blockers": [
-    {"id": "LIVE_AUTHORIZATION_REQUIRED", "detail": "live rooted-RPC (Solana) + governed Sui checkpoint reads + EVM fork/RPC reads: user opt-in; unblocks effective capacity for all readers and R04/R05/R06"},
-    {"id": "OPERATOR_ACCOUNT_INPUT_REQUIRED", "detail": "Project 0 eligibility path needs operator-supplied existing public account"},
-    {"id": "ZEROX_LIVE_CAPTURE_PREREQ", "detail": "0x comparable live quotes need public taker + ZEROX_API_KEY (name only)"},
-    {"id": "ORCA_LICENSE_REVIEW", "detail": "custom license review before any Orca source use"},
-    {"id": "EULER_BSL_BLOCKED", "detail": "Euler v2 BSL 1.1 has no Additional Use Grant (change 2029-04-24) - typed license blocker from #635"}
+    {
+      "id": "LIVE_AUTHORIZATION_REQUIRED",
+      "detail": "live rooted-RPC (Solana) + governed Sui checkpoint reads + EVM fork/RPC reads: user opt-in; unblocks effective capacity for all readers and R04/R05/R06"
+    },
+    {
+      "id": "OPERATOR_ACCOUNT_INPUT_REQUIRED",
+      "detail": "Project 0 eligibility path needs operator-supplied existing public account"
+    },
+    {
+      "id": "ZEROX_LIVE_CAPTURE_PREREQ",
+      "detail": "0x comparable live quotes need public taker + ZEROX_API_KEY (name only)"
+    },
+    {
+      "id": "ORCA_LICENSE_REVIEW",
+      "detail": "custom license review before any Orca source use"
+    },
+    {
+      "id": "EULER_BSL_BLOCKED",
+      "detail": "Euler v2 BSL 1.1 has no Additional Use Grant (change 2029-04-24) - typed license blocker from #635"
+    }
   ],
   "safety_flags": {
     "sign_enabled": false,
@@ -84,10 +301,12 @@
     "live_observations_this_execution": 0
   },
   "integration_order_next": [
-    "SX lanes land as focused PRs (parallel session); lead reviews/merges each after green CI; SX-12 stacked on merged SX-01",
-    "R10 wave: R10-1 CPMM cycle binding -> graph candidates; R10-3 LST residual-fed detectors; R10-2 MarginFi FlashCapitalProvider over pinned captures (lead session lanes)",
-    "Provider adapter wave on the frozen R13-K kernel: Cetus V3 + 7K first (Sui); Titan + OKX (Solana) - one PR per provider",
-    "SX-15 per-family observability matrix, then SX-16 final reconciliation (crosswalk/registry/collision check) - coordinator-only",
-    "User gate: live-capture authorization (LIVE_AUTHORIZATION_REQUIRED) - unblocks R02 effective capacity, then R04 -> R05 -> R06"
-  ]
+    "Rebase/review #645, #648 and #649 against current main; hold #649 until licensing/source/whitepaper/state blockers are resolved.",
+    "Complete R10-1 CPMM graph-to-exact-sizing-to-paper binding, R10-2 MarginFi evidence-backed capital edge and R10-3 residual-fed LST detector bodies.",
+    "Continue independent SX-02/04/05+06/07/13/14 lanes and SX-15 observability.",
+    "Execute SX-17 runtime fanout audit/contract tests in parallel with W6-12 participant episode schema/replay research; integrate only through existing canonical owners.",
+    "Coordinator SX-16 final crosswalk/dashboard reconciliation after all lane receipts.",
+    "Live capture remains user-gated; then R02 effective capacity -> R04 -> R05 -> R06 in dependency order."
+  ],
+  "open": "3 current strategy PRs: #645 SX-12, #648 SX-08 and #649 SX-03; all require current-main rebase/check before merge."
 }

@@ -26,7 +26,7 @@ Repository: BobIvans/studious-pancake
 5. Новые документы этой кампании: STRATEGY_RESEARCH_CROSSWALK_AND_NEW_GAPS_RU.md, STRATEGY_RESEARCH_EXECUTION_ASSIGNMENTS_RU.md, STRATEGY_RESEARCH_ACCEPTANCE_MATRIX_V2.json.
 6. SX-17 archive taxonomy: ARCHIVE_DETECTOR_TAXONOMY_COVERAGE_GATE_RU.md and ARCHIVE_DETECTOR_TAXONOMY_CROSSWALK_V1.json.
 
-Сначала проверь все open/merged PR и их текущие head/base SHA. При snapshot d52e61f36ece249c1221c8e71d22aa29ef476e21 PR #641 (SX-01), #642 (SX-09) и #643 (SX-10/SX-11) уже merged; #645 (SX-12) был открыт и уже содержал portfolio optimizer по SX-01 ResourceManifest + AGG-05. Это только исторический срез — проверь статусы заново. Не создавай повторно SX-00, SX-01, SX-09, SX-10, SX-11 или SX-12, если их PR уже merged/open. #639 — historical receipt на старом SHA, а не текущий dashboard.
+Исторический snapshot d52e61f36ece249c1221c8e71d22aa29ef476e21: #641/#642/#643 были merged, #645 тогда был открыт. Текущий статус приведён в конце этого файла и в `PARALLEL_EXECUTION_STATUS.json`; перед dispatch всегда перепроверяй main/PR/checks. На latest snapshot #645/#648/#651/#653 уже merged; #654 закрепил SX-17 archive taxonomy. Не дублируй эти ID.
 
 ## Существующие owners — reuse, do not replace
 

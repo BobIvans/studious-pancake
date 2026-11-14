@@ -1,0 +1,74 @@
+{
+  "schema_version": "studious-pancake.titan-adapter-additive-sources.v1",
+  "prepared_at_utc": "2026-11-14",
+  "retrieval_window_utc": "2026-11-14 (R13-A1 Titan adapter lane)",
+  "repository_base_sha_audited": "77d57e94f46bb4be05b433b1ff7eea14596b07b1",
+  "parent_bundle": "docs/integrations/offline/providers-wave1-2026-11-13/SOURCE_MANIFEST.json (PR #621, additive; untouched by this lane)",
+  "stream": "R13-A1 Titan quote adapter on frozen kernel (offline, fail-closed, sender-free)",
+  "hash_policy": {
+    "content_sha256": "SHA-256 computed locally over the line-ending-normalized bytes (CRLF->LF) of each file, stable across git autocrlf/eol settings; local integrity hash, not a provider-supplied signature."
+  },
+  "flag_taxonomy_note": "OFFICIAL_CONTRACT_EXTRACT_ONLY: editorial transcription of exact field/type shapes from current official Titan developer docs pages; no verbatim page copies vendored (upstream page copyright).",
+  "safety": {
+    "sign_enabled": false,
+    "send_enabled": false,
+    "credentials_used": "NONE (no credentials exist in this environment)",
+    "live_provider_access": "NONE (adapter is offline-only; live capture verdict TITAN_LIVE_CAPTURE_NOT_AUTHORIZED is constant)"
+  },
+  "acquisitions": [
+    {
+      "id": "titan-newswapquotestream-reference",
+      "provider": "titan",
+      "kind": "official_contract_extract",
+      "url": "https://titan-exchange.gitbook.io/titan/developer-doc/swap-api/reference/direct/new-swap-quote-stream.md",
+      "url_alt": "https://titan-exchange.gitbook.io/titan/titan-developer-docs/swap-api/reference/direct/new-swap-quote-stream.md",
+      "retrieved_at_utc": "2026-11-14",
+      "pins": "SwapQuoteRequest/SwapParams/TransactionParams, SwapQuotes, SwapQuotesMetadata, SwapRoute, RoutePlanStep, PlatformFee exact field names and Rust/TS types",
+      "license": "Proprietary Titan documentation, publicly readable; editorial transcription only (no full-page vendoring)"
+    },
+    {
+      "id": "titan-types-reference",
+      "provider": "titan",
+      "kind": "official_contract_extract",
+      "url": "https://titan-exchange.gitbook.io/titan/developer-doc/swap-api/reference/types.md",
+      "retrieved_at_utc": "2026-11-14",
+      "pins": "Type index; camelCase MessagePack wire names; Instruction {p,a,d}; AccountMeta {p,s,w}; SwapMode ExactIn/ExactOut",
+      "license": "Proprietary Titan documentation, publicly readable; editorial transcription only"
+    },
+    {
+      "id": "titan-swap-api-quickstart",
+      "provider": "titan",
+      "kind": "official_contract_extract",
+      "url": "https://titan-exchange.gitbook.io/titan/developer-doc/swap-api/quickstart.md",
+      "retrieved_at_utc": "2026-11-14",
+      "pins": "Gateway REST request flow; quotes map iteration; metadata.ExpectedWinner selection rule",
+      "license": "Proprietary Titan documentation, publicly readable; editorial transcription only"
+    },
+    {
+      "id": "titan-stream-and-execute-guide",
+      "provider": "titan",
+      "kind": "official_contract_extract",
+      "url": "https://titan-exchange.gitbook.io/titan/developer-doc/swap-api/guides/stream-and-execute.md",
+      "retrieved_at_utc": "2026-11-14",
+      "pins": "Client-side V0 assembly from instructions+addressLookupTables; computeUnitsSafe budget rule; expiry checks",
+      "license": "Proprietary Titan documentation, publicly readable; editorial transcription only"
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/integrations/offline/titan-adapter-2026-11-14/TITAN_ADAPTER_SCHEMA_PIN.md",
+      "content_sha256_normalized": "53bf7b8f0def3dfa1c7617bd4a78731d847ae54b1def11dec7e9917233026778",
+      "flag": "OFFICIAL_CONTRACT_EXTRACT_ONLY"
+    }
+  ],
+  "typed_unknowns_added": [
+    "TITAN-U1 portal JSON u64 encoding (number vs string): UNPINNED",
+    "TITAN-U2 portal JSON transaction bytes encoding: UNPINNED",
+    "TITAN-U3 portal JSON instruction data encoding: UNPINNED as string-vs-array",
+    "TITAN-U4 numeric rate limits per tier: UNKNOWN (inherited from wave-1)",
+    "TITAN-U5 portal swapMode query parameter: NOT_PINNED",
+    "TITAN-U6 MessagePack transport decode: NOT_IMPLEMENTED (needs its own capture)",
+    "TITAN-U7 error-code taxonomy beyond 401/429/no-quotes: UNKNOWN",
+    "TITAN-U8 timeTakenNs vs timeTaken name divergence: NAME_DIVERGENCE (Rust authoritative)"
+  ]
+}

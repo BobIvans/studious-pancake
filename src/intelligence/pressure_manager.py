@@ -12,6 +12,7 @@ from typing import Iterable, Mapping
 import time
 
 from src.agg02.storage import DurableRawJournal
+from src.platform_compat.flock import fcntl, flock_live_file
 
 from .common import canonical, digest, load_json, save_json, seal, verify_seal
 from .evidence_refs import find_raw_references
@@ -486,47 +487,56 @@ def run_pressure_cycle(
         )
     # Lock the existing inode: NORMAL never creates even a lock file. No thread
     # is hidden in the journal and SQLite append transactions remain independent.
-    import fcntl
-
+    # flock_live_file is the shared platform_compat binding: POSIX advisory
+    # fcntl.flock (regular I/O unaffected); on win32 a named-mutex emulation
+    # that keeps this cycle's own SQLite handle's I/O access to the journal
+    # (msvcrt byte-range locks are mandatory and would starve it -- see
+    # platform_compat/flock.py).  Released explicitly (also implicit on fd
+    # close, like flock) so the cycle never outlives its exclusion.
     with journal.open("rb") as lock:
         try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            flock_live_file(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
             raise ValueError("STORAGE_PRESSURE_CYCLE_ALREADY_RUNNING") from exc
-        if receipt_path.exists():
-            receipt = load_json(receipt_path)
-            verify_seal(receipt)
-            if receipt["request_sha256"] != request_sha:
-                raise ValueError("pressure batch identity rebound")
-            if "compaction" in receipt:
-                from src.agg02.storage import DatasetManifest
-                from .parquet_compaction import verify_partition
+        try:
+            if receipt_path.exists():
+                receipt = load_json(receipt_path)
+                verify_seal(receipt)
+                if receipt["request_sha256"] != request_sha:
+                    raise ValueError("pressure batch identity rebound")
+                if "compaction" in receipt:
+                    from src.agg02.storage import DatasetManifest
+                    from .parquet_compaction import verify_partition
 
-                verify_partition(DatasetManifest(**receipt["compaction"]["dataset"]))
-            return receipt
-        ancestor = output
-        while not ancestor.exists():
-            ancestor = ancestor.parent
-        if ancestor.stat().st_dev != root.stat().st_dev:
-            raise ValueError("pressure output must share the measured filesystem")
-        result = _run_pressure_cycle_locked(
-            state_root=root,
-            journal_path=journal,
-            records=records,
-            references=references,
-            reference_inventory_complete=reference_inventory_complete,
-            output_dir=output,
-            minimum_age_ms=minimum_age_ms,
-            max_events=max_events,
-            max_payload_bytes=max_payload_bytes,
-            execute=execute,
-            now_ms=now_ms,
-            cycle_key=key,
-            request_sha=request_sha,
-        )
-        if execute and result["status"] != "NO_ACTION_REQUIRED":
-            save_json(receipt_path, result)
-        return result
+                    verify_partition(
+                        DatasetManifest(**receipt["compaction"]["dataset"])
+                    )
+                return receipt
+            ancestor = output
+            while not ancestor.exists():
+                ancestor = ancestor.parent
+            if ancestor.stat().st_dev != root.stat().st_dev:
+                raise ValueError("pressure output must share the measured filesystem")
+            result = _run_pressure_cycle_locked(
+                state_root=root,
+                journal_path=journal,
+                records=records,
+                references=references,
+                reference_inventory_complete=reference_inventory_complete,
+                output_dir=output,
+                minimum_age_ms=minimum_age_ms,
+                max_events=max_events,
+                max_payload_bytes=max_payload_bytes,
+                execute=execute,
+                now_ms=now_ms,
+                cycle_key=key,
+                request_sha=request_sha,
+            )
+            if execute and result["status"] != "NO_ACTION_REQUIRED":
+                save_json(receipt_path, result)
+            return result
+        finally:
+            flock_live_file(lock, fcntl.LOCK_UN)
 
 
 __all__ = [

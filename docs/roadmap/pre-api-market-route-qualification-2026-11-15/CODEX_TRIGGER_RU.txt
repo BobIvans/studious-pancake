@@ -1,0 +1,11 @@
+CODEX TRIGGER — EXECUTE PRE-API MARKET→ROUTE→PAPER CLOSURE
+
+Work in BobIvans/studious-pancake on the PR branch codex/pre-api-market-route-qualification-2026-11-15 (or current PR head). Read the PR description and docs/roadmap/pre-api-market-route-qualification-2026-11-15/CODEX_START_HERE_RU.md in full. Refresh main, open PRs, active worktrees and canonical owners before editing. Check for an existing R10-1 equivalent; do not duplicate it.
+
+Complete the planned R10-1 integration: existing two-leg detector + existing graph topology + exact 3/4-pool Raydium CPMM cycle evaluation + PR118 amount grid + R13-K PoolIdentityDeduplicator + all-in cost accounting + existing sender-free evidence/paper seam. Keep 2–5 hop solver as topology shortlist; exact-promote only routes where every leg is supported. Build one deterministic offline end-to-end replay with positive and negative cases, stage metrics and typed rejection reasons.
+
+No strategy expansion. No new graph, solver, registry, quote kernel, DB, journal, capital graph, RPC quorum, scheduler or authority gate. No API network capture in this PR. Do not extrapolate quotes or count different aggregators as independent liquidity. Missing identity, state, lineage, cost, capacity, builder or simulation is BLOCKED/UNKNOWN, never zero or success.
+
+HARD STOP: no secrets, wallet/account/ATA creation, signing, sending, borrowing, spending, deployments, provider activation, live mode or production promotion. Keep sender/sign/live false. Do not merge until all code/tests/reviews/checks/branch-protection gates pass.
+
+Commit implementation + tests + replay report + updated R10-1/MASTER00 evidence to this same PR. State exactly which route shapes are exact-supported, shortlist-only or blocked. A successful fixture replay means ready for a separate read-only API-capture PR; it is not proof of real-market profitability, actual trade execution or live readiness.

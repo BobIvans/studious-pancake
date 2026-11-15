@@ -752,8 +752,19 @@ class CapacityEconomics:
         if self.flash_fee_bps >= 10_000:
             raise ValueError("flash_fee_bps must be < 10000")
 
-    def ledger_for(self, route: ExactCpmmRouteEvaluation) -> PR118TypedCostLedger:
-        asset = route.legs[0].input_asset
+    def ledger_for_legs(
+        self,
+        legs: tuple[ExactCpmmEdgeEvaluation, ...],
+        *,
+        input_amount: int,
+        conservative_output: int,
+        provenance_hash: str,
+    ) -> PR118TypedCostLedger:
+        """All-in PR118 ledger for any exact leg sequence (2, 3 or 4 legs)."""
+
+        if not legs:
+            raise ValueError("native capacity ledger requires at least one leg")
+        asset = legs[0].input_asset
         if (asset.mint, asset.decimals, asset.token_program, asset.genesis_hash) != (
             WSOL_MINT,
             9,
@@ -761,7 +772,7 @@ class CapacityEconomics:
             MAINNET_GENESIS,
         ):
             raise ValueError("native capacity ledger requires canonical WSOL identity")
-        fee = (route.input_amount * self.flash_fee_bps + 9_999) // 10_000
+        fee = (input_amount * self.flash_fee_bps + 9_999) // 10_000
         entries: list[PR118CostLedgerEntry] = []
         if self.slippage_buffer_atoms:
             entries.append(
@@ -780,17 +791,23 @@ class CapacityEconomics:
                 )
             )
         return PR118TypedCostLedger(
-            min_out=PR118AssetAmount(
-                self.settlement_asset_id, route.conservative_output
-            ),
+            min_out=PR118AssetAmount(self.settlement_asset_id, conservative_output),
             flash_repayment=PR118FlashRepaymentTerms(
                 self.settlement_asset_id,
-                route.input_amount,
+                input_amount,
                 fee,
                 self.protocol_rounding_atoms,
             ),
             entries=tuple(entries),
-            route_provenance_hash=route.evaluation_id,
+            route_provenance_hash=provenance_hash,
+        )
+
+    def ledger_for(self, route: ExactCpmmRouteEvaluation) -> PR118TypedCostLedger:
+        return self.ledger_for_legs(
+            route.legs,
+            input_amount=route.input_amount,
+            conservative_output=route.conservative_output,
+            provenance_hash=route.evaluation_id,
         )
 
 

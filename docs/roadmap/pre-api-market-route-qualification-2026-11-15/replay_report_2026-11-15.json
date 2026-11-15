@@ -1,0 +1,683 @@
+{
+  "contains_live_evidence": false,
+  "determinism_verified": true,
+  "evidence_scope": "fixture-replay",
+  "live_mode": false,
+  "scenarios": [
+    {
+      "report": {
+        "blocked_venue_kinds": [],
+        "live_mode": false,
+        "metrics": {
+          "aliased_or_correlated_route_count": 0,
+          "builder_eligible_count": 0,
+          "capital_eligible_count": 1,
+          "contains_live_evidence": false,
+          "discovered_market_count": 2,
+          "evidence_scope": "fixture-replay",
+          "exact_qualified_route_count": 1,
+          "exact_quote_route_count": 1,
+          "flashloan_eligible_count": 1,
+          "identity_verified_market_count": 2,
+          "market_candidate_count": 1,
+          "net_positive_route_count": 1,
+          "paper_attempt_count": 1,
+          "paper_complete_count": 0,
+          "paper_rejected_count": 1,
+          "provider_overlap_cluster_count": 2,
+          "ratios": {
+            "capital_eligibility": "1.000000",
+            "economic_survival": "1.000000",
+            "exact_qualification": "1.000000",
+            "paper_completion": "0.000000",
+            "simulation_pass": "0.000000"
+          },
+          "rejections": [
+            {
+              "count": 1,
+              "reason": "NO_QUALIFIED_LENDER_EDGE"
+            },
+            {
+              "count": 1,
+              "reason": "below_min_gross_profit"
+            }
+          ],
+          "rooted_state_count": 2,
+          "shortlist_route_count": 1,
+          "simulation_pass_count": 0,
+          "size_grid_evaluated_count": 1,
+          "topology_route_count": 1,
+          "unique_semantic_route_count": 1
+        },
+        "records": [
+          {
+            "conservative_net_atoms": "203",
+            "detail": "paper seam blocked; candidate preserved with typed reason",
+            "gross_profit_atoms": "203",
+            "hop_count": 2,
+            "ordered_venues": [
+              "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C:pool-1",
+              "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C:pool-2"
+            ],
+            "provenance": "fixture-replay",
+            "rejection": "NO_QUALIFIED_LENDER_EDGE",
+            "route_kind": "two-leg",
+            "selected_amount": "100",
+            "semantic_route_id": "d83ec31ba036b5333759b438af2392ea3415d4462d599f7e733a99470a77b11e",
+            "status": "paper-blocked",
+            "support": "exact-supported",
+            "venue_kind": "raydium-cpmm"
+          }
+        ],
+        "replay_digest": "2c674485220d0a969617a686dd36344509ed9efa067108659749f185196ebb65",
+        "route_support_matrix": [
+          {
+            "count": 1,
+            "route_kind": "two-leg",
+            "support": "exact-supported",
+            "venue_kind": "raydium-cpmm"
+          }
+        ],
+        "schema_version": "r10-1.cpmm-cycle-binding.v1",
+        "send_enabled": false,
+        "sign_enabled": false
+      },
+      "scenario": "two-leg-positive"
+    },
+    {
+      "report": {
+        "blocked_venue_kinds": [],
+        "live_mode": false,
+        "metrics": {
+          "aliased_or_correlated_route_count": 0,
+          "builder_eligible_count": 0,
+          "capital_eligible_count": 1,
+          "contains_live_evidence": false,
+          "discovered_market_count": 3,
+          "evidence_scope": "fixture-replay",
+          "exact_qualified_route_count": 2,
+          "exact_quote_route_count": 2,
+          "flashloan_eligible_count": 1,
+          "identity_verified_market_count": 3,
+          "market_candidate_count": 2,
+          "net_positive_route_count": 1,
+          "paper_attempt_count": 1,
+          "paper_complete_count": 0,
+          "paper_rejected_count": 1,
+          "provider_overlap_cluster_count": 3,
+          "ratios": {
+            "capital_eligibility": "1.000000",
+            "economic_survival": "0.500000",
+            "exact_qualification": "1.000000",
+            "paper_completion": "0.000000",
+            "simulation_pass": "0.000000"
+          },
+          "rejections": [
+            {
+              "count": 1,
+              "reason": "NO_QUALIFIED_LENDER_EDGE"
+            },
+            {
+              "count": 1,
+              "reason": "cpmm-binding-net-negative"
+            }
+          ],
+          "rooted_state_count": 3,
+          "shortlist_route_count": 1,
+          "simulation_pass_count": 0,
+          "size_grid_evaluated_count": 6,
+          "topology_route_count": 2,
+          "unique_semantic_route_count": 2
+        },
+        "records": [
+          {
+            "conservative_net_atoms": null,
+            "detail": "no admissible sizing point",
+            "gross_profit_atoms": null,
+            "hop_count": 3,
+            "ordered_venues": [
+              "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C:pool-3",
+              "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C:pool-2",
+              "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C:pool-1"
+            ],
+            "provenance": "fixture-replay",
+            "rejection": "cpmm-binding-net-negative",
+            "route_kind": "3-pool-cycle",
+            "selected_amount": null,
+            "semantic_route_id": "4f1dbd05a2887074d4297443c8e456bcc2f75b7afa784999092cc407965ada4e",
+            "status": "rejected",
+            "support": "exact-supported",
+            "venue_kind": "raydium-cpmm"
+          },
+          {
+            "conservative_net_atoms": "2",
+            "detail": "paper seam blocked; candidate preserved with typed reason",
+            "gross_profit_atoms": "6",
+            "hop_count": 3,
+            "ordered_venues": [
+              "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C:pool-1",
+              "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C:pool-2",
+              "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C:pool-3"
+            ],
+            "provenance": "fixture-replay",
+            "rejection": "NO_QUALIFIED_LENDER_EDGE",
+            "route_kind": "3-pool-cycle",
+            "selected_amount": "20",
+            "semantic_route_id": "cac5196e26cdfc0f0f08e071d27b37412c7b6fa26dc0bfad276d2bf94adb742f",
+            "status": "paper-blocked",
+            "support": "exact-supported",
+            "venue_kind": "raydium-cpmm"
+          }
+        ],
+        "replay_digest": "d53b3e3bc0a9aa6e44382d850ca0a8162a912916954e7930f190f56342e07fff",
+        "route_support_matrix": [
+          {
+            "count": 2,
+            "route_kind": "3-pool-cycle",
+            "support": "exact-supported",
+            "venue_kind": "raydium-cpmm"
+          }
+        ],
+        "schema_version": "r10-1.cpmm-cycle-binding.v1",
+        "send_enabled": false,
+        "sign_enabled": false
+      },
+      "scenario": "three-pool-triangle-non-monotonic"
+    },
+    {
+      "report": {
+        "blocked_venue_kinds": [],
+        "live_mode": false,
+        "metrics": {
+          "aliased_or_correlated_route_count": 0,
+          "builder_eligible_count": 0,
+          "capital_eligible_count": 1,
+          "contains_live_evidence": false,
+          "discovered_market_count": 4,
+          "evidence_scope": "fixture-replay",
+          "exact_qualified_route_count": 2,
+          "exact_quote_route_count": 2,
+          "flashloan_eligible_count": 1,
+          "identity_verified_market_count": 4,
+          "market_candidate_count": 2,
+          "net_positive_route_count": 1,
+          "paper_attempt_count": 1,
+          "paper_complete_count": 0,
+          "paper_rejected_count": 1,
+          "provider_overlap_cluster_count": 4,
+          "ratios": {
+            "capital_eligibility": "1.000000",
+            "economic_survival": "0.500000",
+            "exact_qualification": "1.000000",
+            "paper_completion": "0.000000",
+            "simulation_pass": "0.000000"
+          },
+          "rejections": [
+            {
+              "count": 1,
+              "reason": "NO_QUALIFIED_LENDER_EDGE"
+            },
+            {
+              "count": 1,
+              "reason": "cpmm-binding-net-negative"
+            }
+          ],
+          "rooted_state_count": 4,
+          "shortlist_route_count": 1,
+          "simulation_pass_count": 0,
+          "size_grid_evaluated_count": 2,
+          "topology_route_count": 2,
+          "unique_semantic_route_count": 2
+        },
+        "records": [
+          {
+            "conservative_net_atoms": "97",
+            "detail": "paper seam blocked; candidate preserved with typed reason",
+            "gross_profit_atoms": "97",
+            "hop_count": 4,
+            "ordered_venues": [
+              "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C:pool-1",
+              "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C:pool-2",
+              "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C:pool-3",
+              "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C:pool-4"
+            ],
+            "provenance": "fixture-replay",
+            "rejection": "NO_QUALIFIED_LENDER_EDGE",
+            "route_kind": "4-pool-cycle",
+            "selected_amount": "10",
+            "semantic_route_id": "72f327cb28236f086dd3abd9562bdd48be8a07e9a6f489235fa2b70d8a1ba330",
+            "status": "paper-blocked",
+            "support": "exact-supported",
+            "venue_kind": "raydium-cpmm"
+          },
+          {
+            "conservative_net_atoms": null,
+            "detail": "no admissible sizing point",
+            "gross_profit_atoms": null,
+            "hop_count": 4,
+            "ordered_venues": [
+              "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C:pool-4",
+              "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C:pool-3",
+              "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C:pool-2",
+              "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C:pool-1"
+            ],
+            "provenance": "fixture-replay",
+            "rejection": "cpmm-binding-net-negative",
+            "route_kind": "4-pool-cycle",
+            "selected_amount": null,
+            "semantic_route_id": "e1dfa39cc1081d2cca5f656ded560772cd63519927347f59de6c6e0b9486ab1b",
+            "status": "rejected",
+            "support": "exact-supported",
+            "venue_kind": "raydium-cpmm"
+          }
+        ],
+        "replay_digest": "f0e7bb38e3fb12914ef2458bc6244d88ec14e6077e5e8afecb643d1cb15b0461",
+        "route_support_matrix": [
+          {
+            "count": 2,
+            "route_kind": "4-pool-cycle",
+            "support": "exact-supported",
+            "venue_kind": "raydium-cpmm"
+          }
+        ],
+        "schema_version": "r10-1.cpmm-cycle-binding.v1",
+        "send_enabled": false,
+        "sign_enabled": false
+      },
+      "scenario": "four-pool-cycle"
+    },
+    {
+      "report": {
+        "blocked_venue_kinds": [],
+        "live_mode": false,
+        "metrics": {
+          "aliased_or_correlated_route_count": 0,
+          "builder_eligible_count": 0,
+          "capital_eligible_count": 0,
+          "contains_live_evidence": false,
+          "discovered_market_count": 2,
+          "evidence_scope": "fixture-replay",
+          "exact_qualified_route_count": 0,
+          "exact_quote_route_count": 0,
+          "flashloan_eligible_count": 0,
+          "identity_verified_market_count": 2,
+          "market_candidate_count": 0,
+          "net_positive_route_count": 0,
+          "paper_attempt_count": 0,
+          "paper_complete_count": 0,
+          "paper_rejected_count": 0,
+          "provider_overlap_cluster_count": 1,
+          "ratios": {
+            "capital_eligibility": null,
+            "economic_survival": null,
+            "exact_qualification": null,
+            "paper_completion": null,
+            "simulation_pass": null
+          },
+          "rejections": [
+            {
+              "count": 2,
+              "reason": "cpmm-binding-pool-alias-correlated"
+            }
+          ],
+          "rooted_state_count": 2,
+          "shortlist_route_count": 0,
+          "simulation_pass_count": 0,
+          "size_grid_evaluated_count": 0,
+          "topology_route_count": 0,
+          "unique_semantic_route_count": 0
+        },
+        "records": [
+          {
+            "conservative_net_atoms": null,
+            "detail": "same physical pool exposed through overlapping lineage",
+            "gross_profit_atoms": null,
+            "hop_count": 1,
+            "ordered_venues": [
+              "agg-0x-view"
+            ],
+            "provenance": "fixture-replay",
+            "rejection": "cpmm-binding-pool-alias-correlated",
+            "route_kind": "pool",
+            "selected_amount": null,
+            "semantic_route_id": "b0658d6158c7e5fca8f726f57d6c349480fe2f3050b4411236ff5fb9c0b8f13a",
+            "status": "rejected",
+            "support": "blocked",
+            "venue_kind": "raydium-cpmm"
+          },
+          {
+            "conservative_net_atoms": null,
+            "detail": "same physical pool exposed through overlapping lineage",
+            "gross_profit_atoms": null,
+            "hop_count": 1,
+            "ordered_venues": [
+              "agg-jupiter-view"
+            ],
+            "provenance": "fixture-replay",
+            "rejection": "cpmm-binding-pool-alias-correlated",
+            "route_kind": "pool",
+            "selected_amount": null,
+            "semantic_route_id": "911ffa9f09ff80978d34cef792630b407580ae531fe4eb3b7c21bf04d957921c",
+            "status": "rejected",
+            "support": "blocked",
+            "venue_kind": "raydium-cpmm"
+          }
+        ],
+        "replay_digest": "ca910bad5e4b0bf459edbde1b2fd81b629300fbf8c662b55dd73b02ab1a8194c",
+        "route_support_matrix": [
+          {
+            "count": 2,
+            "route_kind": "pool",
+            "support": "blocked",
+            "venue_kind": "raydium-cpmm"
+          }
+        ],
+        "schema_version": "r10-1.cpmm-cycle-binding.v1",
+        "send_enabled": false,
+        "sign_enabled": false
+      },
+      "scenario": "pool-alias-across-aggregators"
+    },
+    {
+      "report": {
+        "blocked_venue_kinds": [],
+        "live_mode": false,
+        "metrics": {
+          "aliased_or_correlated_route_count": 0,
+          "builder_eligible_count": 0,
+          "capital_eligible_count": 0,
+          "contains_live_evidence": false,
+          "discovered_market_count": 2,
+          "evidence_scope": "fixture-replay",
+          "exact_qualified_route_count": 0,
+          "exact_quote_route_count": 0,
+          "flashloan_eligible_count": 0,
+          "identity_verified_market_count": 2,
+          "market_candidate_count": 0,
+          "net_positive_route_count": 0,
+          "paper_attempt_count": 0,
+          "paper_complete_count": 0,
+          "paper_rejected_count": 0,
+          "provider_overlap_cluster_count": 1,
+          "ratios": {
+            "capital_eligibility": null,
+            "economic_survival": null,
+            "exact_qualification": null,
+            "paper_completion": null,
+            "simulation_pass": null
+          },
+          "rejections": [
+            {
+              "count": 1,
+              "reason": "cpmm-binding-pool-lineage-unknown"
+            }
+          ],
+          "rooted_state_count": 2,
+          "shortlist_route_count": 0,
+          "simulation_pass_count": 0,
+          "size_grid_evaluated_count": 0,
+          "topology_route_count": 0,
+          "unique_semantic_route_count": 0
+        },
+        "records": [
+          {
+            "conservative_net_atoms": null,
+            "detail": "lineage absent; independence is UNKNOWN, never assumed",
+            "gross_profit_atoms": null,
+            "hop_count": 1,
+            "ordered_venues": [
+              "pool-2"
+            ],
+            "provenance": "fixture-replay",
+            "rejection": "cpmm-binding-pool-lineage-unknown",
+            "route_kind": "pool",
+            "selected_amount": null,
+            "semantic_route_id": "0e43bc48de3b75e34be69714d81440cca29d71be820a3a9d9299bccc068c302c",
+            "status": "rejected",
+            "support": "blocked",
+            "venue_kind": "raydium-cpmm"
+          }
+        ],
+        "replay_digest": "8c7ebc8c677ee43831dee704e80959229a9741e631312d13f082e853d30c21f1",
+        "route_support_matrix": [
+          {
+            "count": 1,
+            "route_kind": "pool",
+            "support": "blocked",
+            "venue_kind": "raydium-cpmm"
+          }
+        ],
+        "schema_version": "r10-1.cpmm-cycle-binding.v1",
+        "send_enabled": false,
+        "sign_enabled": false
+      },
+      "scenario": "unknown-lineage"
+    },
+    {
+      "report": {
+        "blocked_venue_kinds": [
+          "meteora-dlmm",
+          "orderbook",
+          "raydium-clmm"
+        ],
+        "live_mode": false,
+        "metrics": {
+          "aliased_or_correlated_route_count": 0,
+          "builder_eligible_count": 0,
+          "capital_eligible_count": 0,
+          "contains_live_evidence": false,
+          "discovered_market_count": 4,
+          "evidence_scope": "fixture-replay",
+          "exact_qualified_route_count": 0,
+          "exact_quote_route_count": 0,
+          "flashloan_eligible_count": 0,
+          "identity_verified_market_count": 1,
+          "market_candidate_count": 0,
+          "net_positive_route_count": 0,
+          "paper_attempt_count": 0,
+          "paper_complete_count": 0,
+          "paper_rejected_count": 0,
+          "provider_overlap_cluster_count": 1,
+          "ratios": {
+            "capital_eligibility": null,
+            "economic_survival": null,
+            "exact_qualification": null,
+            "paper_completion": null,
+            "simulation_pass": null
+          },
+          "rejections": [
+            {
+              "count": 2,
+              "reason": "cpmm-binding-missing-venue-state"
+            },
+            {
+              "count": 1,
+              "reason": "cpmm-binding-unsupported-venue-kind"
+            }
+          ],
+          "rooted_state_count": 1,
+          "shortlist_route_count": 0,
+          "simulation_pass_count": 0,
+          "size_grid_evaluated_count": 0,
+          "topology_route_count": 0,
+          "unique_semantic_route_count": 0
+        },
+        "records": [
+          {
+            "conservative_net_atoms": null,
+            "detail": "missing tick-array/bitmap state for exact math",
+            "gross_profit_atoms": null,
+            "hop_count": 0,
+            "ordered_venues": [],
+            "provenance": "fixture-replay",
+            "rejection": "cpmm-binding-missing-venue-state",
+            "route_kind": "blocked-venue",
+            "selected_amount": null,
+            "semantic_route_id": "52fed9935cefeccb62053e7f548a5eec2936a2d5f138357392628cc19ef2cf89",
+            "status": "rejected",
+            "support": "blocked",
+            "venue_kind": "raydium-clmm"
+          },
+          {
+            "conservative_net_atoms": null,
+            "detail": "missing direction-specific bin arrays",
+            "gross_profit_atoms": null,
+            "hop_count": 0,
+            "ordered_venues": [],
+            "provenance": "fixture-replay",
+            "rejection": "cpmm-binding-missing-venue-state",
+            "route_kind": "blocked-venue",
+            "selected_amount": null,
+            "semantic_route_id": "93326934888c89b0c2eb55efe536a98bee1fa6e8b8da6743590a13ebb713b2df",
+            "status": "rejected",
+            "support": "blocked",
+            "venue_kind": "meteora-dlmm"
+          },
+          {
+            "conservative_net_atoms": null,
+            "detail": "no verified sequence/depth fill semantics",
+            "gross_profit_atoms": null,
+            "hop_count": 0,
+            "ordered_venues": [],
+            "provenance": "fixture-replay",
+            "rejection": "cpmm-binding-unsupported-venue-kind",
+            "route_kind": "blocked-venue",
+            "selected_amount": null,
+            "semantic_route_id": "fb8376a909277d918923abf903ef0e58f7f5b637db03d0fe7bfa1aa3450edfce",
+            "status": "rejected",
+            "support": "blocked",
+            "venue_kind": "orderbook"
+          }
+        ],
+        "replay_digest": "df03632b92a24e581ec1950584813d297e4c12fd71424a935238b3bc2d4e2c4e",
+        "route_support_matrix": [
+          {
+            "count": 1,
+            "route_kind": "blocked-venue",
+            "support": "blocked",
+            "venue_kind": "meteora-dlmm"
+          },
+          {
+            "count": 1,
+            "route_kind": "blocked-venue",
+            "support": "blocked",
+            "venue_kind": "orderbook"
+          },
+          {
+            "count": 1,
+            "route_kind": "blocked-venue",
+            "support": "blocked",
+            "venue_kind": "raydium-clmm"
+          }
+        ],
+        "schema_version": "r10-1.cpmm-cycle-binding.v1",
+        "send_enabled": false,
+        "sign_enabled": false
+      },
+      "scenario": "blocked-venue-families"
+    },
+    {
+      "report": {
+        "blocked_venue_kinds": [],
+        "live_mode": false,
+        "metrics": {
+          "aliased_or_correlated_route_count": 0,
+          "builder_eligible_count": 0,
+          "capital_eligible_count": 1,
+          "contains_live_evidence": false,
+          "discovered_market_count": 3,
+          "evidence_scope": "fixture-replay",
+          "exact_qualified_route_count": 2,
+          "exact_quote_route_count": 2,
+          "flashloan_eligible_count": 1,
+          "identity_verified_market_count": 3,
+          "market_candidate_count": 2,
+          "net_positive_route_count": 1,
+          "paper_attempt_count": 1,
+          "paper_complete_count": 0,
+          "paper_rejected_count": 1,
+          "provider_overlap_cluster_count": 3,
+          "ratios": {
+            "capital_eligibility": "1.000000",
+            "economic_survival": "0.500000",
+            "exact_qualification": "1.000000",
+            "paper_completion": "0.000000",
+            "simulation_pass": "0.000000"
+          },
+          "rejections": [
+            {
+              "count": 1,
+              "reason": "NO_QUALIFIED_LENDER_EDGE"
+            },
+            {
+              "count": 1,
+              "reason": "cpmm-binding-net-negative"
+            }
+          ],
+          "rooted_state_count": 3,
+          "shortlist_route_count": 1,
+          "simulation_pass_count": 0,
+          "size_grid_evaluated_count": 6,
+          "topology_route_count": 2,
+          "unique_semantic_route_count": 2
+        },
+        "records": [
+          {
+            "conservative_net_atoms": null,
+            "detail": "no admissible sizing point",
+            "gross_profit_atoms": null,
+            "hop_count": 3,
+            "ordered_venues": [
+              "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C:pool-3",
+              "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C:pool-2",
+              "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C:pool-1"
+            ],
+            "provenance": "fixture-replay",
+            "rejection": "cpmm-binding-net-negative",
+            "route_kind": "3-pool-cycle",
+            "selected_amount": null,
+            "semantic_route_id": "4f1dbd05a2887074d4297443c8e456bcc2f75b7afa784999092cc407965ada4e",
+            "status": "rejected",
+            "support": "exact-supported",
+            "venue_kind": "raydium-cpmm"
+          },
+          {
+            "conservative_net_atoms": "2",
+            "detail": "paper seam blocked; candidate preserved with typed reason",
+            "gross_profit_atoms": "6",
+            "hop_count": 3,
+            "ordered_venues": [
+              "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C:pool-1",
+              "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C:pool-2",
+              "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C:pool-3"
+            ],
+            "provenance": "fixture-replay",
+            "rejection": "NO_QUALIFIED_LENDER_EDGE",
+            "route_kind": "3-pool-cycle",
+            "selected_amount": "20",
+            "semantic_route_id": "cac5196e26cdfc0f0f08e071d27b37412c7b6fa26dc0bfad276d2bf94adb742f",
+            "status": "paper-blocked",
+            "support": "exact-supported",
+            "venue_kind": "raydium-cpmm"
+          }
+        ],
+        "replay_digest": "d53b3e3bc0a9aa6e44382d850ca0a8162a912916954e7930f190f56342e07fff",
+        "route_support_matrix": [
+          {
+            "count": 2,
+            "route_kind": "3-pool-cycle",
+            "support": "exact-supported",
+            "venue_kind": "raydium-cpmm"
+          }
+        ],
+        "schema_version": "r10-1.cpmm-cycle-binding.v1",
+        "send_enabled": false,
+        "sign_enabled": false
+      },
+      "scenario": "determinism-proof-triangle"
+    }
+  ],
+  "schema_version": "r10-1.pre-api-route-replay.v1",
+  "send_enabled": false,
+  "sign_enabled": false
+}

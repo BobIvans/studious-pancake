@@ -431,3 +431,7 @@ src/market_data_evolution/qualification_dataset.py
 src/research/occ_qualification.py
 scripts/run_research_qualification.py
 tests/market_data_evolution/test_occ_research_qualification.py
+src/strategy/cpmm_cycle_binding.py
+src/strategy/exact_cpmm_capacity.py
+tests/test_sxr1_cpmm_cycle_binding.py
+scripts/r10_1_pre_api_route_replay.py

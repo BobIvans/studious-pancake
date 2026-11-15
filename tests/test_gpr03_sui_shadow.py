@@ -933,6 +933,12 @@ def test_complete_negative_slice_has_portable_offline_replay(tmp_path, monkeypat
 
     monkeypatch.setattr(CampaignManifest, "create", factory)
 
+    # The CI checkout is shallow and has no origin/main ref; pin the recorded
+    # main SHA instead of invoking git.
+    monkeypatch.setattr(
+        runner.subprocess, "check_output", lambda *args, **kwargs: "0" * 40
+    )
+
     @asynccontextmanager
     async def transport_factory(hosts, environment):
         client = httpx.AsyncClient(

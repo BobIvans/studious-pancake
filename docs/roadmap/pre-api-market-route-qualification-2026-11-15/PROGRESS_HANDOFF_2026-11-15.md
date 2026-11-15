@@ -1,4 +1,42 @@
-# R10-1 WIP handoff — 2026-11-15 (implementation landed, finalization open)
+# R10-1 WIP handoff — 2026-11-15 (SUPERSEDED by completion; kept for audit trail)
+
+## FINAL STATE (updated at session end)
+
+- Implementation COMMITTED and PUSHED: commit `a64fe0d4` on branch
+  `codex/pre-api-market-route-qualification-2026-11-15` (fast-forward over
+  `73191514`).
+- **PR #659 opened**: https://github.com/BobIvans/studious-pancake/pull/659
+  (base main `73191514`). PR #658 is the merged docs-only contract; #659 is the
+  implementation PR.
+- All code gates green locally: 149 offline tests pass (25 new + 124 regression),
+  mypy 0 issues on changed files, black clean, flake8 clean.
+- Replay artifact generated:
+  `docs/roadmap/pre-api-market-route-qualification-2026-11-15/replay_report_2026-11-15.json`
+  (7 scenarios, determinism verified).
+- Docs delivered: `IMPLEMENTATION_REPORT_RU_2026-11-15.md` (Russian final report,
+  route matrix, API preflight, R02–R06 blockers), MASTER00 R10-1 row
+  PLANNED→IMPLEMENTED_UNQUALIFIED, PARALLEL_EXECUTION_STATUS refreshed,
+  `config/format_targets.txt` appended.
+- CI on PR #659 was launched; early checks passing (Secret scanning,
+  Non-root runtime image smoke, durable-webhook-intake pass; the rest were
+  still pending when the session paused). **The `--watch` background job
+  finished but its tail output was not inspected — final CI verdict unknown.**
+
+## What remains for the next task (short list)
+
+1. **Check final CI on PR #659**: `gh pr checks 659` — confirm every check
+   passes. If any check fails, read the log, fix, push to the same branch.
+2. **Do NOT merge without explicit human approval** (AGENTS.md rule 11; this
+   comment is the standing rule, not a per-session grant). Request review,
+   resolve threads, keep branch mergeable/rebased if main moves.
+3. Optional polish if CI flags anything: `verify_repo.py` full run, mypy scoped
+   re-run, re-generate the replay JSON if any fixture changes.
+4. Next downstream PR (separate, per contract): controlled read-only API
+   capture, using §6 preflight in `IMPLEMENTATION_REPORT_RU_2026-11-15.md`.
+
+---
+
+# Original handoff content (historical)
 
 **Branch:** `codex/pre-api-market-route-qualification-2026-11-15`
 **Base at start of session:** origin/main `73191514` (PR #658 docs contract merged)

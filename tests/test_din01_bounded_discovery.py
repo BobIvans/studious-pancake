@@ -83,6 +83,11 @@ def test_capture_preserves_real_owner_envelopes_and_only_admits_reviewed_sources
 
     monkeypatch.setattr(runner, "campaign_transport", transport)
     monkeypatch.setattr(runner.CampaignManifest, "create", manifest)
+    # The CI checkout is shallow and has no origin/main ref; pin the recorded
+    # main SHA instead of invoking git.
+    monkeypatch.setattr(
+        runner.subprocess, "check_output", lambda *args, **kwargs: "0" * 40
+    )
     root = Path(__file__).resolve().parents[1]
     output = tmp_path / "capture"
     result = asyncio.run(

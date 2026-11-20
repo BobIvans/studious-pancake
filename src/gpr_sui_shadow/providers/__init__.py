@@ -17,7 +17,7 @@ from dataclasses import asdict, dataclass
 from urllib.parse import urlsplit
 
 from src.qualification_campaign.identity import digest
-from .models import object_id, sha, uint
+from ..models import object_id, sha, uint
 
 LIVE_SUI_PROVIDERS_BLOCKED = "LIVE_SUI_PROVIDERS_NOT_AUTHORIZED"
 PROVIDER_TRANSPORTS = ("graphql", "grpc")

@@ -436,3 +436,4 @@ src/strategy/exact_cpmm_capacity.py
 tests/test_sxr1_cpmm_cycle_binding.py
 scripts/r10_1_pre_api_route_replay.py
 src/gpr_sui_shadow/providers/aftermath.py
+src/execution/unsigned_plan_simulation_seam.py

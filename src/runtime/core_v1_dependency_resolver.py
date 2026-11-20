@@ -4,6 +4,16 @@ The resolver validates immutable profile/lender/deployment identities from an
 operator-provided evidence manifest and wires only statically reviewed code.
 It never dynamically imports code, constructs a signer/sender, or turns a
 manifest flag into network qualification.
+
+R08-step1 governed-RPC seam (composition-only): a deployment may supply ONE
+governed RPC transport through :func:`resolve_installed_core_v1_dependencies`
+(keyword-only ``governed_rpc_transport``). The transport is accepted ONLY when
+the evidence manifest pins the matching ``governed_rpc`` descriptor (https,
+credential-free, rooted endpoint identity + deployment generation). Absent
+descriptor or absent transport keeps the historical ``_ResolverBlockedRpc``
+default — no environment variable, capability flag or manifest flag alone can
+produce a network-capable transport. The pinned descriptor fingerprint is
+returned on the resolution so simulation evidence can be bound to it.
 """
 
 from __future__ import annotations
@@ -14,12 +24,14 @@ import json
 from pathlib import Path
 import re
 from typing import Any, Mapping
+from urllib.parse import urlsplit
 
 from src.config.runtime import RuntimeConfig
 from src.execution.agg03_financing_decoder import (
     JupiterLendSlumlordRepaymentDecoder,
     decoder_artifact_sha256,
 )
+from src.execution.models import RpcClient
 from src.lending.agg03_financing_ports import (
     JupiterLendFinancingPort,
     SlumlordFinancingPort,
@@ -44,6 +56,13 @@ LEGACY_SCHEMA = "core-v1.financing-evidence-manifest.v1"
 MANIFEST_ENV = "FLASHLOAN_CORE_V1_EVIDENCE_MANIFEST"
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
+CORE_V1_GOVERNED_RPC_DESCRIPTOR_REQUIRED = "CORE_V1_GOVERNED_RPC_DESCRIPTOR_REQUIRED"
+CORE_V1_GOVERNED_RPC_TRANSPORT_REQUIRED = "CORE_V1_GOVERNED_RPC_TRANSPORT_REQUIRED"
+CORE_V1_GOVERNED_RPC_DESCRIPTOR_INVALID = "CORE_V1_GOVERNED_RPC_DESCRIPTOR_INVALID"
+CORE_V1_GOVERNED_RPC_TRANSPORT_INVALID = "CORE_V1_GOVERNED_RPC_TRANSPORT_INVALID"
+
+_MAX_ENDPOINT_TEXT = 256
+
 
 class _ResolverBlockedRpc:
     """No-network port retained until a governed RPC is supplied by deployment."""
@@ -53,10 +72,88 @@ class _ResolverBlockedRpc:
 
 
 @dataclass(frozen=True, slots=True)
+class GovernedRpcDescriptor:
+    """Manifest-pinned deployment RPC identity (R08-step1 seam).
+
+    The descriptor is EVIDENCE, never authority: it pins WHERE a governed
+    transport may terminate (https, credential-free, no query/fragment — the
+    same credential-free discipline as the Sui provider bindings) and WHICH
+    deployment generation it belongs to. The matching transport object is
+    supplied separately by the deployment through the resolver argument, so
+    no code path in this repository constructs a network transport.
+    """
+
+    endpoint: str
+    deployment_generation: int
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.endpoint, str) or not self.endpoint.strip():
+            raise ValueError(CORE_V1_GOVERNED_RPC_DESCRIPTOR_INVALID)
+        endpoint = self.endpoint.strip()
+        if len(endpoint) > _MAX_ENDPOINT_TEXT:
+            raise ValueError(CORE_V1_GOVERNED_RPC_DESCRIPTOR_INVALID)
+        url = urlsplit(endpoint)
+        if (
+            url.scheme != "https"
+            or not url.hostname
+            or url.username
+            or url.password
+            or url.query
+            or url.fragment
+        ):
+            raise ValueError(CORE_V1_GOVERNED_RPC_DESCRIPTOR_INVALID)
+        if url.path not in ("", "/"):
+            raise ValueError(CORE_V1_GOVERNED_RPC_DESCRIPTOR_INVALID)
+        object.__setattr__(self, "endpoint", endpoint)
+        if (
+            type(self.deployment_generation) is not int
+            or self.deployment_generation < 1
+        ):
+            raise ValueError(CORE_V1_GOVERNED_RPC_DESCRIPTOR_INVALID)
+
+    @classmethod
+    def from_manifest(cls, raw: object) -> "GovernedRpcDescriptor":
+        if not isinstance(raw, Mapping):
+            raise ValueError(CORE_V1_GOVERNED_RPC_DESCRIPTOR_INVALID)
+        return cls(
+            endpoint=raw.get("endpoint"),  # type: ignore[arg-type]
+            deployment_generation=raw.get("deployment_generation"),  # type: ignore[arg-type]
+        )
+
+    @property
+    def fingerprint(self) -> str:
+        """Stable identity hash binding simulation evidence to this transport."""
+        return hashlib.sha256(
+            json.dumps(
+                {
+                    "schema": "core-v1.governed-rpc-descriptor.v1",
+                    "endpoint": self.endpoint,
+                    "deployment_generation": self.deployment_generation,
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=True,
+            ).encode("utf-8")
+        ).hexdigest()
+
+
+def _validate_governed_rpc_transport(transport: RpcClient | None) -> RpcClient:
+    """Accept ONE deployment-supplied callable transport; nothing else.
+
+    The transport must already exist (deployment-owned object); this resolver
+    constructs no network client of its own and never dials the endpoint.
+    """
+    if transport is None or not callable(getattr(transport, "call", None)):
+        raise ValueError(CORE_V1_GOVERNED_RPC_TRANSPORT_INVALID)
+    return transport
+
+
+@dataclass(frozen=True, slots=True)
 class InstalledDependencyResolution:
     dependencies: CoreV1Dependencies | None
     blocker: str | None
     manifest_sha256: str | None = None
+    governed_rpc_fingerprint: str | None = None
 
     @property
     def resolved(self) -> bool:
@@ -129,12 +226,19 @@ def resolve_installed_core_v1_dependencies(
     *,
     config: RuntimeConfig | None = None,
     trusted_time: TrustedTime | None = None,
+    governed_rpc_transport: RpcClient | None = None,
 ) -> InstalledDependencyResolution:
     """Validate installed evidence and return statically reviewed dependencies.
 
     Even a resolved manifest uses a blocked draft source and blocked RPC until
     deployment supplies current provider observations. This makes the installed
     generic composition reachable without fabricating external evidence.
+
+    R08-step1: ``governed_rpc_transport`` is the ONLY composition-only seam
+    through which a deployment-supplied governed RPC replaces the blocked
+    default. It is accepted only when the manifest pins the matching
+    ``governed_rpc`` descriptor; any pairing mismatch is a typed error and an
+    absent transport keeps ``_ResolverBlockedRpc`` exactly as before.
     """
 
     if profile.lender == "marginfi":
@@ -169,6 +273,28 @@ def resolve_installed_core_v1_dependencies(
         raise ValueError("CORE_V1_FINANCING_MANIFEST_PROFILE_MISMATCH")
     if payload.get("profile_generation") != profile.profile_generation:
         raise ValueError("CORE_V1_FINANCING_MANIFEST_GENERATION_MISMATCH")
+
+    # R08-step1 governed-RPC seam: descriptor/transport pairing is validated
+    # BEFORE any qualification flow so mismatches fail loud and early.
+    manifest_rpc_raw = payload.get("governed_rpc")
+    governed_rpc_fingerprint: str | None = None
+    rpc_port: RpcClient = _ResolverBlockedRpc()
+    if manifest_rpc_raw is None:
+        if governed_rpc_transport is not None:
+            raise ValueError(CORE_V1_GOVERNED_RPC_DESCRIPTOR_REQUIRED)
+    else:
+        descriptor = GovernedRpcDescriptor.from_manifest(manifest_rpc_raw)
+        if governed_rpc_transport is None:
+            # Descriptor pinned but no deployment transport supplied: keep the
+            # blocked default (fail-closed), never fabricate a transport.
+            return InstalledDependencyResolution(
+                None,
+                CORE_V1_GOVERNED_RPC_TRANSPORT_REQUIRED,
+                digest,
+            )
+        transport = _validate_governed_rpc_transport(governed_rpc_transport)
+        governed_rpc_fingerprint = descriptor.fingerprint
+        rpc_port = transport
 
     primary_raw = payload.get("primary")
     rent_raw = payload.get("rent")
@@ -262,7 +388,7 @@ def resolve_installed_core_v1_dependencies(
         release_id=release_id,
         policy_bundle_hash=policy_bundle_hash,
         draft_source=BlockedCoreV1DraftSource(),
-        rpc=_ResolverBlockedRpc(),
+        rpc=rpc_port,
         marginfi_provider=None,
         planner_policy=AtomicPlannerPolicy(
             allowed_program_ids=allowed_program_ids,
@@ -277,11 +403,17 @@ def resolve_installed_core_v1_dependencies(
         dependencies,
         "CORE_V1_PROVIDER_DRAFT_SOURCE_EXTERNAL",
         digest,
+        governed_rpc_fingerprint,
     )
 
 
 __all__ = [
+    "CORE_V1_GOVERNED_RPC_DESCRIPTOR_INVALID",
+    "CORE_V1_GOVERNED_RPC_DESCRIPTOR_REQUIRED",
+    "CORE_V1_GOVERNED_RPC_TRANSPORT_INVALID",
+    "CORE_V1_GOVERNED_RPC_TRANSPORT_REQUIRED",
     "FinancingIdentity",
+    "GovernedRpcDescriptor",
     "InstalledDependencyResolution",
     "LEGACY_SCHEMA",
     "MANIFEST_ENV",

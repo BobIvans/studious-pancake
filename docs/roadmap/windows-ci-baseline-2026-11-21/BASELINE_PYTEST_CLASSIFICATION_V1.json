@@ -1,0 +1,695 @@
+{
+ "schema": "windows-ci-baseline.pytest-classification.v1",
+ "generated_at": "2026-11-21",
+ "source_log": ".zcode/pr664/pytest_baseline.log",
+ "command": ".venv/Scripts/python.exe -m pytest -m \"not live and not manual\" --disable-socket --allow-unix-socket -q",
+ "baseline_commit": "e394c77b (PR #664 changes absent)",
+ "summary": {
+  "failed": 288,
+  "errors": 327,
+  "passed": 5599,
+  "skipped": 9
+ },
+ "failure_clusters": {
+  "GPR": 146,
+  "OTHER": 119,
+  "QPR": 21,
+  "MPR2602": 1,
+  "TON_RADAR": 1
+ },
+ "error_clusters": {
+  "TON_RADAR": 35,
+  "MPR2602": 120,
+  "OTHER": 150,
+  "MPR2601/MPR043": 22
+ },
+ "root_cause_errors": {
+  "dominant": "pytest_socket.SocketBlockedError at fixture setup",
+  "count_socketblocked_e_lines": 572,
+  "explanation": "pytest-socket --disable-socket blocks the Windows ProactorEventLoop self-pipe (socketpair AF_INET fallback created in events.new_event_loop during asyncio pytest fixture setup); --allow-unix-socket only whitelists AF_UNIX and does not cover it. All 327 errors are this fixture-setup failure.",
+  "candidate_fix": "pre-create the event loop before socket-guard activation or allow the loop self-pipe in conftest (separate bounded task, not part of PR-A)"
+ },
+ "per_file": [
+  {
+   "file": "tests/test_gpr03_sui_shadow.py",
+   "failed": 58,
+   "errors": 0,
+   "cluster": "GPR"
+  },
+  {
+   "file": "tests/test_gpr02_solana_parallel_radar.py",
+   "failed": 31,
+   "errors": 0,
+   "cluster": "GPR"
+  },
+  {
+   "file": "tests/test_gpr01_research_economic_graph.py",
+   "failed": 30,
+   "errors": 0,
+   "cluster": "GPR"
+  },
+  {
+   "file": "tests/test_gpr03_remediation.py",
+   "failed": 27,
+   "errors": 0,
+   "cluster": "GPR"
+  },
+  {
+   "file": "tests/test_shadow_market_data_aggregation.py",
+   "failed": 19,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_qpr02_data_plane.py",
+   "failed": 11,
+   "errors": 0,
+   "cluster": "QPR"
+  },
+  {
+   "file": "tests/test_a2_exact_attempt_runtime.py",
+   "failed": 10,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_qpr03_source_intake.py",
+   "failed": 10,
+   "errors": 0,
+   "cluster": "QPR"
+  },
+  {
+   "file": "tests/test_pr04_repeated_installed_paper_service.py",
+   "failed": 9,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/durability/test_pr003_storage_security.py",
+   "failed": 6,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/providers/test_pr004_transport_authority.py",
+   "failed": 5,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_din00_source_admission.py",
+   "failed": 5,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_native_cpmm_qualification.py",
+   "failed": 5,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr06_management_audit_anchor.py",
+   "failed": 5,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr178_artifact_registry.py",
+   "failed": 4,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/execution/test_transaction_lifecycle.py",
+   "failed": 3,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_din01_bounded_discovery.py",
+   "failed": 3,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_o1_management_evidence_pipeline.py",
+   "failed": 3,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr025_container_runtime.py",
+   "failed": 3,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr170_management_plane.py",
+   "failed": 3,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/intelligence/test_rpc_campaign.py",
+   "failed": 2,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_ai_trading_system.py",
+   "failed": 2,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_mega_pr01_v6_runtime_data_plane_repair.py",
+   "failed": 2,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_mega_pr_a3_installed_durable_paper_service.py",
+   "failed": 2,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr02_unified_lifecycle_authority.py",
+   "failed": 2,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr120_secret_resolver_config_jito.py",
+   "failed": 2,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr190_canonical_config.py",
+   "failed": 2,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_super06_research_frontier_closure.py",
+   "failed": 2,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/deployment/test_pr008_supply_chain.py",
+   "failed": 1,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/durability/test_pr041_durable_lifecycle.py",
+   "failed": 1,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/errors/test_mpr_td_02_verifier.py",
+   "failed": 1,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/intelligence/test_pressure_manager.py",
+   "failed": 1,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/runtime/test_mpr_rp03_instance_resources.py",
+   "failed": 1,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/security/test_mpr_td_04_security.py",
+   "failed": 1,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_decision_calibration.py",
+   "failed": 1,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_decision_model.py",
+   "failed": 1,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_mpr2602_durable_completion.py",
+   "failed": 1,
+   "errors": 3,
+   "cluster": "MPR2602"
+  },
+  {
+   "file": "tests/test_mpr_close_23_hermetic_runtime.py",
+   "failed": 1,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr006_swap_providers.py",
+   "failed": 1,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr023_runtime_truth.py",
+   "failed": 1,
+   "errors": 1,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr025_packaging.py",
+   "failed": 1,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr132_observability_integrity.py",
+   "failed": 1,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr183_credential_trust_lifecycle.py",
+   "failed": 1,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr184_tamper_evident_audit.py",
+   "failed": 1,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr196_durable_runtime_kernel.py",
+   "failed": 1,
+   "errors": 1,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr205_asymmetric_qualification.py",
+   "failed": 1,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr_a_provider_truth_cleanup.py",
+   "failed": 1,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_r02_cap_c_offline_replay.py",
+   "failed": 1,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_r13_quote_race_contract.py",
+   "failed": 1,
+   "errors": 0,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_ton_radar_wave2.py",
+   "failed": 1,
+   "errors": 0,
+   "cluster": "TON_RADAR"
+  },
+  {
+   "file": "tests/test_ton_radar_dedust_swapcoffee.py",
+   "failed": 0,
+   "errors": 22,
+   "cluster": "TON_RADAR"
+  },
+  {
+   "file": "tests/routing/test_mpr2602_governed_transport.py",
+   "failed": 0,
+   "errors": 16,
+   "cluster": "MPR2602"
+  },
+  {
+   "file": "tests/routing/test_mpr2602_transport_bounds.py",
+   "failed": 0,
+   "errors": 16,
+   "cluster": "MPR2602"
+  },
+  {
+   "file": "tests/test_mpr2602_raw_state_integration.py",
+   "failed": 0,
+   "errors": 15,
+   "cluster": "MPR2602"
+  },
+  {
+   "file": "tests/execution/test_exact_simulation_pr036.py",
+   "failed": 0,
+   "errors": 14,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_ton_radar_dynamic_universe.py",
+   "failed": 0,
+   "errors": 13,
+   "cluster": "TON_RADAR"
+  },
+  {
+   "file": "tests/test_mpr2602_durable_provider.py",
+   "failed": 0,
+   "errors": 12,
+   "cluster": "MPR2602"
+  },
+  {
+   "file": "tests/test_mpr2602_prepared_exact_attempt.py",
+   "failed": 0,
+   "errors": 12,
+   "cluster": "MPR2602"
+  },
+  {
+   "file": "tests/test_mpr043_provider_governance.py",
+   "failed": 0,
+   "errors": 11,
+   "cluster": "MPR2601/MPR043"
+  },
+  {
+   "file": "tests/test_mpr2601_scope_workers.py",
+   "failed": 0,
+   "errors": 11,
+   "cluster": "MPR2601/MPR043"
+  },
+  {
+   "file": "tests/test_mpr2602_full_flashloan_vertical.py",
+   "failed": 0,
+   "errors": 11,
+   "cluster": "MPR2602"
+  },
+  {
+   "file": "tests/test_mpr2602_raw_economics.py",
+   "failed": 0,
+   "errors": 8,
+   "cluster": "MPR2602"
+  },
+  {
+   "file": "tests/test_pr185_authenticated_endpoint_identity.py",
+   "failed": 0,
+   "errors": 8,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_runtime_vertical_slice_pr007.py",
+   "failed": 0,
+   "errors": 8,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_mpr2602_exact_attempt_raw_boundary.py",
+   "failed": 0,
+   "errors": 7,
+   "cluster": "MPR2602"
+  },
+  {
+   "file": "tests/test_pr038_paper_shadow_runner.py",
+   "failed": 0,
+   "errors": 7,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr197_archive_complete_resubmission.py",
+   "failed": 0,
+   "errors": 7,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_strategy_runtime.py",
+   "failed": 0,
+   "errors": 7,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_mpr2602_stage_cache.py",
+   "failed": 0,
+   "errors": 6,
+   "cluster": "MPR2602"
+  },
+  {
+   "file": "tests/test_pr002_runtime_integrity.py",
+   "failed": 0,
+   "errors": 6,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr045_permit_bound_submission.py",
+   "failed": 0,
+   "errors": 6,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr194_proof_critical_scheduling.py",
+   "failed": 0,
+   "errors": 6,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/execution/test_pr014_journal_lifecycle.py",
+   "failed": 0,
+   "errors": 5,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_mpr2602_async_source.py",
+   "failed": 0,
+   "errors": 5,
+   "cluster": "MPR2602"
+  },
+  {
+   "file": "tests/test_mpr2602_provider_review_regressions.py",
+   "failed": 0,
+   "errors": 5,
+   "cluster": "MPR2602"
+  },
+  {
+   "file": "tests/test_pr089_active_paper_composition_root.py",
+   "failed": 0,
+   "errors": 5,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr200_async_persistence.py",
+   "failed": 0,
+   "errors": 5,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/routing/test_pr030_discovery_plane.py",
+   "failed": 0,
+   "errors": 4,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr056_runtime_discovery.py",
+   "failed": 0,
+   "errors": 4,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr075_atomic_runtime_stages.py",
+   "failed": 0,
+   "errors": 4,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr150_structured_durable_runtime.py",
+   "failed": 0,
+   "errors": 4,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr152_exact_sender_free_attempt.py",
+   "failed": 0,
+   "errors": 4,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr199_economic_execution_vertical.py",
+   "failed": 0,
+   "errors": 4,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_advanced_components.py",
+   "failed": 0,
+   "errors": 3,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_jito_bundle_handler.py",
+   "failed": 0,
+   "errors": 3,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_mpr2602_provider_status_cleanup.py",
+   "failed": 0,
+   "errors": 3,
+   "cluster": "MPR2602"
+  },
+  {
+   "file": "tests/test_pr058_atomic_vertical.py",
+   "failed": 0,
+   "errors": 3,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr076_paper_shadow_exit_semantics.py",
+   "failed": 0,
+   "errors": 3,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/providers/test_jupiter_quota_scheduler_pr031.py",
+   "failed": 0,
+   "errors": 2,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/providers/test_jupiter_router.py",
+   "failed": 0,
+   "errors": 2,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_mev_executor_final.py",
+   "failed": 0,
+   "errors": 2,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_mpr_sys_03_review_regressions.py",
+   "failed": 0,
+   "errors": 2,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr033_snapshot_detectors.py",
+   "failed": 0,
+   "errors": 2,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_shadow_execution.py",
+   "failed": 0,
+   "errors": 2,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_shadow_replay.py",
+   "failed": 0,
+   "errors": 2,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/routing/test_pr030_quota_integration.py",
+   "failed": 0,
+   "errors": 1,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_core_v1_composition.py",
+   "failed": 0,
+   "errors": 1,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_launcher_startup_smoke.py",
+   "failed": 0,
+   "errors": 1,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_live_admission.py",
+   "failed": 0,
+   "errors": 1,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_live_recovery.py",
+   "failed": 0,
+   "errors": 1,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_mega_pr_b3_rooted_recovery.py",
+   "failed": 0,
+   "errors": 1,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_mpr042_market_truth.py",
+   "failed": 0,
+   "errors": 1,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_mpr2602_marginfi_raw_decoder.py",
+   "failed": 0,
+   "errors": 1,
+   "cluster": "MPR2602"
+  },
+  {
+   "file": "tests/test_pipeline_integration.py",
+   "failed": 0,
+   "errors": 1,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr113_amount_coupled_discovery.py",
+   "failed": 0,
+   "errors": 1,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_pr193_resource_ownership.py",
+   "failed": 0,
+   "errors": 1,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_r08_composition_contract.py",
+   "failed": 0,
+   "errors": 1,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_r08_composition_invariants.py",
+   "failed": 0,
+   "errors": 1,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/test_webhook_handler.py",
+   "failed": 0,
+   "errors": 1,
+   "cluster": "OTHER"
+  },
+  {
+   "file": "tests/venues/pump/test_adapter.py",
+   "failed": 0,
+   "errors": 1,
+   "cluster": "OTHER"
+  }
+ ],
+ "disposition": "Pre-existing repository CI debt on Windows; not a regression of PR #664 (with #664 changes: 287 failed/5600 passed/327 errors; delta within run-to-run variance). GPR cluster (146 failures) and MPR2602/TON error clusters are the main genuine work items; do not treat as fixed or harmless."
+}

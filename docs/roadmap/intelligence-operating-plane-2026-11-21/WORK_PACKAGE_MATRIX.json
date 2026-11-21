@@ -1275,5 +1275,199 @@
       "No LIVE/signing/submission/borrowing/spending/deployment/production mutation authority",
       "Conditional infrastructure requires measured bottleneck and rollback plan"
     ]
+  },
+  "repo_intelligence_strategy_rnd_blueprint": {
+    "document": "docs/roadmap/intelligence-operating-plane-2026-11-21/REPO_INTELLIGENCE_AND_STRATEGY_RND_BLUEPRINT_RU.md",
+    "purpose": "SHA-bound repo-wide knowledge graph, strategy R&D catalogue and token-efficient ChatGPT retrieval product",
+    "execution_mode": "WEB3_FIRST_SINGLE_VERTICAL_SLICES",
+    "first_useful_vertical_slice": [
+      "SHA-bound repo card",
+      "strategy idea/family/version catalogue with status and novelty/duplicate evidence",
+      "exact symbols/callers/imports/tests for a selected Web3 domain slice",
+      "one detailed strategy card linking implementation/config/providers/tests/evidence",
+      "bounded T0-T3 ChatGPT context pack with token estimate/actual count, omissions and evidence manifest",
+      "golden-question recall/critical-omission benchmark",
+      "deterministic rebuild and stale-SHA rejection"
+    ],
+    "capability_letters": [
+      {
+        "letter": "A",
+        "name": "Repository inventory and typed SymbolGraph",
+        "priority": "P0",
+        "maps_to": [
+          "OCA-W0",
+          "OCA-W0A",
+          "OCA-W0B"
+        ]
+      },
+      {
+        "letter": "B",
+        "name": "Incremental computation and content-addressed invalidation",
+        "priority": "P1",
+        "maps_to": [
+          "OCA-W16"
+        ]
+      },
+      {
+        "letter": "C",
+        "name": "Temporal provenance and versioned strategy/code history",
+        "priority": "P0_FOUNDATION",
+        "maps_to": [
+          "OCA-W1",
+          "OCA-W2",
+          "OCA-W3",
+          "OCA-W15"
+        ]
+      },
+      {
+        "letter": "D",
+        "name": "Agent-safe task isolation and sandbox",
+        "priority": "P1_MINIMUM_GUARDS_P0",
+        "maps_to": [
+          "OCA-W17"
+        ]
+      },
+      {
+        "letter": "E",
+        "name": "Retrieval, T0-T4 context packs and ChatGPT handoff",
+        "priority": "P0",
+        "maps_to": [
+          "OCA-W4",
+          "OCA-W7",
+          "OCA-W11"
+        ]
+      },
+      {
+        "letter": "F",
+        "name": "Verification and test economics",
+        "priority": "P1_CRITICAL_TEST_GATES_P0",
+        "maps_to": [
+          "OCA-W18"
+        ]
+      },
+      {
+        "letter": "G",
+        "name": "Large-repository plumbing and scaling",
+        "priority": "P2_CONDITIONAL",
+        "maps_to": [
+          "OCA-W0A",
+          "OCA-W9",
+          "OCA-W19"
+        ]
+      },
+      {
+        "letter": "H",
+        "name": "Token, security, license and resource governance",
+        "priority": "P0_CROSS_CUTTING",
+        "maps_to": [
+          "OCA-W12",
+          "OCA-W17",
+          "OCA-W18"
+        ]
+      }
+    ],
+    "recommended_build_order": [
+      "H0+C0 minimum security/provenance/receipt guardrails and owner/PR reconciliation",
+      "A repository inventory and native typed symbol graph",
+      "E retrieval/context packs/ChatGPT read-only delivery",
+      "WEB3-INFRA-S1..S6 provider contracts, quality, chain identity, strategy requirements, lineage and replay",
+      "F symbol-to-test/evidence verification",
+      "B incremental index and early cutoff",
+      "D strengthen sandbox/task capabilities before increasing write autonomy",
+      "G scale only when measured"
+    ],
+    "context_tiers": [
+      {
+        "tier": "T0",
+        "target_tokens": [
+          300,
+          500
+        ],
+        "content": "Repo card: SHA, modules, strategy families, coverage and risks"
+      },
+      {
+        "tier": "T1",
+        "target_tokens": [
+          1000,
+          3000
+        ],
+        "content": "Compact catalogs of strategies, providers, tools, tests and schemas"
+      },
+      {
+        "tier": "T2",
+        "target_tokens": [
+          1000,
+          2000
+        ],
+        "content": "Task-specific graph slice, lazy 1-3 hop retrieval"
+      },
+      {
+        "tier": "T3",
+        "target_tokens": null,
+        "content": "Exact full functions/configs/tests/evidence on demand"
+      },
+      {
+        "tier": "T4",
+        "target_tokens": null,
+        "content": "Deep dossier including history, alternatives, failures, replay and unresolved questions"
+      }
+    ],
+    "strategy_card_required_fields": [
+      "stable_strategy_id_and_family",
+      "aliases_variants_and_novelty_status",
+      "status_and_temporal_versions",
+      "source_docs_commits_prs_issues_and_repo_sha",
+      "exact_symbols_call_paths_configs_and_tests",
+      "required_chain_protocol_venue_provider_capabilities",
+      "experiments_simulation_paper_shadow_and_negative_results",
+      "qualification_reasons_blockers_unknowns_and_next_evidence"
+    ],
+    "retrieval_order": [
+      "exact IDs/symbols",
+      "lexical BM25/FTS/trigram",
+      "typed graph and call paths",
+      "strategy/config/test relevance",
+      "Git churn/co-change",
+      "proven runtime outcomes",
+      "semantic search only after measured recall gap"
+    ],
+    "chatgpt_delivery_paths": [
+      "authorized GitHub connector",
+      "approved read-only MCP",
+      "explicit uploaded SHA-bound context pack"
+    ],
+    "token_safety_invariants": [
+      "target code/economic logic/safety logic/schema/units/decimals/time semantics/tests/evidence refs remain FULL",
+      "only surrounding context may be skeletonized or summarized",
+      "every pack reports token count or labelled estimate, omissions, completeness, freshness and deterministic continuation",
+      "UNKNOWN remains UNKNOWN; no fabricated repository coverage"
+    ],
+    "candidate_policy": {
+      "tree_sitter_and_scip_lsp": "parsers/resolvers selected per language/build, pin and benchmark",
+      "aider_repo_map": "ranking pattern, no dependency required",
+      "grep_ast_and_ast_grep": "scoped source retrieval and executable audit rules",
+      "sqlite_fts_bm25": "baseline lexical retrieval",
+      "rtk": "output trimming benchmark only, verify information loss",
+      "zoekt_tantivy": "conditional lexical scale",
+      "salsa_buck2_cocoindex": "incremental computation patterns, not default wholesale adoption",
+      "code_graph_backend": "zero or one selected after same-SHA golden benchmark",
+      "glean_ladybugdb": "conditional graph-scale backends",
+      "datahub_apicurio_openlineage_nats_debezium_temporal": "reuse current PRs/owners; deploy only on measured integration/recovery gap",
+      "semantic_overlay": "zero or one, evidence-linked and never canonical for finance/runtime truth"
+    },
+    "canonical_owner_reuse": [
+      "src/intelligence",
+      "src/strategy and qualification owners",
+      "src/market/source_catalog.py",
+      "src/external_contracts",
+      "src/provider_governance",
+      "src/agg02",
+      "src/market/observations.py",
+      "src/market/streams.py",
+      "src/observability"
+    ],
+    "one_pr_policy": "One owner, one isolated worktree, one bounded write scope, one reviewable implementation PR; no broad infrastructure swarm.",
+    "auto_dispatch": false,
+    "human_approval_required_for_merge": true
   }
 }

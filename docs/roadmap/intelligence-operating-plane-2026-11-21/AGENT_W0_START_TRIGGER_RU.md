@@ -255,3 +255,30 @@ The sequence is WEB3-INFRA-S0..S9:
 **Dispatch policy:** WEB3_FIRST_BACKLOG; no automatic dispatch. Reconcile open #672–#676 before creating overlaps. Reuse canonical owners in market/source, external contracts, provider governance, AGG-02, MarketObservation, Observability and strategy qualification. The new catalogue/lineage/graph remains a read-only derived view. See the assignment document for task scope, deliverables, acceptance and explicit no-duplicate rules.
 
 This task sequence is deliberately focused on Web3 correctness and evidence quality, not a broad platform rewrite. It does not change the A–H order or authorize live financial operations.
+
+ 
+## Repo Intelligence + Strategy R&D master blueprint (authoritative implementation scope)
+
+Before implementation, read [REPO_INTELLIGENCE_AND_STRATEGY_RND_BLUEPRINT_RU.md](https://github.com/BobIvans/studious-pancake/blob/codex/intelligence-operating-plane-design-2026-11-21/docs/roadmap/intelligence-operating-plane-2026-11-21/REPO_INTELLIGENCE_AND_STRATEGY_RND_BLUEPRINT_RU.md). This is the top-level target product and acceptance definition for PR #666.
+
+The product is **not a graph database demo**. It is a SHA-bound repository and strategy knowledge system that lets a coding agent and ChatGPT discover existing ideas/versions, compare novelty, navigate exact symbols/call paths, inspect providers/configs/tests, understand runtime evidence and retrieve compact deep context with citations.
+
+Implement the A–H capabilities through existing OCA-W0..W19 and WEB3-INFRA-S0..S9 packages; do not create duplicate work-package families:
+- A: whole-repo inventory, parser and typed SymbolGraph.
+- B: content-addressed incremental index and dependency invalidation.
+- C: temporal/provenance-aware strategy and code history.
+- D: isolated agent tasks/worktrees and bounded sandbox.
+- E: retrieval, T0–T4 context packs and ChatGPT read-only handoff.
+- F: symbol-to-test/verification/evidence coverage.
+- G: scale plumbing only when measured.
+- H: secret, prompt-injection, licensing, SBOM, token and resource governance.
+
+First useful vertical slice must deliver: SHA-bound repo card; strategy idea/family/version catalogue with duplicate/variant links and negative evidence; exact symbol/caller/test lookup; one detailed Web3 strategy card; bounded T0–T3 ChatGPT context pack with evidence manifest and actual/estimated token count; golden-question recall/omission benchmark; deterministic rebuild and stale-SHA rejection.
+
+**Critical distinction:** compression applies to repository navigation and non-target context. Exact target functions, strategy economics, safety gates, decimal/unit/time semantics, schema, test assertions and evidence refs are never lossy-compressed. Every pack reports omitted items and UNKNOWN gaps. No answer may claim complete repository coverage beyond the indexed paths, branches and permissions actually verified.
+
+Use existing canonical owners in src/intelligence, src/strategy, src/market/source_catalog, src/external_contracts, src/provider_governance, src/agg02, src/observability and qualification modules. Graph, labels, catalogue and embeddings are derived read models, never duplicate facts stores.
+
+Use upstreams as function references or isolated benchmark candidates: Tree-sitter, SCIP/LSP where available, Aider RepoMap/PageRank pattern, grep-ast/TreeContext, ast-grep, SQLite FTS/BM25, and one code-graph contender. RTK-like output trimming, Salsa/Buck2/CocoIndex, Zoekt/Tantivy, Glean/LadybugDB, Temporal, NATS, Debezium, DataHub and Apicurio remain conditional by measured need. Do not install everything.
+
+Execution priority remains WEB3_FIRST. Start with current owner/PR reconciliation, then one vertical slice. Do not start all OCA or A–H packages in parallel. Re-fetch current main and inspect open PRs/checks before every assignment. #666 is the design source, not an implementation branch; implementation must start on latest main. Human review/approval is required for merge.

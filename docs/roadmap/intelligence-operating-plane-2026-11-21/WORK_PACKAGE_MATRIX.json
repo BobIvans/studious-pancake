@@ -128,7 +128,10 @@
         "Aider RepoMap/PageRank ranking method",
         "Repomix signature-only export (experimental/lossy, benchmark-only)",
         "Joern/CPG only for scoped CFG/DFG/taint use cases",
-        "Glean deferred architecture review only"
+        "Glean deferred architecture review only",
+        "MakerViking/mimir (integrated local docs/code graph/typed memory candidate)",
+        "codician-team/growmos (provenance-carrying semantic facts / ADR / label memory candidate)",
+        "TheWinci/mimirs (additional local code memory candidate, distinguish project identity)"
       ],
       "guardrails": [
         "Use same clean repo SHA and same 30-50 golden questions",
@@ -153,7 +156,11 @@
         "Disable remote/cloud indexing and telemetry for proprietary code unless explicitly approved; verify telemetry opt-out by inspection",
         "Any MCP write/edit/delete/shell/admin tools remain disabled in analyst/reviewer profile",
         "Include branch/worktree concurrency, shared daemon lock/WAL behavior and Windows/WSL path edge cases in bake-off",
-        "Do not install or index from a dirty/unpinned tree without recording the exact working-tree snapshot hash"
+        "Do not install or index from a dirty/unpinned tree without recording the exact working-tree snapshot hash",
+        "Compare Mimir/growmos only as the semantic label/memory plane, not as raw-event or code graph authority",
+        "Adopt zero or one semantic memory overlay; never both by default",
+        "All agent-authored memory facts must link to immutable repo/event/observation/episode evidence IDs and remain provisional without evidence",
+        "Growmos headless semantic ingestion that invokes a configured LLM must be disabled for deterministic zero-LLM indexing path"
       ],
       "deliverables": [
         "TOOL_CANDIDATE_MATRIX.json",
@@ -163,7 +170,8 @@
         "ADOPTION_DECISION_RU.md",
         "TOKEN_EFFICIENCY_MEASUREMENTS.json",
         "PER_LANGUAGE_COVERAGE_MATRIX.json (syntax / calls / compiler resolution / docs / config support tiers)",
-        "INSTALL_SIDE_EFFECTS_AND_SECURITY_RU.md"
+        "INSTALL_SIDE_EFFECTS_AND_SECURITY_RU.md",
+        "SEMANTIC_MEMORY_ADOPTION_DECISION_RU.md (native labels vs one Mimir/growmos overlay)"
       ],
       "acceptance": [
         "Every candidate is tested on the same pinned SHA or explicitly marked NOT_RUN",
@@ -178,7 +186,11 @@
         "Test FULL/SKELETON/REFERENCE/OVERVIEW levels: focus function remains complete and direct neighbors remain typed, source-linked skeletons",
         "At least one JIT extractor is tested on historical Git refs using blob SHA cache and explicit coverage/exclusion trailer",
         "Installers are run only in isolated config homes; all files/configs/hooks written by installer are listed and reviewed",
-        "All non-verified/newly discovered repository names are marked NOT_VERIFIED until source, license, release and behavior are checked"
+        "All non-verified/newly discovered repository names are marked NOT_VERIFIED until source, license, release and behavior are checked",
+        "Semantic label/memory candidate benchmark tests provenance, deduplication, stale/superseded facts, conflict detection, export/recovery and multi-agent concurrency",
+        "Any selected Mimir/growmos overlay is non-authoritative for raw market events, quotes, settlement, PnL or runtime status",
+        "Memory facts link to exact Git SHA, event IDs, observation IDs or ADR/PR evidence; unsupported claims stay PROPOSED/UNKNOWN",
+        "No two semantic memory stores are deployed together unless a measured distinct requirement is approved"
       ]
     },
     {
@@ -257,7 +269,9 @@
         "Incremental updates invalidate downstream symbols/tests/labels only when affected; full refresh is periodically compared with incremental checksums",
         "Watchers and index jobs are debounced, coalesced, cancellable and single-writer; resource budgets prevent competition with runtime data capture",
         "Multi-resolution context preserves target function body and exact evidence; skeletonization only reduces non-target neighborhood",
-        "Index quality reports supported/partial/unsupported coverage, unresolved calls, dynamic dispatch gaps, dangling edges, parser failures and stale age"
+        "Index quality reports supported/partial/unsupported coverage, unresolved calls, dynamic dispatch gaps, dangling edges, parser failures and stale age",
+        "Versioned label ontology and label records are machine-readable and durable; canonical verified labels are rebuildable/exportable independent of whichever optional memory overlay is selected",
+        "Label store supports exact provenance references, stale/superseded/conflicting labels, human approval and migration across ontology versions"
       ]
     },
     {
@@ -685,5 +699,29 @@
     ],
     "branch_worktree_isolation": true,
     "multi_repo_namespace_ready": true
+  },
+  "semantic_memory_policy": {
+    "canonical_label_owner": "Studious repo graph / versioned deterministic label store",
+    "candidates": [
+      "MakerViking/mimir",
+      "codician-team/growmos",
+      "TheWinci/mimirs"
+    ],
+    "maximum_adopted_overlays": 1,
+    "selection": "Benchmark only after W0A; choose none if native label store/context retrieval is sufficient",
+    "facts_must_link_to": [
+      "repo_sha_and_symbol_id",
+      "event_id",
+      "observation_id",
+      "episode_id",
+      "ADR_or_PR_ref"
+    ],
+    "never_authoritative_for": [
+      "raw_market_facts",
+      "quotes",
+      "settlement",
+      "realized_pnl",
+      "runtime_execution_status"
+    ]
   }
 }

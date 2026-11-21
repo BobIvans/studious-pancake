@@ -163,14 +163,18 @@ Use a hard pack budget with binary-search/greedy-fit over ranked records. Never 
 
 ## 7. Exact all-repo inventory and safe cleanup
 
-Build deterministic inventory for:
+Build deterministic inventory for every Git-tracked artifact and accessible project knowledge source, not only imports. Include archived/closed records where visible and mark inaccessible sources UNKNOWN. Specifically cover:
+- GitHub Issues/PRs/reviews/commit history/release notes for strategy hypotheses, rejected alternatives and superseded plans;
+- local repo content and accessible MCP/app config manifests.
+
+Also build deterministic inventory for:
 - packages/dependencies and versions/locks/licenses;
 - import and call graph, scripts, executable/entrypoint files;
 - CLI commands and scheduled jobs;
 - MCP servers and tools, plugins and connection manifests;
 - GitHub Actions, workflows, container/infra and build/test commands;
 - data/RPC vendors, endpoints, networks, provider limits and actual consumers;
-- strategy ideas in code/docs/roadmaps/tests/PR history;
+- strategy ideas in code/docs/roadmaps/tests plus accessible GitHub Issues, PR descriptions/diffs/review comments, commit messages and release notes (where API permissions allow);
 - configs/schema keys (names + defaults only; never secret values);
 - runtime capability/event/episode evidence.
 

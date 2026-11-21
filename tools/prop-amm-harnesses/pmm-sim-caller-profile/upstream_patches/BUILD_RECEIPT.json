@@ -1,0 +1,28 @@
+{
+  "schema": "studious-pancake.pmm-sim-build-receipt.v1",
+  "generated_at_utc": "2026-11-22",
+  "patch_file": "tools/prop-amm-harnesses/pmm-sim-caller-profile/upstream_patches/sp665_benchmark_observability.patch",
+  "patch_tags": ["SP-665-HARNESS PATCH"],
+  "patch_contents": [
+    "Cmd::Benchmark --amounts discrete amount list (overrides --range)",
+    "Benchmark::amounts_from_human + range_iter/range_end/range_count honoring it",
+    "BenchmarkRecord + forward_status/reverse_status/error_code columns (parquet)",
+    "durable per-amount event journal events_<slot>_<via>_<pmm>_<market>_<time>.jsonl (flush + sync_all per line)",
+    "final artifact-status event (parquet_ok rows=N | parquet_error) after save",
+    "save() writes *.artifact_status sidecar; save errors are never silently discarded",
+    "save failure -> stderr [SAVE_ERROR] <path>: <err>",
+    "forward/reverse/total-failure warnings -> stderr (visible in captured logs)"
+  ],
+  "upstream_base": "LimeChain/pmm-sim @ cc4ae891a2a765d92c89d4381f96dce4afd446bb (MIT)",
+  "toolchain": "rustc 1.92.0-x86_64-pc-windows-gnu (pinned; 1.100 breaks ethnum 1.5.2, 1.88 breaks polars-arrow 0.52) + winlibs MinGW-w64 binutils (as.exe/dlltool.exe on PATH)",
+  "binary_sha256": "d1a95c6f457be3a3f41f4239da2865451b0b757c7db001e20a0566b1e0a0bc98",
+  "patch_sha256": "d4c33ece1cdc47a61a653c511b9a0f2c9ad1b5893c08d5aa2f4b660054e913f8",
+  "cargo_test_result": "67 passed; 0 failed (upstream suite, reported not assumed)",
+  "safety": {
+    "sign_enabled": false,
+    "send_enabled": false,
+    "credentials_used": "NONE",
+    "live_provider_calls": "NONE",
+    "note": "patch affects LOCAL benchmark observability only; no network, signing or submission surface added"
+  }
+}

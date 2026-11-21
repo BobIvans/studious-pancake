@@ -17,7 +17,7 @@ run_one() {
   if [ "$call_type" = "cpi" ]; then
     if [ -n "$spoof" ] && [ "$spoof" != "-" ]; then tag="$spoof"; extra+=(--spoof="$spoof"); else tag="magnus"; fi
   fi
-  "$SIM" benchmark \
+  RUST_LOG="${RUST_LOG:-info}" "$SIM" benchmark \
     --pmms="${pmm}_${suffix}" \
     --range="${amount},$((amount + 1)),1" \
     --src-token="$src" --dst-token="$dst" \

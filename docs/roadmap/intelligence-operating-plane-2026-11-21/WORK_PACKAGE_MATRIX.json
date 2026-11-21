@@ -108,15 +108,25 @@
         "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/tooling/"
       ],
       "candidate_tools": [
-        "Native Local Intelligence V2",
+        "Native Studious Local Intelligence V2",
+        "DeusData/codebase-memory-mcp (native C, shared daemon, local graph, 164 grammar claims, Hybrid LSP subset)",
+        "colbymchenry/codegraph (native Rust, SQLite/WAL, watcher, MCP explore, framework/dynamic dispatch claims)",
         "CodeGraphContext",
         "Graphify",
+        "sdsrss/code-graph-mcp (Rust, SQLite/FTS5, BLAKE3 Merkle, multi-tier compact retrieval)",
+        "SylphxAI/repomap (Rust, local graph/MCP, impact and call paths)",
         "Probe raw CLI/MCP",
-        "Tree-sitter native fallback",
-        "SCIP indexers for detected buildable languages",
+        "mariusei/scantool (JIT extraction, Git blob SHA cache, multi-resolution skeletons)",
+        "ThinkyMiner/codeTree (SQLite graph, impact/dataflow/taint)",
+        "agentralabs/agentic-codebase (portable .acb graph export)",
+        "entireio/entire-graph (PR impact tool; no MCP/background daemon)",
+        "achatainga/mcp-code-context (read-only AST slicing only; 2k file cap and limited language coverage)",
+        "vitali87/code-graph-rag (optional compiler/runtime trace experiment)",
+        "stakwork/stakgraph (optional Neo4j/multi-repo experiment)",
+        "SCIP language indexers for detected buildable languages",
         "grep-ast/TreeContext",
         "Aider RepoMap/PageRank ranking method",
-        "Repomix signature-only export (experimental, benchmark-only)",
+        "Repomix signature-only export (experimental/lossy, benchmark-only)",
         "Joern/CPG only for scoped CFG/DFG/taint use cases",
         "Glean deferred architecture review only"
       ],
@@ -135,7 +145,15 @@
         "Repomix compression is lossy and experimental; never treat it as source of truth",
         "Prompt cache optimization applies only where the actual API supports cache controls/metrics; do not promise caching in ChatGPT UI",
         "Git tree/blob hashes are the first content-addressed incremental mechanism; custom Merkle trees require demonstrated gap",
-        "Do not apply lossy prompt compression to code, identifiers, event IDs, evidence references or transaction logic"
+        "Do not apply lossy prompt compression to code, identifiers, event IDs, evidence references or transaction logic",
+        "Benchmark persistent graph daemons separately from JIT extractors; do not confuse these layers",
+        "At most one primary persistent code graph is selected; Probe/Scantool may complement it only where measured value is distinct",
+        "Do not treat grammar count as call-edge accuracy; record per-language/parser tier and exact golden-query edge precision",
+        "CBM and CodeGraph installers may write MCP/hooks/AGENTS files; run in isolated HOME/client config and inspect every diff; do not modify user-global configuration",
+        "Disable remote/cloud indexing and telemetry for proprietary code unless explicitly approved; verify telemetry opt-out by inspection",
+        "Any MCP write/edit/delete/shell/admin tools remain disabled in analyst/reviewer profile",
+        "Include branch/worktree concurrency, shared daemon lock/WAL behavior and Windows/WSL path edge cases in bake-off",
+        "Do not install or index from a dirty/unpinned tree without recording the exact working-tree snapshot hash"
       ],
       "deliverables": [
         "TOOL_CANDIDATE_MATRIX.json",
@@ -143,7 +161,9 @@
         "CODE_GRAPH_BENCHMARK_RU.md",
         "TOKEN_LATENCY_COVERAGE_RESULTS.json",
         "ADOPTION_DECISION_RU.md",
-        "TOKEN_EFFICIENCY_MEASUREMENTS.json"
+        "TOKEN_EFFICIENCY_MEASUREMENTS.json",
+        "PER_LANGUAGE_COVERAGE_MATRIX.json (syntax / calls / compiler resolution / docs / config support tiers)",
+        "INSTALL_SIDE_EFFECTS_AND_SECURITY_RU.md"
       ],
       "acceptance": [
         "Every candidate is tested on the same pinned SHA or explicitly marked NOT_RUN",
@@ -152,7 +172,13 @@
         "Cold build, incremental update, stale-index detection, RAM, disk, p50/p95 and token budgets are measured",
         "All edge provenance distinguishes extracted/compiler-resolved/inferred",
         "At most one primary external graph backend is selected; no forced adoption",
-        "A lightweight native fallback is specified if no candidate beats existing code"
+        "A lightweight native fallback is specified if no candidate beats existing code",
+        "Candidate scores separate grammar count, symbol recall, call-edge precision/recall, compiler-resolved coverage and docs/config inventory",
+        "Test multi-client daemon operation, single-writer fencing, branch isolation, SQLite WAL/checkpoint recovery and Windows/WSL behavior",
+        "Test FULL/SKELETON/REFERENCE/OVERVIEW levels: focus function remains complete and direct neighbors remain typed, source-linked skeletons",
+        "At least one JIT extractor is tested on historical Git refs using blob SHA cache and explicit coverage/exclusion trailer",
+        "Installers are run only in isolated config homes; all files/configs/hooks written by installer are listed and reviewed",
+        "All non-verified/newly discovered repository names are marked NOT_VERIFIED until source, license, release and behavior are checked"
       ]
     },
     {
@@ -193,7 +219,13 @@
         "deterministic tests and first CHATGPT_CONTEXT_PACK.md",
         "CI workflow for incremental index validation on push/PR and main updates, plus scheduled full consistency rebuild",
         "compact PR index-delta / coverage / token-budget report and downloadable SHA-bound artifact",
-        "tool/parser/schema-version invalidation and deterministic rebuild command"
+        "tool/parser/schema-version invalidation and deterministic rebuild command",
+        "temporal graph snapshots with exact repo SHA/ref and valid-time/recorded-time provenance",
+        "versioned label ontology and label lifecycle (PROPOSED/VERIFIED/STALE/NEEDS_REVIEW/RETIRED)",
+        "FULL/SKELETON/REFERENCE/OVERVIEW multi-resolution AST context API",
+        "content-addressed parser/graph cache by Git blob/tree hash and tool/schema version",
+        "background index resource manager with debounce/coalescing, single-writer lock and CPU/RAM/IO budgets",
+        "daily/PR graph quality and label drift report"
       ],
       "acceptance": [
         "A clean command builds a graph tied to exact Git tree SHA and tool versions",
@@ -215,7 +247,17 @@
         "merge to main refreshes the canonical main index; nightly full rebuild matches incremental graph checksums for the same SHA",
         "CI artifacts carry exact repo SHA, data/index generation, parser/tool versions, checksums and coverage report",
         "tool/parser/schema/schema-version changes invalidate affected cache keys and trigger a rebuild",
-        "large generated graphs/raw data are artifacts or external durable bundles, never committed as huge binary files"
+        "large generated graphs/raw data are artifacts or external durable bundles, never committed as huge binary files",
+        "Every graph node/edge/label is versioned by repo ref/SHA, graph schema version and extraction/validity timestamps",
+        "Historical as-of queries reconstruct strategy/function/config labels active at a recorded paper/shadow operation time",
+        "Label ontology changes have deterministic migrations and old label versions are preserved",
+        "Labels are evidence-backed with source hash and author/provenance; LLM labels remain PROPOSED until human or deterministic rule approval",
+        "Changes revalidate affected labels and mark drifted/stale labels, rather than silently retaining old classification",
+        "Cache keys use Git blob SHA, parser/grammar version, graph schema and config; mtime alone is never authoritative",
+        "Incremental updates invalidate downstream symbols/tests/labels only when affected; full refresh is periodically compared with incremental checksums",
+        "Watchers and index jobs are debounced, coalesced, cancellable and single-writer; resource budgets prevent competition with runtime data capture",
+        "Multi-resolution context preserves target function body and exact evidence; skeletonization only reduces non-target neighborhood",
+        "Index quality reports supported/partial/unsupported coverage, unresolved calls, dynamic dispatch gaps, dangling edges, parser failures and stale age"
       ]
     },
     {
@@ -415,7 +457,11 @@
         "Token counts use the target model tokenizer where available",
         "Stale-index, branch-isolation, rename and dynamic-import false-positive cases are tested",
         "No vendor token-saving claim is treated as a guarantee",
-        "At least one strategy novelty/duplicate question is answered from repo evidence"
+        "At least one strategy novelty/duplicate question is answered from repo evidence",
+        "Label accuracy, semantic drift detection, historical as-of answer quality and ontology migration are included in golden tests",
+        "Evaluation reports precision, recall, citation correctness, unknown rate, answer completeness, token count, latency and reproducibility",
+        "Static call edges and runtime-observed call edges are evaluated separately",
+        "Multi-resolution skeletons are checked against full-source answers to ensure no target implementation logic was lost"
       ]
     },
     {
@@ -466,13 +512,16 @@
       "deliverables": [
         "24h/7d ingest/query/replay soak report",
         "SQLite/WAL/Parquet/index measurements",
-        "ClickHouse/NATS/object-store decision"
+        "ClickHouse/NATS/object-store decision",
+        "indexer CPU/RAM/IO/WAL/cache contention report under simultaneous runtime ingestion and multiple agents"
       ],
       "acceptance": [
         "Actual bytes/sec, events/sec, p50/p95 query and replay are measured",
         "Retention pins and exact replay are proven",
         "ClickHouse/NATS/S3 are added only if measured bottleneck justifies them",
-        "If not needed, record NOT_REQUIRED_YET with measurements"
+        "If not needed, record NOT_REQUIRED_YET with measurements",
+        "Indexing resource budgets and background queues are load-tested while paper/shadow capture continues",
+        "Storage pressure produces explicit backpressure/admission pause before deleting pinned raw or episode evidence"
       ]
     },
     {
@@ -527,7 +576,9 @@
         "Event schema changes preserve migration, compatibility and historical replay",
         "Every event producer path touched by the agent is explicitly listed in the work receipt with before/after source refs and owner/tests",
         "Capture coverage is measured by stage and producer; absent runtime stages are shown as NOT_OBSERVED, not inferred from class/type presence",
-        "Do not declare whole-bot telemetry complete when only the initial vertical is instrumented; uncovered supported paths remain explicit gaps and block a full-coverage claim"
+        "Do not declare whole-bot telemetry complete when only the initial vertical is instrumented; uncovered supported paths remain explicit gaps and block a full-coverage claim",
+        "Static and runtime-observed call edges remain separate; runtime frequency/last-seen is only recorded from actual traces/events",
+        "Trace and source data include occurred_at, recorded_at, repo SHA and strategy/config generation so as-of reconstruction is possible"
       ],
       "scope_note": "W0 must enumerate the exact existing producer files. Any producer file outside the new adapter directories must be added as an explicit allowlisted touch path with owner/test impact; do not widen to whole src/strategy."
     },
@@ -552,7 +603,9 @@
         "stable-ID resolution and cross-plane lineage manifest",
         "portable versioned export bundle (manifest + JSONL events + Parquet datasets where existing owners support them + hashes/schema/replay receipts)",
         "coverage, freshness, lag, gaps, corrections, unresolved joins and retention-pin report",
-        "rebuild/restore/replay validation"
+        "rebuild/restore/replay validation",
+        "portable bitemporal label/event manifest and graph schema migration receipts",
+        "cross-repository namespace federation contract (even if initial implementation has one repo)"
       ],
       "acceptance": [
         "One query/ID follows references to canonical owner data without copying the full raw payload into a second database",
@@ -562,7 +615,10 @@
         "Portable export bundle can be imported/replayed on a clean environment with matching hashes and schema/tool versions",
         "Pinned evidence survives compaction/retention; no model-driven deletion",
         "Read-only query response contains exact repo SHA/data generation and evidence refs",
-        "No second canonical raw event/market store or mandatory external database is added"
+        "No second canonical raw event/market store or mandatory external database is added",
+        "Historical pack can query the code graph and label ontology as of the exact operation repo SHA and event time",
+        "Graph/event/schema migrations preserve provenance and can replay prior exported bundle",
+        "Cross-repository IDs are namespaced and no duplicate symbol IDs collide when a second repo is linked"
       ]
     }
   ],
@@ -579,7 +635,7 @@
     "Only existing supported test/shadow/paper runtime modes are instrumented; no live execution authority",
     "A single logical read-only query plane references multiple canonical physical stores; do not copy all raw data into a new database"
   ],
-  "first_action": "Run OCA-W0 and OCA-W0A in parallel. Then execute W0B and dependency-ready packages. Critically, do not declare success until OCA-W10 wires real supported paper/shadow runtime producers into durable event capture and OCA-W11 proves unified query/export/replay across canonical stores. A static repo graph alone is not the completed objective. Never merge or enable live execution.",
+  "first_action": "Run OCA-W0 and OCA-W0A in parallel. W0A must include the C/Rust daemon wave and multi-resolution/blob-cache extractors. Then build W0B with one chosen graph backend and a compact JIT layer. Do not declare completion without temporal labels/as-of support, runtime OCA-W10 capture across all supported paper/shadow paths and OCA-W11 cross-store export/replay.",
   "token_efficiency_policy": {
     "repo_card_tokens_target": [
       300,
@@ -595,6 +651,39 @@
     "slicing": "Probe raw CLI/MCP or grep-ast",
     "prompt_cache": "stable prefix/tool definitions only where provider API supports prompt caching and metrics",
     "content_addressing": "Git tree/blob SHA; custom Merkle cache deferred",
-    "lossy_compression": "overview only; never remove logic from authoritative code/evidence"
+    "lossy_compression": "overview only; never remove logic from authoritative code/evidence",
+    "multi_resolution_ast": {
+      "levels": [
+        "FULL",
+        "SKELETON",
+        "REFERENCE",
+        "OVERVIEW"
+      ],
+      "rule": "target implementation FULL; direct dependencies SKELETON; outer neighborhood REFERENCE; subsystem OVERVIEW",
+      "invariant": "Never remove target function logic, identifiers, critical branches, evidence refs or uncertainty to save tokens"
+    }
+  },
+  "continuous_evolution": {
+    "cache_authority": "Git tree/blob hashes, not mtime alone",
+    "graph_schema_versioning": true,
+    "label_ontology_versioning": true,
+    "temporal_queries": [
+      "valid_from_sha",
+      "valid_to_sha",
+      "recorded_at",
+      "source_event_time"
+    ],
+    "stale_label_revalidation": true,
+    "periodic_full_vs_incremental_reconciliation": true,
+    "resource_quotas": [
+      "cpu",
+      "ram",
+      "io",
+      "disk",
+      "wal",
+      "queue_depth"
+    ],
+    "branch_worktree_isolation": true,
+    "multi_repo_namespace_ready": true
   }
 }

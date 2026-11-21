@@ -62,6 +62,8 @@ def test_reachability_classifies_every_declared_boundary() -> None:
 def _versioned_schema_registry(
     previous_schema: dict[str, object],
     candidate_schema: dict[str, object],
+    *,
+    candidate_schema_id: str = "fixture.sample.v2",
 ) -> SchemaRegistry:
     def record(schema_id: str, schema: dict[str, object]) -> dict[str, object]:
         return {
@@ -96,7 +98,7 @@ def _versioned_schema_registry(
         "schema_id": "canonical.schema-registry.v1",
         "schemas": [
             record("fixture.sample.v1", previous_schema),
-            record("fixture.sample.v2", candidate_schema),
+            record(candidate_schema_id, candidate_schema),
         ],
     }
     return SchemaRegistry.from_json_text(json.dumps(payload))
@@ -205,7 +207,9 @@ def test_schema_registry_requires_ordered_versions_and_fixtures() -> None:
 
 def test_schema_registry_rejects_cross_family_compatibility() -> None:
     schema = _object_schema(required=("id",), extra_properties=True)
-    registry = _versioned_schema_registry(schema, schema)
+    registry = _versioned_schema_registry(
+        schema, schema, candidate_schema_id="other.sample.v2"
+    )
 
     with pytest.raises(SchemaRegistryError, match="same schema family"):
         registry.check_compatibility(

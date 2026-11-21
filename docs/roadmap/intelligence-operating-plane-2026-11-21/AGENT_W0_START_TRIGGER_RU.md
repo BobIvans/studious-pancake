@@ -1,3 +1,30 @@
+> **Приоритет исполнения, уточнение владельца — 21.11.2026**
+>
+> Пользователь временно переключает основное внимание на Web3 (стратегии, рынки, источники, маршруты, qualification и paper/shadow evidence). Этот документ и PR #666 остаются архитектурным handoff/backlog. Не запускать весь OCA/W0–W19 как параллельную кампанию и не отнимать ресурсы у текущего Web3 workstream. Сначала проверять активные Web3 PR и актуальный main; инфраструктуру не считать целью текущего спринта.
+>
+> **Допустимый ограниченный помощник:** A — минимальный token-efficient repo graph/retrieval, только когда конкретная Web3 задача действительно выигрывает от точной навигации и сокращения контекста. A строится поверх существующего `src/intelligence` (SHA snapshots, AST extraction, import graph, SQLite index, context packs), не создаёт второй snapshot/DB owner и не блокирует Web3 PR. Перед внедрением — benchmark на Web3 golden tasks: токены до/после, recall нужных функций/тестов, ложные/неразрешённые связи, latency. Без доказанного выигрыша оставить текущий механизм.
+>
+> ## Буквенные назначения coding agent — упорядоченный backlog
+>
+> | Буква | Назначение | Результат/граница |
+> |---|---|---|
+> | **A** | Code graph, symbol resolution и поиск | Надстроить стабильные symbol/callsite IDs, AST enclosing scopes, точные import/call edges и статусы RESOLVED/AMBIGUOUS/UNRESOLVED над существующим индексом; SCIP/LSP подключать выборочно. Repo map с PageRank-подобным task ranking и hard token budget. Начать только как измеряемый Web3-context helper. |
+> | **B** | Incremental computation | Signature/body hashes, content-addressed derived artifacts, dependency invalidation, early cutoff, cancellation и full-vs-incremental reconciliation. Отложено; использовать существующие Git/blob hashes, не дублировать их. |
+> | **C** | Temporal state, branching и безопасные изменения | SHA/time-bound facts, history/diff, worktree isolation, leases, patch/merge receipts; CRDT/Dolt/jj — только benchmark по необходимости. Отложено. |
+> | **D** | Sandboxes и execution isolation | Ограниченные CPU/RAM/disk/network/time, отсутствие секретов и финансовых полномочий, отдельные analyst и coder capabilities. Отложено; Web3 safety boundaries остаются обязательными независимо от этого backlog. |
+> | **E** | Retrieval и context quality | Task-conditioned ranking: exact symbol → lexical → graph → tests/change history → доказанные runtime signals → semantic fallback; progressive disclosure и измеренный token budget. Полная версия после A и только если есть retrieval bottleneck. |
+> | **F** | Verification и test economics | Symbol/callsite → test coverage, diff-to-affected-tests, always-run invariant/safety suites, flaky registry, shrinking и целевое mutation testing. Отложено; не сокращать обязательные Web3 regression/safety suites. |
+> | **G** | Large-repo plumbing и координация агентов | Sparse checkout/partial clone, bounded scheduling, blob-hash cache, isolated worktrees, durable tasks/receipts и merge train по реальной нагрузке. Отложено до измеренного scale/parallelism bottleneck. |
+> | **H** | Token economics, security и governance | Реальный tokenizer/cost telemetry, output trimming с контролем потерь, prompt-injection isolation, secret redaction, tool capability registry, SBOM/license gates и audit log. Базовые security gates не отключать; расширение — отложено. |
+>
+> **Порядок:** A → B → C → D → E → F → G → H. В текущем Web3-first режиме разрешён только узкий A по конкретному запросу/доказанной пользе; B–H остаются назначенным backlog, не активной серией PR.
+>
+> **Уже описанные дополнительные контракты не теряются:** OCA-W12 — license/SBOM governance; W13 — provider adapters/capabilities/DataContract; W14 — StrategyDataRequirement/compatibility; W15 — typed temporal ontology/lineage; W16 — incremental engine; W17 — agent access/sandbox/work receipts; W18 — verification/test economics; W19 — условный infrastructure bake-off. Они остаются в матрице, но не исполняются сейчас автоматически. Open PR #672–#676 по schema/catalogue/lineage/CDC/transport не дублировать и не считать merged без проверки фактического статуса/CI.
+>
+> **Definition of success для текущего режима:** Web3 workstream продолжает получать приоритет. Любой repo-intelligence helper должен уменьшать стоимость поиска/контекста на реальных Web3 задачах, сохранять точность и давать evidence refs; он не должен превращаться в отдельную большую инфраструктурную кампанию.
+>
+> ---
+>
 # CODING AGENT EXECUTION TRIGGER — FULL OCA + REPO KNOWLEDGE BOOTSTRAP
 ## Это задание запускает не только аудит, а первую работающую версию агрегатора знаний
 

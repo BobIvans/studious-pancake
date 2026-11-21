@@ -33,11 +33,13 @@ git -C "$TMP/repo" checkout --detach "$PIN"
 test "$(git -C "$TMP/repo" rev-parse HEAD)" = "$PIN"
 
 mkdir -p "$DEST"
-git -C "$TMP/repo" archive --format=tar "$PIN" | tar -xf - -C "$DEST"
-git -C "$TMP/repo" show "$PIN:LICENSE" > "$DEST/LICENSE" 2>/dev/null || true
+git -C "$TMP/repo" archive --format=tar "$PIN" > "$TMP/$NAME.tar"
+sha256sum "$TMP/$NAME.tar" > "$TMP/$NAME.tar.sha256"
+tar -xf "$TMP/$NAME.tar" -C "$DEST"
+
 ~~~
 
-Перед повтором команды проверьте, что DEST не содержит незарегистрированных пользовательских изменений. Не перезаписывайте каталог молча. Для репозитория, где лицензионный файл имеет другое имя, сохраните оригинальный файл; не генерируйте поддельный LICENSE. Для pmm-sim отдельно включите его Cargo.lock и примените локальный patch branch -> pinned revision для Magnus только в snapshot/harness.
+Перед повтором команды проверьте, что DEST не содержит незарегистрированных пользовательских изменений. Не перезаписывайте каталог молча. Для репозитория, где лицензионный файл имеет другое имя, сохраните оригинальный файл как есть; не генерируйте поддельный или пустой LICENSE. Для published crate дополнительно проверьте cargo package --list и содержимое .crate archive; если лицензия/notice не включены и не подтверждены upstream, оставьте статус HOLD. Для pmm-sim отдельно включите его Cargo.lock и примените локальный patch branch -> pinned revision для Magnus только в snapshot/harness.
 
 После архивации:
 1. Проверить отсутствие .git и submodule gaps.
@@ -45,7 +47,7 @@ git -C "$TMP/repo" show "$PIN:LICENSE" > "$DEST/LICENSE" 2>/dev/null || true
 3. Вычислить sha256sum archive.tar, sha256sum LICENSE*, git rev-parse HEAD.
 4. Сохранить LICENSE/NOTICE без изменения текста.
 5. Проверить все Cargo.toml, Cargo.lock, git dependencies, build scripts, proc macros и binary targets.
-6. cargo metadata --locked, затем cargo test --locked, cargo build --release --locked, cargo clippy --locked --all-targets -- -D warnings в отдельной изолированной папке.
+6. Для crate-источников запустить cargo package --list / cargo metadata --locked; затем cargo test --locked, cargo build --release --locked, cargo clippy --locked --all-targets -- -D warnings в отдельной изолированной папке.
 7. Записать stdout/stderr, toolchain version, OS, CPU, dependency graph and test counts.
 
 Не запускать неизвестные install.sh, Makefile, postinstall/build.rs или network scripts до code review. Не запускать mainnet/live loop и не использовать .env из upstream.

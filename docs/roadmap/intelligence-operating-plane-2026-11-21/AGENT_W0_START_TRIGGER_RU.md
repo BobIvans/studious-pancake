@@ -3,7 +3,7 @@
 
 **Repository:** `BobIvans/studious-pancake`  
 **Design source:** PR #666, branch `codex/intelligence-operating-plane-design-2026-11-21`  
-**Master docs:** `CODEX_START_HERE_RU.md`, `OPERATIONS_CONTEXT_AGGREGATOR_RU.md`, `REPO_KNOWLEDGE_GRAPH_RU.md`, `CHATGPT_CODING_AGENT_CONTEXT_WORKFLOW_RU.md`, `TOOL_ACCESS_PROFILES_RU.md`, `WORK_PACKAGE_MATRIX.json`.  
+**Master docs:** `CODEX_START_HERE_RU.md`, `OPERATIONS_CONTEXT_AGGREGATOR_RU.md`, `REPO_KNOWLEDGE_GRAPH_RU.md`, `CHATGPT_CODING_AGENT_CONTEXT_WORKFLOW_RU.md`, `TOOL_ACCESS_PROFILES_RU.md`, `TOKEN_EFFICIENCY_PLAYBOOK_RU.md`, `WORK_PACKAGE_MATRIX.json`.  
 **Execution goal:** deliver a working, incremental, token-efficient, evidence-linked repository knowledge index and connect it to existing Web3 strategy/operations owners. **Do not stop after producing an audit report.**
 
 ---
@@ -32,9 +32,14 @@ On the same pinned clean SHA, benchmark in isolated temporary/dev tool environme
 - CodeGraphContext (CGC);
 - Graphify;
 - SCIP indexers for languages/builds that actually exist in this repository;
-- optional LSP/Serena and Aider RepoMap only if they improve a measurable gap.
+- Probe raw CLI/MCP for zero-index full-function extraction;
+- Aider RepoMap/PageRank for query-time relevance ranking;
+- grep-ast/TreeContext or Repomix only for scoped slicing / one-off signature digest (Repomix compression is experimental and strips implementation logic);
+- SCIP/LSP only for languages with working indexers;
+- Joern/CPG only as optional CFG/DFG/taint deep-analysis profile;
+- Glean only as a deferred scale alternative.
 
-Use 30–50 golden questions, including caller/callee paths, strategy/source/provider links, test impact, tool/MCP discovery, dead-code false positives and 500/1k/2k-token packs. Measure correctness, coverage, freshness, build/update time, p50/p95 latency, peak RAM, disk and token counts. Record versions, source URLs, license/SPDX, transitive dependencies, security status and exact install/self-check results.
+Use 30–50 golden questions, including caller/callee paths, strategy/source/provider links, test impact, tool/MCP discovery, dead-code false positives and 500/1k/2k-token packs. Apply all applicable techniques from TOKEN_EFFICIENCY_PLAYBOOK_RU.md: stable T0 repo card, one-line T1 catalogues, lazy 1–3-hop graph traversal, query-time PageRank, scope-aware function extraction, exact token budgeting, blob-hash incremental caching and prompt-prefix caching only where the actual API supports it. Measure correctness, coverage, freshness, build/update time, p50/p95 latency, peak RAM, disk and token counts. Record versions, source URLs, license/SPDX, transitive dependencies, security status and exact install/self-check results.
 
 Install candidates only in an isolated `uv tool`/pipx/temp environment. Never add them to bot runtime dependencies during evaluation. Graphify's official package is `graphifyy`; keep its optional model-backed docs/media semantic pass off. CGC's CLI/MCP includes management operations; do not expose its full tool catalog to the analyst. jCodeMunch is excluded unless commercial/revenue-supporting licensing is explicitly approved. Do not run remote Graphify Cloud or upload the repo.
 
@@ -69,7 +74,9 @@ Do not stop at W0. Use the W0/W0A evidence to choose the **smallest winning comb
 9. Put bulky indexes/caches outside tracked source or in ignored build output. Commit schemas, reproducible commands, compact manifests, tests and an example report—not a huge opaque database.
 10. If no external candidate beats the native implementation, implement the minimal missing Tree-sitter/SQLite/FTS/graph traversal layer in existing architecture. Do not force a third-party tool merely because it is popular.
 
-**Required first tangible artifact:** one command/entrypoint produces (a) a 300–500-token repo card, (b) a compact one-line catalogue of all discovered strategies/tools/sources/providers, (c) a searchable graph with exact symbol links and callers/callees, and (d) a bounded task context pack with freshness/coverage gaps.
+**Do not build every tool together. Keep native Local Intelligence as orchestrator; adopt at most one persistent graph backend (CGC OR Graphify OR proven native graph), Probe as optional JIT extractor, SCIP/LSP for selected precision paths; defer Joern/Glean/embeddings/remote DB unless benchmarks prove need.
+
+Required first tangible artifact:** one command/entrypoint produces (a) a 300–500-token repo card, (b) a compact one-line catalogue of all discovered strategies/tools/sources/providers, (c) a searchable graph with exact symbol links and callers/callees, and (d) a bounded task context pack with freshness/coverage gaps.
 
 ## 3. Continue into OCA operation/strategy correlation — do not leave it as a standalone code graph
 

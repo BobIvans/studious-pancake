@@ -154,14 +154,14 @@ def test_schema_registry_detects_backward_incompatibility() -> None:
 
 def test_schema_registry_detects_forward_incompatibility() -> None:
     previous = _object_schema(required=("id",), extra_properties=False)
-    candidate = _object_schema(required=("id",), extra_properties=False)
+    candidate = _object_schema(required=("id",), extra_properties=True)
     registry = _versioned_schema_registry(previous, candidate)
 
     report = registry.check_compatibility(
         previous_schema_id="fixture.sample.v1",
         candidate_schema_id="fixture.sample.v2",
         mode="FORWARD",
-        forward_fixtures=({"id": "new-record", "label": "new-field"},),
+        forward_fixtures=({"id": "new-record", "new_field": "new-field"},),
     )
 
     assert report.compatible is False

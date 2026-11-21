@@ -167,8 +167,13 @@ class DataQualityContext:
             type(self.freshness_ms) is not int or self.freshness_ms < 0
         ):
             raise OpenLineageProjectionError("freshness_ms must be non-negative")
-        if self.coverage_ratio is not None and not 0 <= self.coverage_ratio <= 1:
-            raise OpenLineageProjectionError("coverage_ratio must be between 0 and 1")
+        if self.coverage_ratio_ppm is not None and (
+            type(self.coverage_ratio_ppm) is not int
+            or not 0 <= self.coverage_ratio_ppm <= 1_000_000
+        ):
+            raise OpenLineageProjectionError(
+                "coverage_ratio_ppm must be an integer between 0 and 1000000"
+            )
         if self.event_time is not None:
             _validate_rfc3339(self.event_time, field_name="event_time")
         if self.ingest_time is not None:
@@ -281,7 +286,7 @@ def _quality_facet(
         "event_time",
         "ingest_time",
         "freshness_ms",
-        "coverage_ratio",
+        "coverage_ratio_ppm",
         "correction_kind",
         "normalization_version",
         "raw_payload_ref",

@@ -3,7 +3,7 @@
 
 **Repository:** `BobIvans/studious-pancake`  
 **Design source:** PR #666, branch `codex/intelligence-operating-plane-design-2026-11-21`  
-**Master docs:** `CODEX_START_HERE_RU.md`, `OPERATIONS_CONTEXT_AGGREGATOR_RU.md`, `REPO_KNOWLEDGE_GRAPH_RU.md`, `CHATGPT_CODING_AGENT_CONTEXT_WORKFLOW_RU.md`, `TOOL_ACCESS_PROFILES_RU.md`, `TOKEN_EFFICIENCY_PLAYBOOK_RU.md`, `REALTIME_OPERATION_DATA_PLANE_RU.md`, `WORK_PACKAGE_MATRIX.json`.  
+**Master docs:** `CODEX_START_HERE_RU.md`, `OPERATIONS_CONTEXT_AGGREGATOR_RU.md`, `REPO_KNOWLEDGE_GRAPH_RU.md`, `CHATGPT_CODING_AGENT_CONTEXT_WORKFLOW_RU.md`, `TOOL_ACCESS_PROFILES_RU.md`, `TOKEN_EFFICIENCY_PLAYBOOK_RU.md`, `REALTIME_OPERATION_DATA_PLANE_RU.md`, `UNIVERSAL_KNOWLEDGE_DATA_PLANE_EXPANSION_RU.md`, `WORK_PACKAGE_MATRIX.json`.  
 **Execution goal:** deliver a working, incremental, token-efficient, evidence-linked repository knowledge index and connect it to existing Web3 strategy/operations owners. **Do not stop after producing an audit report.**
 
 ---
@@ -109,7 +109,7 @@ Required work:
 
 ## 4. Continue into OCA operation/strategy correlation — do not leave it as a standalone code graph
 
-After W0/W0A, execute each dependency-ready package in `WORK_PACKAGE_MATRIX.json`; independent work may run in parallel only with disjoint write scopes. Continue through W1–W11 where evidence and dependencies permit:
+After W0/W0A, execute each dependency-ready package in `WORK_PACKAGE_MATRIX.json`; independent work may run in parallel only with disjoint write scopes. Continue through W1–W19 where evidence and dependencies permit:
 
 - bind real EventEnvelope producers and events to strategy/config/repo SHA/code symbols using exact values and stable callsites;
 - complete OCA-W10 runtime instrumentation and OCA-W11 universal read-only query/export/replay before claiming operational knowledge coverage;
@@ -168,3 +168,43 @@ Every report records exact base/head SHA, commands, versions, source blob hashes
 The next ChatGPT/coding-agent session can retrieve a compact, up-to-date map of existing strategy ideas, exact functions and call chains, providers/data sources/tools, configs/tests, observed operations and unknowns—without re-reading the entire repository or reimplementing an existing idea. The index refreshes against new commits and reports its own coverage and staleness. It is a durable external knowledge system, not a claim of unlimited model memory.
 
 **Do the work now. Do not return only a plan. If a dependency or permission blocks part of the scope, still deliver the working safe subset and document the blocker precisely.**
+
+
+## 9. Expanded universal data-intelligence and governance execution (OCA-W12–W19)
+
+Read UNIVERSAL_KNOWLEDGE_DATA_PLANE_EXPANSION_RU.md before dispatching the expanded work. It is the normative expansion for provider contracts, StrategyDataRequirement, typed temporal graph, incremental computation, agent access, license/SBOM governance and conditional infrastructure candidates. WORK_PACKAGE_MATRIX.json is the machine-readable task/dependency/write-scope authority.
+
+**Observed repository snapshot at this design update:** main was 0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54 (2026-11-21); PR #666 was still based on ea204222df86a0697cc6bce0e9ec60f7db31ffd8. This is not permission to use a stale base. Before any implementation, fetch main again and create new isolated worktrees/branches from the exact latest SHA. Keep PR #666 as design/handoff only.
+
+### W0A mandatory candidate wave
+
+Add these explicit same-SHA profiles to the existing bake-off:
+- Main graph contender: sdsrss/code-graph-mcp — https://github.com/sdsrss/code-graph-mcp
+- Independent AST/symbol navigation: defendend/Claude-ast-index-search — https://github.com/defendend/Claude-ast-index-search
+- Cross-language resolver precision: aimasteracc/tree-sitter-analyzer — https://github.com/aimasteracc/tree-sitter-analyzer
+- Retrieval/risk/co-change: iliaal/codesage — https://github.com/iliaal/codesage
+- Temporal Git graph: n24q02m/crg — https://github.com/n24q02m/crg
+- Conditional graph storage: facebookincubator/Glean — https://github.com/facebookincubator/Glean; LadybugDB/ladybug — https://github.com/LadybugDB/ladybug
+- Structural audit/slicing: ast-grep — https://github.com/ast-grep/ast-grep; Aider/grep-ast — https://github.com/Aider-AI/grep-ast
+- Output compression/serialization: rtk-ai/rtk — https://github.com/rtk-ai/rtk; dweve-ai/hedl — https://github.com/dweve-ai/hedl
+- RCA: sebdenes/code-graph-rca — https://github.com/sebdenes/code-graph-rca
+
+Retain existing candidates (DeusData/codebase-memory-mcp, colbymchenry/codegraph, CodeGraphContext, Graphify, SylphxAI/repomap, Probe, Scantool, SCIP/LSP, Joern and current native Local Intelligence). Evaluate candidates in isolated HOME/client profiles; inspect install hooks, skills, MCP tools, telemetry, network access and AGENTS/config diffs. Use one pinned commit and the same 30–50 golden questions. Select zero/one persistent graph engine, at most one useful JIT extractor and no more than one measured semantic overlay. Popularity and README claims are not acceptance evidence.
+
+### New packages
+
+- **OCA-W12:** path-level license/SBOM/security governance; audit nested directories, rulesets, dataflow packages, models, embeddings, datasets and subprocess-distributed executables. Apply the corrected licensing matrix in the expansion document. A subprocess is not a blanket GPL exemption.
+- **OCA-W13:** generic ProviderCapabilityRegistry + versioned ProviderAdapterContract + DataContract; cursors/watermarks, event/ingest time, freshness, lag, coverage, gaps, quotas, corrections/retractions, replay and explicit STREAMING/POLL_ONLY/ONE_SHOT/UNAVAILABLE.
+- **OCA-W14:** StrategyDataRequirement and CompatibilityEvaluator; strategies require capabilities/contracts, not a provider implementation; adapter presence never equals strategy qualification.
+- **OCA-W15:** multi-layer typed temporal graph with stable IDs, edge provenance, valid-time/recorded-time, schema/ontology versions, correction/reorg events and as-of repo/operation queries.
+- **OCA-W16:** signature/body index split, Git blob/tree content addressing, dependency invalidation, early cutoff, cancellation, priorities, branch snapshots, full-vs-incremental reconciliation and resource governor.
+- **OCA-W17:** typed agent capability policies, separate analyst/admin surfaces, stable bounded read-only MCP facade, worktree/lease/task isolation, sandbox limits, secret/prompt-injection protection and WorkResultReceipt.
+- **OCA-W18:** symbol/callsite-to-test coverage, affected test selection, always-run critical suites, flaky registry, failure shrinking, targeted mutation tests and retrieval/evidence correctness metrics.
+- **OCA-W19:** conditional OpenLineage/DataHub/Apicurio/NATS/Debezium/Temporal integration bake-off. Adopt none unless current owners demonstrably fail a measured requirement.
+
+Follow package dependencies and exclusive write scopes exactly. W12 and W0B can proceed after the source/tool inventory is pinned; W13 follows OCA-W1; W14 follows W13 and the existing conflict/qualification owners; W15 follows W1/W2/W3 and W13/W14; W16–W19 start only when their declared dependencies are satisfied. Shared canonical owners remain serialized.
+
+### Expanded invariant
+
+No new provider is enabled; no new source is treated as streaming without continuous capture evidence; no strategy is qualified by adapter presence; no graph edge is upgraded from static/inferred to runtime-observed without event evidence; no data correction/reorg silently overwrites history; no index job may starve paper/shadow capture; no new MCP query path grants signing, submission, borrowing, spending, LIVE or production mutation authority.
+

@@ -1,0 +1,125 @@
+{
+  "schema": "studious-pancake.campaign-next-pr-dag.v1",
+  "generated_at": "2026-11-21",
+  "reconciled_main_sha": "ea204222df86a0697cc6bce0e9ec60f7db31ffd8",
+  "note": "No strategy family is solved in PR #664; each node is one bounded PR targeting current main with evidence receipts per AGENTS.md rule 10 (exact changed paths, source pins, positive/negative tests, offline replay, actual test counts, evidence receipts, blockers, PR link). One owner per node; no concurrent edits to the same canonical owner.",
+  "nodes": [
+    {
+      "id": "N01",
+      "title": "humidi-fi-venue-dossier",
+      "owner_paths": ["docs/integrations/offline/<new dated dir>/HUMIDIFI_SOLANA.md", "SOURCE_MANIFEST.json"],
+      "depends_on": [],
+      "execution_class": "docs pin + offline contract vectors (first per-venue prop-AMM PR; not one generic AMM)",
+      "evidence_required": "program/deployment ID, account discovery method, instruction source/bindings revision + license, CU/fee model, account closure, reproducible vectors, quote parity vs Jupiter comparator",
+      "safety_note": "research only; no unsupported direct submission; flow-integrity policy applies"
+    },
+    {
+      "id": "N02",
+      "title": "exp01-event-to-state-harness",
+      "owner_paths": ["EXP-01/EXP-03 lineage (coordinate with existing EXP owners)"],
+      "depends_on": [],
+      "execution_class": "research experiment, network-disabled replay",
+      "evidence_required": "event->coherent after-state evaluation, first/last-positive times vs time-shuffled null control, PR118 amount grid, consumed-input and survival metrics",
+      "safety_note": "never framed as mempool sniping; shred feeds are pre-propagation data, rooted state confirms market"
+    },
+    {
+      "id": "N03",
+      "title": "stablecoin-anchor-proofs",
+      "owner_paths": ["#491 stable-peg owner lineage"],
+      "depends_on": [],
+      "execution_class": "offline identity tests",
+      "evidence_required": "issuer/redeem anchor semantics, exact same-chain venue edges, negative stable mint/pool identity tests",
+      "safety_note": "offline only"
+    },
+    {
+      "id": "N04",
+      "title": "pump-migration-event-dossier",
+      "owner_paths": ["EXP-02 boundary lineage"],
+      "depends_on": [],
+      "execution_class": "discovery/event signal only",
+      "evidence_required": "migration event source pin, post-migration pool identity, fee/Token-2022 state",
+      "safety_note": "never predict a migration as a live pool"
+    },
+    {
+      "id": "N05",
+      "title": "openocean-schema-drift-refresh",
+      "owner_paths": ["docs/integrations/offline/<new dated dir>/OPENOCEAN_SOLANA.md refresh"],
+      "depends_on": [],
+      "execution_class": "offline dossier refresh",
+      "evidence_required": "re-pin gasPriceDecimals, amount units, auth and fee contract; clear BLOCKED_SCHEMA_DRIFT or keep it honestly",
+      "safety_note": "offline only"
+    },
+    {
+      "id": "N06",
+      "title": "jupiter-lend-capacity-qualification",
+      "owner_paths": ["src/lending/jupiter_lend.py", "R02-CAP-A", "R03-A"],
+      "depends_on": [],
+      "execution_class": "R02-CAP-A reader proof (one lender per PR)",
+      "evidence_required": "resource identity, deployed owner/version, mint/decimals, reserve/vault, utilization/ceilings/liabilities, exact fee+rounding, availability, slot/freshness, independent provenance; vault cash/TVL is not borrowable capacity",
+      "safety_note": "one lender implementation/reader per PR; aggregators/wrappers are not independent capital"
+    },
+    {
+      "id": "N07",
+      "title": "project0-deployment-rebind",
+      "owner_paths": ["R02-CAP-D", "R03-D"],
+      "depends_on": [],
+      "execution_class": "R02-CAP-D + R03-D deployment rebind",
+      "evidence_required": "current deployed program/bank/flash semantics, asset, cap, fee, callback, account eligibility",
+      "safety_note": "priority Solana lender candidate; one lender per PR"
+    },
+    {
+      "id": "N08",
+      "title": "kamino-sdk-pin-qualification",
+      "owner_paths": ["R02-CAP-B", "R03-B"],
+      "depends_on": [],
+      "execution_class": "R02-CAP-B + R03-B SDK pin + deployed-state qualification",
+      "evidence_required": "actual flash borrow instruction distinguished from standard obligation borrowing; deployed state pin",
+      "safety_note": "no account creation; one lender per PR"
+    },
+    {
+      "id": "N09",
+      "title": "navi-checkpoint-qualification",
+      "owner_paths": ["R02-CAP-C", "R03-C"],
+      "depends_on": [],
+      "execution_class": "R02-CAP-C + R03-C checkpoint qualification (Sui, later wave)",
+      "evidence_required": "Sui coin types, package ids, object versions/checkpoint, hot-potato repay semantics",
+      "safety_note": "Sui-local only; one lender per PR"
+    },
+    {
+      "id": "N10",
+      "title": "save-solend-support-proof",
+      "owner_paths": ["MISSING_OWNER (dossier PR defines the owner)"],
+      "depends_on": [],
+      "execution_class": "research dossier",
+      "evidence_required": "current flashloan API, deployed reserve, fees, cap, repayment, same-tx composition proof",
+      "safety_note": "no implementation before support proof"
+    },
+    {
+      "id": "N11",
+      "title": "delivery-provider-benchmark-dossiers",
+      "owner_paths": ["docs/integrations/offline/<new dated dir>/ (astralane_iris + 0slot new pins; helius_sender + jito_block_engine refresh)"],
+      "depends_on": [],
+      "execution_class": "offline dossiers, RESEARCH_ONLY",
+      "evidence_required": "identical offline benchmark methodology (inclusion rate, latency, effective tip, ACK-to-settlement delta, failure modes) per EXECUTION_DELIVERY_RESEARCH_PACK_V1.md; dated pins that expire",
+      "safety_note": "no submission, no tip, no transport/adapter; preserves docs/pr130_jito_mev_policy.md + MPR-04"
+    },
+    {
+      "id": "N12",
+      "title": "clmm-dlmm-pin-prs",
+      "owner_paths": ["src/providers/raydium_clmm_native.py", "src/providers/meteora_dlmm_native.py", "src/strategy/clmm_dlmm_binding.py (PR #660 lineage)"],
+      "depends_on": [],
+      "execution_class": "bounded pin PRs: DLMM amount-specific quote pin, CLMM tick-array bitmap extension, Orca license review",
+      "evidence_required": "typed blockers cleared: DLMM_AMOUNT_SPECIFIC_QUOTE_MISSING_PIN, CLMM_TICK_ARRAY_BITMAP_EXTENSION_REQUIRED, BLOCKED_LICENSE_REVIEW; offline replay via scripts/clmm_dlmm_market_trace_replay.py",
+      "safety_note": "coordinate with #660 owner lineage; do not duplicate or overwrite #660"
+    }
+  ],
+  "paper_gate_node": {
+    "id": "PG01",
+    "title": "R06/QPR paper qualification",
+    "owner_paths": ["src/paper_shadow/", "src/qualification_campaign/", "R06 campaign owner", "MPR-05 installed 72-hour qualification"],
+    "depends_on": ["N06 or N07 or N08 qualified lender", "R03 builder conformance", "R05 full exact simulation", "installed-composition PASS"],
+    "execution_class": "installed sender-free paper qualification",
+    "evidence_required": "exact QPR/R06/campaign-authority PASS; deterministic network-disabled replay with zero outbound calls; durable terminal outcomes, no UNKNOWN terminal; MPR-05 72h soak where applicable",
+    "safety_note": "BLOCKED until R02+R03+R05+installed-composition PASS AND explicit human authorization; no custom paper runner; CAPTURE_ONLY evidence is never PAPER_QUALIFIED"
+  }
+}

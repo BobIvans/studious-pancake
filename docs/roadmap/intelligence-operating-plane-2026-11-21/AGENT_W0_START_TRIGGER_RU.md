@@ -114,7 +114,9 @@ If a missing field/callsite cannot be proven, record MISSING/UNKNOWN and create 
 
 Implement the least invasive reliable path:
 - local command/hook or agent post-commit refresh for the active worktree;
-- CI on push/PR to verify head-SHA freshness, deterministic index update, schema, dangling edges and token-pack budgets;
+- CI on push/PR and merge to main to verify head-SHA freshness, deterministic incremental index update, schema, dangling edges, secret exclusion and token-pack budgets;
+- scheduled nightly full rebuild to compare checksums against incremental index, detect drift and report parser/tool/schema version changes;
+- keep generated index as downloadable SHA-bound CI artifact/cache, not large binary Git commits;
 - Work Result Receipt includes base/head SHA, index generation, graph delta, affected strategies/sources/tools/tests, test counts and artifact hashes;
 - branch/worktree indexes are isolated; PR review includes index diff and impacted dependencies.
 Indexing and deterministic labels run without an LLM. Ambiguous semantic labels remain PROPOSED/UNKNOWN.
@@ -131,7 +133,7 @@ At minimum, produce the OCA-W0 reports plus:
 - repo graph schema, index generator/importer, CLI/query surface and tests;
 - compact repo card and one-line strategy/source/tool maps;
 - first bounded context pack with exact SHA, token count and continuation;
-- incremental refresh/CI check or an explicit tested integration plan if CI permissions block wiring;
+- working GitHub Actions CI wiring for push/PR/main merge plus scheduled nightly full consistency check (if repository policy/permissions block it, document the exact blocker and do not claim automatic refresh);
 - unused/duplicate/deprecation candidate list (no deletion);
 - Work Result Receipt and a follow-up dependency graph.
 

@@ -172,7 +172,9 @@ class CatalogRelationship:
             raise ValueError("catalogue relationship identity is required")
         if not self.evidence_refs or any(not item for item in self.evidence_refs):
             raise ValueError("catalogue relationships require evidence references")
-        object.__setattr__(self, "evidence_refs", tuple(sorted(set(self.evidence_refs))))
+        object.__setattr__(
+            self, "evidence_refs", tuple(sorted(set(self.evidence_refs)))
+        )
 
     def to_payload(self) -> dict[str, object]:
         return {
@@ -291,7 +293,9 @@ def _entity(
     )
 
 
-def _market_source_entity(source: MarketDataSource, *, checked_at: str) -> CatalogEntity:
+def _market_source_entity(
+    source: MarketDataSource, *, checked_at: str
+) -> CatalogEntity:
     return _entity(
         "market-source",
         source.source_id,
@@ -558,7 +562,9 @@ def build_data_catalog_snapshot(
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Export the read-only Studious data catalogue")
+    parser = argparse.ArgumentParser(
+        description="Export the read-only Studious data catalogue"
+    )
     parser.add_argument(
         "--summary",
         action="store_true",

@@ -94,9 +94,53 @@ def _urn(entity_type: str, key: str) -> str:
     return f"urn:studious-pancake:{entity_type}:{quote(key, safe='-._~')}"
 
 
-def _resource_sha256(name: str) -> str:
-    raw = resources.files("src.resources").joinpath(name).read_bytes()
-    return hashlib.sha256(raw).hexdigest()
+def _market_source_catalog_digest(catalog: MarketSourceCatalog) -> str:
+    payload = {
+        "checked_at": catalog.checked_at,
+        "sources": [
+            {
+                "source_id": source.source_id,
+                "label": source.label,
+                "family": source.family.value,
+                "domains": source.domains,
+                "access": source.access.value,
+                "evidence_urls": source.evidence_urls,
+                "limitation": source.limitation,
+            }
+            for source in catalog.sources
+        ],
+    }
+    return domain_sha256(
+        domain="market-source-catalog-projection",
+        schema_id="shadow.market-source-catalog.v1",
+        payload=canonical_json_bytes(payload),
+    )
+
+
+def _external_contract_catalog_digest(
+    entities: Sequence[CatalogEntity],
+    relationships: Sequence[CatalogRelationship],
+    *,
+    schema_version: str,
+) -> str:
+    payload = {
+        "entities": [
+            item.to_payload()
+            for item in entities
+            if item.entity_type in {"provider", "external-contract", "pinned-artifact"}
+        ],
+        "relationships": [
+            item.to_payload()
+            for item in relationships
+            if item.relationship_type
+            in {"HAS_API_CONTRACT", "HAS_PINNED_ARTIFACT"}
+        ],
+    }
+    return domain_sha256(
+        domain="external-contract-catalog-projection",
+        schema_id=schema_version,
+        payload=canonical_json_bytes(payload),
+    )
 
 
 def _json_value(value: object) -> object:
@@ -531,12 +575,16 @@ def build_data_catalog_snapshot(
             CatalogSourceGeneration(
                 owner="src.market.source_catalog",
                 resource_version=source_catalog.checked_at,
-                sha256=_resource_sha256("market_source_catalog.json"),
+                sha256=_market_source_catalog_digest(source_catalog),
             ),
             CatalogSourceGeneration(
                 owner="src.external_contracts.registry",
                 resource_version=contract_registry.model.schema_version,
-                sha256=_resource_sha256("external_contracts.json"),
+                sha256=_external_contract_catalog_digest(
+                    contract_entities,
+                    contract_relationships,
+                    schema_version=contract_registry.model.schema_version,
+                ),
             ),
             CatalogSourceGeneration(
                 owner="src.contracts.registry",

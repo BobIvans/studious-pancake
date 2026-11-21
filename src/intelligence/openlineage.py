@@ -405,8 +405,20 @@ def validate_openlineage_run_event(payload: object) -> None:
     except (ValueError, AttributeError) as exc:
         raise OpenLineageProjectionError("runId must be a UUID") from exc
     producer = payload.get("producer")
-    if not isinstance(producer, str) or not producer.startswith("https://"):
-        raise OpenLineageProjectionError("producer must be an HTTPS URI")
+    if (
+        not isinstance(producer, str)
+        or re.fullmatch(
+            r"https://github\\.com/BobIvans/studious-pancake/blob/"
+            r"[0-9a-f]{40}/src/intelligence/openlineage\\.py",
+            producer,
+        )
+        is None
+    ):
+        raise OpenLineageProjectionError(
+            "producer must pin this repository and exporter Git SHA"
+        )
+    if payload.get("schemaURL") != OPENLINEAGE_CORE_SCHEMA_URL:
+        raise OpenLineageProjectionError("unsupported OpenLineage core schema URL")
     validate_facets(
         run.get("facets"),
         supported={

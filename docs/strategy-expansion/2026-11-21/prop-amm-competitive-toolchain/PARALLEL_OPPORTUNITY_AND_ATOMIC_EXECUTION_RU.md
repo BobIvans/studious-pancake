@@ -118,3 +118,10 @@ Current first-production send policy remains PR130: one strategy transaction, JI
 - Jito/provider ACK and bundle id never close an economic outcome; finality + balance/repayment reconciliation required.
 - Parallel send is of distinct transactions only; a single trade's alternate tip/signature variants are rejected.
 - Failure fees and partial portfolio outcomes are attributed to each route; never report aggregate "all succeeded" when one route failed.
+
+
+## 9. Relay tip recipient is fixed at signing
+
+A transaction with a Jito tip transfer remains a transaction that pays the Jito tip account even if another relay forwards the same bytes. Putting Jito, Helius, Astralane, Syncro and bloXroute transfers into one transaction pays all of them if it lands. Creating a separate signed tip variant per provider creates distinct independently executable transactions and risks duplicate flashloan routes. Therefore provider fan-out is not a conditional winner-payment mechanism.
+
+Prefer one provider per signed transaction and use that provider's own internal multipath where it is part of the product (Helius Sender Max, Syncro, bloXroute). The provider tip table and rebate notes are in RELAY_PROVIDER_TIP_PROFILES_V1.json. Current bot policy remains PR130 JITO_SINGLE only.

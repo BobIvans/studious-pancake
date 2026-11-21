@@ -1,0 +1,46 @@
+{
+  "schema": "studious-pancake.lane-receipt.v1",
+  "lane": "OCA-W0A",
+  "date": "2026-11-22",
+  "branch": "codex/oca-w0a-tool-bakeoff-2026-11-22",
+  "base_main_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+  "deliverables": [
+    "benchmarks/intelligence/golden_questions.jsonl",
+    "benchmarks/intelligence/run_benchmark.py",
+    "benchmarks/intelligence/baseline_report_500t.json",
+    "benchmarks/intelligence/baseline_report_1000t.json",
+    "benchmarks/intelligence/baseline_report_2000t.json",
+    "benchmarks/intelligence/TOOL_CANDIDATE_MATRIX.json",
+    "benchmarks/intelligence/README.md",
+    "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/W0A_TOOL_BAKEOFF_2026-11-22.md"
+  ],
+  "checks": {
+    "golden_questions": 42,
+    "required_refs_resolved": 42,
+    "unresolved_required_refs": 0,
+    "mean_recall_500t": 0.6667,
+    "mean_recall_1000t": 0.6667,
+    "mean_recall_2000t": 0.6667,
+    "repo_tokens_byte_estimate": 1901112,
+    "external_tools_installed": 0,
+    "network_probes": 0,
+    "runtime_dependencies_added": 0
+  },
+  "acceptance": {
+    "same_pinned_sha": true,
+    "golden_corpus_verified_against_checkout": true,
+    "tokenizer_labelled_byte_estimate": true,
+    "no_silent_drops_or_midfile_truncation": true,
+    "not_verified_watchlist_maintained": true,
+    "license_telemetry_checks_recorded_for_candidates": true
+  },
+  "safety": {
+    "live": "HARD_DENIED",
+    "sign_enabled": false,
+    "send_enabled": false,
+    "execution_authority": "NONE",
+    "merge_authority": "HUMAN_ONLY"
+  },
+  "blockers": [],
+  "related": {"design_pr": 666, "design_head": "6214202b9604766b5483be4607db9bc7f5fc61e3", "w0_pr": 680}
+}

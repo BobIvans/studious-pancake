@@ -29,8 +29,13 @@ Inspect Local Intelligence V2, EventEnvelope producer → store → export → r
 On the same pinned clean SHA, benchmark in isolated temporary/dev tool environments:
 - current Studious `repo_source.py` / `context_pack.py`;
 - Tree-sitter-based candidate(s);
+- DeusData/codebase-memory-mcp (C daemon + shared coordination daemon + docs/config/infrastructure graph);
+- colbymchenry/codegraph (Rust daemon + SQLite/WAL + code graph + file watcher);
+- sdsrss/code-graph-mcp (Rust + SQLite/FTS5 + BLAKE3 Merkle + multi-tier context);
+- SylphxAI/repomap (Rust local graph + call paths/impact);
 - CodeGraphContext (CGC);
 - Graphify;
+- ThinkyMiner/codeTree / agentic-codebase / Entire Graph / stakgraph / code-graph-rag only where a specific measured gap exists;
 - SCIP indexers for languages/builds that actually exist in this repository;
 - Probe raw CLI/MCP for zero-index full-function extraction;
 - Aider RepoMap/PageRank for query-time relevance ranking;
@@ -39,7 +44,7 @@ On the same pinned clean SHA, benchmark in isolated temporary/dev tool environme
 - Joern/CPG only as optional CFG/DFG/taint deep-analysis profile;
 - Glean only as a deferred scale alternative.
 
-Use 30–50 golden questions, including caller/callee paths, strategy/source/provider links, test impact, tool/MCP discovery, dead-code false positives and 500/1k/2k-token packs. Apply all applicable techniques from TOKEN_EFFICIENCY_PLAYBOOK_RU.md: stable T0 repo card, one-line T1 catalogues, lazy 1–3-hop graph traversal, query-time PageRank, scope-aware function extraction, exact token budgeting, blob-hash incremental caching and prompt-prefix caching only where the actual API supports it. Measure correctness, coverage, freshness, build/update time, p50/p95 latency, peak RAM, disk and token counts. Record versions, source URLs, license/SPDX, transitive dependencies, security status and exact install/self-check results.
+Use 30–50 golden questions, including caller/callee paths, strategy/source/provider links, test impact, tool/MCP discovery, dead-code false positives and 500/1k/2k-token packs. Benchmark C/Rust daemons against Graphify/CGC on the exact Studious SHA. Also benchmark Mimir vs growmos only as one optional semantic label/memory overlay; do not adopt both, and do not treat either as raw runtime fact store. Apply all applicable techniques from TOKEN_EFFICIENCY_PLAYBOOK_RU.md: stable T0 repo card, one-line T1 catalogues, lazy 1–3-hop graph traversal, query-time PageRank, scope-aware function extraction, exact token budgeting, blob-hash incremental caching and prompt-prefix caching only where the actual API supports it. Measure correctness, coverage, freshness, build/update time, p50/p95 latency, peak RAM, disk and token counts. Record versions, source URLs, license/SPDX, transitive dependencies, security status and exact install/self-check results.
 
 Install candidates only in an isolated `uv tool`/pipx/temp environment. Never add them to bot runtime dependencies during evaluation. Graphify's official package is `graphifyy`; keep its optional model-backed docs/media semantic pass off. CGC's CLI/MCP includes management operations; do not expose its full tool catalog to the analyst. jCodeMunch is excluded unless commercial/revenue-supporting licensing is explicitly approved. Do not run remote Graphify Cloud or upload the repo.
 
@@ -69,12 +74,16 @@ Do not stop at W0. Use the W0/W0A evidence to choose the **smallest winning comb
 4. Preserve edge provenance: STATIC_EXTRACTED, COMPILER_RESOLVED, CANONICAL_REGISTRY, RUNTIME_OBSERVED, DOC_CLAIM, HUMAN_CONFIRMED or LLM_PROPOSED. Inferred, missing or ambiguous edges must never be upgraded to verified facts.
 5. Provide compact one-line catalogues for every strategy, source, provider, tool/app, MCP server/tool, CLI command and protocol. Include status, exact symbol/file links, tests, consumers, evidence refs and UNKNOWN gaps.
 6. Expose a small read-only query surface: search, symbol, callers, callees, path, impact, strategy explain/compare, source lineage, tool inventory and bounded context-pack build. Follow existing CLI conventions after verifying the current parser; do not invent duplicate registries.
-7. Make incremental refresh by changed file hashes / Git tree diff; support add/delete/rename, stale-SHA rejection, branch isolation, deterministic output and coverage accounting.
-8. Add tests for graph edges, source links, no dangling references, no secret values, rename/delete, stale index, branch isolation, unsupported parsers, token cap and deterministic rebuild.
+7. Make incremental refresh by Git blob/tree hashes (not mtime alone); support add/delete/rename, stale-SHA rejection, branch isolation, deterministic output, dependency-aware invalidation, parser/schema version cache keys and coverage accounting.
+8. Add tests for graph edges, source links, no dangling references, no secret values, rename/delete, stale index, branch isolation, unsupported parsers, token cap and deterministic rebuild. Add temporal/as-of queries, ontology/schema migration, label drift revalidation, static-vs-runtime edge separation, daemon concurrency and indexing resource budgets.
 9. Put bulky indexes/caches outside tracked source or in ignored build output. Commit schemas, reproducible commands, compact manifests, tests and an example report—not a huge opaque database.
 10. If no external candidate beats the native implementation, implement the minimal missing Tree-sitter/SQLite/FTS/graph traversal layer in existing architecture. Do not force a third-party tool merely because it is popular.
+11. Create a versioned label store for StrategyIdea/StrategyVersion/DataSource/Provider/Venue/FlashCapitalSource/Tool/Capability/RiskCheck/ExecutionStage. Each label carries ontology version, evidence refs, source blob/repo SHA, provenance, confidence, valid-time/recorded-time and status (PROPOSED/VERIFIED/STALE/NEEDS_REVIEW/RETIRED). Revalidate on source/config/registry changes; LLM suggestion is never auto-verified.
+12. Add temporal graph lookup as-of repo SHA and operation event time; old episodes must resolve the code/config/strategy labels actually active then.
+13. Control index CPU/RAM/IO, single writer, debounced queues and cancellation so repo graph refresh cannot starve market capture or paper/shadow operations.
+14. Support multi-repo identity namespace in schema, but do not ingest more repos until actual shared dependencies/cross-repo services are discovered.
 
-**Do not build every tool together. Keep native Local Intelligence as orchestrator; adopt at most one persistent graph backend (CGC OR Graphify OR proven native graph), Probe as optional JIT extractor, SCIP/LSP for selected precision paths; defer Joern/Glean/embeddings/remote DB unless benchmarks prove need.
+**Do not build every tool together. Keep native Local Intelligence as orchestrator; adopt at most one persistent graph backend (CBM OR CodeGraph OR Graphify OR CGC OR another measured winner), one JIT extractor only if useful (Scantool OR Probe), SCIP/LSP for selected precision paths, and at most one semantic memory overlay (Mimir OR growmos OR none). Joern/CPG, Glean, embeddings and remote DB remain optional until benchmarks prove need. Install all candidates in isolated HOME/client configs; inspect generated MCP/AGENTS/hooks diff and turn telemetry/cloud features off.
 
 Required first tangible artifact:** one command/entrypoint produces (a) a 300–500-token repo card, (b) a compact one-line catalogue of all discovered strategies/tools/sources/providers, (c) a searchable graph with exact symbol links and callers/callees, and (d) a bounded task context pack with freshness/coverage gaps.
 

@@ -115,6 +115,62 @@ BSD-licensed source-code fact collection/query system with Angle. It is designed
 - Mimir/growmos/CodeGraphRAG/codeTree/codeprysm/infiniloom/Agentic Codebase/repomap alternatives: do not install as a bundle. Add an individual candidate only when it fills a measured gap and its license/health can be verified.
 - Neo4j server, remote vector DB, ClickHouse, NATS, remote graph gateway: not needed for first local index.
 
+### K. New persistent local graph daemons — add to same-SHA bake-off
+
+These are important candidates from the latest research wave. None is accepted until tested against Studious's actual Python/JSON/YAML/TOML/docs/workflow/SQL mix, plus installed tooling and build environments.
+
+| Candidate | What current upstream says | Fit / cautions |
+|---|---|---|
+| **DeusData/codebase-memory-mcp (CBM)** — https://github.com/DeusData/codebase-memory-mcp | Native C backend; 17 MCP tools; 164 vendored Tree-sitter grammars; local persistent graph across code/docs/config/infrastructure; Hybrid LSP refines calls for supported languages; one shared coordination daemon across multiple agent clients; MIT | **Top candidate to test first.** Closest to C daemon + multi-agent shared graph + docs/config/infra. Hybrid LSP only covers selected languages; its own README distinguishes syntax-only base from per-language type resolution. Installer enables hooks and writes client/agent integration files by default: evaluate in isolated HOME/client config and review every diff; do not silently mutate user-global configs. |
+| **colbymchenry/codegraph** — https://github.com/colbymchenry/codegraph | Native Rust engine, self-contained client binaries, SQLite/WAL graph, file watcher/debounce, MCP and CLI, 38-ish language coverage claims with language-by-language support table, dynamic-dispatch/framework edges, impact analysis; MIT; telemetry has explicit opt-out | **Top Rust daemon competitor.** Good candidate for call-flow/source retrieval and warm shared index. Turn telemetry off for proprietary code. Installer can write MCP and AGENTS/CLAUDE instructions; use isolated profile and inspect diff. Check platform/WAL/WSL behavior and exact language support. |
+| **SylphxAI/repomap** — https://github.com/SylphxAI/repomap | Rust binary, local graph, search/call paths/impact, BM25/local embeddings, MCP and graph UI, per-file cached incremental updates, read-only; MIT | Lightweight candidate with a narrow read-only surface. Smaller project/activity and language coverage must be measured on Studious; its own benchmark is not a Studious guarantee. |
+| **sdsrss/code-graph-mcp** — https://github.com/sdsrss/code-graph-mcp | Rust + embedded SQLite/FTS5 + optional sqlite-vec, BLAKE3 Merkle change detection + watcher, recursive caller/callee traversal, L0–L3 context tiers, 19 language labels with materially different depth tiers; MIT | **Strong token/incremental candidate.** Verify full-depth vs smoke/limited parsing for the exact repo file types. Its published sub-millisecond query and ~28 ms no-op numbers are measured on its own 283-file repository; do not project them to Studious. |
+| **ThinkyMiner/codeTree** — https://github.com/ThinkyMiner/codeTree | Python MCP, SQLite graph, Tree-sitter, 23 tools, ~11 languages, change-impact and dataflow/taint queries; MIT | Candidate for data-flow/taint and Python-friendly setup; compare its MCP surface and parser coverage. Do not add as a second graph unless it wins the bake-off. |
+| **agentralabs/agentic-codebase** — https://github.com/agentralabs/agentic-codebase | Rust semantic graph compiled to portable `.acb` binary; SQLite-backed query, CLI and MCP; MIT; supports Python/Rust/TS/JS/Go/C++/Java/C# | Test as a **portable graph artifact / distribution format**, not necessarily as primary live watcher. Inspect binary schema evolution, dynamic/runtime limits and whether its benchmark represents real repo queries. |
+| **entireio/entire-graph** — https://github.com/entireio/entire-graph | Local Tree-sitter map, 36 semantic-parsed languages plus inventory-only file types, diff/impact/export and token budgets; MIT; requires Entire CLI and does not expose its own MCP server or background daemon | Potential PR/change-impact side tool, not the primary ChatGPT MCP graph. Run only if Entire CLI fits the agent workflow; no claim of background refresh. |
+| **mariusei/scantool** — https://github.com/mariusei/scantool | On-demand Tree-sitter, no persistent graph; parse cache keyed by Git blob ID, multi-resolution function skeletons, exact focus by symbol/ref and explicit coverage line; MIT | **Strong JIT complement** to one persistent graph. Useful for historical refs and avoiding repeated parse cost without storing a second graph. Benchmark its skeleton fidelity on strategy code and tests. |
+| **achatainga/mcp-code-context** — https://github.com/achatainga/mcp-code-context | WASM Tree-sitter + SQLite MCP, multi-resolution AST read and surgical symbol write; MIT; current README says 5 principal languages and a 2,000-file cap | Read-only extraction can be tested as a narrow alternative, but do not expose write/rename/remove tools to analyst agents. Regex cross-file rename and no automatic syntax validation make its editing surface inappropriate as a default code writer. |
+| **vitali87/code-graph-rag** — https://github.com/vitali87/code-graph-rag | Tree-sitter + optional compiler frontends (libclang/go/types/Roslyn/javac/Jedi) + embedded SQLite graph; runtime traces can enrich graph where supplied; MIT | Optional advanced comparison for compiler/runtime edges. Its natural-language query/edit workflow uses model reasoning; separate that from deterministic indexing. Runtime tracing is only available if instrumentation really emits traces. |
+| **stakwork/stakgraph** — https://github.com/stakwork/stakgraph | Rust Tree-sitter + LSP graph, in-memory or Neo4j backend, MCP, vector search and optional LLM agents; multi-repo endpoint/request links | Defer unless cross-repo services/route links become a measured requirement. Neo4j + embeddings + agents adds more moving parts than needed for the first local index. |
+
+**Selection update:** primary graph bake-off must now include at least CBM, colbymchenry/codegraph, Graphify, CGC and one compact Rust graph (repomap or code-graph-mcp) on exactly the same SHA/question set. Probe or Scantool may complement the chosen primary graph as JIT extraction because they address a different layer. Do not run all graph MCP servers concurrently in an agent's normal tool list.
+
+### L. Multi-resolution AST context is mandatory
+
+Adopt explicit retrieval tiers rather than one generic "compact" mode:
+- `FULL`: target function/class body and directly relevant tests/config/evidence, never lossy.
+- `SKELETON`: directly related callers/callees/dependencies with signatures, docstrings, type contracts, key branches/calls/returns as safely extracted.
+- `REFERENCE`: outer neighborhood with IDs, qualified names, hashes and links only.
+- `OVERVIEW`: modules/directories/communities and short purpose lines.
+
+For a task, return target node as FULL, immediate dependency ring as SKELETON and wider graph as REFERENCE. A context budget may demote non-target neighbors, but must never silently skeletonize the target implementation required to reason about its algorithm. Provide `expand(node_id, level=FULL)` or equivalent with exact source SHA/range. Keep a coverage/exclusions trailer in every answer; Scantool is a useful example of blob-SHA cache + explicit coverage counts.
+
+### M. Continuous graph and label-store evolution — requirements beyond parsing
+
+A growing repository needs more than file watching:
+
+1. **Content-addressed incremental cache:** key parse output by (Git blob SHA, parser/grammar version, parser config); key graph output by (repo tree SHA, graph schema version, backend version). Reuse unchanged blobs across branches/worktrees. Never use mtime alone as truth.
+2. **Dependency-aware invalidation:** changed signature/type/config/schema invalidates dependent call/reference/test/context nodes; body-only changes update the target and behavior fingerprint. Recompute PageRank/community clusters only for affected components or scheduled full refresh.
+3. **Temporal/bitemporal provenance:** every node/edge/label has `valid_from_sha`, `valid_to_sha` (or active range), `recorded_at`, source-data time, parser/schema version and provenance. Support `as_of(repo_sha, event_time)` so an old paper/shadow attempt is explained using the exact code/config/strategy labels active then, not today's code.
+4. **Schema evolution:** version graph schema and label ontology; migrations are deterministic, reversible where possible, tested on prior snapshots, and preserve old event/edge provenance. Never silently reinterpret historical labels after a schema change.
+5. **Label store lifecycle:** typed labels (strategy, provider, venue, source, protocol, risk check, execution stage, capability, tool) carry `label_id`, ontology_version, source evidence, source SHA/hash, author (rule/human/LLM), confidence/evidence kind, approval status, valid time and review trigger. Statuses PROPOSED, VERIFIED, STALE, NEEDS_REVIEW, RETIRED. Revalidate labels when source symbols/config/registry entries change. LLM labels never become VERIFIED without review.
+6. **Runtime-vs-static edge separation:** keep `STATIC_CALLS`, `COMPILER_RESOLVED_CALLS`, `RUNTIME_OBSERVED_CALLS` distinct. Dynamic traces add observed edges with repo SHA, trace/span/logsite, time window and sampling/coverage; they do not overwrite static edges.
+7. **Cross-repo federation:** namespace node IDs by repository identity + commit/ref; link package dependencies, HTTP routes, schemas, shared SDKs and submodules. Start with this repo; add neighbouring repositories only when actual consumers/dependencies are discovered.
+8. **Tool/MCP capability registry:** record tool server + method + read/write/network/secret capabilities, version, license, owner, health, required auth and source. Query facade returns only allowlisted read tools to analysts; write-capable tools are a separate human-approved profile.
+9. **Resource budgets:** background indexing has CPU/RAM/IO quotas, debounced/coalesced change queues, a single writer per index, cancellation/restart, queue depth and stale-index alarms. Never let full index rebuild contend with the bot's market collection/operation capture path.
+10. **Data quality SLO:** track parser coverage, unresolved/dangling links, stale age, label drift, runtime producer/stage coverage, event loss/gaps, index build/query p50/p95/p99, disk growth and token cost. A green process exit is not proof of complete coverage.
+
+These requirements must be represented in W0B/W1/W7/W10/W11 acceptance and in CI reports, not left as future prose only.
+
+### N. Storage policy for a continuously growing repository
+
+- Source of truth remains Git and canonical runtime stores; the graph contains IDs, edges, signatures, ranges, hashes and compact metadata, not redundant copies of every source file and raw event.
+- Deduplicate by content hash; retain blobs once per canonical owner, not once per strategy label or graph edge.
+- Hot: SQLite graph/index and recent query projections. Warm: bounded per-SHA snapshots/caches and active episodes. Cold: existing Parquet + ZSTD/archive owners with checksums, schema version, row counts, time/slot ranges and replay manifests.
+- Keep full payloads only when they are decision-relevant or required by source contract/retention policy. All decision facts, rejections, gaps, corrections and terminal outcomes remain; repetitive debug can be sampled with explicit counts/policy.
+- Define byte budgets, index growth/day, compression ratio, page-cache/WAL/checkpoint behavior, backup/restore and disk-pressure admission. Pressure blocks new governed ingestion before pinned evidence is deleted.
+- Portable export includes graph schema + compact index manifests + Git commit + JSONL operation events + existing Parquet datasets + hashes and replay receipts. Do not dump giant binary DB into Git.
+
 ## 4. The actual retrieval algorithm
 
 For every user task, build packs in stages:
@@ -186,7 +242,7 @@ Never auto-delete. Dynamic imports, reflection, plugin registries, config and ex
 
 ## 8. W0A bake-off must measure, not assume
 
-Run native Local Intelligence, CGC, Graphify and Probe on one clean exact SHA; add SCIP for languages with viable indexers. Joern is a separate optional deep-analysis benchmark. Repomix/grep-ast only benchmark packing/slicing. Glean is a deferred architecture option.
+Run native Local Intelligence, DeusData/codebase-memory-mcp (C daemon), colbymchenry/codegraph (Rust daemon), CGC, Graphify, and one compact Rust graph (repomap or sdsrss/code-graph-mcp) on one clean exact SHA; add SCIP for languages with viable indexers. Benchmark Scantool or Probe as the JIT extractor. Optional codeTree, agentic-codebase, Entire Graph and code-graph-rag are evaluated only for specific gaps. Joern is a separate optional deep-analysis benchmark. Repomix/grep-ast only benchmark packing/slicing. Glean is a deferred architecture option.
 
 Golden questions (30–50) must test:
 1. strategy idea → exact code entrypoint and all known variants;
@@ -213,15 +269,16 @@ Measure:
 
 Adopt one primary persistent graph only if its measured value beats current native baseline. Probe may complement it as a fast body retriever because it serves a different layer.
 
-## 9. First practical implementation order
+## 10. First practical implementation order
 
-1. Immediately use Probe raw CLI/MCP in an isolated test to give the coding agent complete-function retrieval (if current toolchain and policy allow).
-2. In parallel compare CGC and Graphify; do not blindly choose both.
-3. Preserve native Local Intelligence as repo snapshot/pack/retention orchestrator.
-4. Add SCIP only for real repo languages where it produces a repeatable precise index.
-5. Use PageRank selection + 1–3-hop lazy retrieval + Probe/grep-ast body fetch + strict token budget.
-6. Add Web3 strategy/source/provider/runtime graph adapter over canonical owners.
-7. Add CI/local incremental update and context pack receipt.
-8. Only then consider Joern/Glean/embeddings/remote data stores if measured use cases require them.
+1. Preserve native Local Intelligence as repo snapshot/pack/retention orchestrator.
+2. In parallel benchmark CBM C daemon, CodeGraph Rust daemon, CGC, Graphify and one compact Rust graph on identical questions/SHA; record install/config side effects and licenses.
+3. Benchmark Scantool and Probe as JIT extractors with blob-SHA reuse and explicit coverage; choose one or prove both serve distinct needs.
+4. Add SCIP/LSP only for repo languages where a working indexer produces measured higher precision.
+5. Apply FULL/SKELETON/REFERENCE/OVERVIEW retrieval, query-time PageRank, lazy 1–3-hop expansion and hard model-token budgeting.
+6. Add Web3 strategy/source/provider/runtime graph adapter, temporal labels and bitemporal evidence joins over canonical owners.
+7. Add CI + nightly rebuild, dependency-aware incremental refresh, label drift checks, cache invalidation and portable context/evidence receipts.
+8. Add resource budgets, graph-quality SLOs, schema/label ontology migration tests and cross-repo federation only when required.
+9. Only then consider Joern/Glean/embeddings/remote data stores if measured use cases require them.
 
 **Success condition:** coding agent and ChatGPT can answer “what already exists, which exact function implements it, who calls it, what source/config/provider it uses, which tests and runtime evidence support it, and what's missing?” with a small pack, exact links and explicit unknowns. No indexing tool alone can guarantee that; the Web3 domain mapping and event correlation are the Studious-specific integration work.

@@ -1535,8 +1535,7 @@
     "first_execution_wave": [
       "OCA-W0",
       "OCA-W0A",
-      "OCA-W0C",
-      "OCA-W12_READ_ONLY_AUDIT"
+      "OCA-W0C"
     ],
     "mandatory_gate": "docs/roadmap/intelligence-operating-plane-2026-11-21/LLM_FREE_DETERMINISTIC_INDEXING_CONTRACT_RU.md",
     "llm_free_build": {
@@ -1655,7 +1654,7 @@
       "OCA-W0A",
       "OCA-W0C"
     ],
-    "cross_cutting_audit": "OCA-W12 license/SBOM/security baseline after W0A tool inventory is pinned; no external tool adoption before its gate",
+    "cross_cutting_audit": "OCA-W0A includes a read-only preliminary path-level license/SBOM/security inventory; the dedicated OCA-W12 gate/remediation follows after the candidate list is pinned.",
     "first_implementation": "OCA-W0B deterministic graph/index, CLI, context packs, CI and nightly reconciliation",
     "next_waves": [
       [

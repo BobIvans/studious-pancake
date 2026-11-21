@@ -2,7 +2,7 @@
 >
 > Пользователь поручил реализовать staged Repo Intelligence + Web3 Data Plane, включая LLM-FREE DETERMINISTIC INDEXING CONTRACT. Web3/flashloan remains the target domain, но инфраструктурная работа больше не ограничивается только экспериментальным A-helper: coding agent должен пройти W0/W0A/W0C, затем построить W0B, после чего закрывать зависимые C/E/F/B/H и S1–S6 по этапам. Это не разрешение запускать W0–W19 одновременно.
 >
-> **Execution waves:** (0) параллельные read-only audits W0, W0A, W0C и path-level H0/W12 без пересечения write scopes; (1) обязательная реализация W0B с нулевой LLM-зависимостью и CI/nightly refresh; (2) typed temporal graph + provider contracts/quality/chain identity/strategy requirements; (3) runtime lineage/replay на фактических test/paper/shadow paths; (4) retrieval/context/MCP + verification; (5) масштабирование и внешние сервисы только при измеренном bottleneck. Все старые формулировки «только A», «B–H отложены» и «не начинать W0B после аудита» уступают этой новой инструкции.
+> **Execution waves:** (0) параллельные read-only audits W0, W0A, W0C; W0A включает предварительный path-level license/SBOM/security inventory, а отдельный OCA-W12 gate идёт после фиксации списка кандидатов; (1) обязательная реализация W0B с нулевой LLM-зависимостью и CI/nightly refresh; (2) typed temporal graph + provider contracts/quality/chain identity/strategy requirements; (3) runtime lineage/replay на фактических test/paper/shadow paths; (4) retrieval/context/MCP + verification; (5) масштабирование и внешние сервисы только при измеренном bottleneck. Все старые формулировки «только A», «B–H отложены» и «не начинать W0B после аудита» уступают этой новой инструкции.
 >
 > **Capability letters A–H (taxonomy retained; no new letters):**
 >

@@ -183,7 +183,7 @@ No blended score can hide failure of one critical invariant. No unsupported lang
 
 ## 7. Delivery order and PR discipline
 
-**Wave 0 — parallel read-only reports:** OCA-W0 owner/runtime audit, OCA-W0A tool bake-off, OCA-W0C provider/source/strategy trace inventory and OCA-W12 initial supply-chain audit. Separate worktrees and disjoint report paths only.
+**Wave 0 — parallel read-only reports:** OCA-W0 owner/runtime audit, OCA-W0A tool bake-off (including a preliminary read-only path-level license/SBOM/security inventory), and OCA-W0C provider/source/strategy trace inventory. Separate worktrees and disjoint report paths only. The dedicated OCA-W12 gate/remediation follows once the candidate inventory is pinned.
 
 **Wave 1 — first implementation:** OCA-W0B deterministic index + graph + labels + compact catalogue + read-only CLI + CI/nightly + SHA-bound pack. Implement native minimal capability first; adopt only measured candidate winners.
 

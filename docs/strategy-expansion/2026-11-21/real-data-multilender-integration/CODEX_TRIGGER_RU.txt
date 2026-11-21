@@ -1,0 +1,80 @@
+CODEX EXECUTION TRIGGER — REAL DATA → MULTI-PROVIDER QUOTES → MULTI-LENDER → ATOMIC UNSIGNED FLASHLOAN
+
+Repository: BobIvans/studious-pancake
+Start from latest origin/main, not this task-pack's historical audit SHA.
+Task pack: docs/strategy-expansion/2026-11-21/real-data-multilender-integration/
+
+MISSION
+Implement the missing runtime wiring, not another architecture document. Finish one reviewable implementation PR with actual code, deterministic tests and a truthful report. Coordinate with PRs #664/#665/#666, merged #660 and open owners #657; refresh every status/head SHA before editing. Follow AGENTS.md and owner maps.
+
+PHASE 0 — RECONCILE BEFORE WRITE
+1. Read this pack, current main, all related PR diffs/comments, open PRs, branch/worktree state, AGENTS.md and current owner dashboards.
+2. Identify any current active lane owning each target path. Do not overwrite dirty worktrees or write to an owned path from another lane.
+3. Use existing code; no duplicate quote kernel, data store, graph, capital graph, transport, scheduler, strategy registry, signer or sender.
+4. If a required shared owner is blocked/owned by another lane, implement only a disjoint adapter/fixture and report a precise dependency; do not race another agent.
+
+PHASE 1 — MARKET STATE AND LIVE DATA READINESS
+1. Sui: extend existing GPR/QPR/DIN state sources. gRPC and GraphQL only. Never use the retired Sui Foundation mainnet JSON-RPC path, including as a timeout fallback.
+2. Use two truly independent, non-smoke provider profiles for checkpoint/object evidence (different provider, operator and correlation group). Verify same genesis, checkpoint sequence/digest, object IDs, versions/digests, payload hashes and bounded time. Reuse current provider governance; do NOT weaken its deterministic LIVE_SUI_PROVIDERS_NOT_AUTHORIZED gate or self-authorize credentials.
+3. Add bounded, restartable, read-only capture code and deterministic offline replay. Preserve raw response hashes, request fingerprints, observation/availability times, source generations and typed negative receipts. No credentials in logs or repository.
+4. Solana: reuse current governed source capture, RPC quorum and exact-state owners, including PR #660 merged CLMM/DLMM work. Do not duplicate source inventory or pool state decoders.
+
+PHASE 2 — REAL QUOTE PROVIDERS
+1. Sui quote race candidates: Aftermath, Cetus Aggregator V3, Bluefin7K, FlowX, OKX DEX, Rango and direct DeepBook.
+2. Start from the existing offline Aftermath normalizer; add an injected governed transport/ingress and boot wiring only under existing source/provider gates. It must remain BLOCKED live where approval/evidence is absent.
+3. Add adapters only one at a time where exact source pins, schema, terms/license, auth, quotas, units, fees, errors and build semantics are proven. Do not copy FlowX/Cetus source while license is unresolved. API-only use still requires approved terms.
+4. Separate quote from build: Quote-only ≠ composable PTB ≠ unsigned PTB. No blind decoding of opaque route references.
+5. Retain full Move CoinTypes, package IDs, pool/object IDs, route legs, fee fields, source operator/correlation group and checkpoint only when actually supplied. Never synthesize slot/checkpoint, minimum output, expiry or stale-data freshness.
+6. Add direct DeepBook book state into the same normalizer only after exact fee/depth math and pool identity are proven.
+7. Solana: finish pmm-sim same-snapshot matrix for DIRECT, native Magnus and simulated Jupiter/DFlow/OKX/Titan profiles using pinned snapshots. Report raw results per AMM/version/market/direction/amount and hashes. This is LOCAL LiteSVM research only. Never swap a production instruction program ID or claim the synthetic profile is a real aggregator.
+8. Compare real official quote/build surfaces for Prop AMMs. Use genuine Jupiter/DFlow/OKX/Titan route builders or an audited direct venue builder. 1000xsh/swaps is HOLD until package license evidence is verified.
+
+PHASE 3 — PAIR UNIVERSE AND POOL DEDUP
+1. Use existing canonical AssetIdentity registry. Sui identity is full package::module::type; ticker is display-only. See SUI_ASSET_AND_PAIR_PLAN_RU.md.
+2. Seed dynamic discovery with P0/P1 pair families, but generate pairs only from actual verified pool/book/route inventories. Never create a static N×N cross product.
+3. Distinct wrapped/bridged coin types stay distinct. Exact quote inputs must match exact CoinType and integer base-unit amount.
+4. Deduplicate all aggregator route paths by underlying pool/book/object/venue identity using existing kernel's PoolIdentity/PoolIdentityDeduplicator. Fix any stale current gaps as code owners permit; do not define a second deduper.
+5. Every amount evaluated by nonlinear sizing must be requoted. Preserve losing and failed provider evidence.
+
+PHASE 4 — FLASH CAPITAL PROVIDERS AND ROUTE/LENDER MATCHING
+1. Reuse FlashCapitalGraph and R02 readers. Do not edit the frozen graph owner without owner approval.
+2. First compare Solana Kamino and Jupiter Lend; include Project 0 only with already existing public-account context. MarginFi remains quarantined.
+3. On Sui, first NAVI and DeepBook; then Scallop and USDB-only Bucket as separate qualification slices. Suilend remains research-only. Do not classify Cetus/Aftermath/FlowX as lenders.
+4. For each exact route input, enumerate lender candidates by chain, exact asset type, amount and constraints; require fresh effective capacity, fee, rounding, enabled state and same state generation. Unknown capacity/fee blocks, it is never zero.
+5. Calculate all-in outcome with lender fee, swap/LP/aggregator fees, gas/compute, rent/object setup, slippage/price impact, token transfer fees/hooks and sender cost where applicable.
+6. Choose one qualified lender per atomic transaction/PTB unless an existing protocol-supported combined borrow is proved in exact conformance tests.
+
+PHASE 5 — CUSTOM ATOMIC UNSIGNED PLAN
+1. Convert only the winning, comparable, pool-deduplicated quote into existing R03 unsigned plan contract. Do not invent a separate transaction builder.
+2. Solana atomic order: compute budget (if justified) → flash borrow → exact supported swap instructions → explicit minimum-output/profit guard → flash repay. Borrow/repay instruction indices/account metas and token mint/program exact.
+3. Sui PTB atomic order: NAVI/DeepBook/other qualified borrow → append composable swaps in the same Transaction → exact output and fee guard → return exact hot-potato receipt. Validate shared object versions, object ownership, CoinTypes, integer amounts and no unconsumed receipt.
+4. Quote source response may be stale/incomparable or may not expose composable instructions; block rather than generate a fake direct call.
+5. No cross-chain one-shot flashloan claims. No split transaction that leaves debt outside same atomic unit.
+
+PHASE 6 — FULL SIMULATION, PAPER RECEIPT, TESTS
+1. Feed full assembled unsigned message/PTB into the existing R05 exact simulator using the same state generation. If the R05 owner is not wired, do not fake simulation; produce typed blocked handoff.
+2. Verify repayment, all required account/object transitions, expected output, min-out/profit guard, protocol fee rounding, gas, rent and positive all-in net.
+3. Only if simulation passes may the existing sender-free R06/QPR paper path record the result. Never label a replay as a live observation.
+4. Add deterministic offline positive/negative tests: stale slot/checkpoint; source disagreement; correlated provider; route shares pool; wrong CoinType/decimals; missing fee/capacity; amount mismatch; 429/timeout/schema drift; no route; slippage; fee rounding; insufficient lender capital; object conflict; hot-potato receipt missing; borrow/repay reordered; output below guard; full-simulation failure; replay mismatch.
+5. Network-free tests must use fakes/fixtures and pytest-socket. Add no live provider call in unit tests.
+
+HARD STOP
+- no wallet or private key generation/import;
+- no signing, sendTransaction, executeTransactionBlock, borrowing, real transaction simulation that changes chain state, spending, account/ATA/object creation, deployment, relay/provider activation or production promotion;
+- do not turn on live profiles or make live calls in this coding task;
+- do not bypass QPR/R02/R03/R05/R06, MPR-04/MPR-05, CAMPAIGN_START_V1 or human review;
+- keep capture/provider/live/sign/send/borrow flags false in repo defaults;
+- no impersonation/spoofed caller in mainnet; pmm-sim caller variants local-only.
+
+DELIVERABLES
+- implementation + tests on this branch/PR, not just a plan;
+- exact changed paths, base/head SHA, test commands/results;
+- provider matrix with DOCUMENTED / ADAPTER / BOOT_WIRED / LIVE_READ / ROOTED / EXACT / QUALIFIED statuses separated;
+- pair discovery report by full CoinType and actual pools (not ticker-only);
+- per-lender asset/fee/capacity evidence with UNKNOWN blockers visible;
+- pmm-sim matrix with reproducible raw data or explicit failure reasons;
+- route-to-lender-to-unsigned-plan handoff report and R05 result or typed blocker;
+- update only canonical master/owner maps through their owners; no duplicate orchestration;
+- leave PR Draft until CI, tests, reviews, code owner and safety acceptance pass.
+
+Do not stop after updating documentation. If the full sequence is too broad for one PR, commit a working vertical slice (one market route + one lender on one chain) with all tests and explicit next slices.

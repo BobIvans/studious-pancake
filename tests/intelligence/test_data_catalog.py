@@ -74,7 +74,6 @@ def test_catalog_does_not_export_probe_urls_or_credential_bindings() -> None:
     assert "required_env" not in encoded
     assert "credential_header_env" not in encoded
     assert "JUPITER_API_KEY" not in encoded
-    assert "JUPITER_API_KEY" not in encoded
     assert "raw_events" not in encoded
     assert "payload_bytes" not in encoded
 

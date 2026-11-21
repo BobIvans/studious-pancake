@@ -70,6 +70,7 @@ All 12 nodes have empty `depends_on` (independently startable, one per owner): *
 ## 6. Replay / coverage receipts (fixture/replay vs live)
 
 - Fixture/replay: r10 experiments A–D (byte-identical across two runs, receipts hashed); DIN-01 bounded-Solana replay (`replay_identical: true`, `network_reads: 0`, 11 deduplicated candidates).
+- Local Windows gates: quality_gate (flake8/black/mypy/bandit) PASSED; `validate_authority_map` PASSED; `verify_repo --skip-dependency-audit` blocked at `package_smoke` (module `build` missing in local venv — `BLOCKED_PRE_EXISTING_ENV`, unrelated to docs-only changes; CI Linux authoritative). Offline pytest suite: with this PR `287 failed, 5600 passed, 9 skipped, 327 errors`; baseline without the PR's changes (merge commit `e394c77b`) `288 failed, 5599 passed, 9 skipped, 327 errors` — failures are pre-existing and environmental (GPR/TON/MPR2602/socket clusters), none introduced or fixed by this docs-only diff.
 - Live capture: **0 observations** (no capture run; none authorized by this PR).
 - All percentages in future capture reports must show numerator and denominator; unknowns stay in their own population.
 

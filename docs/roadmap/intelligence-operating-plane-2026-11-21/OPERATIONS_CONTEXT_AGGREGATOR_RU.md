@@ -720,7 +720,7 @@ Golden set: 30–50 realistic questions over frozen repo snapshot and fixed pape
 
 # 13. Ограничения и unresolved risks
 
-1. EventEnvelope имеет сильные IDs, но strategy_id, stable symbol/logsite ID, chain identity и resource access sets могут быть не first-class fields. W0 должен проверить producers, attributes и end-to-end persistence.
+1. EventEnvelope/ObservabilityStore существуют, но по аудированному main GitHub code search нашёл make_event() только как definition и в tests; production callsites не подтверждены. make_event() по умолчанию использует test-runtime/test и unknown provenance. Это НЕ доказательство реального runtime capture. W0 обязан повторно подтвердить на актуальном SHA. strategy_id/version, repo SHA, stable callsite/logsite, observation refs, trace/span and resource access sets требуют producer-to-store проверки.
 2. Current Environment enum не включает LIVE. Эта работа не должна подразумевать или включать live mode.
 3. Current repo_source покрывает Python AST; multi-language и richer config/doc relations не гарантированы.
 4. Static callgraph не доказывает dynamic imports, reflection, runtime plugin loading или все provider calls. Нужны runtime IDs и tests.
@@ -731,6 +731,8 @@ Golden set: 30–50 realistic questions over frozen repo snapshot and fixed pape
 9. Слишком много MCP tools увеличивает cost выбора и контекста. Нужны несколько composite query tools и explicit tool profiles.
 10. Vendor versions, licenses, coverage, API quota меняются; pin and re-audit at install time.
 11. ZIP репозитория не содержит runtime events, если operation export/evidence bundle не приложен отдельно.
+12. Наличие EventEnvelope types, SQLite store и replay tests не гарантирует, что production runtime вызывает make_event() и append(). Runtime telemetry должна быть отдельным implementation work package с end-to-end fixture/runtime test.
+13. Текущий native_cpmm_capture.py описан как one-shot capture без subscriptions; RuntimeDiscoveryCoordinator возвращает bounded report. Нельзя заявлять continuous market stream без отдельного источника и подтверждённого subscription/collector path.
 12. Automatic indexing не отправляет данные в ChatGPT. Оно готовит локальный pack; доставка требует explicit upload или authenticated read-only connector/MCP session.
 
 ---
@@ -739,15 +741,18 @@ Golden set: 30–50 realistic questions over frozen repo snapshot and fixed pape
 
 Не начинать с graph database, ClickHouse или autonomous agents.
 
-1. **W0 current owner audit:** producers, observability store, AGG-02, MarketObservation, strategy registry, scheduler, Local Intelligence V2, tests and runtime wiring.
-2. **W1 correlation completeness:** EVENT_CORRELATION_MATRIX.json — какие IDs/fields emitted, persisted, replayable and mapped to code.
-3. **W2 OperationEpisode projection:** deterministic view combining existing EventEnvelope timeline + raw observation refs + strategy identity + code/config generation + terminal evidence. No new raw database.
-4. **W3 stable callsite IDs:** static scanner and logsite registry for high-value producers; add IDs only in focused, tested vertical.
-5. **W4 context-pack API:** query one opportunity/strategy/provider/time window and return bounded pack + evidence manifest.
-6. **W5 strategy conflict/admission report:** connect current ConflictAwareScheduler/resource sets to strategy/episode reports; no second scheduler.
-7. **W6 source query adapters:** optional bounded SQD/Antseer read-only profiles under source governance.
-8. **W7 retrieval/compression benchmark:** Graphify sidecar and target-model token measurements before choosing external index.
-9. **W8 operations cockpit and review workflow:** CLI/report bundle first; MCP after query contract stabilizes.
-10. **W9 storage scale gate:** measure 24h/7d load before considering ClickHouse/NATS/remote object storage.
+1. **W0 + W0A:** current owner/runtime audit in parallel with same-SHA polyglot/tool bake-off.
+2. **W0B:** first working repo knowledge graph, all strategy/tool/source inventories, bounded context packs and incremental refresh.
+3. **W1 correlation completeness:** EVENT_CORRELATION_MATRIX.json — какие IDs/fields emitted, persisted, replayable and mapped to code.
+4. **W2 OperationEpisode projection:** deterministic view combining existing durable records + raw observation refs + strategy identity + code/config generation + terminal evidence. No new raw database.
+5. **W3 stable callsite IDs:** static scanner and logsite registry for high-value producers; add IDs only in focused, tested vertical.
+6. **W10 runtime instrumentation:** wire actual supported test/paper/shadow producers into durable event capture, trace context, strategy→function→source→outcome. This is mandatory; a schema/test-only implementation does not count.
+7. **W11 universal query/export/replay:** one read-only façade across code graph, ObservabilityStore, AGG-02, MarketObservation, MarketEpisode and work receipts; portable checksummed evidence bundle.
+8. **W4 context-pack API:** query one opportunity/strategy/provider/time window and return bounded pack + evidence manifest including runtime event lineage.
+9. **W5 strategy conflict/admission report:** connect current ConflictAwareScheduler/resource sets to strategy/episode reports; no second scheduler.
+10. **W6 source query adapters:** optional bounded SQD/Antseer read-only profiles under source governance.
+11. **W7 retrieval/compression benchmark:** Graphify sidecar and target-model token measurements before choosing external index.
+12. **W8 operations cockpit and review workflow:** CLI/report bundle first; MCP after query contract stabilizes.
+13. **W9 storage scale gate:** measure 24h/7d load before considering ClickHouse/NATS/remote object storage.
 
-Every step requires exact current main SHA, focused worktree/PR, positive and negative tests, evidence artifacts and human review.
+Every step requires exact current main SHA, focused worktree/PR, positive and negative tests, evidence artifacts and human review. Completion cannot be declared until W0B + W10 + W11 work on a real supported test/paper/shadow vertical and preserve a replayable operation after process restart.

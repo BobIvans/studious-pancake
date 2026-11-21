@@ -19,9 +19,10 @@
       "layer": "sight",
       "url": "https://www.dedicatednodes.io/localshred/",
       "status": "PRODUCT_ADVERTISED_FREE_LITE",
-      "finding": "DedicatedNodes advertises a free Lite tier as a baseline similar to former Jito ShredStream. Paid/hosted LocalShred product claims must not be applied to Lite.",
+      "finding": "DedicatedNodes advertises a separate free Lite tier for anyone, tuned to the speed of former Jito ShredStream; the paid/hosted bare-metal LocalShred stream has a claimed ~3ms Amsterdam advantage, which must not be attributed to Lite. Provider terms explicitly disclaim availability, continuity, latency, completeness and SLA guarantees, and reserve the right to alter or discontinue service.",
       "use": "First candidate for bounded read-only A/B under an authorized source profile.",
-      "blocker": "Need current access terms, endpoint contract, regional path, packet completeness/loss/replay and independent latency benchmark. No 100-500ms lead claim accepted."
+      "blocker": "Need current access terms, endpoint contract, regional path, packet completeness/loss/replay and independent latency benchmark. The free product has no SLA/continuity/completeness/latency guarantee. No 100-500ms lead claim accepted.",
+      "terms_url": "https://www.dedicatednodes.io/terms-and-conditions/"
     },
     {
       "name": "DoubleZero Edge",

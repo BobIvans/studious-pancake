@@ -3,7 +3,7 @@
 
 **Repository:** `BobIvans/studious-pancake`  
 **Design source:** PR #666, branch `codex/intelligence-operating-plane-design-2026-11-21`  
-**Master docs:** `CODEX_START_HERE_RU.md`, `OPERATIONS_CONTEXT_AGGREGATOR_RU.md`, `REPO_KNOWLEDGE_GRAPH_RU.md`, `CHATGPT_CODING_AGENT_CONTEXT_WORKFLOW_RU.md`, `TOOL_ACCESS_PROFILES_RU.md`, `TOKEN_EFFICIENCY_PLAYBOOK_RU.md`, `REALTIME_OPERATION_DATA_PLANE_RU.md`, `UNIVERSAL_KNOWLEDGE_DATA_PLANE_EXPANSION_RU.md`, `WORK_PACKAGE_MATRIX.json`.  
+**Master docs:** `CODEX_START_HERE_RU.md`, `OPERATIONS_CONTEXT_AGGREGATOR_RU.md`, `REPO_KNOWLEDGE_GRAPH_RU.md`, `CHATGPT_CODING_AGENT_CONTEXT_WORKFLOW_RU.md`, `TOOL_ACCESS_PROFILES_RU.md`, `TOKEN_EFFICIENCY_PLAYBOOK_RU.md`, `REALTIME_OPERATION_DATA_PLANE_RU.md`, `UNIVERSAL_KNOWLEDGE_DATA_PLANE_EXPANSION_RU.md`, `FUNCTION_AND_INFRASTRUCTURE_COVERAGE_RU.md`, `WORK_PACKAGE_MATRIX.json`.  
 **Execution goal:** deliver a working, incremental, token-efficient, evidence-linked repository knowledge index and connect it to existing Web3 strategy/operations owners. **Do not stop after producing an audit report.**
 
 ---

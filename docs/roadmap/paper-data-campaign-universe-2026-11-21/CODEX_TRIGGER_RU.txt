@@ -1,7 +1,7 @@
 CODEX TRIGGER — MARKET UNIVERSE / DATA CAPTURE / PAPER QUALIFICATION PREPARATION
 
-Work in PR #661:
-https://github.com/BobIvans/studious-pancake/pull/661
+Work in PR #664:
+https://github.com/BobIvans/studious-pancake/pull/664
 
 Read the pack:
 - docs/roadmap/paper-data-campaign-universe-2026-11-21/CODEX_START_HERE_RU.md

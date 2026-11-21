@@ -43,7 +43,7 @@
 - Pin pmm-sim commit and all floating dependencies to immutable SHAs.
 - Import fixtures from exact account-state capture (labeled fixture or approved capture).
 - Produce direct/single/multi/benchmark matrix for each supported Prop AMM version.
-- No caller spoofing, no simulated identity bypass, no fabricated live result.
+- Run pmm-sim local caller-profile differential tests (Jupiter/DFlow/OKX/Titan synthetic profiles) on the same pinned snapshot; research only, not production identity bypass. Never send synthetic caller identity on mainnet.
 - Keep build/test environment isolated from production runtime until SDK conflicts and supply-chain checks pass.
 
 ### Phase 4 — direct instruction builder
@@ -63,7 +63,7 @@
 - Retain PR130 JITO_SINGLE policy.
 - Implement pure data model / offline conformance tests for a future provider-neutral sender contract only if current submission owner approves it.
 - Helius Sender/Astralane/Syncro get separate capability and pricing profiles.
-- No parallel fan-out, no provider-specific signature variants, no auto tip escalation.
+- No cross-provider fan-out, no provider-specific signature variants, no auto tip escalation. Provider-native internal multi-path routing may be evaluated as a single product endpoint.
 - No sender endpoint or credentials in this pack.
 
 ### Phase 7 — sender-free shadow/paper
@@ -86,7 +86,10 @@
 - [ ] Lender capacity/fee is R02-proven; builder semantics are R03-proven; exact simulation/economics is R05-proven.
 - [ ] Route splitting is justified by capacity or price impact and uses existing shared-resource reservations.
 - [ ] Relay ACK, block-engine ACK or bundle id is never reported as finalized settlement.
-- [ ] No multi-relay fan-out unless billing, duplicate behavior, exact-byte forwarding and idempotency all separately proven.
+- [ ] Caller profile benchmark matrix covers direct, Magnus and local simulated Jupiter/DFlow/OKX/Titan per AMM/version/amount/snapshot.
+- [ ] Real aggregator route is built through its official API/program; simulated caller identity is never sent.
+- [ ] Provider tip matrix distinguishes fixed on-chain recipient, native multipath, off-chain billing and rebate eligibility.
+- [ ] No cross-provider fan-out unless billing, duplicate behavior, exact-byte forwarding and idempotency are independently proven.
 - [ ] Offline tests, replay, typed rejects, compute and packet benchmarks pass.
 - [ ] send_enabled=false, sign_enabled=false, live_enabled=false, borrow_enabled=false; provider activation flags false.
 - [ ] No secrets, wallet creation, ATA creation, account mutation, fee transfer or subscription.

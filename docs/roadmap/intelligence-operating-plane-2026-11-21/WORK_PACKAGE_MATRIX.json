@@ -1,5 +1,5 @@
 {
-  "schema": "studious.intelligence-operating-plane.work-packages.v1",
+  "schema": "studious.intelligence-operating-plane.work-packages.v2",
   "repository": "BobIvans/studious-pancake",
   "design_baseline_sha": "ea204222df86a0697cc6bce0e9ec60f7db31ffd8",
   "entrypoint": "docs/roadmap/intelligence-operating-plane-2026-11-21/CODEX_START_HERE_RU.md",
@@ -13,7 +13,15 @@
       "EXPLICIT_CONTEXT_PACK_UPLOAD",
       "AUTHORIZED_GITHUB_CONNECTOR",
       "EXPLICIT_LOCAL_READ_ONLY_MCP"
-    ]
+    ],
+    "execution_policy": {
+      "run_dependency_ready_packages_automatically": true,
+      "parallelize_only_disjoint_write_scopes": true,
+      "do_not_stop_after_audit": true,
+      "isolated_dev_tool_installs_only": true,
+      "do_not_vendor_without_license_review": true,
+      "never_auto_delete_or_merge": true
+    }
   },
   "canonical_owners_to_reuse": [
     "src/intelligence",
@@ -89,11 +97,110 @@
       ]
     },
     {
+      "id": "OCA-W0A",
+      "name": "Parallel polyglot code-intelligence and tool bake-off",
+      "priority": "P0",
+      "status": "READY",
+      "depends_on": [],
+      "mode": "ISOLATED_READ_ONLY_BENCHMARK",
+      "exclusive_write_scope": [
+        "benchmarks/intelligence/",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/tooling/"
+      ],
+      "candidate_tools": [
+        "Native Local Intelligence V2",
+        "Tree-sitter",
+        "CodeGraphContext",
+        "Graphify",
+        "SCIP language indexers",
+        "Serena/LSP optional",
+        "Aider RepoMap/PageRank optional"
+      ],
+      "guardrails": [
+        "Use same clean repo SHA and same 30-50 golden questions",
+        "Install candidates only in isolated uv tool, pipx or temporary environments",
+        "No production runtime dependencies or user-global MCP/client edits",
+        "Graphify semantic LLM pass and remote cloud stay disabled",
+        "CGC management tools are not exposed to analyst model profiles",
+        "jCodeMunch excluded until commercial license is approved",
+        "Record exact package versions, transitive licenses, SBOM/security and environment"
+      ],
+      "deliverables": [
+        "TOOL_CANDIDATE_MATRIX.json",
+        "GOLDEN_REPO_QUERIES.json",
+        "CODE_GRAPH_BENCHMARK_RU.md",
+        "TOKEN_LATENCY_COVERAGE_RESULTS.json",
+        "ADOPTION_DECISION_RU.md"
+      ],
+      "acceptance": [
+        "Every candidate is tested on the same pinned SHA or explicitly marked NOT_RUN",
+        "Exact symbols/callers/callees/path/test-link precision is measured against expected evidence",
+        "Language and artifact coverage plus unsupported formats are explicit",
+        "Cold build, incremental update, stale-index detection, RAM, disk, p50/p95 and token budgets are measured",
+        "All edge provenance distinguishes extracted/compiler-resolved/inferred",
+        "At most one primary external graph backend is selected; no forced adoption",
+        "A lightweight native fallback is specified if no candidate beats existing code"
+      ]
+    },
+    {
+      "id": "OCA-W0B",
+      "name": "First working repo-wide Knowledge Graph and compact catalogue",
+      "priority": "P0",
+      "status": "BLOCKED_ON_W0_AND_W0A",
+      "depends_on": [
+        "OCA-W0",
+        "OCA-W0A"
+      ],
+      "mode": "ADDITIVE_DEV_INTELLIGENCE_IMPLEMENTATION",
+      "exclusive_write_scope": [
+        "src/intelligence/repo_graph/",
+        "tests/test_repo_graph_*.py",
+        "tools/repo-intel/",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/repo-graph/"
+      ],
+      "must_reuse": [
+        "src/intelligence/repo_snapshot.py",
+        "src/intelligence/repo_manifest.py",
+        "src/intelligence/repo_source.py",
+        "src/intelligence/repo_groups.py",
+        "src/intelligence/context_pack.py",
+        "src/intelligence/evidence_refs.py",
+        "src/strategy/registry.py",
+        "src/market/source_catalog.py",
+        "src/observability"
+      ],
+      "deliverables": [
+        "versioned repo graph schema and deterministic importer/generator",
+        "read-only CLI/query façade for search/symbol/callers/callees/path/impact",
+        "strategy/source/provider/tool/app/MCP/CLI one-line catalogues",
+        "300-500 token repo card and bounded task context pack",
+        "incremental index refresh and stale-SHA detection",
+        "branch/worktree isolation and coverage report",
+        "deterministic tests and first CHATGPT_CONTEXT_PACK.md"
+      ],
+      "acceptance": [
+        "A clean command builds a graph tied to exact Git tree SHA and tool versions",
+        "All code and non-code repository assets are inventoried with supported/partial/unsupported/excluded status",
+        "Every discovered strategy/source/tool record links to exact files/symbols/tests and provenance",
+        "Graph relations distinguish STATIC_EXTRACTED, COMPILER_RESOLVED, CANONICAL_REGISTRY, RUNTIME_OBSERVED, DOC_CLAIM, HUMAN_CONFIRMED and LLM_PROPOSED",
+        "Unknown or ambiguous edges remain UNKNOWN and dangling links fail verification",
+        "A compact catalogue can list all known strategies, sources, providers, tools/apps and subsystems without code bodies",
+        "Context packs honor hard token/byte budgets and fetch exact code/evidence by ID",
+        "Index update handles changed/deleted/renamed files and rejects stale or cross-branch indexes",
+        "No canonical raw market/observability/strategy database is duplicated",
+        "No production runtime dependency, signer, sender, live authority or destructive cleanup is added",
+        "The index can be rebuilt deterministically and tests prove secret exclusion"
+      ]
+    },
+    {
       "id": "OCA-W1",
       "name": "Correlation completeness contract",
       "priority": "P0",
       "status": "BLOCKED_ON_W0",
-      "depends_on": ["OCA-W0"],
+      "depends_on": [
+        "OCA-W0",
+        "OCA-W0B"
+      ],
       "mode": "CONTRACT_AND_FIXTURE",
       "exclusive_write_scope": [
         "docs/roadmap/intelligence-operating-plane-2026-11-21/contracts/"
@@ -116,7 +223,9 @@
       "name": "Deterministic OperationEpisode projection",
       "priority": "P1",
       "status": "BLOCKED_ON_W1",
-      "depends_on": ["OCA-W1"],
+      "depends_on": [
+        "OCA-W1"
+      ],
       "mode": "ADDITIVE_PROJECTION",
       "exclusive_write_scope": [
         "src/intelligence/operation_context/",
@@ -141,7 +250,10 @@
       "name": "Stable code callsite IDs",
       "priority": "P1",
       "status": "BLOCKED_ON_W1",
-      "depends_on": ["OCA-W1"],
+      "depends_on": [
+        "OCA-W1",
+        "OCA-W0B"
+      ],
       "mode": "STATIC_SCANNER_AND_FOCUSED_RUNTIME_WIRING",
       "exclusive_write_scope": [
         "src/intelligence/logsites/",
@@ -166,7 +278,11 @@
       "name": "Bounded operation and strategy context pack",
       "priority": "P1",
       "status": "BLOCKED_ON_W2",
-      "depends_on": ["OCA-W2", "OCA-W3"],
+      "depends_on": [
+        "OCA-W2",
+        "OCA-W3",
+        "OCA-W0B"
+      ],
       "mode": "READ_ONLY_QUERY_API",
       "exclusive_write_scope": [
         "src/intelligence/operation_context/",
@@ -193,7 +309,10 @@
       "name": "Strategy resource conflict and parallel admission report",
       "priority": "P1",
       "status": "BLOCKED_ON_W0",
-      "depends_on": ["OCA-W0"],
+      "depends_on": [
+        "OCA-W0",
+        "OCA-W0B"
+      ],
       "mode": "REUSE_EXISTING_SCHEDULER",
       "exclusive_write_scope": [
         "src/intelligence/operation_context/conflicts.py",
@@ -217,7 +336,10 @@
       "name": "Bounded external evidence profiles",
       "priority": "P2",
       "status": "BLOCKED_ON_W0",
-      "depends_on": ["OCA-W0"],
+      "depends_on": [
+        "OCA-W0",
+        "OCA-W0B"
+      ],
       "mode": "READ_ONLY_ADAPTERS",
       "exclusive_write_scope": [
         "src/intelligence/external_evidence/",
@@ -239,27 +361,33 @@
     },
     {
       "id": "OCA-W7",
-      "name": "Polyglot and token retrieval benchmark",
-      "priority": "P2",
-      "status": "BLOCKED_ON_W0",
-      "depends_on": ["OCA-W0"],
+      "name": "Golden retrieval, token-efficiency and adoption benchmark",
+      "priority": "P1",
+      "status": "BLOCKED_ON_W0B_AND_W4",
+      "depends_on": [
+        "OCA-W0A",
+        "OCA-W0B",
+        "OCA-W4"
+      ],
       "mode": "BENCHMARK_ONLY",
       "exclusive_write_scope": [
         "benchmarks/intelligence/",
         "docs/roadmap/intelligence-operating-plane-2026-11-21/benchmarks/"
       ],
       "deliverables": [
-        "golden query set 30-50 questions",
-        "Graphify sidecar report",
-        "token/latency/coverage measurements",
-        "tool adoption decision"
+        "30-50 repository golden questions with expected exact evidence",
+        "retrieval precision/recall and citation correctness report",
+        "500/1000/2000-token context-pack comparison",
+        "p50/p95 latency, refresh, RAM and disk measurements",
+        "tool adoption / keep / remove recommendations"
       ],
       "acceptance": [
-        "Graphify/native index compared on exact same SHA",
-        "Unsupported file/language coverage is explicit",
-        "Token counts use target tokenizer where available",
-        "Commercial license checked before jCodeMunch use",
-        "No vendor token-saving claim treated as guaranteed"
+        "All candidate retrieval paths use the same pinned repo/data SHA and golden questions",
+        "Every answer's file/symbol/test/evidence link is checked against expected refs",
+        "Token counts use the target model tokenizer where available",
+        "Stale-index, branch-isolation, rename and dynamic-import false-positive cases are tested",
+        "No vendor token-saving claim is treated as a guarantee",
+        "At least one strategy novelty/duplicate question is answered from repo evidence"
       ]
     },
     {
@@ -267,7 +395,11 @@
       "name": "Operations cockpit and human review workflow",
       "priority": "P2",
       "status": "BLOCKED_ON_W4",
-      "depends_on": ["OCA-W4", "OCA-W5"],
+      "depends_on": [
+        "OCA-W4",
+        "OCA-W5",
+        "OCA-W7"
+      ],
       "mode": "REPORT_AND_READ_ONLY_UI",
       "exclusive_write_scope": [
         "src/intelligence/operation_context/reports.py",
@@ -291,7 +423,10 @@
       "name": "Storage scale and retention benchmark",
       "priority": "P2",
       "status": "CONDITIONAL",
-      "depends_on": ["OCA-W0", "OCA-W2"],
+      "depends_on": [
+        "OCA-W0",
+        "OCA-W2"
+      ],
       "mode": "MEASURE_BEFORE_INFRASTRUCTURE",
       "exclusive_write_scope": [
         "benchmarks/storage/",
@@ -320,5 +455,5 @@
     "No destructive retention based on model scores",
     "Implementation PRs require human approval"
   ],
-  "first_action": "Execute OCA-W0 only. Do not begin OCA-W1 through OCA-W9 until W0 integration and event correlation matrices are reviewed."
+  "first_action": "Run OCA-W0 and OCA-W0A in parallel. Then automatically execute OCA-W0B and every dependency-ready OCA-W1..W9 package using disjoint worktrees/write scopes. Do not stop after audit: deliver the first working repo knowledge graph, compact strategy/tool/source catalogues, bounded context packs and tested refresh path. Open reviewable PR(s); never merge."
 }

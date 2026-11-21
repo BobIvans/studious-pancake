@@ -1,0 +1,41 @@
+CODEX TASK — Prop AMM Competitive Toolchain
+
+Work only on branch codex/prop-amm-competitive-toolchain-2026-11-21 and rebase to the latest main before coding.
+
+Read every file in:
+docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/
+
+Then inspect the actual main-tree implementation, composition root, source/market owners, R13 quote normalization, PR118 sizing/ConflictScheduler, R02/R03/R05/R06, PR130, MPR04/MPR05, and open PR #660/#664. Produce an owner crosswalk before changing source.
+
+GOAL:
+Implement the verified, useful parts of this toolchain as additive, offline-first adapters/tests for the existing flashloan bot:
+1. LocalShred Lite / approved Yellowstone or Geyser feed profile through the existing source governance/transport.
+2. sol-parser-sdk only if crate/toolchain compatibility and canonical event conformance pass.
+3. pmm-sim as an isolated, pinned offline simulation harness with direct/single/multi/benchmark corpus.
+4. Jupiter Swap API V2 /build plus 1000xsh/swaps direct instruction construction, one venue/version at a time, with exact account/state and min-output or same-tx post-balance/repayment guarantees.
+5. A provider-neutral relay capability model only if it belongs inside the existing submission owner; keep PR130 Jito SINGLE policy as the only current route.
+
+NON-NEGOTIABLE:
+- No stealth/camouflage, no size/time randomization to evade Prop AMM solver detection, no spoofed CPI caller/aggregator identity, no anti-abuse bypass, no sandwich/front-running/victim targeting.
+- Splitting is allowed only to model genuine depth/price impact/resource constraints; flashloan legs and repayment must remain atomic.
+- No second source catalog, parser pipeline, market graph, quote kernel, scheduler, capital graph, journal, capture OS, parallel runner, or sender stack.
+- Do not install KADES/CADES/Capture OS/Supanode/Sanctum/BoltTx/Nozomi as runtime dependency without canonical API/repo, terms, license, security and performance proof.
+- No all-relay fan-out and no claim that only the winning relay gets paid.
+- No changed-tip re-sign/retry loops. A changed transaction is a different signature and independently executable.
+- No API credential probing, external subscriptions, network campaign, account creation, ATA creation, wallet/key access, signing, sending, borrowing, spending, paid feed activation, paper campaign start, or production promotion.
+- Keep every activation flag false. Do not modify the live/signer/sender safety boundaries.
+
+DELIVERABLES:
+- Implement only offline-safe adapters, immutable pins, deterministic fixtures, typed rejection reasons and tests.
+- Add parser + SVM benchmark reports with p50/p95/p99 and reproducible machine/toolchain metadata; never copy vendor latency claims into acceptance thresholds.
+- Add pmm-sim differential corpus and venue-version matrix.
+- Add direct builder test for each supported Prop AMM; explicitly test HumidiFi min-out caveat and block unless a verified same-tx guard exists.
+- Compare direct route vs Jupiter V2 /build on same amount/state generation.
+- Add atomic borrow/swap/output-guard/repay invariant tests and reserve shared pool resources through the existing owner.
+- Add source feed gap/reorg/duplicate/replay tests.
+- Add pure relay semantics tests only; no real sender.
+- Update SOURCE_AUDIT_V1.json with actual commit/tag pins, Cargo.lock hashes, licenses and blockers.
+- Run focused tests, all relevant owner suites, format/lint/type checks, and scripts/verify_repo.py as allowed by the repository.
+- Report exact base/head SHA, changed files, test outputs, unresolved sources, and why each rejected/blocked item remains blocked.
+
+Keep the PR draft. Never claim a provider was installed or an execution was performed.

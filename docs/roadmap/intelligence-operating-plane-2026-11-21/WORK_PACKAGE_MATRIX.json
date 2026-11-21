@@ -1,0 +1,324 @@
+{
+  "schema": "studious.intelligence-operating-plane.work-packages.v1",
+  "repository": "BobIvans/studious-pancake",
+  "design_baseline_sha": "ea204222df86a0697cc6bce0e9ec60f7db31ffd8",
+  "entrypoint": "docs/roadmap/intelligence-operating-plane-2026-11-21/CODEX_START_HERE_RU.md",
+  "operating_model": {
+    "current_stage": "CHATGPT_PLUS_CODING_AGENTS",
+    "autonomous_agent_swarm_required": false,
+    "human_approval_required_for_implementation_merge": true,
+    "live_execution_authority_added": false,
+    "indexing_requires_llm": false,
+    "chatgpt_data_delivery": [
+      "EXPLICIT_CONTEXT_PACK_UPLOAD",
+      "AUTHORIZED_GITHUB_CONNECTOR",
+      "EXPLICIT_LOCAL_READ_ONLY_MCP"
+    ]
+  },
+  "canonical_owners_to_reuse": [
+    "src/intelligence",
+    "src/observability",
+    "src/agg02",
+    "src/market",
+    "src/market_data_evolution",
+    "src/strategy",
+    "src/economics/flash_capital_graph",
+    "src/provider_governance",
+    "src/qualification_campaign",
+    "src/paper_shadow",
+    "src/execution/exact_simulation.py",
+    "src/production_qualification.py"
+  ],
+  "work_packages": [
+    {
+      "id": "OCA-W0",
+      "name": "Current owners and event correlation audit",
+      "priority": "P0",
+      "status": "READY",
+      "depends_on": [],
+      "mode": "AUDIT_ONLY",
+      "exclusive_write_scope": [
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/"
+      ],
+      "must_read": [
+        "AGENTS.md",
+        "CODEX_START_HERE.md",
+        "docs/roadmap/agent-execution-master-2026-11-13/PROJECT_KNOWLEDGE_BASE_MAP.md",
+        "CODEX_LOCAL_INTELLIGENCE_V2_START_HERE.md",
+        "CODEX_STORAGE_PRESSURE_START_HERE.md",
+        "docs/strategy/local-intelligence-v2/MASTER_CONTEXT_RU.md",
+        "docs/strategy/local-intelligence-v2/OPERATIONS.md",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/OPERATIONS_CONTEXT_AGGREGATOR_RU.md",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/CHATGPT_CODING_AGENT_CONTEXT_WORKFLOW_RU.md"
+      ],
+      "inspect": [
+        "src/observability/events.py",
+        "src/observability/store.py",
+        "src/observability/authoritative_store_pr195.py",
+        "src/observability/replay.py",
+        "src/observability/export.py",
+        "src/observability/cross_plane_pr196.py",
+        "src/operations/operator_readiness.py",
+        "src/agg02/storage.py",
+        "src/market/observations.py",
+        "src/market/streams.py",
+        "src/market_data_evolution/contracts.py",
+        "src/intelligence",
+        "src/intelligence/episode_builder.py",
+        "src/strategy/market_graph_ingest.py",
+        "src/strategy/conflict_scheduler.py",
+        "src/strategy/shadow_workers.py",
+        "src/strategy/shadow_portfolio.py",
+        "src/strategy/opportunity_identity.py"
+      ],
+      "deliverables": [
+        "AUDIT_CURRENT_OWNERS_RU.md",
+        "INTEGRATION_MATRIX.json",
+        "EVENT_CORRELATION_MATRIX.json",
+        "CLI_AND_TEST_BASELINE.json",
+        "GAP_PRIORITY_RU.md"
+      ],
+      "acceptance": [
+        "Every claimed existing capability points to exact source files and tests",
+        "EventEnvelope fields are traced from producer through store, export and replay",
+        "Strategy/source/config/repo/observation/operation joins are marked PRESENT, PARTIAL, MISSING or UNKNOWN",
+        "Language and artifact coverage gaps are explicit",
+        "Existing canonical owners and duplicate-owner risks are listed",
+        "Actual CLI command help and targeted tests are recorded on current main",
+        "No implementation code or runtime behavior is changed"
+      ]
+    },
+    {
+      "id": "OCA-W1",
+      "name": "Correlation completeness contract",
+      "priority": "P0",
+      "status": "BLOCKED_ON_W0",
+      "depends_on": ["OCA-W0"],
+      "mode": "CONTRACT_AND_FIXTURE",
+      "exclusive_write_scope": [
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/contracts/"
+      ],
+      "deliverables": [
+        "EVENT_CORRELATION_CONTRACT_V1.md",
+        "EVENT_SCHEMA_GAP_MATRIX.json",
+        "CORRELATION_FIXTURES/"
+      ],
+      "acceptance": [
+        "No duplicate observability or market database is introduced",
+        "Existing identifiers are reused wherever possible",
+        "Missing typed fields are proposed only after producer-to-store audit",
+        "Repo SHA, config checksum, strategy version, observation refs and attempt identity are linked or explicitly UNKNOWN",
+        "Schema compatibility and historical replay rules are documented"
+      ]
+    },
+    {
+      "id": "OCA-W2",
+      "name": "Deterministic OperationEpisode projection",
+      "priority": "P1",
+      "status": "BLOCKED_ON_W1",
+      "depends_on": ["OCA-W1"],
+      "mode": "ADDITIVE_PROJECTION",
+      "exclusive_write_scope": [
+        "src/intelligence/operation_context/",
+        "tests/test_operation_context_*.py"
+      ],
+      "deliverables": [
+        "OperationEpisode projection",
+        "deterministic evidence join",
+        "operation trace replay tests",
+        "coverage/unknown report"
+      ],
+      "acceptance": [
+        "Reads EventEnvelope, AGG-02, MarketObservation and MarketEpisode canonical owners",
+        "No raw market or observability store is duplicated",
+        "Join is deterministic and reproducible from pinned repo/data versions",
+        "Unmatched/ambiguous relations remain UNKNOWN",
+        "Terminal outcomes require authoritative reconciliation evidence"
+      ]
+    },
+    {
+      "id": "OCA-W3",
+      "name": "Stable code callsite IDs",
+      "priority": "P1",
+      "status": "BLOCKED_ON_W1",
+      "depends_on": ["OCA-W1"],
+      "mode": "STATIC_SCANNER_AND_FOCUSED_RUNTIME_WIRING",
+      "exclusive_write_scope": [
+        "src/intelligence/logsites/",
+        "tests/test_logsite_*.py"
+      ],
+      "deliverables": [
+        "logsite/statement ID manifest",
+        "Python AST scanner",
+        "high-value event producer mapping",
+        "rename/ambiguity fixtures"
+      ],
+      "acceptance": [
+        "IDs survive source line shifts",
+        "Repo SHA binds mapping to exact source",
+        "Ambiguous rename/move returns NEEDS_REVIEW or UNKNOWN",
+        "No LLM in correlation hot path",
+        "No broad rewrite of all logging calls"
+      ]
+    },
+    {
+      "id": "OCA-W4",
+      "name": "Bounded operation and strategy context pack",
+      "priority": "P1",
+      "status": "BLOCKED_ON_W2",
+      "depends_on": ["OCA-W2", "OCA-W3"],
+      "mode": "READ_ONLY_QUERY_API",
+      "exclusive_write_scope": [
+        "src/intelligence/operation_context/",
+        "src/intelligence/cli.py",
+        "tests/test_operation_context_pack_*.py"
+      ],
+      "deliverables": [
+        "context pack builder",
+        "evidence manifest",
+        "continuation support",
+        "golden query fixtures"
+      ],
+      "acceptance": [
+        "Pack includes exact repo SHA and data generation",
+        "Pack budget is bounded by bytes and target-model tokenizer when configured",
+        "Pack includes source refs, tests, negative evidence and coverage gaps",
+        "Raw payload is fetched by ID on demand",
+        "Same input snapshot/query parameters produce deterministic pack",
+        "Query surface is read-only"
+      ]
+    },
+    {
+      "id": "OCA-W5",
+      "name": "Strategy resource conflict and parallel admission report",
+      "priority": "P1",
+      "status": "BLOCKED_ON_W0",
+      "depends_on": ["OCA-W0"],
+      "mode": "REUSE_EXISTING_SCHEDULER",
+      "exclusive_write_scope": [
+        "src/intelligence/operation_context/conflicts.py",
+        "tests/test_operation_conflict_report_*.py"
+      ],
+      "deliverables": [
+        "ResourceSet projection",
+        "conflict/overlap report",
+        "scheduler decision evidence joins"
+      ],
+      "acceptance": [
+        "Reuses ConflictAwareScheduler and existing reservation owners",
+        "Solana account read/write locks and shared pools are represented",
+        "EVM sender nonce lanes and shared state resources are represented where applicable",
+        "Provider quota and shared capital constraints are represented",
+        "Does not add signer, sender, nonce authority or live execution"
+      ]
+    },
+    {
+      "id": "OCA-W6",
+      "name": "Bounded external evidence profiles",
+      "priority": "P2",
+      "status": "BLOCKED_ON_W0",
+      "depends_on": ["OCA-W0"],
+      "mode": "READ_ONLY_ADAPTERS",
+      "exclusive_write_scope": [
+        "src/intelligence/external_evidence/",
+        "tools/mcp-profiles.example.json",
+        "tests/test_external_evidence_*.py"
+      ],
+      "deliverables": [
+        "SQD bounded query adapter/profile",
+        "Antseer narrow profile",
+        "source provenance and pagination receipts"
+      ],
+      "acceptance": [
+        "External reads are bounded, paginated and rate-aware",
+        "Network/window/query hash/freshness/coverage are preserved",
+        "External analytics are not treated as execution/settlement truth",
+        "No secrets are committed",
+        "All persisted ingestion passes existing source governance"
+      ]
+    },
+    {
+      "id": "OCA-W7",
+      "name": "Polyglot and token retrieval benchmark",
+      "priority": "P2",
+      "status": "BLOCKED_ON_W0",
+      "depends_on": ["OCA-W0"],
+      "mode": "BENCHMARK_ONLY",
+      "exclusive_write_scope": [
+        "benchmarks/intelligence/",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/benchmarks/"
+      ],
+      "deliverables": [
+        "golden query set 30-50 questions",
+        "Graphify sidecar report",
+        "token/latency/coverage measurements",
+        "tool adoption decision"
+      ],
+      "acceptance": [
+        "Graphify/native index compared on exact same SHA",
+        "Unsupported file/language coverage is explicit",
+        "Token counts use target tokenizer where available",
+        "Commercial license checked before jCodeMunch use",
+        "No vendor token-saving claim treated as guaranteed"
+      ]
+    },
+    {
+      "id": "OCA-W8",
+      "name": "Operations cockpit and human review workflow",
+      "priority": "P2",
+      "status": "BLOCKED_ON_W4",
+      "depends_on": ["OCA-W4", "OCA-W5"],
+      "mode": "REPORT_AND_READ_ONLY_UI",
+      "exclusive_write_scope": [
+        "src/intelligence/operation_context/reports.py",
+        "docs/operations/"
+      ],
+      "deliverables": [
+        "run overview report",
+        "strategy performance report",
+        "provider quality report",
+        "incident/operation trace report"
+      ],
+      "acceptance": [
+        "Only canonical owners provide facts",
+        "Unknown and stale states are visible",
+        "Simulated/paper/realized economics remain separate",
+        "No UI control can sign, send, borrow or promote"
+      ]
+    },
+    {
+      "id": "OCA-W9",
+      "name": "Storage scale and retention benchmark",
+      "priority": "P2",
+      "status": "CONDITIONAL",
+      "depends_on": ["OCA-W0", "OCA-W2"],
+      "mode": "MEASURE_BEFORE_INFRASTRUCTURE",
+      "exclusive_write_scope": [
+        "benchmarks/storage/",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/benchmarks/"
+      ],
+      "deliverables": [
+        "24h/7d ingest/query/replay soak report",
+        "SQLite/WAL/Parquet/index measurements",
+        "ClickHouse/NATS/object-store decision"
+      ],
+      "acceptance": [
+        "Actual bytes/sec, events/sec, p50/p95 query and replay are measured",
+        "Retention pins and exact replay are proven",
+        "ClickHouse/NATS/S3 are added only if measured bottleneck justifies them",
+        "If not needed, record NOT_REQUIRED_YET with measurements"
+      ]
+    }
+  ],
+  "global_invariants": [
+    "LIVE remains hard-denied",
+    "No signer or sender authority is added",
+    "No production credentials or private keys in repo or context packs",
+    "No duplicate canonical raw event/market/strategy authority",
+    "All context packs are bounded and evidence-backed",
+    "LLM suggestions remain provisional until reviewed",
+    "No destructive retention based on model scores",
+    "Implementation PRs require human approval"
+  ],
+  "first_action": "Execute OCA-W0 only. Do not begin OCA-W1 through OCA-W9 until W0 integration and event correlation matrices are reviewed."
+}

@@ -162,7 +162,8 @@
           "available liquidity/caps",
           "same-message borrow index",
           "R05 exact message simulation"
-        ]
+        ],
+        "qualification_owner": "PR #664 DAG N08 (R02-CAP-B / R03-B)"
       },
       {
         "id": "jupiter_lend",
@@ -174,7 +175,8 @@
           "live capacity and fee",
           "exact borrow/payback metas",
           "R05 exact message simulation"
-        ]
+        ],
+        "qualification_owner": "PR #664 DAG N06 (R02-CAP-A / R03-A)"
       },
       {
         "id": "project0_marginfi",
@@ -186,7 +188,8 @@
           "existing account context",
           "direct instruction ABI",
           "no account creation"
-        ]
+        ],
+        "qualification_owner": "PR #664 DAG N07 (R02-CAP-D / R03-D)"
       },
       {
         "id": "marginfi_legacy",
@@ -213,7 +216,8 @@
           "effective flash cap/fee/rounding",
           "same-PTB receipt repayment",
           "R05 PTB simulation"
-        ]
+        ],
+        "qualification_owner": "PR #664 DAG N09 (later wave; R02-CAP-C / R03-C)"
       },
       {
         "id": "deepbook_v3",
@@ -226,7 +230,8 @@
           "current fee semantics",
           "hot-potato repayment",
           "R05 PTB simulation"
-        ]
+        ],
+        "qualification_owner": "UNASSIGNED_SEPARATE_OWNER_REQUIRED"
       },
       {
         "id": "scallop",
@@ -238,7 +243,8 @@
           "current fee",
           "package and object state",
           "unsigned builder and same-PTB repayment"
-        ]
+        ],
+        "qualification_owner": "LATER_RESEARCH_SLICE_NOT_OWNED_BY_PR667"
       },
       {
         "id": "bucket_usdb",
@@ -249,7 +255,8 @@
           "current fee/capacity",
           "mint/repay semantics",
           "atomic PTB simulation"
-        ]
+        ],
+        "qualification_owner": "LATER_RESEARCH_SLICE_NOT_OWNED_BY_PR667"
       },
       {
         "id": "suilend",
@@ -260,7 +267,8 @@
           "fee/capacity source",
           "deployed package",
           "builder and repay proof"
-        ]
+        ],
+        "qualification_owner": "LATER_RESEARCH_SLICE_NOT_OWNED_BY_PR667"
       }
     ],
     "excluded_as_lenders": [
@@ -287,5 +295,11 @@
     "A DeepBook pool's flash liquidity and orderbook depth are one correlated resource.",
     "Cross-chain atomicity is not assumed.",
     "All builder outputs remain unsigned and inert until R05/R06/MPR gates pass."
-  ]
+  ],
+  "workstream_ownership": {
+    "PR_664": "Campaign control plane and campaign readiness: CAPTURE_ONLY manifest/runbook, source profiles/quotas/retention, CAMPAIGN_START_V1, R06/QPR PG01, Solana N06 Jupiter Lend, N07 Project 0, N08 Kamino, N09 NAVI. One lender owner per bounded PR.",
+    "PR_665": "Solana Prop-AMM/toolchain: immutable vendor mirrors, isolated harnesses, pmm-sim local LiteSVM caller-profile matrix, direct Prop-AMM builder research and Jupiter V2/direct-route comparison.",
+    "PR_667": "Sui R13 quote/state integration only: first Aftermath quote adapter vertical slice, exact pair/route provenance, pool dedup and handoff to existing R02/R03/R05. No campaign control-plane implementation, no pmm-sim benchmark, no Solana lender reader/builder implementation.",
+    "deepbook_lender": "No current PR DAG owner identified in #664 for new DeepBook capacity qualification/builder; requires a separately assigned owner. #667 must not invent or modify a DeepBook lender owner as part of quote integration."
+  }
 }

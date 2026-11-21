@@ -1,222 +1,148 @@
-# Tool Access Profiles для Studious coding agents и ChatGPT
-## Установка, MCP, data residency, доступ и стоимость контекста
+# Tool Access Profiles — Studious Pancake
+## Минимальный reproducible stack для code graph, Web3 research и операций
 
-**Назначение:** дать coding agent максимальный полезный набор tools, но без взрыва контекста, дублирования индексов и ненужных прав. Инструменты доступны по задаче, а не все одновременно каждому агенту.
+**Принцип:** один canonical Studious data plane + один проверенный derived code graph + точечный retrieval. Не устанавливать одновременно несколько memory/graph систем. Внешние инструменты — dev-only/read-only, пока не доказана необходимость их встраивания.
 
 ---
 
-# 1. Рекомендуемые profiles
+## 1. Profiles
 
-| Profile | Tools | Для чего |
+| Profile | Разрешённые возможности | Запреты |
 |---|---|---|
-| LOCAL_CODE | Existing src/intelligence CLI, Git, pytest, Graphify optional sidecar | Код, AST, dependencies, impact, context packs |
-| STRATEGY_RESEARCH | LOCAL_CODE + read-only SQD Portal + small Antseer subset | Chain state, providers, flows, venue coverage |
-| OPERATIONS_READ | OCA CLI, observability replay/export, AGG-02/MarketEpisode readers, DuckDB optional | Operation trace, paper/shadow, provider metrics, episode compare |
-| CODING_WORKER | TASK_PACKET reader, LOCAL_CODE, tests, verifier, WORK_RESULT generator | Одна ограниченная implementation task |
-| REVIEWER | Git diff, context pack, test evidence, index diff, task ledger | PR review и strategy impact |
-| HUMAN_OPERATOR | Health/status/readiness, reports, explicit approvals | Контроль и одобрение человеком |
+| LOCAL_CODE | Git, существующий `src/intelligence`, code graph CLI, AST/SCIP, tests, context pack | Нет RPC/keys/trading |
+| STRATEGY_RESEARCH | LOCAL_CODE + bounded read-only SQD / небольшой Antseer subset | Нет submission/trading authority |
+| OPERATIONS_READ | Read-only EventEnvelope/AGG-02/MarketObservation/MarketEpisode replay/export | Нет event mutation/retention deletion |
+| CODING_WORKER | Один Task Packet, отдельный worktree, write только в scope задачи, tests, index refresh | Нет signer/sender/live/secret access |
+| REVIEWER | Diff, graph impact, tests, evidence, work receipt, stale-index checks | Нет production mutation |
+| HUMAN_OPERATOR | Health/readiness/reports и explicit approvals | Только человек даёт operational/merge approval |
 
-MVP включает только LOCAL_CODE, OPERATIONS_READ, CODING_WORKER и REVIEWER. STRATEGY_RESEARCH — по запросу; HUMAN_OPERATOR остаётся у человека.
+MVP сейчас: LOCAL_CODE + CODING_WORKER + REVIEWER + OPERATIONS_READ. STRATEGY_RESEARCH добавляется только для задач, которым реально нужны внешние chain/analytics data.
 
----
+## 2. Code-intelligence tools: verified candidate shortlist
 
-# 2. Инструменты: решение и ограничения
+### 2.1 Studious Local Intelligence V2 — canonical foundation
 
-## 2.1 Existing Studious CLI — обязательно
+Всегда переиспользовать:
+- `src/intelligence/repo_snapshot.py`, `repo_manifest.py`, `repo_source.py`, `repo_groups.py`, `repo_history.py`, `repo_coverage.py`;
+- `context_pack.py`, `context_archive.py`, `context_recovery.py`, `context_benchmark.py`, `evidence_refs.py`;
+- `episode_builder.py`, experiment/provider/strategy reports;
+- existing sampling, rollups, Parquet compaction, retention, storage budget/pressure;
+- `src/observability`, `src/agg02`, `src/market`, `src/market_data_evolution`.
 
-Основной локальный entrypoint:
-- python -m src.intelligence.cli repo scan/status/export/delta/benchmark;
-- python -m src.intelligence.cli storage status/forecast/rollups/compact/retention-dry-run;
-- python -m src.intelligence.cli report build/compare/bundle;
-- existing observability replay/export/verify commands;
-- existing tests/verifiers.
+First inspect real CLI/help/tests and actual coverage. Do not create Local Intelligence V3 or duplicate canonical registries. Native parser coverage is known to be incomplete beyond Python; W0 must establish current exact language/artifact coverage.
 
-Агент сначала проверяет фактические argparse commands и help output. Документированный пример команды не означает, что она прошла execution test на новом main.
+### 2.2 CodeGraphContext (CGC) — primary code-graph candidate
 
-## 2.2 Graphify — optional code intelligence sidecar
+Upstream: https://github.com/CodeGraphContext/CodeGraphContext  
+License: repository identifies MIT; separately audit transitive package/dependency licenses.
 
-Зачем:
-- дополнить Python AST индекс polyglot languages;
-- связать code, configs, SQL schemas и documentation;
-- queries по call paths, dependencies, impact и tests;
-- incremental update вместо полного переиндексирования.
+Useful because its CLI/MCP exposes callers, callees, call chains, imports, inheritance, variable use and dead-code candidates. Its current project description advertises 23 languages including Solidity and offers embedded graph DB options. It may be a faster way to get navigable function links than writing a graph engine from scratch.
 
-Docs: https://github.com/Graphify-Labs/graphify
+Isolated developer install candidate:
+```bash
+uv tool install codegraphcontext
+cgc index
+cgc stats
+cgc analyze callers <symbol>
+cgc analyze calls <symbol>
+cgc analyze chain <start> <end>
+```
 
-Начальная установка в developer environment, не в runtime package:
+Check the exact current package command, Python compatibility, selected embedded backend, RAM/disk use and indexing correctness before relying on it. Do not add it to bot runtime dependencies. Its MCP catalog includes management/write operations; do not expose the whole server to ChatGPT. Prefer the CLI during indexing and a narrow read-only wrapper for queries.
 
-~~~bash
-uv tool install "graphifyy[mcp]"
-graphify extract . --no-viz
-graphify query "what calls the canonical strategy entrypoint?"
-~~~
+### 2.3 Graphify — broad code + docs/config graph candidate
 
-Перед применением проверить текущий CLI и flags; команды/версии могут меняться.
+Upstream: https://github.com/Graphify-Labs/graphify  
+The repository currently shows Apache-2.0 and MIT license files; inspect component-specific license/NOTICE before copying code.
 
-Правила:
-- начать с code-only/local extraction;
-- semantic extraction docs/PDFs/images не включать по умолчанию;
-- если semantic extraction нужна, backend выбирать явно и проверить data residency;
-- сохранить различие EXTRACTED и INFERRED relations;
-- Graphify graph остаётся sidecar projection, не заменяет canonical registries;
-- cache/build должны быть commit-bound;
-- не коммитить graph database/huge binary index.
+Graphify uses local Tree-sitter parsing for code, supports about 40 languages, and can represent docs, SQL schemas, configs and other artifacts. It produces a graph with EXTRACTED vs INFERRED edges, query/path/explain, subsystem communities and a compact report. Its optional semantic pass for documents/media may call an LLM/backend: keep that disabled for the initial local-only bake-off.
 
-## 2.3 jCodeMunch — только после license approval
+Current install:
+```bash
+uv tool install graphifyy
+```
+Official package name is `graphifyy` (two y's); CLI/skill command is `graphify`. Codex skill registration is a separate operation (for example `graphify install --platform codex`); do not run a setup wizard or modify client/repo configuration without reviewing its diff. Benchmark code-only locally first. Do not use Graphify Cloud or upload repository contents.
 
-Зачем: symbol-level search/fetch вместо чтения больших файлов.
+Do not depend on the old `uv tool install "graphifyy[mcp]"` instruction.
 
-Docs: https://github.com/jgravelle/jcodemunch-mcp
+### 2.4 Tree-sitter + SQLite + Personalized PageRank — lightweight fallback
 
-Dual-use license версии, опубликованной в октябре 2026, разрешает non-commercial use бесплатно, но commercial/revenue-supporting internal use требует paid license. Для revenue-generating flashloan bot не считать его бесплатным. До license decision использовать current context_pack/native AST.
+Tree-sitter supplies deterministic multi-language syntax trees; a small SQLite/FTS5 and adjacency projection can support compact search and traversal. Aider RepoMap demonstrates graph ranking and token-budgeted selection:
+https://aider.chat/docs/repomap.html
 
-Заявленный vendor token-saving benchmark — собственный 15-lookup comparison на трёх codebases. Не переносить цифру как гарантию для Studious; воспроизвести на golden questions.
+Choose this route if it reuses existing code better or beats CGC/Graphify on measured setup cost, query correctness, incremental refresh and token efficiency. Implement only missing parts; do not rewrite existing snapshots/context packs.
 
-## 2.4 SQD Portal MCP — read-only chain research
+### 2.5 SCIP and LSP / Serena — precision layer, not another memory system
 
-Endpoint/docs:
-- https://portal.sqd.dev/mcp
-- https://sqd.dev/learn/portal-mcp-server-setup/
-- https://github.com/subsquid-labs/portal-mcp-server
+- SCIP protocol/indexers: https://github.com/scip-code/scip. The ecosystem includes indexers for Python, TypeScript/JavaScript, Rust, Go, Java/Kotlin/Scala, C/C++ and others. Use only where actual project build/config supports compiler-grade references. Local SCIP indexes do not require deploying the Sourcegraph server.
+- Serena: https://github.com/oraios/serena. LSP-backed semantic tools across 40+ languages are useful for on-demand definitions/references/implementations. Serena's main application is GPL-3.0-or-later (SolidLSP component has its own MIT license); do not vendor/bundle without reviewing implications. Treat it as a separate optional developer tool, not the persistent knowledge graph.
 
-Подходит для bounded historical/recent EVM transactions/logs/traces, Solana transactions/instructions, Bitcoin inputs/outputs, Hyperliquid fills, Substrate events/calls.
+### 2.6 jCodeMunch — license gate
 
-Правила:
-- read-only research/evidence source;
-- точные network + block/slot bounds;
-- минимальный field list and bounded row limit;
-- следовать pagination cursor;
-- сохранять query hash, network, window, coverage, retrieval time, page count;
-- не запрашивать всю сеть/огромный time range без причины;
-- не считать ответ SQD proof of protocol-specific executable state/finality;
-- ingestion в Studious stores — только через existing source governance/schema/provenance/quota/replay.
+https://github.com/jgravelle/jcodemunch-mcp  
+Do not use in a revenue-supporting commercial workflow until current licensing is reviewed and the needed paid rights are explicitly approved. Vendor token-saving figures are not transferable guarantees; compare on the same golden questions.
 
-Docs описывают bounded previews/cursor pagination. Большое окно Solana может вернуть capped page, а не весь набор. Нужно сужать slot range и filters.
+### 2.7 Decision rule
 
-## 2.5 Antseer MCP — небольшая аналитическая подсекция
+Run W0A on the exact same SHA and 30–50 golden questions. Compare:
+- file/language/artifact coverage and unsupported formats;
+- exact symbol definition, callers/callees, path and test links;
+- EXTRACTED/COMPILER_RESOLVED vs inferred edges;
+- precision/recall, stale detection, rename/delete correctness;
+- cold build + incremental update time, p50/p95 query latency, RAM and disk;
+- context tokens at 500/1k/2k budgets;
+- license/SBOM/security, offline behavior and number of tools exposed to the model.
 
-Docs: https://antseer.ai/docs
+Adopt **one primary graph backend at most**. SCIP/LSP may add precision for selected language paths. Do not deploy Graphify + CGC + Serena + a vector DB by default.
 
-Документация заявляет 65 read-only tools в 12 domains, provenance на datapoints и возможность ограничить exposed tools URL query. Для single-purpose agent рекомендует менее 10 tools.
+## 3. Other evidence and data tools
 
-Применение: supplemental fund-flow/smart-money/token/protocol analytics, research signal и cross-check market context.
+### SQD Portal — bounded read-only on-chain evidence
+https://portal.sqd.dev/mcp  
+https://sqd.dev/learn/portal-mcp-server-setup/  
+Use precise network + block/slot range + field filters + row cap + pagination. Persist query hash, network, window, cursor/page count, retrieval time and coverage. It supplements chain data; it is not automatically exact pool-state, quote, execution or settlement authority.
 
-Не использовать как exact pool state authority, executable quote, lending capacity proof, transaction finality proof или production trading authorization.
+### Antseer — small analytics subset
+https://antseer.ai/docs  
+Its documentation describes 65 read-only tools across 12 domains with provenance and a way to restrict exposed tools. Expose only the few needed for one research task (target under 10), not all tools to every agent. Never treat analytics as executable quote, exact lending capacity, settlement/finality or trading authorization.
 
-Не открывать все 65 tools каждому coding agent. Использовать profile с несколькими выбранными tools.
+### DuckDB + Parquet
+https://duckdb.org/docs/data/parquet  
+Optional local analytics if existing reports cannot answer historical queries. Use projection/filter pushdown and existing ZSTD Parquet/AGG-02 retention owners. Do not add another server/database without measured need.
 
-## 2.6 DuckDB + Parquet — optional local analytics
+### Deferred
 
-Docs:
-- https://duckdb.org/docs/data/parquet
-- https://parquet.apache.org/docs/file-format/data-pages/compression/
+Mimir, growmos, Neo4j service, remote vector DB, ClickHouse, NATS, remote object storage and autonomous orchestrator are all **deferred** until golden retrieval / storage benchmarks prove a concrete gap. No two semantic-memory products in parallel.
 
-DuckDB умеет читать Parquet напрямую с projection/filter pushdown. ZSTD поддерживается Parquet. Это может дать local historical queries без обязательной второй database.
+## 4. Tool and app inventory
 
-Сначала проверить existing analytics dependencies/reports. Не добавлять DuckDB в production runtime package ради research CLI, если хватает analytics extra.
+Inventory every package, SDK, script, binary, CLI command, MCP server/tool, GitHub Action, CI workflow, RPC/data provider, strategy adapter and developer application found in manifests, lock files, imports, config, docs and CI.
 
-## 2.7 Mimir / growmos — не включать по умолчанию
+For each record: ID, version, source URL, license/SPDX, install method, owner, code entrypoint, used-by edges, tests, permissions, network access, secrets required (names only; never values), status, duplicate candidate, evidence refs.
 
-- Mimir overlaps local memory/code/docs retrieval. Его docs описывают O(n) vector scan по RAM/time; включать только после benchmark на реальной corpus size.
-- growmos полезен для shared semantic knowledge/provenance, но не является raw source event store и не заменяет source AST.
-- Не разворачивать их одновременно с Graphify и existing Local Intelligence V2 без конкретного gap.
+Statuses: ACTIVE, DEV_ONLY, OPTIONAL, EXPERIMENTAL, DUPLICATE_CANDIDATE, UNREFERENCED_CANDIDATE, DEPRECATED, BLOCKED, UNKNOWN.
 
----
+Static zero-reference is not enough to delete: inspect dynamic imports, registries, reflection, plugins, workflow triggers, CLI entrypoints, configuration and external consumers. Produce evidence-backed cleanup proposals; deletion must be a separate reviewed PR.
 
-# 3. Tool access policy — права и контекст
+## 5. Reproducible install, MCP and permissions
 
-## 3.1 Capabilities
+- Install tools in isolated `uv tool` / pipx environments or a dedicated dev extra, never in production runtime by default.
+- Pin exact versions/hashes; retain lock/SBOM/license/NOTICE and install/health-check scripts.
+- Do not vendor third-party source unless exact component license is approved, copyright/SPDX is preserved and the copied code is independently tested.
+- Do not modify user-global MCP/client settings. Commit only an example profile after review.
+- Keep query facade read-only and allowlisted. Do not expose shell/write/index-delete/config-mutating tools to analyst/reviewer profiles.
+- No credentials, private keys, seeds or secret values in Git, indexes, reports or context packs.
+- External requests require bounded query windows, quotas, provenance and a declared use.
 
-| Tool group | Read | Write | External side effect |
-|---|---:|---:|---:|
-| Repo index / context pack | Yes | Только local generated artifacts | No |
-| Git inspection | Yes | Branch/worktree commits в task scope | Repo changes |
-| Unit/offline tests | Yes | Test artifacts | No market side effect |
-| SQD/Antseer | Yes | No | External read queries |
-| OCA/observability replay | Yes | No | No |
-| Market data collectors | Governed | Through canonical ingestion owner only | RPC/provider reads + storage writes |
-| Signing/submission/live controls | Not granted | No | Not allowed |
+## 6. Context/token efficiency
 
-MCP read-only surface не должен иметь shell/write tools. Coding agent получает normal Git/code write permissions только в isolated worktree. Это разные scopes.
+- Always start from a 300–500 token repo card and one-line catalogues.
+- Fetch only 1–3 graph hops relevant to the task; retrieve full function bodies/tests/evidence by ID.
+- Suggested task pack: 1k–2k tokens by default; exact model tokenizer budget when available.
+- Output paths, qualified symbol names, stable IDs and refs rather than repeated prose.
+- Store large raw payloads once in canonical stores; summaries carry IDs/hashes and retrieve on demand.
+- Indexing and deterministic labels must not call an LLM. Ambiguous semantic labels are PROPOSED/UNKNOWN until reviewed.
 
-## 3.2 Context budget
+## 7. Access truth
 
-Не включать все MCP tools всегда:
-- code worker: 1–3 repo/context tools + Git/test shell;
-- operations analyst: 3–6 OCA tools + optional data provider subset;
-- chain researcher: SQD tools only for task scope;
-- reviewer: diff/context/evidence/status, no mutating market tools.
-
-Tool output — compact structured fields, не verbose raw payload. Full records fetch by ID. Если tool вернул next_cursor, агент продолжает осознанно, а не dump-ит все pages.
-
-## 3.3 Credentials and data residency
-
-- No keys/seeds in repo, MCP examples, packs or task packets.
-- Environment credential reference only; secret supplied via approved local secret manager.
-- No arbitrary remote semantic indexing of proprietary repo by default.
-- Graphify code-only mode runs locally without remote LLM backend.
-- External MCP responses enter model context only when explicitly queried.
-- Record provider terms, license, source host and retention policy before persistent ingestion.
-
----
-
-# 4. Reproducible installation model
-
-Не vendoring third-party source. Repo should contain:
-- pinned tool manifest/config;
-- wrappers and adapters;
-- test fixtures and benchmarks;
-- installation/health-check commands;
-- license inventory and source provenance;
-- CI cache keys by binary version + checksum.
-
-External tools install into developer environment using approved package manager. Production runtime dependencies remain isolated from optional research/code-index tooling.
-
-Proposed files after W0:
-- tools/tooling-profiles.json;
-- tools/tool-versions.lock;
-- tools/mcp-profiles.example.json;
-- scripts/check_tooling_profiles.py;
-- docs/tooling/INSTALL_LOCAL_INTELLIGENCE_RU.md.
-
-Не добавлять manifests до проверки exact versions, Python compatibility and licenses.
-
----
-
-# 5. Tool decision table
-
-| Tool / block | MVP status | Reason |
-|---|---|---|
-| Existing src/intelligence | Mandatory | Repo snapshot/context/retention/episode/report owners already exist |
-| Existing src/observability | Mandatory | Structured events, replay, integrity, export, readiness |
-| Existing AGG-02/MarketObservation | Mandatory | Canonical raw market lineage/replay |
-| Git worktrees + task packets | Mandatory | Current human+coding-agent stage |
-| Graphify | Benchmark first | Potential polyglot coverage gap in current Python index |
-| SQD Portal | Research profile | Read-only bounded cross-chain evidence |
-| Antseer | Research profile subset | Supplemental analytics; expose few tools |
-| jCodeMunch | License-gated | Commercial license needed for revenue-supporting workflow |
-| DuckDB | Optional analytics extra | Query Parquet locally if current reports insufficient |
-| Mimir | Deferred | Overlap and vector-scan scaling |
-| growmos | Deferred | Semantic multi-agent knowledge not yet required |
-| ClickHouse | Scale-gated | Only if measured operational event/query volume exceeds current stores |
-| NATS JetStream | Deferred | No distributed consumer fanout requirement proven |
-| Remote MCP gateway | Deferred | First stabilize local CLI and bounded query contracts |
-| Autonomous orchestrator | Deferred | Human + coding agents currently sufficient |
-
----
-
-# 6. Required tool-access audit in W0
-
-Coding agent must report:
-1. Which current CLI commands actually work on fresh main?
-2. Which requirements already cover Parquet/analytics/reporting?
-3. Which local tools are installed and which need installation?
-4. Does repo build complete Python symbols/call relationships?
-5. Which languages and config formats remain uncovered?
-6. Is Graphify MCP useful compared with native context_pack?
-7. Do SQD and Antseer profiles return bounded/provenance-backed data under selected tool subsets?
-8. Are there licensing blockers for jCodeMunch or any semantic indexer?
-9. What minimal MCP/tool profile exposes enough capability without tool catalog explosion?
-10. What measured token reduction and latency results come from the golden query set?
-
-No agent should claim access to a tool until install/connection and a read-only self-check succeed.
+A tool is not "available" because it is in this document. Record installed version, successful local self-check, connected client, granted capabilities and last health time for each actual agent environment. ChatGPT does not automatically receive the local index; provide the pinned context pack, authorized GitHub repository access or an explicitly configured local read-only MCP.

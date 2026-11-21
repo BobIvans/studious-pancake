@@ -1,0 +1,318 @@
+{
+  "schema": "prop_amm_source_mirror_manifest.v1",
+  "audited_at": "2026-11-21",
+  "policy": "Mirror source code only when upstream identity, immutable commit, license and dependency closure are verified. Provider services are not source repositories. Keep all research mirrors isolated from the installed Python runtime until an adapter is proven.",
+  "targets": {
+    "approved_root": "vendor/strategy-research/",
+    "harness_root": "tools/prop-amm-harnesses/",
+    "provenance_root": "docs/third_party/prop_amm_sources/"
+  },
+  "sources": [
+    {
+      "name": "sol-parser-sdk",
+      "repository": "https://github.com/0xfnzero/sol-parser-sdk",
+      "ref": "23e97f4d00f96840136ac9f11705df64934cf384",
+      "release": "v0.11.0",
+      "license": "MIT",
+      "license_evidence": "LICENSE file read from upstream",
+      "status": "MIRROR_CANDIDATE",
+      "target": "vendor/strategy-research/sol-parser-sdk",
+      "role": "DEX event/account parser only",
+      "build_profile": "isolated Rust workspace; Solana SDK 4.0.1 / Client 4.2.2, Yellowstone 13.5 dependency line",
+      "tests": [
+        "cargo test --locked",
+        "cargo build --release --locked"
+      ],
+      "must_not": [
+        "Do not import related sol-trade-sdk signing/submission modules",
+        "Do not infer Prop AMM protocol parser coverage unless source explicitly supports each program",
+        "Do not treat vendor microbenchmarks as end-to-end latency evidence"
+      ]
+    },
+    {
+      "name": "pmm-sim",
+      "repository": "https://github.com/LimeChain/pmm-sim",
+      "ref": "cc4ae891a2a765d92c89d4381f96dce4afd446bb",
+      "release": "v0.2.0 metadata observed",
+      "license": "MIT",
+      "license_evidence": "LICENSE file read from upstream",
+      "status": "MIRROR_CANDIDATE_TEST_ONLY",
+      "target": "vendor/strategy-research/pmm-sim",
+      "role": "Offline direct/single/multi/benchmark simulation",
+      "build_profile": "isolated Rust 2024 workspace; LiteSVM 0.10 / Solana SDK 3.0 line",
+      "transitive_git_dependencies": [
+        {
+          "name": "LimeChain/magnus",
+          "locked_revision": "9ecd34b634031f5dfdf5747c33a329605ea6e7c4",
+          "cargo_lock_source": "git+https://git@github.com/limechain/magnus.git?branch=extend-router-ixs#9ecd34b634031f5dfdf5747c33a329605ea6e7c4",
+          "rule": "Patch mutable branch selector in vendored Cargo.toml to immutable rev; retain original Cargo.lock and track the patch."
+        }
+      ],
+      "tests": [
+        "cargo test --locked",
+        "cargo build --release --locked",
+        "Run only direct/single/multi/benchmark modes against immutable snapshots"
+      ],
+      "must_not": [
+        "Spoofed aggregator CPI caller modes disabled and excluded from all tests",
+        "Do not fetch live mainnet accounts as a side effect",
+        "Simulation result is not a live quote or fill",
+        "Not linked into production Python runtime"
+      ]
+    },
+    {
+      "name": "1000xsh/swaps",
+      "repository": "https://github.com/1000xsh/swaps",
+      "ref": "06a999e8528ced5382ca41123c7c90cbaa11aed6",
+      "release": "0.1.1 Cargo metadata observed",
+      "license": "MIT declared in Cargo.toml",
+      "license_evidence": "Cargo.toml declares MIT; root LICENSE, LICENSE-MIT and LICENSE-APACHE were not found in this review",
+      "status": "HOLD_PENDING_LICENSE_PACKAGE_VERIFICATION",
+      "target": "vendor/strategy-research/1000xsh-swaps",
+      "role": "Direct swap instruction builder, not a quote engine",
+      "build_profile": "isolated Rust 2024 workspace; solana-address 2.6 type line",
+      "tests": [
+        "Verify published crate archive checksum and bundled license metadata",
+        "cargo test --all-features --locked",
+        "cargo clippy --all-features --all-targets -- -D warnings"
+      ],
+      "must_not": [
+        "Do not copy until license evidence is resolved",
+        "Do not treat min_amount_out as a universal guard",
+        "HumidiFi ignores min_amount_out per upstream notes; require same-transaction post-balance assertion or block",
+        "Bonkswap has a price-limit caveat; preserve venue-specific semantics",
+        "Test Tessera direct path and SolFi slot/oracle dependency explicitly"
+      ]
+    },
+    {
+      "name": "ValidatorsDAO/solana-stream",
+      "repository": "https://github.com/ValidatorsDAO/solana-stream",
+      "ref": "3b22307033ec6d7b78242d3b4cc9f3168209dcfd",
+      "release": "workspace v5 metadata observed",
+      "license": "Apache-2.0",
+      "license_evidence": "LICENSE.txt file read from upstream",
+      "status": "MIRROR_CANDIDATE_READ_ONLY_STREAM_HARNESS",
+      "target": "vendor/strategy-research/validatorsdao-solana-stream",
+      "role": "Geyser gRPC / Shred gRPC / UDP shred client research",
+      "build_profile": "isolated workspace; current README notes Transaction v1 and Alpenglow wire format requirements",
+      "tests": [
+        "cargo test --locked for selected client crate",
+        "Test slot gap, duplicate, reorder, reorg, reconnect and bounded backpressure"
+      ],
+      "must_not": [
+        "UDP shreds can be missing/out-of-order/pre-finalization; treat as tentative signals",
+        "SDK use does not grant a provider feed subscription",
+        "No separate production market-data capture service"
+      ]
+    },
+    {
+      "name": "solana-arb-executor",
+      "repository": "https://github.com/alexbanda08/solana-arb-executor",
+      "ref": "07d8145ab9aec65d60aca1cc431b3a0851bf7c32",
+      "license": "MIT",
+      "license_evidence": "LICENSE file read from upstream",
+      "status": "MIRROR_AS_RESEARCH_SKILL_ONLY",
+      "target": "vendor/strategy-research/solana-arb-executor",
+      "role": "Codex/Claude code-generation skill templates and risk-gate reference",
+      "build_profile": "documentation/skill review; not a runtime crate",
+      "tests": [
+        "Review generated code templates manually; never launch live bot"
+      ],
+      "must_not": [
+        "Do not install as a live executor",
+        "Do not adopt signer/sender templates without PR130/MPR04 review"
+      ]
+    },
+    {
+      "name": "Anza Mollusk",
+      "repository": "https://github.com/anza-xyz/mollusk",
+      "ref": "81d1463aabad700c3bb953827215c5dfc81ca61a",
+      "license": "Apache-2.0",
+      "license_evidence": "LICENSE file read from upstream; Cargo.toml declares license-file",
+      "status": "DEV_TEST_HARNESS_CANDIDATE",
+      "target": "vendor/strategy-research/anza-mollusk",
+      "role": "Deterministic SVM instruction tests and CU measurement",
+      "build_profile": "separate dev/test workspace; current crate line v0.16.4 observed",
+      "tests": [
+        "cargo test --locked for selected harness"
+      ],
+      "must_not": [
+        "Not a production quote engine or market-data source"
+      ]
+    },
+    {
+      "name": "Anza Pinocchio",
+      "repository": "https://github.com/anza-xyz/pinocchio",
+      "ref": "b45dd2a98e3437a42140bafd98b49b78c9e76305",
+      "license": "Apache-2.0",
+      "license_evidence": "LICENSE file read from upstream",
+      "status": "ONCHAIN_PROGRAM_REFERENCE_ONLY",
+      "target": "vendor/strategy-research/anza-pinocchio",
+      "role": "Low-level on-chain program framework only if an existing on-chain program bottleneck is measured",
+      "build_profile": "separate program workspace; not part of off-chain Python executor",
+      "tests": [
+        "Only a separately scoped program PR with CU and binary-size benchmarks"
+      ],
+      "must_not": [
+        "Do not create a new on-chain router solely to use this library",
+        "Do not claim fixed percentage CU reduction"
+      ]
+    },
+    {
+      "name": "Jito ShredStream Proxy",
+      "repository": "https://github.com/jito-labs/shredstream-proxy",
+      "ref": "b96e369f3165600c02182e3d8e1d01b6aada9fdb",
+      "license": "Apache-2.0",
+      "license_evidence": "LICENSE file read from upstream",
+      "status": "HISTORICAL_REFERENCE_ONLY",
+      "target": "vendor/strategy-research/jito-shredstream-proxy",
+      "role": "Protocol history / compatibility reference for retired feed path",
+      "build_profile": "not built for production",
+      "tests": [],
+      "must_not": [
+        "Jito ShredStream sunset means this client does not create a working feed entitlement",
+        "Do not expose it as an active data provider"
+      ]
+    },
+    {
+      "name": "LiteSVM",
+      "repository": "https://github.com/LiteSVM/litesvm",
+      "ref": null,
+      "license": "Verify crate and exact upstream revision",
+      "license_evidence": "pmm-sim Cargo dependency litesvm=0.10.0; no independent source mirror pin made in this sweep",
+      "status": "USE_LOCKED_CRATE_TRANSITIVELY_FIRST",
+      "target": null,
+      "role": "pmm-sim in-process SVM harness",
+      "build_profile": "Use pmm-sim lockfile first; do not add a second version to main runtime",
+      "tests": [],
+      "must_not": [
+        "Avoid version drift across harnesses"
+      ]
+    },
+    {
+      "name": "Solana Arbitrage Framework (ototech7)",
+      "repository": "https://github.com/ototech7/Solana-Arbitrage-Framework",
+      "ref": null,
+      "license": "Not independently verified",
+      "license_evidence": "README says educational / not production",
+      "status": "REFERENCE_ONLY_LICENSE_HOLD",
+      "target": null,
+      "role": "Educational architecture reference",
+      "build_profile": "Do not build or run as a bot",
+      "tests": [],
+      "must_not": [
+        "Do not import old venue code as production-ready",
+        "Do not reuse its hard-coded success/slippage targets"
+      ]
+    },
+    {
+      "name": "Solana arb framework (sripathiabhiram29-droid)",
+      "repository": "https://github.com/sripathiabhiram29-droid/solana-arb-framework",
+      "ref": null,
+      "license": "Not verified",
+      "license_evidence": "README describes live loop, wallet/keypair environment variables and dashboard trading controls",
+      "status": "EXCLUDE_FROM_BUILD_AND_EXECUTION",
+      "target": null,
+      "role": "Security-review reference only",
+      "build_profile": "Do not build or run",
+      "tests": [],
+      "must_not": [
+        "No credentials",
+        "No live_loop",
+        "No wallet/keypair loading",
+        "No mainnet execution"
+      ]
+    },
+    {
+      "name": "KADES / CADES / Capture OS",
+      "repository": null,
+      "ref": null,
+      "license": "Unknown",
+      "license_evidence": "No canonical code repository or documented API contract identified",
+      "status": "NO_SOURCE_TO_MIRROR",
+      "target": null,
+      "role": "Unresolved external signal lead",
+      "build_profile": "No implementation until canonical source and terms are verified",
+      "tests": [],
+      "must_not": [
+        "Do not fabricate a client or duplicate the existing detector/capture owner"
+      ]
+    },
+    {
+      "name": "Hosted feed / relay vendors",
+      "repository": null,
+      "ref": null,
+      "license": "Commercial service terms, not source license",
+      "license_evidence": "LocalShred, DoubleZero, OrbitFlare, Helius, Triton, GetBlock, Astralane, Syncro, Sanctum, BoltTx and Nozomi are provider products; source code cannot be inferred from product name",
+      "status": "API_CONTRACT_ONLY_NOT_VENDOR_SOURCE",
+      "target": null,
+      "role": "Use existing provider governance with per-product capability profiles",
+      "build_profile": "No provider activation or credentials in repository",
+      "tests": [
+        "Mock contract tests only until operator grants access"
+      ],
+      "must_not": [
+        "Do not claim provider client is official without official docs",
+        "Do not store tokens/endpoints with secrets",
+        "No trial/subscription activation"
+      ]
+    },
+    {
+      "name": "Jupiter Swap API V2",
+      "repository": null,
+      "ref": null,
+      "license": "API terms",
+      "license_evidence": "Official API docs; hosted API is not an open-source source tree",
+      "status": "API_ADAPTER_ONLY",
+      "target": null,
+      "role": "V2 /order quotes and /build raw instructions",
+      "build_profile": "Mock transport contract tests and R13 normalization",
+      "tests": [
+        "Schema tests",
+        "Same amount/context differential tests"
+      ],
+      "must_not": [
+        "No live API calls without approved source credentials/quota",
+        "/build output remains unsigned and unsubmitted"
+      ]
+    },
+    {
+      "name": "sol-trade-sdk / sol-trade-router-sdk",
+      "repository": "https://github.com/0xfnzero/sol-trade-sdk",
+      "ref": null,
+      "license": "Requires separate license/review",
+      "license_evidence": "sol-parser-sdk README lists separate trading/signing/multi-channel submission SDKs",
+      "status": "DO_NOT_MIRROR_OR_INTEGRATE_IN_THIS_PACK",
+      "target": null,
+      "role": "Reference only; conflicts with isolated signer and submission owner",
+      "build_profile": "No build/test in bot",
+      "tests": [],
+      "must_not": [
+        "No private keys",
+        "No second signer",
+        "No parallel multi-channel sender",
+        "No bypass of MPR04/PR130"
+      ]
+    }
+  ],
+  "archive_rules": [
+    "Clone into temporary directory, checkout exact commit detached, then git archive into reviewed vendor path; do not leave nested .git.",
+    "Save original upstream LICENSE/NOTICE/COPYING and provenance.json next to each snapshot.",
+    "Compute SHA-256 of archive and license files; verify commit with git rev-parse HEAD.",
+    "Run cargo metadata --locked; retain Cargo.lock. Resolve branch-based git dependencies to immutable revisions. Do not allow floating main/master dependencies.",
+    "Run cargo-deny/cargo-audit or repository-approved equivalents before building; record transitive licenses and advisories.",
+    "Do not add vendored tools to pyproject runtime dependencies or supported composition root until an adapter PR passes tests and packaging gates.",
+    "If source lacks a complete license, stop mirroring and keep URL+metadata only.",
+    "An external source archive is not a runtime capability, source credential, API subscription or permission to contact provider infrastructure."
+  ],
+  "activation": {
+    "download_allowed_for_candidate_snapshots": true,
+    "build_allowed_in_isolated_workspaces": true,
+    "network_provider_calls": false,
+    "install_in_supported_runtime": false,
+    "sign_enabled": false,
+    "send_enabled": false,
+    "borrow_enabled": false,
+    "live_enabled": false
+  }
+}

@@ -26,7 +26,7 @@
 2. **Detection / parsing:** переиспользовать текущий source governance и canonical market observations. 0xfnzero/sol-parser-sdk — возможный parser adapter после dependency compatibility и benchmark. KADES/CADES и Capture OS — только optional external signal leads, пока нет проверенной публичной API/репозитория/контракта. solana-arb-executor — code-generation skill reference, не runtime dependency.
 3. **Microscope / simulation:** LimeChain/pmm-sim как изолированный offline differential harness для direct/single/multi/benchmark сценариев на pinned current account snapshots. LiteSVM и Mollusk — тестовые SVM harnesses; Pinocchio — низкоуровневая on-chain program library только после измеренного CU/binary bottleneck.
 4. **Router / builders:** Jupiter Swap API V2 для benchmark quote/order и /build raw instructions; 1000xsh/swaps как прямой instruction builder (не quote engine). Сверять точный input, output mint, token program/extensions, pool/program identity, state slot, fees, slippage floor, accounts, CU и final balance guard.
-5. **Delivery:** канонический путь из docs/pr130_jito_mev_policy.md остаётся первым разрешённым дизайном: одна стратегия-транзакция через JITO_SINGLE/sendTransaction, один tip в той же транзакции, без standalone tip tx и без multi-tx bundle на первой production-полосе. Helius/Astralane/Syncro — кандидаты для отдельной sender qualification. Никакой all-relay fan-out и никакого предположения «платим только победителю».
+5. **Delivery:** канонический путь из docs/pr130_jito_mev_policy.md остаётся первым разрешённым дизайном: одна стратегия-транзакция через JITO_SINGLE/sendTransaction, один tip в той же транзакции, без standalone tip tx и без multi-tx bundle на первой production-полосе. Helius/Astralane/Syncro — кандидаты для отдельной sender qualification. Никакой all-relay fan-out и никакого предположения «платим только победителю». Внутренний multipath одного поставщика (Helius Sender Max, Syncro, bloXroute) — отдельная функция самого сервиса.
 6. **Atomic flashloan:** borrow → all swap legs → repayment → post-balance/economic invariants внутри того же атомарного transaction plan; builder обязуется доказать repayment coverage. Маршрутный split допускается лишь по измеренной ликвидности/impact и только если весь набор legs остаётся атомарным.
 
 ## Важные корректировки исходного pasted text
@@ -44,11 +44,11 @@
 
 ## Необходимая последовательность реализации
 
-См. IMPLEMENTATION_DAG_AND_ACCEPTANCE_RU.md. Сначала read-only источник и evidence, затем parser, simulation harness, direct builder + Jupiter differential, и только затем отдельная submission qualification. Этот pack сам по себе не включает платные endpoints, не создаёт аккаунты, не хранит credentials, не подписывает, не отправляет и не занимает flashloan.
+См. PMM_SIM_CALLER_PROFILE_RESEARCH_RU.md, RELAY_PROVIDER_TIP_PROFILES_V1.json и IMPLEMENTATION_DAG_AND_ACCEPTANCE_RU.md. Сначала read-only источник и evidence, затем parser, simulation harness, direct builder + Jupiter differential, и только затем отдельная submission qualification. Этот pack сам по себе не включает платные endpoints, не создаёт аккаунты, не хранит credentials, не подписывает, не отправляет и не занимает flashloan.
 
 ## Hard stops
 
-- Запрещены маскировка токсичного потока, impersonation aggregator identity, spoofed CPI caller в целях получения preferential quote, обход фильтров/ограничений venue и timing/size randomization для сокрытия стратегии.
+- Запрещено production impersonation aggregator identity и spoofed CPI caller. Разрешено только локальное LiteSVM исследование caller-dependent pricing через pmm-sim synthetic profiles Jupiter/DFlow/OKX/Titan на одном frozen snapshot; результаты не являются реальными aggregator routes и не дают права использовать чужой program ID в mainnet.
 - Запрещены sandwich/front-running, victim targeting, unauthorized private order flow.
 - Split только для price-impact/capacity/reservation correctness; никаких «рассыпных» non-atomic транзакций с заёмным капиталом без отдельной доказанной модели риска.
 - Fixture/replay не считать live market evidence.

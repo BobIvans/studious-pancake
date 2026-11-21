@@ -28,7 +28,7 @@ OPENLINEAGE_CORE_SCHEMA_URL = (
     "https://openlineage.io/spec/2-0-2/OpenLineage.json#/$defs/RunEvent"
 )
 FACET_SCHEMA_RESOURCE = "openlineage_facets.v1.json"
-FACET_SCHEMA_COMMIT = "6ae925f9560305b0a6c987e08c83e4e263e04cb1"
+FACET_SCHEMA_COMMIT = "bc167def28a0432a51b91f8233d6c8d33db7a74b"
 FACET_SCHEMA_BASE_URL = (
     "https://raw.githubusercontent.com/BobIvans/studious-pancake/"
     f"{FACET_SCHEMA_COMMIT}/src/resources/{FACET_SCHEMA_RESOURCE}"
@@ -63,7 +63,12 @@ class DatasetRef:
     name: str
 
     def __post_init__(self) -> None:
-        if not self.namespace.strip() or not self.name.strip():
+        if (
+            not isinstance(self.namespace, str)
+            or not self.namespace.strip()
+            or not isinstance(self.name, str)
+            or not self.name.strip()
+        ):
             raise OpenLineageProjectionError(
                 "dataset namespace and name must be non-empty"
             )
@@ -87,7 +92,12 @@ class StrategyContext:
     strategy_family: str | None = None
 
     def __post_init__(self) -> None:
-        if not self.strategy_id.strip() or not self.strategy_version.strip():
+        if (
+            not isinstance(self.strategy_id, str)
+            or not self.strategy_id.strip()
+            or not isinstance(self.strategy_version, str)
+            or not self.strategy_version.strip()
+        ):
             raise OpenLineageProjectionError(
                 "strategy ID and version must be non-empty"
             )
@@ -157,6 +167,12 @@ class DataQualityContext:
             raise OpenLineageProjectionError("freshness_ms must be non-negative")
         if self.coverage_ratio is not None and not 0 <= self.coverage_ratio <= 1:
             raise OpenLineageProjectionError("coverage_ratio must be between 0 and 1")
+        if self.event_time is not None:
+            _validate_rfc3339(self.event_time, field_name="event_time")
+        if self.ingest_time is not None:
+            _validate_rfc3339(self.ingest_time, field_name="ingest_time")
+        if any(not item for item in self.gap_refs) or len(self.gap_refs) > 256:
+            raise OpenLineageProjectionError("gap_refs must be non-empty and bounded")
         if self.correction_kind not in {None, "original", "correction", "retraction"}:
             raise OpenLineageProjectionError("unsupported correction kind")
         if self.raw_payload_sha256 is not None and not _SHA256_RE.fullmatch(
@@ -210,6 +226,17 @@ def _facet(
         "_schemaURL": _facet_schema_url(name),
         **dict(properties),
     }
+
+
+def _validate_rfc3339(value: str, *, field_name: str) -> None:
+    if not isinstance(value, str):
+        raise OpenLineageProjectionError(f"{field_name} must be RFC3339 text")
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise OpenLineageProjectionError(f"{field_name} must be RFC3339") from exc
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise OpenLineageProjectionError(f"{field_name} must include a timezone")
 
 
 def _event_time(occurred_at_utc_ns: int) -> str:
@@ -349,6 +376,15 @@ def validate_openlineage_run_event(payload: object) -> None:
     job = payload.get("job")
     if not isinstance(run, Mapping) or not isinstance(job, Mapping):
         raise OpenLineageProjectionError("RunEvent requires run and job objects")
+    event_time = payload.get("eventTime")
+    _validate_rfc3339(event_time, field_name="eventTime")
+    try:
+        uuid.UUID(str(run.get("runId")))
+    except (ValueError, AttributeError) as exc:
+        raise OpenLineageProjectionError("runId must be a UUID") from exc
+    producer = payload.get("producer")
+    if not isinstance(producer, str) or not producer.startswith("https://"):
+        raise OpenLineageProjectionError("producer must be an HTTPS URI")
     validate_facets(
         run.get("facets"),
         supported={
@@ -403,7 +439,12 @@ def project_event(
     Inputs, outputs, event type and lineage edges are caller-supplied explicitly.
     The projector never infers them from EventEnvelope.attributes.
     """
-    if not job_namespace.strip() or not job_name.strip():
+    if (
+        not isinstance(job_namespace, str)
+        or not job_namespace.strip()
+        or not isinstance(job_name, str)
+        or not job_name.strip()
+    ):
         raise OpenLineageProjectionError("job namespace and name are required")
     producer_uri = _producer_uri(repo_sha)
     event_type = OpenLineageEventType(event_type)
@@ -547,8 +588,30 @@ def project_event(
 
 def serialize_run_event(
     envelope: EventEnvelope,
-    **projection: object,
+    *,
+    event_type: OpenLineageEventType,
+    job_namespace: str,
+    job_name: str,
+    repo_sha: str,
+    inputs: Sequence[DatasetRef],
+    outputs: Sequence[DatasetRef],
+    lineage_edges: Sequence[ExplicitLineageEdge] = (),
+    strategy: StrategyContext | None = None,
+    block: BlockContext | None = None,
+    dataset_quality: Mapping[DatasetRef, DataQualityContext] | None = None,
 ) -> str:
     """Return canonical JSON for one validated OpenLineage RunEvent."""
-    payload = project_event(envelope, **projection)  # type: ignore[arg-type]
+    payload = project_event(
+        envelope,
+        event_type=event_type,
+        job_namespace=job_namespace,
+        job_name=job_name,
+        repo_sha=repo_sha,
+        inputs=inputs,
+        outputs=outputs,
+        lineage_edges=lineage_edges,
+        strategy=strategy,
+        block=block,
+        dataset_quality=dataset_quality,
+    )
     return canonical_json_bytes(payload).decode("utf-8")

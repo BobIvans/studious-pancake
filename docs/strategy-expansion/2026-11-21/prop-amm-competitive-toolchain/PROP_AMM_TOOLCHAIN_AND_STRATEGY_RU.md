@@ -62,7 +62,7 @@ Before use:
 6. compare simulator outputs with independent official/reference vectors and current exact quote math;
 7. preserve every negative/revert/unsupported route.
 
-Do not assume spoof CPI caller behavior is a valid or permitted production route. Any CPI caller mutation is excluded from strategy execution. The test harness may only assess explicitly documented instruction semantics with authentic caller identity.
+Use pmm-sim local LiteSVM caller-profile matrix (DIRECT, Magnus, simulated Jupiter, DFlow, OKX and Titan) to measure caller-dependent AMM price differences. The source implements synthetic aggregator identity locally by loading a Magnus router binary under the selected ID; this is not authentic aggregator execution. Never deploy or send with the synthetic ID. Production must use the genuine official aggregator route/build integration. See PMM_SIM_CALLER_PROFILE_RESEARCH_RU.md.
 
 ### SVM roles
 
@@ -131,4 +131,4 @@ Splitting is legitimate only when measured pool capacity, slippage/price impact,
 
 ## 6. Delivery and feedback
 
-The delivery plan and prohibitions are specified in RELAY_AND_ORDERFLOW_POLICY_RU.md. A provider ACK is not landing; landing is not final settlement. Reconcile finalized signature, actual balance delta, repayment, rent, fees, tip and all provider charges before calling any opportunity successful.
+The delivery plan and verified tip floors are specified in RELAY_AND_ORDERFLOW_POLICY_RU.md and RELAY_PROVIDER_TIP_PROFILES_V1.json. A provider ACK is not landing; landing is not final settlement. Reconcile finalized signature, actual balance delta, repayment, rent, fees, tip and all provider charges before calling any opportunity successful.

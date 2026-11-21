@@ -24,13 +24,25 @@ from src.economics.flash_capital_graph.graph import (
     KaminoCapitalProvider,
 )
 from src.lending.kamino import (
+    KAMINO_CONFIG_BORROW_LIMIT_OFFSET,
+    KAMINO_CONFIG_DEPOSIT_LIMIT_OFFSET,
+    KAMINO_CONFIG_DEPOSIT_WITHDRAWAL_CAP_OFFSET,
+    KAMINO_FLASH_BORROW_CHECKS_TOTAL_AVAILABLE_AMOUNT_ONLY,
+    KAMINO_FLASH_BORROW_IGNORES_BORROW_LIMIT,
+    KAMINO_FLASH_BORROW_ORACLE_ELIGIBILITY_REQUIRED,
+    KAMINO_FLASH_FEE_DISABLED_SENTINEL_SF,
+    KAMINO_FEE_ROUNDING_RULE,
     KAMINO_FLASH_BORROW_INSTRUCTION_NAME,
     KAMINO_FLASH_IX_OBLIGATION_ACCOUNT_REQUIRED,
     KAMINO_FLASH_REPAY_CARRIES_BORROW_INSTRUCTION_INDEX_U8,
     KAMINO_FLASH_REPAY_INSTRUCTION_NAME,
+    KAMINO_LENDING_MARKET_SIZE_PINNED,
+    KAMINO_MARKET_REFERRAL_FEE_BPS_OFFSET,
+    KAMINO_PROGRAM_VERSION_PINNED,
     KAMINO_RESERVE_ACCOUNT_DISCRIMINATOR,
     KAMINO_RESERVE_PINNED_FIELDS,
     KAMINO_RESERVE_PINNED_PREFIX_LEN,
+    KAMINO_RESERVE_SIZE_PINNED,
     KAMINO_SPL_TOKEN_ACCOUNT_LEN,
     KAMINO_UNPINNED_CAPACITY_GAPS,
     KLEND_FRACTION_SCALE_BITS,
@@ -51,8 +63,13 @@ from src.lending.kamino import (
     KaminoCapacityRejectionCode,
     KaminoReserveCapacityObservation,
     build_kamino_capital_reader_result,
+    calculate_kamino_flash_loan_fee,
+    decode_kamino_lending_market,
+    decode_kamino_mint_account,
     decode_kamino_reserve,
+    decode_kamino_reserve_config_tail,
     decode_kamino_vault_token_account,
+    derive_kamino_offline_flash_capacity_bound,
     kamino_flash_loan_fee_rational,
     kamino_reserve_capital_edge_gate,
     observe_kamino_reserve_capacity,
@@ -563,10 +580,17 @@ def test_flash_loan_fee_rational_is_exact_pinned_scale(fixture: Fixture) -> None
     assert kamino_flash_loan_fee_rational(raw) == Fraction(3, 4)
     assert kamino_flash_loan_fee_rational(KLEND_ONE_SF >> 1) == Fraction(1, 2)
     assert kamino_flash_loan_fee_rational(0) == Fraction(0)
-    assert fixture.observation.fee_rounding == "UNPINNED"
-    assert "FEE_ROUNDING_RULE_UNPINNED" in fixture.observation.constraint_gaps
+    # N08: the transfer-rounding rule is pinned (never invented); the
+    # observation claims exactly the pinned rule.
+    assert fixture.observation.fee_rounding == KAMINO_FEE_ROUNDING_RULE
+    assert KAMINO_FEE_ROUNDING_RULE == "U68F60_MUL_TRUNC_TO_ROUND_HALF_UP_MIN_1"
+    assert "FEE_ROUNDING_RULE_UNPINNED" not in obs_gap_set(fixture)
     with pytest.raises(KaminoCapacityReaderError):
         kamino_flash_loan_fee_rational(-1)
+
+
+def obs_gap_set(fixture: Fixture) -> set[str]:
+    return set(fixture.observation.constraint_gaps)
 
 
 def test_observation_types_blocked_unknown_capacity_not_zero(
@@ -580,20 +604,30 @@ def test_observation_types_blocked_unknown_capacity_not_zero(
         "LIVE_ROOTED_RPC_NOT_AUTHORIZED",
     }
     for gap in (
+        # Cleared by N08 with vendored codegen / study-cited semantics:
+        # BORROW_LIMIT_UNDECODABLE_OFFLINE, UTILIZATION_CONFIG_UNDECODABLE_OFFLINE,
+        # CONFIG_TAIL_LAYOUT_UNPINNED, LENDING_MARKET_LAYOUT_UNPINNED,
+        # ORACLE_HEALTH_ELIGIBILITY_UNPINNED, FEE_ROUNDING_RULE_UNPINNED,
+        # ORIGINATION_FEE_PAYABLE_AMOUNT_UNPINNED, MINT_ACCOUNT_NOT_DECODED_OFFLINE,
+        # FLASH_FEE_DEDUCTION_SEMANTICS_UNAUDITED (see module gap comment).
+        "ORACLE_PRICE_STATUS_SEMANTICS_UNPINNED",
+        "INTEREST_ACCRUAL_LAZY_UPDATE_UNAUDITED",
+        "SUPPLY_VAULT_AUTHORITY_BINDING_UNPROVEN",
+        "ELEVATION_GROUP_BORROW_LIMIT_SEMANTICS_UNPINNED",
+    ):
+        assert gap in obs.constraint_gaps, gap
+    for cleared in (
         "BORROW_LIMIT_UNDECODABLE_OFFLINE",
         "UTILIZATION_CONFIG_UNDECODABLE_OFFLINE",
         "CONFIG_TAIL_LAYOUT_UNPINNED",
         "LENDING_MARKET_LAYOUT_UNPINNED",
         "ORACLE_HEALTH_ELIGIBILITY_UNPINNED",
-        "ORACLE_PRICE_STATUS_SEMANTICS_UNPINNED",
         "FEE_ROUNDING_RULE_UNPINNED",
         "ORIGINATION_FEE_PAYABLE_AMOUNT_UNPINNED",
-        "INTEREST_ACCRUAL_LAZY_UPDATE_UNAUDITED",
-        "SUPPLY_VAULT_AUTHORITY_BINDING_UNPROVEN",
         "MINT_ACCOUNT_NOT_DECODED_OFFLINE",
         "FLASH_FEE_DEDUCTION_SEMANTICS_UNAUDITED",
     ):
-        assert gap in obs.constraint_gaps, gap
+        assert cleared not in obs.constraint_gaps, cleared
     assert "REVIEWED_MINT_BINDING_ABSENT" not in obs.constraint_gaps
     assert set(KAMINO_UNPINNED_CAPACITY_GAPS) <= set(obs.constraint_gaps)
     assert obs.status == "BLOCKED_LIVE_STATE"
@@ -823,3 +857,353 @@ def test_flash_capital_edge_cannot_be_fabricated_from_offline_evidence(
         )
     # And the observation itself structurally carries no usable capacity.
     assert fixture.observation.effective_capacity_base_units is None
+
+
+# ---------------------------------------------------------------------------
+# N08 qualification: config-tail decode, exact flash fee math, lending-market
+# and mint decode, and the program-proven offline flash-capacity bound.
+# ---------------------------------------------------------------------------
+
+
+def _full_reserve_values() -> dict[str, bytes]:
+    """Full-length (8616-byte) reserve values with version pinned to 1."""
+
+    values = _default_reserve_values(
+        _pk(3), _pk(7), _pk(9), _pk(10), SPL_TOKEN_PROGRAM_ID
+    )
+    values["version"] = (KAMINO_PROGRAM_VERSION_PINNED).to_bytes(8, "little")
+    return values
+
+
+def _full_reserve_bytes(
+    tail_patches: dict[int, bytes] | None = None,
+    *,
+    prefix_overrides: dict[str, bytes] | None = None,
+) -> bytes:
+    """Build a schema-valid full 8616-byte Reserve with tail patches."""
+
+    values = _full_reserve_values()
+    if prefix_overrides:
+        values.update(prefix_overrides)
+    raw = bytearray(_reserve_bytes(values, tail_len=KAMINO_RESERVE_SIZE_PINNED - 4904))
+    assert len(raw) == KAMINO_RESERVE_SIZE_PINNED
+    for offset, chunk in (tail_patches or {}).items():
+        raw[offset : offset + len(chunk)] = chunk
+    return bytes(raw)
+
+
+def test_n08_config_tail_offset_arithmetic_matches_pinned_program_sizes() -> None:
+    # Config spans 4840..5792 (RESERVE_CONFIG_SIZE = 952) and the tail that is
+    # decoded starts exactly where the previously vendored prefix ended.
+    assert KAMINO_CONFIG_BORROW_LIMIT_OFFSET == 5008
+    assert KAMINO_CONFIG_DEPOSIT_LIMIT_OFFSET == 5000
+    assert KAMINO_CONFIG_DEPOSIT_WITHDRAWAL_CAP_OFFSET == 5400
+    assert KAMINO_RESERVE_SIZE_PINNED == 8616
+    assert KAMINO_LENDING_MARKET_SIZE_PINNED == 4656
+    # config base 4840 + 952 = 5792 = start of configPadding [u64;112] = 896;
+    # 5792 + 896 = 6688 = borrowedAmountOutsideElevationGroup; + 8 + 32*8 = 6952;
+    # withdrawQueue 32 + padding 204*8 = 1632 -> 6952 + 32 + 1632 = 8616.
+    assert 4840 + 952 + 896 + 8 + 256 + 32 + 1632 == KAMINO_RESERVE_SIZE_PINNED
+
+
+def test_n08_decode_kamino_reserve_config_tail_positive() -> None:
+    tail_patches = {
+        # borrowLimit = 1_500_000_000 @5008
+        KAMINO_CONFIG_BORROW_LIMIT_OFFSET: (1_500_000_000).to_bytes(8, "little"),
+        # depositLimit = 4_000_000_000 @5000
+        KAMINO_CONFIG_DEPOSIT_LIMIT_OFFSET: (4_000_000_000).to_bytes(8, "little"),
+        # borrowFactorPct @4992
+        4992: (120).to_bytes(8, "little"),
+        # depositWithdrawalCap.configCapacity = -1 (i64, "no cap") @5400
+        KAMINO_CONFIG_DEPOSIT_WITHDRAWAL_CAP_OFFSET: (-1).to_bytes(
+            8, "little", signed=True
+        ),
+        # debtWithdrawalCap.configCapacity = 500_000_000 @5432
+        5432: (500_000_000).to_bytes(8, "little"),
+        # utilizationLimitBlockBorrowingAbovePct @5485
+        5485: (95).to_bytes(1, "little"),
+        # borrowLimitOutsideElevationGroup @5488
+        5488: (1_400_000_000).to_bytes(8, "little"),
+    }
+    raw = bytearray(_full_reserve_bytes(tail_patches))
+    # borrowRateCurve point 0 = (util 100 bps, borrow 550 bps) @4904
+    raw[4904:4908] = (100).to_bytes(4, "little")
+    raw[4908:4912] = (550).to_bytes(4, "little")
+
+    tail = decode_kamino_reserve_config_tail(bytes(raw))
+    assert tail.borrow_limit == 1_500_000_000
+    assert tail.deposit_limit == 4_000_000_000
+    assert tail.borrow_factor_pct == 120
+    assert tail.borrow_rate_curve_points[0] == (100, 550)
+    assert len(tail.borrow_rate_curve_points) == 11
+    assert tail.deposit_withdrawal_cap[0] == -1
+    assert tail.debt_withdrawal_cap[0] == 500_000_000
+    assert tail.utilization_limit_block_borrowing_above_pct == 95
+    assert tail.borrow_limit_outside_elevation_group == 1_400_000_000
+
+
+def test_n08_decode_kamino_reserve_config_tail_rejects_short_account() -> None:
+    with pytest.raises(KaminoCapacityReaderError) as exc:
+        decode_kamino_reserve_config_tail(_full_reserve_bytes()[:8615])
+    assert exc.value.code == KaminoCapacityRejectionCode.RESERVE_TRUNCATED_LAYOUT
+
+
+def test_n08_calculate_kamino_flash_loan_fee_exact_vectors() -> None:
+    # amount 1_000_000, fee 0.75 -> exactly 750_000 (no rounding ambiguity).
+    fee_sf = 3 * (KLEND_ONE_SF >> 2)
+    assert calculate_kamino_flash_loan_fee(1_000_000, fee_sf) == 750_000
+    # Minimum fee of 1 applies before rounding (amount=2, fee 0 -> fee 1).
+    assert calculate_kamino_flash_loan_fee(2, 0) == 1
+    # Rounding is half-away-from-zero on the exact product: 5 * 0.5 = 2.5 -> 3
+    # (a floor rule would give 2, so this vector pins the direction).
+    assert calculate_kamino_flash_loan_fee(5, KLEND_ONE_SF >> 1) == 3
+    # Tiny fee rate below 1 unit still charges the minimum fee of 1.
+    assert calculate_kamino_flash_loan_fee(10, 1) == 1
+    # fee >= amount fails on-chain with BorrowTooSmall; the reader mirrors it.
+    with pytest.raises(KaminoCapacityReaderError, match="BorrowTooSmall"):
+        calculate_kamino_flash_loan_fee(2, KLEND_ONE_SF)
+    # Disabled sentinel (u64::MAX) never computes a fee.
+    with pytest.raises(KaminoCapacityReaderError, match="disabled"):
+        calculate_kamino_flash_loan_fee(
+            1_000_000, KAMINO_FLASH_FEE_DISABLED_SENTINEL_SF
+        )
+    # Referrer: bps=5000 halves the fee (floor at the scaled-fraction level);
+    # bps=10000 gives the whole fee to the referrer (protocol fee 0).
+    assert (
+        calculate_kamino_flash_loan_fee(
+            1_000_000, fee_sf, referral_fee_bps=5000, has_referrer=True
+        )
+        == 750_000 - 375_000
+    )
+    assert (
+        calculate_kamino_flash_loan_fee(
+            1_000_000, fee_sf, referral_fee_bps=10_000, has_referrer=True
+        )
+        == 0
+    )
+    # No referrer means no referral split regardless of market bps.
+    assert (
+        calculate_kamino_flash_loan_fee(1_000_000, fee_sf, referral_fee_bps=5000)
+        == 750_000
+    )
+    # Non-positive amounts and bad bps fail closed.
+    with pytest.raises(KaminoCapacityReaderError):
+        calculate_kamino_flash_loan_fee(0, fee_sf)
+    with pytest.raises(KaminoCapacityReaderError):
+        calculate_kamino_flash_loan_fee(1_000_000, fee_sf, referral_fee_bps=10_001)
+
+
+def test_n08_decode_kamino_lending_market_positive() -> None:
+    raw = bytearray(200)
+    raw[:8] = KAMINO_RESERVE_ACCOUNT_DISCRIMINATOR
+    raw[8:16] = (1).to_bytes(8, "little")
+    raw[16:24] = (7).to_bytes(8, "little")
+    raw[24:56] = bytes(_pk(11))
+    raw[56:88] = bytes(_pk(12))
+    raw[88:120] = b"USDC" + bytes(28)
+    fee_off = KAMINO_MARKET_REFERRAL_FEE_BPS_OFFSET
+    raw[fee_off : fee_off + 2] = (500).to_bytes(2, "little")
+    raw[122] = 0  # emergencyMode
+    raw[123] = 0  # autodeleverageEnabled
+    raw[124] = 0  # borrowDisabled
+    state = decode_kamino_lending_market(
+        bytes(raw), address=_pk(7), owner_program=KLEND_PROGRAM_ID
+    )
+    assert state.referral_fee_bps == 500
+    assert state.version == 1
+    assert state.emergency_mode == 0
+    assert state.borrow_disabled == 0
+    assert state.quote_currency[:4] == b"USDC"
+    assert state.lending_market_owner == _pk(11)
+    assert len(state.tail_sha256) == 64
+
+
+def test_n08_decode_kamino_lending_market_negative_matrix() -> None:
+    def _market() -> bytes:
+        raw = bytearray(200)
+        raw[:8] = KAMINO_RESERVE_ACCOUNT_DISCRIMINATOR
+        raw[8:16] = (1).to_bytes(8, "little")
+        raw[122] = 0
+        raw[124] = 0
+        return bytes(raw)
+
+    good = _market()
+    with pytest.raises(KaminoCapacityReaderError):
+        decode_kamino_lending_market(good, address=_pk(7), owner_program=_pk(99))
+    bad_version = bytearray(good)
+    bad_version[8:16] = (2).to_bytes(8, "little")
+    with pytest.raises(KaminoCapacityReaderError, match="version"):
+        decode_kamino_lending_market(
+            bytes(bad_version), address=_pk(7), owner_program=KLEND_PROGRAM_ID
+        )
+    emergency = bytearray(good)
+    emergency[122] = 1
+    with pytest.raises(KaminoCapacityReaderError, match="emergency"):
+        decode_kamino_lending_market(
+            bytes(emergency), address=_pk(7), owner_program=KLEND_PROGRAM_ID
+        )
+    borrow_disabled = bytearray(good)
+    borrow_disabled[124] = 1
+    with pytest.raises(KaminoCapacityReaderError, match="borrow_disabled"):
+        decode_kamino_lending_market(
+            bytes(borrow_disabled), address=_pk(7), owner_program=KLEND_PROGRAM_ID
+        )
+    with pytest.raises(KaminoCapacityReaderError):
+        decode_kamino_lending_market(
+            good[:100], address=_pk(7), owner_program=KLEND_PROGRAM_ID
+        )
+
+
+def test_n08_decode_kamino_mint_account_positive_and_negatives() -> None:
+    raw = bytearray(82)
+    raw[0:4] = (1).to_bytes(4, "little")  # mint authority present
+    raw[4:36] = bytes(_pk(21))
+    raw[36:44] = (10_000_000_000).to_bytes(8, "little")
+    raw[44] = 6
+    raw[45] = 1  # initialized
+    raw[46:50] = (0).to_bytes(4, "little")  # no freeze authority
+    mint = _pk(3)
+    state = decode_kamino_mint_account(
+        bytes(raw),
+        address=mint,
+        owner_program=SPL_TOKEN_PROGRAM_ID,
+        expected_mint=mint,
+    )
+    assert state.mint_authority == _pk(21)
+    assert state.supply == 10_000_000_000
+    assert state.decimals == 6
+    assert state.is_initialized is True
+    assert state.freeze_authority is None
+    assert state.extensions_present is False
+
+    # Address binding is enforced fail-closed.
+    with pytest.raises(KaminoCapacityReaderError):
+        decode_kamino_mint_account(
+            bytes(raw),
+            address=_pk(4),
+            owner_program=SPL_TOKEN_PROGRAM_ID,
+            expected_mint=mint,
+        )
+    # Uninitialized mints fail closed.
+    uninitialized = bytearray(raw)
+    uninitialized[45] = 0
+    with pytest.raises(KaminoCapacityReaderError, match="initialized"):
+        decode_kamino_mint_account(
+            bytes(uninitialized),
+            address=mint,
+            owner_program=SPL_TOKEN_PROGRAM_ID,
+            expected_mint=mint,
+        )
+    # Unsupported owner program fails closed.
+    with pytest.raises(KaminoCapacityReaderError):
+        decode_kamino_mint_account(
+            bytes(raw), address=mint, owner_program=_pk(98), expected_mint=mint
+        )
+    # Token-2022 mint longer than 82 bytes reports extensions presence.
+    ext = bytes(raw) + bytes(50)
+    ext_state = decode_kamino_mint_account(
+        ext,
+        address=mint,
+        owner_program=SPL_TOKEN_2022_PROGRAM_ID,
+        expected_mint=mint,
+    )
+    assert ext_state.extensions_present is True
+
+
+def test_n08_derive_kamino_offline_flash_capacity_bound_positive() -> None:
+    reserve_bytes = _full_reserve_bytes(
+        {KAMINO_CONFIG_BORROW_LIMIT_OFFSET: (1_500_000_000).to_bytes(8, "little")}
+    )
+    state = decode_kamino_reserve(
+        reserve_bytes, owner=KLEND_PROGRAM_ID, lending_market=_pk(7)
+    )
+    bound = derive_kamino_offline_flash_capacity_bound(state)
+    # Program-proven flash bound is totalAvailableAmount (withdraw_including_
+    # queued); the borrow limit of 1.5e9 does NOT constrain the flash path
+    # because a full flash borrow of 5e9 exceeds it while remaining valid.
+    assert bound.bound_base_units == 5_000_000_000
+    assert bound.bound_base_units > 1_500_000_000
+    fee = calculate_kamino_flash_loan_fee(
+        bound.bound_base_units, 3 * (KLEND_ONE_SF >> 2)
+    )
+    assert fee == 3_750_000_000
+    assert bound.repay_obligation_base_units == 5_000_000_000 + 3_750_000_000
+    assert bound.fee_rule == KAMINO_FEE_ROUNDING_RULE
+    assert bound.blockers == ()
+
+
+def test_n08_derive_kamino_offline_flash_capacity_bound_negative_matrix() -> None:
+    def _state(patch, prefix_overrides=None):
+        raw = _full_reserve_bytes(patch, prefix_overrides=prefix_overrides)
+        return decode_kamino_reserve(raw, owner=KLEND_PROGRAM_ID, lending_market=_pk(7))
+
+    # Stale LastUpdate.
+    with pytest.raises(KaminoCapacityReaderError) as exc:
+        derive_kamino_offline_flash_capacity_bound(
+            _state(
+                {},
+                prefix_overrides={"last_update_stale": (1).to_bytes(1, "little")},
+            )
+        )
+    assert exc.value.code == KaminoCapacityRejectionCode.RESERVE_LAST_UPDATE_STALE
+    # Nonzero emergency mode.
+    with pytest.raises(KaminoCapacityReaderError) as exc:
+        derive_kamino_offline_flash_capacity_bound(
+            _state(
+                {},
+                prefix_overrides={"config_emergency_mode": (1).to_bytes(1, "little")},
+            )
+        )
+    assert exc.value.code == KaminoCapacityRejectionCode.RESERVE_EMERGENCY_MODE_NONZERO
+    # Obsolete reserve status (ReserveStatus::Obsolete = 1): the prefix decode
+    # itself fails closed on any nonzero status, so the bound derivation can
+    # never observe an obsolete reserve.
+    with pytest.raises(KaminoCapacityReaderError, match="status is nonzero"):
+        _state({}, prefix_overrides={"config_status": (1).to_bytes(1, "little")})
+    # Version mismatch.
+    with pytest.raises(KaminoCapacityReaderError, match="version"):
+        derive_kamino_offline_flash_capacity_bound(
+            _state({}, prefix_overrides={"version": (2).to_bytes(8, "little")})
+        )
+    # Disabled flash sentinel fee.
+    with pytest.raises(KaminoCapacityReaderError, match="disabled"):
+        derive_kamino_offline_flash_capacity_bound(
+            _state(
+                {},
+                prefix_overrides={
+                    "config_flash_loan_fee_sf": (
+                        KAMINO_FLASH_FEE_DISABLED_SENTINEL_SF.to_bytes(8, "little")
+                    )
+                },
+            )
+        )
+
+
+def test_n08_flash_semantics_pins_are_locked() -> None:
+    # Pin-lock: these constants are proven from klend@a087609 (see N08
+    # dossier). If upstream changes any of them, this test must be updated
+    # together with the dossier and the evidence record.
+    assert KAMINO_FLASH_BORROW_CHECKS_TOTAL_AVAILABLE_AMOUNT_ONLY is True
+    assert KAMINO_FLASH_BORROW_IGNORES_BORROW_LIMIT is True
+    assert KAMINO_FLASH_BORROW_ORACLE_ELIGIBILITY_REQUIRED is False
+    assert KAMINO_PROGRAM_VERSION_PINNED == 1
+    assert KAMINO_RESERVE_SIZE_PINNED == 8616
+
+
+def test_n08_observation_evidence_record_carries_fee_semantics(
+    fixture: Fixture,
+) -> None:
+    record = fixture.observation.evidence_record()
+    fee = record["flash_fee_semantics"]
+    assert fee["fee_rounding_rule"] == KAMINO_FEE_ROUNDING_RULE
+    assert fee["fee_charged_at_repay"] is True
+    assert fee["borrow_transfers_exact_amount"] is True
+    assert fee["disabled_sentinel_sf"] == KAMINO_FLASH_FEE_DISABLED_SENTINEL_SF
+    assert fee["minimum_fee_units"] == 1
+    assert fee["same_tx_matching_repay_required"] is True
+    assert fee["cpi_forbidden"] is True
+    assert fee["ignores_borrow_limit"] is True
+    assert fee["oracle_eligibility_required"] is False
+    # The observation itself still never claims effective capacity offline.
+    assert fixture.observation.effective_capacity_base_units is None
+    assert fixture.observation.capacity_derivation is KaminoCapacityDerivation.UNPROVEN

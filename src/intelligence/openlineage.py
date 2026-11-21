@@ -28,7 +28,7 @@ OPENLINEAGE_CORE_SCHEMA_URL = (
     "https://openlineage.io/spec/2-0-2/OpenLineage.json#/$defs/RunEvent"
 )
 FACET_SCHEMA_RESOURCE = "openlineage_facets.v1.json"
-FACET_SCHEMA_COMMIT = "bc167def28a0432a51b91f8233d6c8d33db7a74b"
+FACET_SCHEMA_COMMIT = "ead61c5c146fb4122eb5997c9d2ed43a69449079"
 FACET_SCHEMA_BASE_URL = (
     "https://raw.githubusercontent.com/BobIvans/studious-pancake/"
     f"{FACET_SCHEMA_COMMIT}/src/resources/{FACET_SCHEMA_RESOURCE}"

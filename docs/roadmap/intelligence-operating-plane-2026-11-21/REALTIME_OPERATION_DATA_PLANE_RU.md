@@ -178,4 +178,4 @@ A fresh checkout plus the portable data bundle (or approved connected data store
 - tests, config, repo commit and evidence supporting each conclusion;
 - gaps, corrections, failures, dropped events and unknown relationships.
 
-The system does not claim literal unlimited retention or that all market data exists. It reports exact coverage and gaps. No strategy becomes qualified based on incomplete telemetry. This is an implementation target; current functionality must be established by W0 and end-to-end tests.
+The system does not claim literal unlimited retention or that all market data exists. It reports exact coverage and gaps. “Full bot capture” means all presently supported paper/shadow execution paths have been inventoried and instrumented, not merely one test fixture or demonstration strategy. No strategy becomes qualified based on incomplete telemetry. This is an implementation target; current functionality must be established by W0 and end-to-end tests.

@@ -1,0 +1,15 @@
+{
+  "batches": 33,
+  "mode": "batched",
+  "offline_status": "ZERO_CONFIGURED_RPC_ATTEMPTS",
+  "skipped_scenarios": 0,
+  "snapshot_id": "upstream_401101387",
+  "terminal_status_counts": {
+    "FORWARD_SWAP_FAILED": 17,
+    "OK_COMPLETE_ROUND_TRIP": 22,
+    "REVERSE_SWAP_FAILED": 9
+  },
+  "throughput_scenarios_per_s": 24.12,
+  "wall_clock_s": 2.0,
+  "workers": 3
+}

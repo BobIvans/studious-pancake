@@ -12,6 +12,7 @@ Writes an immutable snapshot directory:
 
 This is CAPTURE_ONLY evidence: never PAPER_QUALIFIED, never live, valid only at the captured slot.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -29,21 +30,141 @@ MAGNUS_ROUTER_ID = "F9Z9WiieTtL4giMt3eBFEsB5vmAFotLz37FWC7NcbzpT"
 
 MARKETS = [
     # (swap_version, pair, market, base_ta, quote_ta, add1, vote)
-    ("v1", "WSOL-USDC", "FksffEqnBRixYGR791Qw2MgdU7zNCpHVFYBL4Fa4qVuH", "C3FzbX9n1YD2dow2dCmEv5uNyyf22Gb3TLAEqGBhw5fY", "3RWFAQBRkNGq7CMGcTLK3kXDgFTe9jgMeFYqk8nHwcWh", None, None),
-    ("v1", "WSOL-USDC", "DB3sUCP2H4icbeKmK6yb6nUxU5ogbcRHtGuq7W2RoRwW", "8BrVfsvzb1DZqCactbYWoKSv24AfsLBuXJqzpzYCwznF", "HsQcHFFNUVTp3MWrXYbuZchBNd4Pwk8636bKzLvpfYNR", None, None),
-    ("v1", "WSOL-USDC", "6n9VhCwQ7EwK6NqFDjnHPzEk6wZdRBTfh43RFgHQWHuQ", "Cv9St5tDTGwpbG5UVvM6QvFmf3FYSXc14W9BYvQN5wAZ", "7Rf8Gu8YemSoGjZT3z1cL5BT9HLbGywcyaz8Mrbhd1MH", None, None),
-    ("v1", "WSOL-USDC", "AvGeFw71N5sNfV97mZ1uNrHg4yfufRicCJUrS9j2ehTX", "ECEPWwZJ1U1Vjsj1X5sUbZYETKMSCjYHuoTMVitCn64t", "FBWtVVvzsRuAAzVX8ua1hden9KmgPrC2rFijuwEn1ngJ", None, None),
-    ("v1", "WSOL-USDC", "5dhYayH9qvzNyCPoh2hKN8TJqumoGsWdyZ9UfPLXBfD9", "86DHdQfRpghMCmXYKDg93bXtmi3doBL5NeY9DYwAj6rz", "FqEVwrQJsJ4AciwJRYLPQEdstDfUYJp6z3f6XYb6MnSb", None, None),
-    ("v2", "WSOL-USDC", "FksffEqnBRixYGR791Qw2MgdU7zNCpHVFYBL4Fa4qVuH", "C3FzbX9n1YD2dow2dCmEv5uNyyf22Gb3TLAEqGBhw5fY", "3RWFAQBRkNGq7CMGcTLK3kXDgFTe9jgMeFYqk8nHwcWh", "4nXmcNY1NjNd9sjA3qajUdUYpVDvwxTzGZT9oS4KpaD1", "J1to1yufRnoWn81KYg1XkTWzmKjnYSnmE2VY8DGUJ9Qv"),
-    ("v2", "WSOL-USDC", "DB3sUCP2H4icbeKmK6yb6nUxU5ogbcRHtGuq7W2RoRwW", "8BrVfsvzb1DZqCactbYWoKSv24AfsLBuXJqzpzYCwznF", "HsQcHFFNUVTp3MWrXYbuZchBNd4Pwk8636bKzLvpfYNR", None, None),
-    ("v2", "WSOL-USDC", "6n9VhCwQ7EwK6NqFDjnHPzEk6wZdRBTfh43RFgHQWHuQ", "Cv9St5tDTGwpbG5UVvM6QvFmf3FYSXc14W9BYvQN5wAZ", "7Rf8Gu8YemSoGjZT3z1cL5BT9HLbGywcyaz8Mrbhd1MH", None, None),
-    ("v2", "WSOL-USDC", "AvGeFw71N5sNfV97mZ1uNrHg4yfufRicCJUrS9j2ehTX", "ECEPWwZJ1U1Vjsj1X5sUbZYETKMSCjYHuoTMVitCn64t", "FBWtVVvzsRuAAzVX8ua1hden9KmgPrC2rFijuwEn1ngJ", None, None),
-    ("v2", "WSOL-USD1", "5dhYayH9qvzNyCPoh2hKN8TJqumoGsWdyZ9UfPLXBfD9", "86DHdQfRpghMCmXYKDg93bXtmi3doBL5NeY9DYwAj6rz", "FqEVwrQJsJ4AciwJRYLPQEdstDfUYJp6z3f6XYb6MnSb", None, None),
-    ("v3", "WSOL-USDC", "FksffEqnBRixYGR791Qw2MgdU7zNCpHVFYBL4Fa4qVuH", "C3FzbX9n1YD2dow2dCmEv5uNyyf22Gb3TLAEqGBhw5fY", "3RWFAQBRkNGq7CMGcTLK3kXDgFTe9jgMeFYqk8nHwcWh", "4nXmcNY1NjNd9sjA3qajUdUYpVDvwxTzGZT9oS4KpaD1", "J1to1yufRnoWn81KYg1XkTWzmKjnYSnmE2VY8DGUJ9Qv"),
-    ("v3", "WSOL-USDC", "DB3sUCP2H4icbeKmK6yb6nUxU5ogbcRHtGuq7W2RoRwW", "8BrVfsvzb1DZqCactbYWoKSv24AfsLBuXJqzpzYCwznF", "HsQcHFFNUVTp3MWrXYbuZchBNd4Pwk8636bKzLvpfYNR", "4nXmcNY1NjNd9sjA3qajUdUYpVDvwxTzGZT9oS4KpaD1", "J1to1yufRnoWn81KYg1XkTWzmKjnYSnmE2VY8DGUJ9Qv"),
-    ("v3", "WSOL-USDC", "6n9VhCwQ7EwK6NqFDjnHPzEk6wZdRBTfh43RFgHQWHuQ", "Cv9St5tDTGwpbG5UVvM6QvFmf3FYSXc14W9BYvQN5wAZ", "7Rf8Gu8YemSoGjZT3z1cL5BT9HLbGywcyaz8Mrbhd1MH", "4nXmcNY1NjNd9sjA3qajUdUYpVDvwxTzGZT9oS4KpaD1", "J1to1yufRnoWn81KYg1XkTWzmKjnYSnmE2VY8DGUJ9Qv"),
-    ("v3", "WSOL-USDC", "AvGeFw71N5sNfV97mZ1uNrHg4yfufRicCJUrS9j2ehTX", "ECEPWwZJ1U1Vjsj1X5sUbZYETKMSCjYHuoTMVitCn64t", "FBWtVVvzsRuAAzVX8ua1hden9KmgPrC2rFijuwEn1ngJ", "4nXmcNY1NjNd9sjA3qajUdUYpVDvwxTzGZT9oS4KpaD1", "J1to1yufRnoWn81KYg1XkTWzmKjnYSnmE2VY8DGUJ9Qv"),
-    ("v3", "WSOL-USD1", "5dhYayH9qvzNyCPoh2hKN8TJqumoGsWdyZ9UfPLXBfD9", "86DHdQfRpghMCmXYKDg93bXtmi3doBL5NeY9DYwAj6rz", "FqEVwrQJsJ4AciwJRYLPQEdstDfUYJp6z3f6XYb6MnSb", "4nXmcNY1NjNd9sjA3qajUdUYpVDvwxTzGZT9oS4KpaD1", "J1to1yufRnoWn81KYg1XkTWzmKjnYSnmE2VY8DGUJ9Qv"),
+    (
+        "v1",
+        "WSOL-USDC",
+        "FksffEqnBRixYGR791Qw2MgdU7zNCpHVFYBL4Fa4qVuH",
+        "C3FzbX9n1YD2dow2dCmEv5uNyyf22Gb3TLAEqGBhw5fY",
+        "3RWFAQBRkNGq7CMGcTLK3kXDgFTe9jgMeFYqk8nHwcWh",
+        None,
+        None,
+    ),
+    (
+        "v1",
+        "WSOL-USDC",
+        "DB3sUCP2H4icbeKmK6yb6nUxU5ogbcRHtGuq7W2RoRwW",
+        "8BrVfsvzb1DZqCactbYWoKSv24AfsLBuXJqzpzYCwznF",
+        "HsQcHFFNUVTp3MWrXYbuZchBNd4Pwk8636bKzLvpfYNR",
+        None,
+        None,
+    ),
+    (
+        "v1",
+        "WSOL-USDC",
+        "6n9VhCwQ7EwK6NqFDjnHPzEk6wZdRBTfh43RFgHQWHuQ",
+        "Cv9St5tDTGwpbG5UVvM6QvFmf3FYSXc14W9BYvQN5wAZ",
+        "7Rf8Gu8YemSoGjZT3z1cL5BT9HLbGywcyaz8Mrbhd1MH",
+        None,
+        None,
+    ),
+    (
+        "v1",
+        "WSOL-USDC",
+        "AvGeFw71N5sNfV97mZ1uNrHg4yfufRicCJUrS9j2ehTX",
+        "ECEPWwZJ1U1Vjsj1X5sUbZYETKMSCjYHuoTMVitCn64t",
+        "FBWtVVvzsRuAAzVX8ua1hden9KmgPrC2rFijuwEn1ngJ",
+        None,
+        None,
+    ),
+    (
+        "v1",
+        "WSOL-USDC",
+        "5dhYayH9qvzNyCPoh2hKN8TJqumoGsWdyZ9UfPLXBfD9",
+        "86DHdQfRpghMCmXYKDg93bXtmi3doBL5NeY9DYwAj6rz",
+        "FqEVwrQJsJ4AciwJRYLPQEdstDfUYJp6z3f6XYb6MnSb",
+        None,
+        None,
+    ),
+    (
+        "v2",
+        "WSOL-USDC",
+        "FksffEqnBRixYGR791Qw2MgdU7zNCpHVFYBL4Fa4qVuH",
+        "C3FzbX9n1YD2dow2dCmEv5uNyyf22Gb3TLAEqGBhw5fY",
+        "3RWFAQBRkNGq7CMGcTLK3kXDgFTe9jgMeFYqk8nHwcWh",
+        "4nXmcNY1NjNd9sjA3qajUdUYpVDvwxTzGZT9oS4KpaD1",
+        "J1to1yufRnoWn81KYg1XkTWzmKjnYSnmE2VY8DGUJ9Qv",
+    ),
+    (
+        "v2",
+        "WSOL-USDC",
+        "DB3sUCP2H4icbeKmK6yb6nUxU5ogbcRHtGuq7W2RoRwW",
+        "8BrVfsvzb1DZqCactbYWoKSv24AfsLBuXJqzpzYCwznF",
+        "HsQcHFFNUVTp3MWrXYbuZchBNd4Pwk8636bKzLvpfYNR",
+        None,
+        None,
+    ),
+    (
+        "v2",
+        "WSOL-USDC",
+        "6n9VhCwQ7EwK6NqFDjnHPzEk6wZdRBTfh43RFgHQWHuQ",
+        "Cv9St5tDTGwpbG5UVvM6QvFmf3FYSXc14W9BYvQN5wAZ",
+        "7Rf8Gu8YemSoGjZT3z1cL5BT9HLbGywcyaz8Mrbhd1MH",
+        None,
+        None,
+    ),
+    (
+        "v2",
+        "WSOL-USDC",
+        "AvGeFw71N5sNfV97mZ1uNrHg4yfufRicCJUrS9j2ehTX",
+        "ECEPWwZJ1U1Vjsj1X5sUbZYETKMSCjYHuoTMVitCn64t",
+        "FBWtVVvzsRuAAzVX8ua1hden9KmgPrC2rFijuwEn1ngJ",
+        None,
+        None,
+    ),
+    (
+        "v2",
+        "WSOL-USD1",
+        "5dhYayH9qvzNyCPoh2hKN8TJqumoGsWdyZ9UfPLXBfD9",
+        "86DHdQfRpghMCmXYKDg93bXtmi3doBL5NeY9DYwAj6rz",
+        "FqEVwrQJsJ4AciwJRYLPQEdstDfUYJp6z3f6XYb6MnSb",
+        None,
+        None,
+    ),
+    (
+        "v3",
+        "WSOL-USDC",
+        "FksffEqnBRixYGR791Qw2MgdU7zNCpHVFYBL4Fa4qVuH",
+        "C3FzbX9n1YD2dow2dCmEv5uNyyf22Gb3TLAEqGBhw5fY",
+        "3RWFAQBRkNGq7CMGcTLK3kXDgFTe9jgMeFYqk8nHwcWh",
+        "4nXmcNY1NjNd9sjA3qajUdUYpVDvwxTzGZT9oS4KpaD1",
+        "J1to1yufRnoWn81KYg1XkTWzmKjnYSnmE2VY8DGUJ9Qv",
+    ),
+    (
+        "v3",
+        "WSOL-USDC",
+        "DB3sUCP2H4icbeKmK6yb6nUxU5ogbcRHtGuq7W2RoRwW",
+        "8BrVfsvzb1DZqCactbYWoKSv24AfsLBuXJqzpzYCwznF",
+        "HsQcHFFNUVTp3MWrXYbuZchBNd4Pwk8636bKzLvpfYNR",
+        "4nXmcNY1NjNd9sjA3qajUdUYpVDvwxTzGZT9oS4KpaD1",
+        "J1to1yufRnoWn81KYg1XkTWzmKjnYSnmE2VY8DGUJ9Qv",
+    ),
+    (
+        "v3",
+        "WSOL-USDC",
+        "6n9VhCwQ7EwK6NqFDjnHPzEk6wZdRBTfh43RFgHQWHuQ",
+        "Cv9St5tDTGwpbG5UVvM6QvFmf3FYSXc14W9BYvQN5wAZ",
+        "7Rf8Gu8YemSoGjZT3z1cL5BT9HLbGywcyaz8Mrbhd1MH",
+        "4nXmcNY1NjNd9sjA3qajUdUYpVDvwxTzGZT9oS4KpaD1",
+        "J1to1yufRnoWn81KYg1XkTWzmKjnYSnmE2VY8DGUJ9Qv",
+    ),
+    (
+        "v3",
+        "WSOL-USDC",
+        "AvGeFw71N5sNfV97mZ1uNrHg4yfufRicCJUrS9j2ehTX",
+        "ECEPWwZJ1U1Vjsj1X5sUbZYETKMSCjYHuoTMVitCn64t",
+        "FBWtVVvzsRuAAzVX8ua1hden9KmgPrC2rFijuwEn1ngJ",
+        "4nXmcNY1NjNd9sjA3qajUdUYpVDvwxTzGZT9oS4KpaD1",
+        "J1to1yufRnoWn81KYg1XkTWzmKjnYSnmE2VY8DGUJ9Qv",
+    ),
+    (
+        "v3",
+        "WSOL-USD1",
+        "5dhYayH9qvzNyCPoh2hKN8TJqumoGsWdyZ9UfPLXBfD9",
+        "86DHdQfRpghMCmXYKDg93bXtmi3doBL5NeY9DYwAj6rz",
+        "FqEVwrQJsJ4AciwJRYLPQEdstDfUYJp6z3f6XYb6MnSb",
+        "4nXmcNY1NjNd9sjA3qajUdUYpVDvwxTzGZT9oS4KpaD1",
+        "J1to1yufRnoWn81KYg1XkTWzmKjnYSnmE2VY8DGUJ9Qv",
+    ),
 ]
 
 MINTS = [
@@ -57,8 +178,12 @@ TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
 
 
 def rpc(url: str, method: str, params: list) -> dict:
-    body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode()
-    req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"})
+    body = json.dumps(
+        {"jsonrpc": "2.0", "id": 1, "method": method, "params": params}
+    ).encode()
+    req = urllib.request.Request(
+        url, data=body, headers={"Content-Type": "application/json"}
+    )
     with urllib.request.urlopen(req, timeout=60) as resp:
         out = json.load(resp)
     if "error" in out:
@@ -76,7 +201,9 @@ def program_data_address_from_chain(url: str, program_id: str) -> str | None:
 
     data = _b64.b64decode(val["data"][0])
     if val["owner"] != BPF_LOADER_PROGRAM or len(data) < 36:
-        raise RuntimeError(f"program {program_id} is not a loader-v3 executable account (owner={val['owner']})")
+        raise RuntimeError(
+            f"program {program_id} is not a loader-v3 executable account (owner={val['owner']})"
+        )
     import solders.pubkey as spk
 
     return str(spk.Pubkey.from_bytes(data[4:36]))
@@ -93,7 +220,9 @@ def sha256_file(path: Path) -> str:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--rpc-url", default="https://api.mainnet-beta.solana.com")
-    ap.add_argument("--out-root", required=True, help="research/pmm-sim-caller-profile/snapshot")
+    ap.add_argument(
+        "--out-root", required=True, help="research/pmm-sim-caller-profile/snapshot"
+    )
     args = ap.parse_args()
 
     out_root = Path(args.out_root)
@@ -103,11 +232,16 @@ def main() -> int:
     accounts_dir = out_dir / "accounts"
     accounts_dir.mkdir(parents=True, exist_ok=True)
 
-    optional_pubkeys = [MAGNUS_ROUTER_ID, program_data_address_from_chain(args.rpc_url, MAGNUS_ROUTER_ID)]
+    optional_pubkeys = [
+        MAGNUS_ROUTER_ID,
+        program_data_address_from_chain(args.rpc_url, MAGNUS_ROUTER_ID),
+    ]
     optional_pubkeys = [p for p in optional_pubkeys if p]
-    humidifi_program_data = program_data_address_from_chain(args.rpc_url, HUMIDIFI_PROGRAM_ID)
+    humidifi_program_data = program_data_address_from_chain(
+        args.rpc_url, HUMIDIFI_PROGRAM_ID
+    )
     pubkeys = [HUMIDIFI_PROGRAM_ID, humidifi_program_data] + optional_pubkeys
-    for (_v, _p, market, base_ta, quote_ta, add1, vote) in MARKETS:
+    for _v, _p, market, base_ta, quote_ta, add1, vote in MARKETS:
         pubkeys += [market, base_ta, quote_ta]
         if add1:
             pubkeys.append(add1)
@@ -122,7 +256,11 @@ def main() -> int:
     BATCH = 100
     for i in range(0, len(pubkeys), BATCH):
         batch = pubkeys[i : i + BATCH]
-        res = rpc(args.rpc_url, "getMultipleAccounts", [batch, {"encoding": "base64", "commitment": "confirmed"}])
+        res = rpc(
+            args.rpc_url,
+            "getMultipleAccounts",
+            [batch, {"encoding": "base64", "commitment": "confirmed"}],
+        )
         for pk, val in zip(batch, res["value"]):
             if val is None:
                 # Required venue accounts are asserted below; optional router accounts are recorded as UNKNOWN.
@@ -140,7 +278,7 @@ def main() -> int:
 
     # owner assertions
     required = [HUMIDIFI_PROGRAM_ID]
-    for (_v, _p, market, base_ta, quote_ta, add1, vote) in MARKETS:
+    for _v, _p, market, base_ta, quote_ta, add1, vote in MARKETS:
         # add1/vote are upstream-setup CPI helper accounts that may be legitimately absent
         # (some upstream v2 rows even use the 111..1 placeholder); markets, token accounts and
         # mints are required — unknown is not zero.
@@ -149,25 +287,41 @@ def main() -> int:
     missing_required = [pk for pk in dict.fromkeys(required) if pk not in fetched]
     if missing_required:
         for pk in missing_required:
-            print(f"REQUIRED_ACCOUNT_NOT_FOUND: {pk} — refusing to continue (unknown is not zero)", file=sys.stderr)
+            print(
+                f"REQUIRED_ACCOUNT_NOT_FOUND: {pk} — refusing to continue (unknown is not zero)",
+                file=sys.stderr,
+            )
         return 3
     problems = []
-    if fetched[HUMIDIFI_PROGRAM_ID]["owner"] != BPF_LOADER_PROGRAM or not fetched[HUMIDIFI_PROGRAM_ID]["executable"]:
-        problems.append("HumidiFi program account is not an executable BPFLoaderUpgradeab1e account")
-    for (_v, _p, market, base_ta, quote_ta, _a1, _v1) in MARKETS:
+    if (
+        fetched[HUMIDIFI_PROGRAM_ID]["owner"] != BPF_LOADER_PROGRAM
+        or not fetched[HUMIDIFI_PROGRAM_ID]["executable"]
+    ):
+        problems.append(
+            "HumidiFi program account is not an executable BPFLoaderUpgradeab1e account"
+        )
+    for _v, _p, market, base_ta, quote_ta, _a1, _v1 in MARKETS:
         if fetched[market]["owner"] != HUMIDIFI_PROGRAM_ID:
-            problems.append(f"market {market} owner {fetched[market]['owner']} != HumidiFi program")
+            problems.append(
+                f"market {market} owner {fetched[market]['owner']} != HumidiFi program"
+            )
         for ta in (base_ta, quote_ta):
             if fetched[ta]["owner"] != TOKEN_PROGRAM:
-                problems.append(f"token account {ta} owner {fetched[ta]['owner']} != SPL Token program")
+                problems.append(
+                    f"token account {ta} owner {fetched[ta]['owner']} != SPL Token program"
+                )
     if problems:
         for p in problems:
             print(f"OWNER_ASSERTION_FAILED: {p}", file=sys.stderr)
-        (out_dir / "OWNER_ASSERTION_FAILURES.txt").write_text("\n".join(problems) + "\n", encoding="utf-8")
+        (out_dir / "OWNER_ASSERTION_FAILURES.txt").write_text(
+            "\n".join(problems) + "\n", encoding="utf-8"
+        )
         return 2
 
     for pk, rec in fetched.items():
-        (accounts_dir / f"{pk}.json").write_text(json.dumps(rec, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+        (accounts_dir / f"{pk}.json").write_text(
+            json.dumps(rec, indent=1, sort_keys=True) + "\n", encoding="utf-8"
+        )
 
     account_files = sorted(accounts_dir.glob("*.json"))
     per_account = {p.stem: sha256_file(p) for p in account_files}
@@ -191,10 +345,16 @@ def main() -> int:
         "whole_snapshot_digest": whole.hexdigest(),
         "humidifi_program_id": HUMIDIFI_PROGRAM_ID,
         "humidifi_program_data_address": humidifi_program_data,
-        "humidifi_program_bytes_sha256": hashlib.sha256(base64.b64decode(fetched[HUMIDIFI_PROGRAM_ID]["data_base64"])).hexdigest(),
+        "humidifi_program_bytes_sha256": hashlib.sha256(
+            base64.b64decode(fetched[HUMIDIFI_PROGRAM_ID]["data_base64"])
+        ).hexdigest(),
         "magnus_router_id": MAGNUS_ROUTER_ID,
         "magnus_router_deployed_state": (
-            {"bytes_sha256": hashlib.sha256(base64.b64decode(fetched[MAGNUS_ROUTER_ID]["data_base64"])).hexdigest()}
+            {
+                "bytes_sha256": hashlib.sha256(
+                    base64.b64decode(fetched[MAGNUS_ROUTER_ID]["data_base64"])
+                ).hexdigest()
+            }
             if MAGNUS_ROUTER_ID in fetched
             else "NOT_FOUND_ON_MAINNET_AT_PINNED_ID (UNKNOWN, honestly recorded; MAGNUS_NATIVE rows stay SYNTHETIC_SIMULATION_BY_DEFAULT)"
         ),
@@ -202,8 +362,12 @@ def main() -> int:
         "owner_assertions": "PASS",
         "snapshot_status": "RAW_ACCOUNT_CAPTURE_ONLY — never PAPER_QUALIFIED, never live",
     }
-    (out_dir / "SNAPSHOT_MANIFEST.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print(f"OK slot={slot} accounts={len(account_files)} digest={manifest['whole_snapshot_digest']}")
+    (out_dir / "SNAPSHOT_MANIFEST.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    print(
+        f"OK slot={slot} accounts={len(account_files)} digest={manifest['whole_snapshot_digest']}"
+    )
     print(f"humidifi_program_bytes_sha256={manifest['humidifi_program_bytes_sha256']}")
     print(f"magnus_router_deployed_state={manifest['magnus_router_deployed_state']}")
     return 0

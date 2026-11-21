@@ -11,12 +11,14 @@
     "final artifact-status event (parquet_ok rows=N | parquet_error) after save",
     "save() writes *.artifact_status sidecar; save errors are never silently discarded",
     "save failure -> stderr [SAVE_ERROR] <path>: <err>",
-    "forward/reverse/total-failure warnings -> stderr (visible in captured logs)"
+    "forward/reverse/total-failure warnings -> stderr (visible in captured logs)",
+    "deterministic order id under PMM_SIM_ORDER_ID env var (reproducible CU across runs; upstream fallback preserved)",
+    "amount-scoped order ids gen_order_id_for(amount): identical across isolated/batched modes (strict CU equality)"
   ],
   "upstream_base": "LimeChain/pmm-sim @ cc4ae891a2a765d92c89d4381f96dce4afd446bb (MIT)",
   "toolchain": "rustc 1.92.0-x86_64-pc-windows-gnu (pinned; 1.100 breaks ethnum 1.5.2, 1.88 breaks polars-arrow 0.52) + winlibs MinGW-w64 binutils (as.exe/dlltool.exe on PATH)",
-  "binary_sha256": "d1a95c6f457be3a3f41f4239da2865451b0b757c7db001e20a0566b1e0a0bc98",
-  "patch_sha256": "d4c33ece1cdc47a61a653c511b9a0f2c9ad1b5893c08d5aa2f4b660054e913f8",
+  "binary_sha256": "570706cc26eaaeab7cae623cb9ef5abaae149f9ffdb6cc9ab14da94fb42da2a2",
+  "patch_sha256": "974955fc4b55438c060ff4a2a3089da803a9e75395a00bd73e0ccc4e75d1cb90",
   "cargo_test_result": "67 passed; 0 failed (upstream suite, reported not assumed)",
   "safety": {
     "sign_enabled": false,

@@ -4,6 +4,19 @@
 >
 > **Execution waves:** (0) параллельные read-only audits W0, W0A, W0C и path-level H0/W12 без пересечения write scopes; (1) обязательная реализация W0B с нулевой LLM-зависимостью и CI/nightly refresh; (2) typed temporal graph + provider contracts/quality/chain identity/strategy requirements; (3) runtime lineage/replay на фактических test/paper/shadow paths; (4) retrieval/context/MCP + verification; (5) масштабирование и внешние сервисы только при измеренном bottleneck. Все старые формулировки «только A», «B–H отложены» и «не начинать W0B после аудита» уступают этой новой инструкции.
 >
+> **Capability letters A–H (taxonomy retained; no new letters):**
+>
+> | Letter | Implementation capability | Priority/role |
+> |---|---|---|
+> | **A** | Whole-repo inventory, polyglot parser, SymbolGraph, calls/imports and exact source references | P0; first graph foundation |
+> | **B** | Content-addressed incremental indexing, dependency invalidation, early cutoff and full reconciliation | Required for continuous refresh |
+> | **C** | SHA-bound temporal provenance, valid/recorded time, as-of queries and version history | P0 foundation |
+> | **D** | Isolated worktrees, leases, bounded sandbox, secret/network/resource separation and work receipts | Minimum safeguards immediately; stronger isolation before autonomy |
+> | **E** | Exact/lexical/graph retrieval, T0–T4 context packs and read-only ChatGPT handoff | P0 |
+> | **F** | Symbol-to-test evidence, impact analysis, invariant suites, flaky registry and failure shrinking | Critical tests P0; optimization after baseline |
+> | **G** | Sparse checkout, multi-agent scheduling, large-repo storage/merge plumbing | Conditional on measured scale |
+> | **H** | Token/cost telemetry, prompt-injection isolation, redaction, SBOM/license/security and resource governance | Cross-cutting P0 |
+>
 > **No-duplicate / current-state rule:** на момент обновления main = 0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54; PR #672–#676 открыты и имеют отдельных владельцев. #672 schema compatibility, #673 read-only metadata catalogue, #674 Debezium adoption gate, #675 NATS adoption gate и #676 OpenLineage projection нужно повторно проверить по latest head/CI и встроить/расширить, а не создавать дубликаты.
 >
 > Полный нормативный контракт: LLM_FREE_DETERMINISTIC_INDEXING_CONTRACT_RU.md. Он обязателен для OCA-W0B и любого scheduled/CI refresh.

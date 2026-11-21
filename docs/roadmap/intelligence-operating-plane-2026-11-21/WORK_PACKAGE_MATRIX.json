@@ -202,6 +202,56 @@
       ]
     },
     {
+      "id": "OCA-W0C",
+      "name": "Provider/source/strategy extraction and flash-loan data-path inventory",
+      "priority": "P0",
+      "status": "READY",
+      "depends_on": [],
+      "mode": "PARALLEL_READ_ONLY_AUDIT",
+      "exclusive_write_scope": [
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/source-provider-inventory/"
+      ],
+      "must_reuse": [
+        "src/market/source_catalog.py",
+        "src/external_contracts",
+        "src/provider_governance",
+        "src/agg02",
+        "src/market/observations.py",
+        "src/market/streams.py",
+        "src/strategy",
+        "src/economics/flash_capital_graph",
+        "src/qualification_campaign",
+        "src/paper_shadow",
+        "src/observability"
+      ],
+      "inspect": [
+        "RPC/indexer/API/WebSocket/poller/one-shot providers and archive/history sources",
+        "DEX/AMM/aggregator quote and pool-state adapters",
+        "oracles, token/entity metadata and chain-native identity",
+        "flash lenders, capital providers, SDKs, IDLs and capacity/fee derivation",
+        "provider contracts, schemas, cursor/watermark and replay code",
+        "all strategy/provider consumers, configs, tests and runtime evidence owners",
+        "accessible PRs/issues/reviews/commits"
+      ],
+      "deliverables": [
+        "SOURCE_PROVIDER_CATALOGUE.jsonl",
+        "STRATEGY_PROVIDER_TRACE_MATRIX.json",
+        "SOURCE_CAPABILITY_GAP_REPORT_RU.md",
+        "FLASHLOAN_DATA_PATHS.md",
+        "source evidence manifest with exact main SHA/blob hashes/contract versions"
+      ],
+      "acceptance": [
+        "Every discovered source/provider/adapter is included or explicitly EXCLUDED_WITH_REASON/UNKNOWN",
+        "Declared and observed capabilities and source modes are separate",
+        "Strategy-to-provider trace links exact symbols, methods, configs and tests where proven",
+        "Raw payload/cursor to normalization/observation lineage is mapped without inventing runtime joins",
+        "Flash-capital availability/capacity/fee evidence is separate from market liquidity and strategy qualification",
+        "Chain/deployment/block-or-slot/transaction/event identity and reorg/correction semantics are inventoried",
+        "Missing stages, freshness, coverage, history/replay and runtime wiring remain explicit",
+        "No network probes, provider enablement, RPC mutation, signing, sending, borrowing or production actions"
+      ]
+    },
+    {
       "id": "OCA-W0B",
       "name": "First working repo-wide Knowledge Graph and compact catalogue",
       "priority": "P0",
@@ -295,56 +345,6 @@
         "UNKNOWN/AMBIGUOUS/UNRESOLVED and heuristic semantic labels cannot be automatically promoted to VERIFIED",
         "Nightly full rebuild reconciles with incremental graph and reports drift/missed triggers",
         "Strategy-provider-flashloan source path catalogue exists with PROVEN/STATIC_ONLY/DOC_CLAIM/MISSING/UNKNOWN edge states"
-      ]
-    },
-    {
-      "id": "OCA-W0C",
-      "name": "Provider/source/strategy extraction and flash-loan data-path inventory",
-      "priority": "P0",
-      "status": "READY",
-      "depends_on": [],
-      "mode": "PARALLEL_READ_ONLY_AUDIT",
-      "exclusive_write_scope": [
-        "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/source-provider-inventory/"
-      ],
-      "must_reuse": [
-        "src/market/source_catalog.py",
-        "src/external_contracts",
-        "src/provider_governance",
-        "src/agg02",
-        "src/market/observations.py",
-        "src/market/streams.py",
-        "src/strategy",
-        "src/economics/flash_capital_graph",
-        "src/qualification_campaign",
-        "src/paper_shadow",
-        "src/observability"
-      ],
-      "inspect": [
-        "RPC/indexer/API/WebSocket/poller/one-shot providers and archive/history sources",
-        "DEX/AMM/aggregator quote and pool-state adapters",
-        "oracles, token/entity metadata and chain-native identity",
-        "flash lenders, capital providers, SDKs, IDLs and capacity/fee derivation",
-        "provider contracts, schemas, cursor/watermark and replay code",
-        "all strategy/provider consumers, configs, tests and runtime evidence owners",
-        "accessible PRs/issues/reviews/commits"
-      ],
-      "deliverables": [
-        "SOURCE_PROVIDER_CATALOGUE.jsonl",
-        "STRATEGY_PROVIDER_TRACE_MATRIX.json",
-        "SOURCE_CAPABILITY_GAP_REPORT_RU.md",
-        "FLASHLOAN_DATA_PATHS.md",
-        "source evidence manifest with exact main SHA/blob hashes/contract versions"
-      ],
-      "acceptance": [
-        "Every discovered source/provider/adapter is included or explicitly EXCLUDED_WITH_REASON/UNKNOWN",
-        "Declared and observed capabilities and source modes are separate",
-        "Strategy-to-provider trace links exact symbols, methods, configs and tests where proven",
-        "Raw payload/cursor to normalization/observation lineage is mapped without inventing runtime joins",
-        "Flash-capital availability/capacity/fee evidence is separate from market liquidity and strategy qualification",
-        "Chain/deployment/block-or-slot/transaction/event identity and reorg/correction semantics are inventoried",
-        "Missing stages, freshness, coverage, history/replay and runtime wiring remain explicit",
-        "No network probes, provider enablement, RPC mutation, signing, sending, borrowing or production actions"
       ]
     },
     {

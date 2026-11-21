@@ -1,0 +1,441 @@
+{
+  "schema": "studious-pancake.windows-first-campaign-backlog.v1",
+  "generated_at": "2026-11-22",
+  "task_pack_pr": 679,
+  "base_main_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+  "target_platform": {
+    "os": "Windows 11 26H2 x64 General Availability Channel",
+    "current_reference_build": "26300.9974",
+    "current_reference_update_date": "2026-11-10",
+    "python": ">=3.13,<3.14 (current project requirement)",
+    "note": "Reference only. Record actual test machine build; do not assume it matches this value."
+  },
+  "tasks": [
+    {
+      "id": "CAM-01",
+      "priority": "P0",
+      "status": "OPEN",
+      "lane": "campaign-runtime",
+      "delivery": "implementation PR based on current main",
+      "title": "Enforce CAMPAIGN_START_V1 before the first external request",
+      "finding": "The current capture CLI accepts --source-config and optional --rpc-profiles, creates a runtime manifest, then opens governed transport. The V2 preflight docs say CS-01..CS-10 are mapped manually and no script executes the gate.",
+      "files": [
+        "src/qualification_campaign/cli.py",
+        "src/qualification_campaign/identity.py",
+        "docs/roadmap/prequal-rnd-2026-10-06/package/data/acceptance_gates.json",
+        "docs/roadmap/campaign-start-preflight-2026-11-21/"
+      ],
+      "actions": [
+        "Map every blocking CS-01..CS-10 item to an existing code owner and exact pre-network check.",
+        "Resolve current canonical human/release authorization mechanism before adding code; inspect src/release_gate/, src/runtime_authority.py and src/provider_governance/.",
+        "Require explicit authorization bound to exact approved manifest digest, code/release SHA, source config/generations, RPC profiles, policy, budget, retention and capture window.",
+        "Run all blocking checks before constructing/opening external transport or making DNS/network calls.",
+        "If canonical operator approval cannot be verified by existing infrastructure, return typed BLOCKED and do not invent an unsigned boolean/string approval that pretends to be authorization."
+      ],
+      "acceptance": [
+        "Missing or invalid operator authorization -> typed BLOCKED and instrumented zero physical network attempts.",
+        "Changed profile/config/budget/runtime SHA after approval -> typed BLOCKED and zero network attempts.",
+        "All CS gates have explicit status, evidence reference, owner and typed blocker.",
+        "No CAPTURE_ONLY campaign is executed while implementing this task."
+      ],
+      "source_urls": [
+        "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "CAM-02",
+      "priority": "P0",
+      "status": "OPEN",
+      "lane": "campaign-runtime",
+      "delivery": "same or linked implementation PR",
+      "title": "Separate campaign label, cryptographic identity and authorization envelope",
+      "finding": "V2 uses a human-readable campaign_id while CampaignManifest.campaign_id is a canonical digest. V2 release.git_commit records ea204222..., older than current main 0a0c8ad9...; campaign_manifest_sha256 is null at authoring time.",
+      "files": [
+        "docs/roadmap/campaign-start-preflight-2026-11-21/CAMPAIGN_MANIFEST_CAPTURE_ONLY_V2.json",
+        "src/qualification_campaign/identity.py",
+        "src/qualification_campaign/cli.py"
+      ],
+      "actions": [
+        "Rename the human-readable identifier to campaign_label/campaign_ref and keep CampaignManifest.campaign_id exclusively as cryptographic identity.",
+        "Avoid circular self-hash. Use an existing detached approval envelope bound to canonical manifest digest; if no canonical approval owner exists, remain BLOCKED.",
+        "Compare actual runtime CampaignManifest to the exact approved manifest before network.",
+        "Resolve code SHA dynamically according to release authority; do not hardcode this task's main SHA into runtime code.",
+        "Preserve provenance from template -> V1 -> V2 -> approved digest -> runtime campaign identity -> journal/report."
+      ],
+      "acceptance": [
+        "A changed manifest or profile produces a different digest and invalidates approval.",
+        "Tests cover tampered manifest, missing digest, stale code SHA and dirty checkout.",
+        "No null/self-referential identity is ever treated as bound."
+      ],
+      "source_urls": [
+        "https://github.com/BobIvans/studious-pancake/blob/main/src/qualification_campaign/identity.py"
+      ],
+      "depends_on": [
+        "CAM-01"
+      ]
+    },
+    {
+      "id": "CAM-03",
+      "priority": "P0",
+      "status": "OPEN",
+      "lane": "campaign-data-sources",
+      "delivery": "linked implementation PR",
+      "title": "Reconcile V2, source catalog, actual adapters and current docs pins",
+      "finding": "representative-sources.json has three entries and old 2026-10-06 checked_at values with 86400-second TTL. V2 source names differ from DiscoveryRequest canonical IDs; Meteora adapter is not represented in the current sample config.",
+      "files": [
+        "config/qualification/representative-sources.json",
+        "src/market/source_catalog.py",
+        "src/market/discovery.py",
+        "src/qualification_campaign/sources.py",
+        "docs/roadmap/campaign-start-preflight-2026-11-21/SOURCE_RECHECK_MATRIX_V1.json"
+      ],
+      "actions": [
+        "Build a four-way crosswalk: manifest id, catalog id, DiscoveryRequest id and adapter id.",
+        "Use actual supported IDs for DexScreener, GeckoTerminal, Raydium and Meteora DLMM; aliases require explicit registry mapping plus tests.",
+        "Re-fetch official docs, exact route, terms, limits and schema; update checked_at, SHA256, schema fingerprint and provider quota.",
+        "Keep all four in discovery-only classification; no indexed metadata becomes an exact edge.",
+        "If current docs/terms are inaccessible, status remains typed BLOCKED; do not keep expired pins."
+      ],
+      "acceptance": [
+        "All configured source dossiers pass current TTL and schema validation.",
+        "Manifest source generations exactly equal the runtime profiles and adapters loaded by CLI.",
+        "Positive and negative tests cover alias mapping, stale pin, redirect, 429 and schema drift."
+      ],
+      "source_urls": [
+        "https://docs.dexscreener.com/api/reference",
+        "https://docs.coingecko.com/reference/introduction",
+        "https://api-v3.raydium.io/docs/",
+        "https://docs.meteora.ag/"
+      ],
+      "depends_on": [
+        "CAM-01",
+        "CAM-02"
+      ]
+    },
+    {
+      "id": "CAM-04",
+      "priority": "P0",
+      "status": "OPEN",
+      "lane": "campaign-runtime",
+      "delivery": "linked implementation PR",
+      "title": "Enforce durable campaign-global physical-attempt and storage budgets",
+      "finding": "CampaignEvidenceStore currently exposes per-profile attempt accounting. V2 proposes a global cap of 200 and 100 MiB storage. Verify and enforce both across the entire campaign, all profiles, retries, SQLite files and blob storage.",
+      "files": [
+        "src/qualification_campaign/evidence.py",
+        "src/qualification_campaign/cli.py",
+        "src/market/streams.py",
+        "src/provider_governance/authority.py",
+        "src/provider_governance/models.py"
+      ],
+      "actions": [
+        "Keep independent per-provider quotas and add a separate atomic durable campaign-global counter for all physical attempts.",
+        "Retries/backoff count as physical attempts; restarts, replay and multi-process workers never reset or double-spend counters.",
+        "Enforce the approved total storage ceiling across journal DB, WAL/SHM, raw blobs and temp/staging files.",
+        "Fail closed before a network attempt or write if quota/storage usage is unknown or exhausted.",
+        "Keep external_data_spend_usd_max=0 and reject paid provider entitlements."
+      ],
+      "acceptance": [
+        "Two providers each at 100 cannot exceed campaign-global 200; test concurrency and restart.",
+        "Retry counts increment physical attempt count.",
+        "Storage usage at the exact limit passes; one byte over fails before persist.",
+        "Budget receipts survive process restart and offline replay."
+      ],
+      "source_urls": [
+        "https://docs.python.org/3/library/sqlite3.html"
+      ],
+      "depends_on": [
+        "CAM-01",
+        "CAM-02"
+      ]
+    },
+    {
+      "id": "CAM-05",
+      "priority": "P1",
+      "status": "OPEN",
+      "lane": "rpc-contracts",
+      "delivery": "linked implementation PR",
+      "title": "Align sender-free RPC methods between actual runtime and connections registry",
+      "finding": "ProviderProfile.READ_RPC_METHODS and the MPR2602 connections-registry enum differ. rpc.py calls getVersion, getSlot and collectors perform rooted account reads; template contains getGenesisHash/getMultipleAccounts/getSlot/getBlockHeight only.",
+      "files": [
+        "src/qualification_campaign/profiles.py",
+        "src/qualification_campaign/rpc.py",
+        "src/data_plane/rpc.py",
+        "src/provider_governance/",
+        "docs/roadmap/campaign-start-preflight-2026-11-21/CAMPAIGN_CONNECTIONS_PROFILES_MPR2602_V1.json"
+      ],
+      "actions": [
+        "Enumerate actual methods called by each collector on capture path.",
+        "Compare to both registry enums and ensure the intersection supports the exact required read methods.",
+        "Do not add unused getBlock/getBlockHeight or unsafe methods just to make schemas match.",
+        "Keep every profile disabled/unreviewed until real operator review; maintain 0 network effects in structural validator."
+      ],
+      "acceptance": [
+        "A test proves every actual RPC method is explicitly allowed by both relevant registries.",
+        "A test proves an unlisted method is rejected before transport.",
+        "Sender/submission methods remain impossible."
+      ],
+      "source_urls": [
+        "https://solana.com/docs/rpc/http/getmultipleaccounts",
+        "https://solana.com/docs/rpc/http/getslot",
+        "https://solana.com/docs/rpc/http/getgenesishash",
+        "https://solana.com/docs/rpc/http/getversion"
+      ],
+      "depends_on": [
+        "CAM-01"
+      ]
+    },
+    {
+      "id": "DOC-01",
+      "priority": "P1",
+      "status": "OPEN",
+      "lane": "campaign-docs",
+      "delivery": "docs update",
+      "title": "Fix runbook capture/replay cross-reference and add the actual CLI capture section",
+      "finding": "#671 remaining-blockers list points to runbook S7 for capture, but S7 is Deterministic offline replay.",
+      "files": [
+        "docs/roadmap/paper-data-campaign-universe-2026-11-21/DATA_CAPTURE_RUNBOOK_V1.md",
+        "docs/roadmap/campaign-start-preflight-2026-11-21/REMAINING_BLOCKERS_TO_FIRST_CAPTURE_V1.md"
+      ],
+      "actions": [
+        "Add an explicit capture section with exact CLI flags, source config, approved manifest/approval input, RPC profiles, output directory and expected typed outcomes.",
+        "Document that replay is offline only and not a capture operation.",
+        "Document Windows PowerShell command syntax without exposing secrets."
+      ],
+      "acceptance": [
+        "No runbook step points users to replay as the capture command.",
+        "All commands match actual CLI parser flags and tests."
+      ],
+      "source_urls": [
+        "https://github.com/BobIvans/studious-pancake/blob/main/src/qualification_campaign/cli.py"
+      ],
+      "depends_on": [
+        "CAM-01"
+      ]
+    },
+    {
+      "id": "WIN-01",
+      "priority": "P0",
+      "status": "OPEN",
+      "lane": "windows-runtime",
+      "delivery": "separate focused implementation PR",
+      "title": "Regenerate requirements.lock with Windows uvloop marker",
+      "finding": "pyproject.toml declares uvloop==0.22.1 only when platform_system != Windows, but requirements.lock has unmarked uvloop==0.22.1. #670 package_smoke wheelhouse failed on Windows because no Windows wheel exists.",
+      "files": [
+        "pyproject.toml",
+        "scripts/lock_requirements.py",
+        "requirements.lock"
+      ],
+      "actions": [
+        "Use scripts/lock_requirements.py with pinned uv 0.13.4 to regenerate the lock; do not hand-edit the generated file.",
+        "Preserve uvloop for supported Unix targets, exclude it on Windows through the correct marker.",
+        "Check all hashes and verify lock generation is deterministic."
+      ],
+      "acceptance": [
+        "Native Windows pip download/install using --require-hashes --only-binary=:all: succeeds.",
+        "Linux installs still include uvloop and pass.",
+        "Repeated lock generation gives no unexplained diff."
+      ],
+      "source_urls": [
+        "https://docs.astral.sh/uv/pip/compile/"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "WIN-02",
+      "priority": "P0",
+      "status": "OPEN",
+      "lane": "windows-test-runtime",
+      "delivery": "separate focused implementation PR",
+      "title": "Fix ProactorEventLoop + pytest-socket without opening network access",
+      "finding": "#670 shows 327 fixture setup errors from pytest_socket.SocketBlockedError when Windows ProactorEventLoop creates an AF_INET socketpair/self-pipe; --allow-unix-socket covers AF_UNIX only.",
+      "files": [
+        "tests/conftest.py",
+        "tests/",
+        "pytest configuration"
+      ],
+      "actions": [
+        "Reproduce on clean Windows 11 26H2 x64 with Python 3.13.",
+        "Use targeted event-loop bootstrap/loopback allowance only; never remove --disable-socket globally.",
+        "Add tests proving Proactor loop starts and external DNS/TCP/UDP stays blocked.",
+        "Retain Linux SelectorEventLoop regression tests."
+      ],
+      "acceptance": [
+        "All asyncio fixtures collect and execute on Windows.",
+        "External outbound socket attempts remain blocked.",
+        "Network-denial regression test fails if a public host can be reached.",
+        "Linux CI remains green."
+      ],
+      "source_urls": [
+        "https://docs.python.org/3.13/library/asyncio-platforms.html",
+        "https://docs.python.org/3.13/library/asyncio-eventloop.html",
+        "https://pypi.org/project/pytest-socket/"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "WIN-03",
+      "priority": "P0",
+      "status": "OPEN",
+      "lane": "windows-storage",
+      "delivery": "separate focused implementation PR",
+      "title": "Close SQLite and journal handles before TemporaryDirectory cleanup",
+      "finding": "#670 verify_occ_durable_host failed with PermissionError WinError 32 on content.sqlite3 under TemporaryDirectory.",
+      "files": [
+        "scripts/verify_occ_durable_host.py",
+        "src/occ_durable_library.py",
+        "src/market/streams.py",
+        "src/durability/"
+      ],
+      "actions": [
+        "Reproduce the open handle on Windows and identify whether sqlite connection, WAL/SHM, journal or authority remains open.",
+        "Add explicit close/context-manager lifecycle; close all databases before cleanup.",
+        "Do not use ignore_errors=True or suppress PermissionError."
+      ],
+      "acceptance": [
+        "Temporary directory deletion succeeds immediately after context exit.",
+        "Regression test runs on Windows and Linux.",
+        "No leaked SQLite handles remain after repeated verifier runs."
+      ],
+      "source_urls": [
+        "https://docs.python.org/3/library/sqlite3.html"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "WIN-04",
+      "priority": "P0",
+      "status": "OPEN",
+      "lane": "windows-validation",
+      "delivery": "separate CI + native receipt",
+      "title": "Add native Windows verification and rerun post-fix pytest baseline",
+      "finding": "#670 labels the platform Windows 10.0.26300; that OS version string should be identified as Windows 11 26H2 when verified via Caption/DisplayVersion. The Windows suite is explicitly NOT green.",
+      "files": [
+        "scripts/verify_repo.py",
+        ".github/workflows/",
+        "docs/roadmap/windows-ci-baseline-2026-11-21/"
+      ],
+      "actions": [
+        "Add a Windows CI job where supported and provide a native Windows 11 26H2 PowerShell receipt; GitHub-hosted Windows runner is supplementary, not equivalent to a Windows 11 client.",
+        "Record OS Caption, DisplayVersion, build, architecture, Python exact version, PowerShell, uv, Git and core.autocrlf.",
+        "After WIN-02, rerun the entire offline suite; do not carry forward old counts.",
+        "Triage genuine remaining test IDs into focused PRs with explicit root cause."
+      ],
+      "acceptance": [
+        "All required verify_repo stages complete on native Windows or remain explicitly BLOCKED with owner.",
+        "Receipt contains exact commit and SHA256.",
+        "No old 288/327 totals are presented as current without a fresh rerun."
+      ],
+      "source_urls": [
+        "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information"
+      ],
+      "depends_on": [
+        "WIN-01",
+        "WIN-02",
+        "WIN-03"
+      ]
+    },
+    {
+      "id": "PMM-01",
+      "priority": "P0",
+      "status": "OPEN",
+      "lane": "prop-amm",
+      "delivery": "fix existing PR #665 only",
+      "title": "Repair the two GitHub CI failures in #665",
+      "finding": "At checked head 548d5c06, GitHub scripts/verify_pmm_sim_caller_profile.py reports 15/17. vendor_mirror_sha256sums fails for .github/workflows/audit.yml, .github/workflows/ci.yml and .gitignore; results_digest_chain fails because CSV digest does not match scenario_manifest receipt.",
+      "files": [
+        "scripts/verify_pmm_sim_caller_profile.py",
+        "vendor/strategy-research/pmm-sim-cc4ae891/SHA256SUMS",
+        "research/pmm-sim-caller-profile/scenario_manifest_v1.json",
+        "research/pmm-sim-caller-profile/caller_profile_results.csv",
+        ".gitattributes"
+      ],
+      "actions": [
+        "Reproduce on clean Linux and Windows checkouts of the exact head.",
+        "Find actual cause (bytes/line endings, checksum generation, stale manifest or generated data); do not guess.",
+        "Regenerate mirror hashes from committed bytes and correct manifest/CSV receipt.",
+        "Add a checkout-independent regression test and rerun every required workflow on updated #665 head."
+      ],
+      "acceptance": [
+        "Verifier is 17/17 on both clean OS checkouts.",
+        "GitHub CI required jobs PASS on exact current head.",
+        "Summary report matches committed receipts."
+      ],
+      "source_urls": [
+        "https://github.com/BobIvans/studious-pancake/pull/665"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "PMM-02",
+      "priority": "P2",
+      "status": "OPEN",
+      "lane": "prop-amm",
+      "delivery": "separate storage review",
+      "title": "Review the size/retention cost of #665 evidence",
+      "finding": "#665 currently has 691 changed files, including hundreds of JSONL evidence journals, snapshots, result files and binary fixtures.",
+      "files": [
+        "research/pmm-sim-caller-profile/",
+        "vendor/strategy-research/pmm-sim-cc4ae891/"
+      ],
+      "actions": [
+        "Measure actual repository and checkout size.",
+        "Keep integrity/provenance evidence; never delete evidence merely to reduce diff.",
+        "Evaluate existing approved artifact registry/storage and retention mechanisms before moving large files.",
+        "If no approved immutable storage exists, keep artifacts tracked and document the storage cost."
+      ],
+      "acceptance": [
+        "Every moved artifact has immutable digest, retrieval procedure and retention owner.",
+        "No evidence is silently dropped."
+      ],
+      "source_urls": [
+        "https://github.com/BobIvans/studious-pancake/pull/665"
+      ],
+      "depends_on": [
+        "PMM-01"
+      ]
+    },
+    {
+      "id": "GPR-01",
+      "priority": "P1",
+      "status": "OPEN",
+      "lane": "windows-test-triage",
+      "delivery": "focused PRs by root cause",
+      "title": "Triage genuine failures after Proactor fixture errors are removed",
+      "finding": "#670 baseline lists GPR=146 failed tests, other=119, QPR=21 and 327 fixture errors; another report cites unresolved synthetic path in registry.py. Existing counts are historical and must be reproduced.",
+      "files": [
+        "tests/test_gpr03_remediation.py",
+        "src/research_economic_graph/registry.py",
+        "tests/test_gpr01_research_economic_graph.py",
+        "tests/test_gpr02_solana_parallel_radar.py",
+        "tests/test_gpr03_sui_shadow.py",
+        "tests/test_mpr2602*",
+        "tests/test_ton_radar*"
+      ],
+      "actions": [
+        "Rerun after WIN-02 and classify by exact current failing test and first root-cause traceback.",
+        "Reproduce on a clean main checkout to distinguish real main debt from PR regressions.",
+        "Fix unresolved synthetic path and other confirmed errors under the owning module; add smallest regression test.",
+        "Create one focused PR per root cause/module owner; do not combine unrelated GPR, TON and MPR2602 changes."
+      ],
+      "acceptance": [
+        "No aggregate failure count without current commit/test IDs.",
+        "Every genuine failure has owner, fix/typed blocker, and regression test."
+      ],
+      "source_urls": [
+        "https://github.com/BobIvans/studious-pancake/blob/main/src/research_economic_graph/registry.py"
+      ],
+      "depends_on": [
+        "WIN-02",
+        "WIN-04"
+      ]
+    }
+  ],
+  "safety_invariants": [
+    "No CAPTURE_ONLY execution as part of task-pack or implementation PR.",
+    "No signing, sending, borrowing, account creation, relay submission or tips.",
+    "No paid provider activation or credential probing.",
+    "No live gate weakening or synthetic data promoted to real evidence.",
+    "Missing approvals/unknown quotas/source semantics fail closed."
+  ]
+}

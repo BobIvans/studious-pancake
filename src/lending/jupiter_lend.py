@@ -332,14 +332,72 @@ _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 # valuation and claim semantics are not pinned, so they are never capacity.
 
 _UNPINNED_CAPACITY_GAPS: tuple[str, ...] = (
-    "UTILIZATION_SCALE_UNPINNED",
     "MAX_UTILIZATION_SEMANTICS_UNPINNED",
     "EXCHANGE_PRICE_VALUATION_UNAUDITED",
-    "FLASH_BORROW_POSITION_DEBT_CEILING_UNDECODED",
-    "FEE_ROUNDING_RULE_UNPINNED",
     "TOTAL_CLAIM_SEMANTICS_UNPINNED",
     "VAULT_AUTHORITY_BINDING_UNPROVEN",
+    "MIN_OPERATE_AMOUNT_ENFORCEMENT_UNPINNED",
+    "FLASH_BORROW_POSITION_STATUS_SEMANTICS_UNPINNED",
 )
+
+# Cleared in the N06 qualification (dossier jupiter-lend-qualification-
+# 2026-11-21, from the pinned fluid-solana-programs@626b177 source, BSL-1.1
+# study-only citations): UTILIZATION_SCALE_UNPINNED (rate-model utilization
+# and rates use the 1e2 scale: 100% = 10_000, 1% = 100),
+# FLASH_BORROW_POSITION_DEBT_CEILING_UNDECODED (UserBorrowPosition is a
+# 112-byte packed layout, fully pinned), FEE_ROUNDING_RULE_UNPINNED (exact
+# flashloan fee rule pinned below).
+
+# ---------------------------------------------------------------------------
+# N06 pins (Instadapp/fluid-solana-programs@626b177..., BSL-1.1 study-only;
+# files/symbols recorded in the N06 dossier):
+#   programs/flashloan/src/constants.rs: MIN_FLASHLOAN_AMOUNT = 1_000;
+#     FLASHLOAN_FEE_MAX = 50 (scale 1e4 = 100%, so max fee 0.5%);
+#     FOUR_DECIMALS = 10_000.
+#   programs/flashloan/src/state/state.rs: calculate_flashloan_fee =
+#     amount * flashloan_fee, safe_div_ceil(FOUR_DECIMALS) — ROUND UP;
+#     get_expected_payback_amount = amount + fee (fee charged at payback).
+#   programs/liquidity/src/constants.rs: EXCHANGE_PRICES_PRECISION = 1e12;
+#     token decimals in [2, 9]; MIN_OPERATE_AMOUNT = 10;
+#     MAX_TOKEN_AMOUNT_CAP = 2^60 - 1.
+#   programs/liquidity/src/state/rate_model.rs: utilization and rate fields
+#     use the 1e2 scale (100% = 10_000, 1% = 100).
+# ---------------------------------------------------------------------------
+JUPITER_FLASHLOAN_FEE_ROUNDING_RULE = "U128_MUL_DIV_CEIL_SCALE_1E4_MAX_50"
+JUPITER_FLASHLOAN_FEE_SOURCE = (
+    "Instadapp/fluid-solana-programs@626b177f235224bc5d074d39439cd2558f542886"
+    " programs/flashloan/src/state/state.rs calculate_flashloan_fee "
+    "(safe_div_ceil) + constants.rs (MIN_FLASHLOAN_AMOUNT=1000, "
+    "FLASHLOAN_FEE_MAX=50, FOUR_DECIMALS=10000); BSL-1.1 study-only "
+    "citation, not vendored"
+)
+JUPITER_FLASHLOAN_FEE_SCALE = 10_000
+JUPITER_FLASHLOAN_FEE_MAX = 50
+JUPITER_FLASHLOAN_MIN_AMOUNT = 1_000
+JUPITER_FLASHLOAN_FEE_CHARGED_AT_PAYBACK = True
+JUPITER_FLASHLOAN_BORROW_TRANSFERS_EXACT_AMOUNT = True
+JUPITER_FLASHLOAN_SAME_TX_PAYBACK_REQUIRED = True
+JUPITER_FLASHLOAN_CPI_FORBIDDEN = True
+JUPITER_EXCHANGE_PRICES_PRECISION = 10**12
+JUPITER_UTILIZATION_SCALE = 10_000  # 1e2: 100% = 10_000, 1% = 100
+JUPITER_TOKEN_DECIMALS_MIN = 2
+JUPITER_TOKEN_DECIMALS_MAX = 9
+JUPITER_MAX_TOKEN_AMOUNT_CAP = (1 << 60) - 1
+
+# UserBorrowPosition (programs/liquidity/src/state/user_borrow_position.rs):
+# zero_copy, repr(C, packed) — offsets are packed, no alignment padding.
+JUPITER_USER_BORROW_POSITION_LEN = 112
+JUPITER_UBP_PROTOCOL_OFFSET = 0  # pubkey
+JUPITER_UBP_MINT_OFFSET = 32  # pubkey
+JUPITER_UBP_WITH_INTEREST_OFFSET = 64  # u8 mode flag
+JUPITER_UBP_AMOUNT_OFFSET = 65  # u64
+JUPITER_UBP_DEBT_CEILING_OFFSET = 73  # u64
+JUPITER_UBP_LAST_UPDATE_OFFSET = 81  # u64
+JUPITER_UBP_EXPAND_PCT_OFFSET = 89  # u16 (1e2 scale)
+JUPITER_UBP_EXPAND_DURATION_OFFSET = 91  # u32 seconds
+JUPITER_UBP_BASE_DEBT_CEILING_OFFSET = 95  # u64
+JUPITER_UBP_MAX_DEBT_CEILING_OFFSET = 103  # u64
+JUPITER_UBP_STATUS_OFFSET = 111  # u8: 0=Paused, 1=Active, 2=NotSet
 
 
 class JupiterLendCapacityDerivation(StrEnum):
@@ -570,6 +628,135 @@ def decode_vault_token_account(
 
 
 @dataclass(frozen=True, slots=True)
+class JupiterFlashBorrowPositionState:
+    """N06: pinned 112-byte packed UserBorrowPosition decode (fail-closed).
+
+    Layout and field semantics pinned from
+    Instadapp/fluid-solana-programs@626b177 programs/liquidity/src/state/
+    user_borrow_position.rs (BSL-1.1 study-only citation). The debt ceilings
+    are raw token amounts (normal or raw depends on ``with_interest``) —
+    their valuation against exchange prices stays UNAUDITED, so these are
+    resource facts, never capacity.
+    """
+
+    address: Pubkey
+    owner_program: Pubkey
+    protocol: Pubkey
+    mint: Pubkey
+    with_interest: bool
+    amount: int
+    debt_ceiling: int
+    last_update: int
+    expand_pct: int
+    expand_duration_secs: int
+    base_debt_ceiling: int
+    max_debt_ceiling: int
+    status: int
+
+
+def decode_jupiter_flash_borrow_position(
+    data: bytes,
+    *,
+    address: Pubkey,
+    owner_program: Pubkey,
+    expected_program: Pubkey,
+    expected_mint: Pubkey,
+) -> JupiterFlashBorrowPositionState:
+    """Fail-closed decode of the liquidity UserBorrowPosition account."""
+
+    raw = bytes(data)
+    if len(raw) != JUPITER_USER_BORROW_POSITION_LEN:
+        raise JupiterLendAdapterError(
+            JupiterLendCapacityRejectionCode.CAPACITY_STATE_INVALID,
+            f"flash borrow position length {len(raw)} != pinned "
+            f"{JUPITER_USER_BORROW_POSITION_LEN}",
+        )
+    if owner_program != expected_program:
+        raise JupiterLendAdapterError(
+            JupiterLendCapacityRejectionCode.CAPACITY_STATE_INVALID,
+            "flash borrow position owner program differs from the pinned "
+            "liquidity program",
+        )
+    protocol = Pubkey.from_bytes(
+        raw[JUPITER_UBP_PROTOCOL_OFFSET : JUPITER_UBP_PROTOCOL_OFFSET + 32]
+    )
+    mint = Pubkey.from_bytes(
+        raw[JUPITER_UBP_MINT_OFFSET : JUPITER_UBP_MINT_OFFSET + 32]
+    )
+    if mint != expected_mint:
+        raise JupiterLendAdapterError(
+            JupiterLendCapacityRejectionCode.CAPACITY_STATE_INVALID,
+            "flash borrow position mint differs from the reviewed mint",
+        )
+
+    def _u64(off: int) -> int:
+        return int.from_bytes(raw[off : off + 8], "little")
+
+    return JupiterFlashBorrowPositionState(
+        address=address,
+        owner_program=owner_program,
+        protocol=protocol,
+        mint=mint,
+        with_interest=raw[JUPITER_UBP_WITH_INTEREST_OFFSET] == 1,
+        amount=_u64(JUPITER_UBP_AMOUNT_OFFSET),
+        debt_ceiling=_u64(JUPITER_UBP_DEBT_CEILING_OFFSET),
+        last_update=_u64(JUPITER_UBP_LAST_UPDATE_OFFSET),
+        expand_pct=int.from_bytes(
+            raw[JUPITER_UBP_EXPAND_PCT_OFFSET : JUPITER_UBP_EXPAND_PCT_OFFSET + 2],
+            "little",
+        ),
+        expand_duration_secs=int.from_bytes(
+            raw[
+                JUPITER_UBP_EXPAND_DURATION_OFFSET : JUPITER_UBP_EXPAND_DURATION_OFFSET
+                + 4
+            ],
+            "little",
+        ),
+        base_debt_ceiling=_u64(JUPITER_UBP_BASE_DEBT_CEILING_OFFSET),
+        max_debt_ceiling=_u64(JUPITER_UBP_MAX_DEBT_CEILING_OFFSET),
+        status=raw[JUPITER_UBP_STATUS_OFFSET],
+    )
+
+
+def calculate_jupiter_flashloan_fee(
+    amount: int,
+    flashloan_fee: int,
+) -> int:
+    """Exact pinned flashloan fee in base units (fail-closed).
+
+    Replicates fluid-solana-programs@626b177
+    ``FlashloanAdmin::calculate_flashloan_fee`` exactly: fee = ceil(amount *
+    flashloan_fee / 10_000) (u128 product, ROUND UP via safe_div_ceil), with
+    the pinned scale (1e4 = 100%), the max fee (50 = 0.5%) and the minimum
+    flashloan amount (1000). Fee is charged at payback: the borrow transfers
+    the exact amount and the payback must transfer amount + fee in the same
+    transaction.
+    """
+
+    if type(amount) is not int or amount <= 0:
+        raise JupiterLendAdapterError(
+            JupiterLendCapacityRejectionCode.CAPACITY_STATE_INVALID,
+            "flashloan amount must be a positive integer",
+        )
+    if amount < JUPITER_FLASHLOAN_MIN_AMOUNT:
+        raise JupiterLendAdapterError(
+            JupiterLendCapacityRejectionCode.CAPACITY_STATE_INVALID,
+            f"amount below the pinned MIN_FLASHLOAN_AMOUNT "
+            f"({JUPITER_FLASHLOAN_MIN_AMOUNT})",
+        )
+    if (
+        type(flashloan_fee) is not int
+        or not 0 <= flashloan_fee <= JUPITER_FLASHLOAN_FEE_MAX
+    ):
+        raise JupiterLendAdapterError(
+            JupiterLendCapacityRejectionCode.CAPACITY_STATE_INVALID,
+            f"flashloan_fee must be in [0, {JUPITER_FLASHLOAN_FEE_MAX}] "
+            "(pinned u16 scale 1e4 = 100%)",
+        )
+    return -(-(amount * flashloan_fee) // JUPITER_FLASHLOAN_FEE_SCALE)
+
+
+@dataclass(frozen=True, slots=True)
 class JupiterLendReserveCapacityObservation:
     """Typed read-only capacity observation for one TokenReserve resource.
 
@@ -665,6 +852,22 @@ class JupiterLendReserveCapacityObservation:
             "decoder_generation": self.decoder_generation,
             "evidence_sha256": self.evidence_digest,
             "status": self.status,
+            "flash_fee_semantics": {
+                "fee_rounding_rule": JUPITER_FLASHLOAN_FEE_ROUNDING_RULE,
+                "fee_rounding_source": JUPITER_FLASHLOAN_FEE_SOURCE,
+                "fee_scale": JUPITER_FLASHLOAN_FEE_SCALE,
+                "fee_max": JUPITER_FLASHLOAN_FEE_MAX,
+                "min_flashloan_amount": JUPITER_FLASHLOAN_MIN_AMOUNT,
+                "fee_charged_at_payback": JUPITER_FLASHLOAN_FEE_CHARGED_AT_PAYBACK,
+                "borrow_transfers_exact_amount": (
+                    JUPITER_FLASHLOAN_BORROW_TRANSFERS_EXACT_AMOUNT
+                ),
+                "same_tx_payback_required": JUPITER_FLASHLOAN_SAME_TX_PAYBACK_REQUIRED,
+                "cpi_forbidden": JUPITER_FLASHLOAN_CPI_FORBIDDEN,
+                "exchange_prices_precision": JUPITER_EXCHANGE_PRICES_PRECISION,
+                "utilization_scale": JUPITER_UTILIZATION_SCALE,
+                "user_borrow_position_len": JUPITER_USER_BORROW_POSITION_LEN,
+            },
             "observation": json.loads(_canonical_json(self)),
         }
 
@@ -774,6 +977,7 @@ def observe_token_reserve_capacity(
         constraint_gaps=tuple(sorted(gaps)),
         blockers=tuple(sorted(blockers)),
         mint_decimals=mint_decimals,
+        fee_rounding=JUPITER_FLASHLOAN_FEE_ROUNDING_RULE,
     )
 
 

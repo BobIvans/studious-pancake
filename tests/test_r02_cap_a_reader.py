@@ -23,6 +23,7 @@ from src.lending.jupiter_lend import (
     FLASHLOAN_ADMIN_DISCRIMINATOR,
     JUPITER_FLASHLOAN_ADMIN_BUMP,
     JUPITER_FLASHLOAN_ADMIN_PDA,
+    JUPITER_FLASHLOAN_FEE_ROUNDING_RULE,
     JUPITER_LEND_FLASHLOAN_PROGRAM_ID,
     JUPITER_LEND_LIQUIDITY_IDL_BLOB,
     JUPITER_LEND_LIQUIDITY_IDL_NAME,
@@ -223,9 +224,7 @@ def test_token_reserve_pda_uses_pinned_reserve_seed(fixture: Fixture) -> None:
         JUPITER_LEND_LIQUIDITY_PROGRAM_ID,
     )
     assert wrong_seed_pda != fixture.reserve_pda
-    with pytest.raises(
-        JupiterLendAdapterError, match="R02CAPA_CAPACITY_STATE_INVALID"
-    ):
+    with pytest.raises(JupiterLendAdapterError, match="R02CAPA_CAPACITY_STATE_INVALID"):
         derive_token_reserve_pda(Pubkey.from_bytes(bytes(32)))
 
 
@@ -242,7 +241,9 @@ def test_token_reserve_decode_roundtrips_pinned_layout_fields(
     assert state.vault == fixture.vault
     assert state.borrow_rate == int.from_bytes(values["borrow_rate"], "little")
     assert state.fee_on_interest == int.from_bytes(values["fee_on_interest"], "little")
-    assert state.last_utilization == int.from_bytes(values["last_utilization"], "little")
+    assert state.last_utilization == int.from_bytes(
+        values["last_utilization"], "little"
+    )
     assert state.last_update_timestamp == int.from_bytes(
         values["last_update_timestamp"], "little"
     )
@@ -302,11 +303,13 @@ def test_capacity_observation_reports_resource_state_without_effective_cap(
         "MISSING_EFFECTIVE_FLASH_CAP",
         "LIVE_ROOTED_RPC_NOT_AUTHORIZED",
     }
-    assert "UTILIZATION_SCALE_UNPINNED" in obs.constraint_gaps
+    # N06 clears UTILIZATION_SCALE_UNPINNED, FLASH_BORROW_POSITION_DEBT_
+    # CEILING_UNDECODED and FEE_ROUNDING_RULE_UNPINNED; the rest stay honest.
+    assert "UTILIZATION_SCALE_UNPINNED" not in obs.constraint_gaps
     assert "MAX_UTILIZATION_SEMANTICS_UNPINNED" in obs.constraint_gaps
     assert "EXCHANGE_PRICE_VALUATION_UNAUDITED" in obs.constraint_gaps
-    assert "FLASH_BORROW_POSITION_DEBT_CEILING_UNDECODED" in obs.constraint_gaps
-    assert "FEE_ROUNDING_RULE_UNPINNED" in obs.constraint_gaps
+    assert "FLASH_BORROW_POSITION_DEBT_CEILING_UNDECODED" not in obs.constraint_gaps
+    assert "FEE_ROUNDING_RULE_UNPINNED" not in obs.constraint_gaps
     assert "TOTAL_CLAIM_SEMANTICS_UNPINNED" in obs.constraint_gaps
     assert "VAULT_AUTHORITY_BINDING_UNPROVEN" in obs.constraint_gaps
     assert "MINT_DECIMALS_UNPROVEN" in obs.constraint_gaps
@@ -315,7 +318,7 @@ def test_capacity_observation_reports_resource_state_without_effective_cap(
     assert obs.slot is None
     assert obs.slot_rooted is False
     assert obs.slot_provenance == "OFFLINE_FIXTURE_NOT_ROOTED"
-    assert obs.fee_rounding == "UNPINNED"
+    assert obs.fee_rounding == JUPITER_FLASHLOAN_FEE_ROUNDING_RULE
     assert obs.execution_authority == "NONE"
     assert obs.sign_enabled is False
     assert obs.send_enabled is False
@@ -332,7 +335,7 @@ def test_capacity_observation_reports_resource_state_without_effective_cap(
     )
     assert with_decimals.mint_decimals == 9
     assert "MINT_DECIMALS_UNPROVEN" not in with_decimals.constraint_gaps
-    assert "UTILIZATION_SCALE_UNPINNED" in with_decimals.constraint_gaps
+    assert "MAX_UTILIZATION_SEMANTICS_UNPINNED" in with_decimals.constraint_gaps
 
 
 def test_capacity_observation_digest_is_content_addressed(fixture: Fixture) -> None:
@@ -412,7 +415,9 @@ def test_financing_admission_adds_resource_binding_negatives(
 ) -> None:
     accounts = _bound_accounts(fixture)
     admin = decode_flashloan_admin_state(
-        _admin_bytes(authority=_pk(11), liquidity_program=JUPITER_LEND_LIQUIDITY_PROGRAM_ID)
+        _admin_bytes(
+            authority=_pk(11), liquidity_program=JUPITER_LEND_LIQUIDITY_PROGRAM_ID
+        )
     )
     wrong_mint = replace(accounts, mint=_pk(31))
     drifted = admit_reserve_financing_snapshot(
@@ -425,9 +430,7 @@ def test_financing_admission_adds_resource_binding_negatives(
     assert "R02CAPA_FINANCING_MINT_BINDING_MISMATCH" in drifted.blockers
     assert drifted.snapshot is None
 
-    wrong_reserve = replace(
-        accounts, flashloan_token_reserves_liquidity=_pk(32)
-    )
+    wrong_reserve = replace(accounts, flashloan_token_reserves_liquidity=_pk(32))
     drifted = admit_reserve_financing_snapshot(
         observation=fixture.observation,
         accounts=wrong_reserve,
@@ -463,7 +466,11 @@ def test_admin_fee_zero_is_still_not_capacity_proof(fixture: Fixture) -> None:
 
     accounts = _bound_accounts(fixture)
     paused = decode_flashloan_admin_state(
-        _admin_bytes(authority=_pk(11), liquidity_program=JUPITER_LEND_LIQUIDITY_PROGRAM_ID, status=False)
+        _admin_bytes(
+            authority=_pk(11),
+            liquidity_program=JUPITER_LEND_LIQUIDITY_PROGRAM_ID,
+            status=False,
+        )
     )
     admission = admit_reserve_financing_snapshot(
         observation=fixture.observation,
@@ -477,7 +484,11 @@ def test_admin_fee_zero_is_still_not_capacity_proof(fixture: Fixture) -> None:
     assert admission.snapshot is None
 
     nonzero_fee = decode_flashloan_admin_state(
-        _admin_bytes(authority=_pk(11), liquidity_program=JUPITER_LEND_LIQUIDITY_PROGRAM_ID, fee=5)
+        _admin_bytes(
+            authority=_pk(11),
+            liquidity_program=JUPITER_LEND_LIQUIDITY_PROGRAM_ID,
+            fee=5,
+        )
     )
     admission = admit_reserve_financing_snapshot(
         observation=fixture.observation,
@@ -676,11 +687,11 @@ def test_vault_binding_negatives_fail_closed(fixture: Fixture) -> None:
             owner_program=SPL_TOKEN_PROGRAM_ID,
             expected_mint=fixture.mint,
         )
-    with pytest.raises(
-        JupiterLendAdapterError, match="R02CAPA_CAPACITY_STATE_INVALID"
-    ):
+    with pytest.raises(JupiterLendAdapterError, match="R02CAPA_CAPACITY_STATE_INVALID"):
         decode_vault_token_account(
-            _vault_bytes(fixture.mint, fixture.reserve_pda, 5_000_000_000, account_state=0),
+            _vault_bytes(
+                fixture.mint, fixture.reserve_pda, 5_000_000_000, account_state=0
+            ),
             address=fixture.vault,
             owner_program=SPL_TOKEN_PROGRAM_ID,
             expected_mint=fixture.mint,
@@ -689,7 +700,9 @@ def test_vault_binding_negatives_fail_closed(fixture: Fixture) -> None:
         JupiterLendAdapterError, match="R02CAPA_VAULT_DELEGATE_UNPROVEN"
     ):
         decode_vault_token_account(
-            _vault_bytes(fixture.mint, fixture.reserve_pda, 5_000_000_000, delegate=True),
+            _vault_bytes(
+                fixture.mint, fixture.reserve_pda, 5_000_000_000, delegate=True
+            ),
             address=fixture.vault,
             owner_program=SPL_TOKEN_PROGRAM_ID,
             expected_mint=fixture.mint,
@@ -744,9 +757,7 @@ def test_interacting_state_fail_closed(fixture: Fixture) -> None:
     inconsistent = dict(values)
     inconsistent["interacting_timestamp"] = (0).to_bytes(8, "little")
     inconsistent["interacting_balance"] = (0).to_bytes(8, "little")
-    with pytest.raises(
-        JupiterLendAdapterError, match="R02CAPA_CAPACITY_STATE_INVALID"
-    ):
+    with pytest.raises(JupiterLendAdapterError, match="R02CAPA_CAPACITY_STATE_INVALID"):
         observe_token_reserve_capacity(
             mint=fixture.mint,
             reserve_bytes=_reserve_bytes(inconsistent),
@@ -759,9 +770,7 @@ def test_interacting_state_fail_closed(fixture: Fixture) -> None:
 
     orphan_state = _default_reserve_values(fixture.mint, fixture.vault)
     orphan_state["interacting_balance"] = (5).to_bytes(8, "little")
-    with pytest.raises(
-        JupiterLendAdapterError, match="R02CAPA_CAPACITY_STATE_INVALID"
-    ):
+    with pytest.raises(JupiterLendAdapterError, match="R02CAPA_CAPACITY_STATE_INVALID"):
         observe_token_reserve_capacity(
             mint=fixture.mint,
             reserve_bytes=_reserve_bytes(orphan_state),
@@ -801,3 +810,109 @@ def _bound_accounts(fixture: Fixture) -> JupiterLendFlashloanAccounts:
         liquidity_program=JUPITER_LEND_LIQUIDITY_PROGRAM_ID,
         token_program=SPL_TOKEN_PROGRAM_ID,
     )
+
+
+# ---------------------------------------------------------------------------
+# N06 qualification: exact flashloan fee math, UserBorrowPosition decode,
+# and the pinned flash-semantics lock.
+# ---------------------------------------------------------------------------
+
+
+def test_n06_flashloan_fee_exact_vectors() -> None:
+    from src.lending.jupiter_lend import (
+        JUPITER_FLASHLOAN_FEE_MAX,
+        JUPITER_FLASHLOAN_MIN_AMOUNT,
+        calculate_jupiter_flashloan_fee,
+    )
+
+    # Exact scale: 1e6 at 0.05% (5/10000) -> ceil(5000) = 5000.
+    assert calculate_jupiter_flashloan_fee(1_000_000, 5) == 500
+    assert calculate_jupiter_flashloan_fee(1_000_000, 50) == 5_000
+    # ROUND UP (safe_div_ceil): 1_000_003 at 0.05% -> 500.0015 -> 501.
+    assert calculate_jupiter_flashloan_fee(1_000_003, 5) == 501
+    # Zero fee is legal.
+    assert calculate_jupiter_flashloan_fee(1_000, 0) == 0
+    # Minimum flashloan amount is pinned (1000) and enforced.
+    with pytest.raises(JupiterLendAdapterError, match="MIN_FLASHLOAN_AMOUNT"):
+        calculate_jupiter_flashloan_fee(999, 0)
+    # Fee above the pinned max (50 = 0.5%) fails closed.
+    with pytest.raises(JupiterLendAdapterError, match="pinned u16 scale"):
+        calculate_jupiter_flashloan_fee(1_000, JUPITER_FLASHLOAN_FEE_MAX + 1)
+    with pytest.raises(JupiterLendAdapterError):
+        calculate_jupiter_flashloan_fee(0, 0)
+
+
+def test_n06_user_borrow_position_decode_roundtrip() -> None:
+    from src.lending.jupiter_lend import (
+        JUPITER_USER_BORROW_POSITION_LEN,
+        decode_jupiter_flash_borrow_position,
+    )
+
+    raw = bytearray(JUPITER_USER_BORROW_POSITION_LEN)
+    raw[0:32] = bytes(_pk(51))  # protocol
+    mint = _pk(50)
+    raw[32:64] = bytes(mint)
+    raw[64] = 1  # with_interest
+    raw[65:73] = (2_000_000).to_bytes(8, "little")  # amount
+    raw[73:81] = (3_000_000).to_bytes(8, "little")  # debt_ceiling
+    raw[81:89] = (1_760_000_000).to_bytes(8, "little")  # last_update
+    raw[89:91] = (500).to_bytes(2, "little")  # expand_pct (1e2 scale)
+    raw[91:95] = (3600).to_bytes(4, "little")  # expand_duration
+    raw[95:103] = (4_000_000).to_bytes(8, "little")  # base_debt_ceiling
+    raw[103:111] = (5_000_000).to_bytes(8, "little")  # max_debt_ceiling
+    raw[111] = 1  # status Active
+    state = decode_jupiter_flash_borrow_position(
+        bytes(raw),
+        address=_pk(52),
+        owner_program=JUPITER_LEND_LIQUIDITY_PROGRAM_ID,
+        expected_program=JUPITER_LEND_LIQUIDITY_PROGRAM_ID,
+        expected_mint=mint,
+    )
+    assert state.amount == 2_000_000
+    assert state.debt_ceiling == 3_000_000
+    assert state.base_debt_ceiling == 4_000_000
+    assert state.max_debt_ceiling == 5_000_000
+    assert state.with_interest is True
+    assert state.expand_pct == 500
+    assert state.status == 1
+    # Negative paths: wrong length, wrong owner, wrong mint.
+    with pytest.raises(JupiterLendAdapterError, match="length"):
+        decode_jupiter_flash_borrow_position(
+            bytes(raw[:111]),
+            address=_pk(52),
+            owner_program=JUPITER_LEND_LIQUIDITY_PROGRAM_ID,
+            expected_program=JUPITER_LEND_LIQUIDITY_PROGRAM_ID,
+            expected_mint=mint,
+        )
+    with pytest.raises(JupiterLendAdapterError, match="owner program"):
+        decode_jupiter_flash_borrow_position(
+            bytes(raw),
+            address=_pk(52),
+            owner_program=_pk(53),
+            expected_program=JUPITER_LEND_LIQUIDITY_PROGRAM_ID,
+            expected_mint=mint,
+        )
+
+
+def test_n06_flash_semantics_pins_are_locked() -> None:
+    from src.lending.jupiter_lend import (
+        JUPITER_EXCHANGE_PRICES_PRECISION,
+        JUPITER_FLASHLOAN_FEE_CHARGED_AT_PAYBACK,
+        JUPITER_FLASHLOAN_FEE_MAX,
+        JUPITER_FLASHLOAN_FEE_SCALE,
+        JUPITER_FLASHLOAN_MIN_AMOUNT,
+        JUPITER_FLASHLOAN_SAME_TX_PAYBACK_REQUIRED,
+        JUPITER_TOKEN_DECIMALS_MAX,
+        JUPITER_TOKEN_DECIMALS_MIN,
+        JUPITER_UTILIZATION_SCALE,
+    )
+
+    # Pin-lock: proven from fluid-solana-programs@626b177 (see N06 dossier).
+    assert JUPITER_FLASHLOAN_FEE_SCALE == 10_000
+    assert JUPITER_FLASHLOAN_FEE_MAX == 50
+    assert JUPITER_FLASHLOAN_MIN_AMOUNT == 1_000
+    assert JUPITER_FLASHLOAN_FEE_CHARGED_AT_PAYBACK is True
+    assert JUPITER_FLASHLOAN_SAME_TX_PAYBACK_REQUIRED is True
+    assert JUPITER_EXCHANGE_PRICES_PRECISION == 10**12
+    assert JUPITER_UTILIZATION_SCALE == 10_000
+    assert (JUPITER_TOKEN_DECIMALS_MIN, JUPITER_TOKEN_DECIMALS_MAX) == (2, 9)

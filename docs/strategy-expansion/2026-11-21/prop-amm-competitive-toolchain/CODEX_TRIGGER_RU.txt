@@ -1,41 +1,76 @@
-CODEX TASK — Prop AMM Competitive Toolchain
+CODEX TASK — Prop AMM competitive toolchain, source mirror and parallel flashloan strategies
 
-Work only on branch codex/prop-amm-competitive-toolchain-2026-11-21 and rebase to the latest main before coding.
+Branch: codex/prop-amm-competitive-toolchain-2026-11-21
+Target PR: #665 (keep Draft)
 
-Read every file in:
-docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/
+READ FIRST:
+- CODEX_START_HERE_RU.md
+- SOURCE_AUDIT_V1.json
+- VENDORED_SOURCE_MANIFEST_V1.json
+- SOURCE_DOWNLOAD_AND_VENDOR_PLAYBOOK_RU.md
+- PARALLEL_OPPORTUNITY_AND_ATOMIC_EXECUTION_RU.md
+- ADAPTER_CONTRACTS_AND_TESTS_RU.md
+- IMPLEMENTATION_DAG_AND_ACCEPTANCE_RU.md
+- RELAY_AND_ORDERFLOW_POLICY_RU.md
+- PROP_AMM_TOOLCHAIN_AND_STRATEGY_RU.md
 
-Then inspect the actual main-tree implementation, composition root, source/market owners, R13 quote normalization, PR118 sizing/ConflictScheduler, R02/R03/R05/R06, PR130, MPR04/MPR05, and open PR #660/#664. Produce an owner crosswalk before changing source.
+Then refresh main, #657 SX-18, #660 CLMM/DLMM and #664 campaign pack. Rebase before code. Coordinate owners; SX-18 owns strategy runtime fanout. Do not create a second detector, graph, quote kernel, scheduler, market-data bus, journal, source catalog or sender.
 
-GOAL:
-Implement the verified, useful parts of this toolchain as additive, offline-first adapters/tests for the existing flashloan bot:
-1. LocalShred Lite / approved Yellowstone or Geyser feed profile through the existing source governance/transport.
-2. sol-parser-sdk only if crate/toolchain compatibility and canonical event conformance pass.
-3. pmm-sim as an isolated, pinned offline simulation harness with direct/single/multi/benchmark corpus.
-4. Jupiter Swap API V2 /build plus 1000xsh/swaps direct instruction construction, one venue/version at a time, with exact account/state and min-output or same-tx post-balance/repayment guarantees.
-5. A provider-neutral relay capability model only if it belongs inside the existing submission owner; keep PR130 Jito SINGLE policy as the only current route.
+MISSION A — MIRROR AND TEST OPEN-SOURCE TOOLS
+1. Use VENDORED_SOURCE_MANIFEST_V1.json as the exact allow/hold/exclude list.
+2. Download eligible upstream sources by immutable commit into vendor/strategy-research/ without nested .git; include unmodified LICENSE/NOTICE and provenance.json checksums.
+3. Use separate harness workspaces and retain Cargo.lock. Do not merge incompatible Solana SDK versions.
+4. Pin pmm-sim's Magnus dependency to the exact commit in its upstream Cargo.lock; do not follow mutable branch.
+5. Keep sol-parser-sdk parser-only. Do not import sol-trade-sdk or sol-trade-router-sdk signing/multi-relay paths.
+6. Keep pmm-sim spoofed CPI aggregator identity mode disabled and excluded from all strategy tests.
+7. Keep 1000xsh/swaps on HOLD until published crate archive/license evidence is verified.
+8. Do not download or execute hosted provider code, unverified KADES/CADES/Capture OS, unlicensed frameworks, or upstream mainnet/live bot loops.
+9. Run selected workspace tests/builds offline after dependencies are prefetched; record SHA256s, versions, build reports and benchmarks.
+
+MISSION B — ADD TO EXISTING BOT OWNERS
+1. Add parser/source adapters only at existing canonical source and MarketObservation boundary.
+2. Implement pmm-sim as an offline differential harness, not production runtime.
+3. Integrate Jupiter Swap API V2 /order and /build through current R13 quote/build owner; /build remains unsigned.
+4. Integrate 1000xsh direct instructions only after license/program/account/min-out conformance, one venue/version at a time.
+5. Preserve exact mint/token-program/base units/state generation, route lineage, fees, compute/account/packet limits and same-transaction repayment.
+6. Route lender evidence through R02; unsigned plan through R03; simulation/economics through R05; paper campaign through R06/QPR; installed soak through MPR05.
+
+MISSION C — PARALLEL STRATEGY OPPORTUNITIES
+1. Reuse SX-18 StrategyRegistry fanout, SX-12 portfolio optimizer and ConflictScheduler.
+2. Evaluate strategy candidates concurrently against one immutable source/state generation; no duplicate detector.
+3. Deduplicate route candidates using underlying pool/account lineage, not merely strategy names.
+4. Produce amount-specific all-in net estimates and parallel simulation, deterministic deadlines/cancellation and typed rejections.
+5. Pick a compatible portfolio only after actual account read/write lock analysis, fee-payer/token-account/lender-capacity checks.
+6. Each accepted flashloan opportunity must be independently profitable and complete within one transaction: borrow -> swaps -> output guard -> repay.
+7. Parallel execution means concurrent distinct self-contained transactions with disjoint writable resources. If the same fee payer, lender vault, token account, pool, tick/bin array or oracle is writable in multiple txs, serialize or reject/requote.
+8. Default execution concurrency remains 1. Discovery/simulation may be bounded-concurrent.
+9. Do not send all Top-K candidates; only the conflict-free selected portfolio may be considered for later authorization.
+
+MISSION D — SIGNING / SENDING BOUNDARY
+1. Never load/export private keys into the bot, Codex, vendor tree or environment.
+2. Build immutable unsigned transaction candidates and sign-intent records only.
+3. Future signing must pass through MPR-04 isolated signer and bind exact message hash, source/config generations, wallet, notional, fee/repay economics, reservation, expiry, simulation evidence and second-human approval.
+4. Preserve PR130 JITO_SINGLE first-production policy. Do not replace with parallel relay fan-out or multi-tx bundles.
+5. No provider-specific tip variants, endless repricing/re-signing, or claim that only winner relay charges.
+6. ACK is not settlement; finalized signature + balance and flashloan repayment reconciliation is mandatory.
+7. All activation flags remain false in this task.
 
 NON-NEGOTIABLE:
-- No stealth/camouflage, no size/time randomization to evade Prop AMM solver detection, no spoofed CPI caller/aggregator identity, no anti-abuse bypass, no sandwich/front-running/victim targeting.
-- Splitting is allowed only to model genuine depth/price impact/resource constraints; flashloan legs and repayment must remain atomic.
-- No second source catalog, parser pipeline, market graph, quote kernel, scheduler, capital graph, journal, capture OS, parallel runner, or sender stack.
-- Do not install KADES/CADES/Capture OS/Supanode/Sanctum/BoltTx/Nozomi as runtime dependency without canonical API/repo, terms, license, security and performance proof.
-- No all-relay fan-out and no claim that only the winning relay gets paid.
-- No changed-tip re-sign/retry loops. A changed transaction is a different signature and independently executable.
-- No API credential probing, external subscriptions, network campaign, account creation, ATA creation, wallet/key access, signing, sending, borrowing, spending, paid feed activation, paper campaign start, or production promotion.
-- Keep every activation flag false. Do not modify the live/signer/sender safety boundaries.
+- no stealth/camouflage, caller impersonation, spoofed CPI, evasion of Prop AMM venue risk filters, sandwich, front-running or victim targeting.
+- splitting only for genuine measured price impact/capacity/compute/account limits; repayment must remain atomic.
+- no provider credentials, API probing, trial activation, paid subscriptions, network campaigns, wallet/ATA creation, borrow, sign, send or live mode.
+- no omitted source licenses and no unpinned branch dependencies.
+- do not claim profitability, competitive latency or live qualification from local fixtures.
 
 DELIVERABLES:
-- Implement only offline-safe adapters, immutable pins, deterministic fixtures, typed rejection reasons and tests.
-- Add parser + SVM benchmark reports with p50/p95/p99 and reproducible machine/toolchain metadata; never copy vendor latency claims into acceptance thresholds.
-- Add pmm-sim differential corpus and venue-version matrix.
-- Add direct builder test for each supported Prop AMM; explicitly test HumidiFi min-out caveat and block unless a verified same-tx guard exists.
-- Compare direct route vs Jupiter V2 /build on same amount/state generation.
-- Add atomic borrow/swap/output-guard/repay invariant tests and reserve shared pool resources through the existing owner.
-- Add source feed gap/reorg/duplicate/replay tests.
-- Add pure relay semantics tests only; no real sender.
-- Update SOURCE_AUDIT_V1.json with actual commit/tag pins, Cargo.lock hashes, licenses and blockers.
-- Run focused tests, all relevant owner suites, format/lint/type checks, and scripts/verify_repo.py as allowed by the repository.
-- Report exact base/head SHA, changed files, test outputs, unresolved sources, and why each rejected/blocked item remains blocked.
+- vendored snapshots only for approved sources, each with provenance and license checksums;
+- isolated Cargo harnesses, locked dependency graphs and reproducible test reports;
+- parser/source gap/reorg/replay tests;
+- pmm-sim direct/single/multi/benchmark corpus with spoof mode disabled;
+- Jupiter V2 and direct-builder conformance matrix per venue/version;
+- bounded parallel strategy-evaluation receipt and conflict-free portfolio selection evidence;
+- unsigned per-opportunity atomic flashloan plans and fake-signer MPR04 conformance tests;
+- updated source audit and machine-readable source mirror manifest;
+- tests/quality gates/verify_repo.py output, exact commit SHAs, files and unresolved blockers.
 
-Keep the PR draft. Never claim a provider was installed or an execution was performed.
+Keep PR #665 Draft. Report what was downloaded, what could not legally/technically be downloaded, what built, what tests passed, and which live/provider/signing/sending gates remain closed.

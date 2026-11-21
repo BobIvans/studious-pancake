@@ -34,3 +34,9 @@ regexes = [
   '''WSOL_MINT_FIXTURE''',
   '''JUPITER_PROGRAM_FIXTURE''',
 ]
+
+[[allowlists]]
+description = "Vendor docs HTML snapshots (Mintlify site chrome) contain CSS class names such as sk-assistant-button / sk-assistant-code-block-button that match the sk- token rule; they are site styling, not secrets. Scoped: only that class-name pattern inside docs-pins snapshot files."
+condition = "AND"
+paths = ['''docs/roadmap/.*/docs-pins-snapshots-.*\.html''']
+regexes = ['''sk-assistant-[A-Za-z0-9_-]+''']

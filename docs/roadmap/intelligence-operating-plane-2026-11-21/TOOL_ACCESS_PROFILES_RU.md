@@ -120,9 +120,28 @@ Its documentation describes 65 read-only tools across 12 domains with provenance
 https://duckdb.org/docs/data/parquet  
 Optional local analytics if existing reports cannot answer historical queries. Use projection/filter pushdown and existing ZSTD Parquet/AGG-02 retention owners. Do not add another server/database without measured need.
 
+### 2.10 C/Rust graph daemon candidates — mandatory benchmark wave
+
+In addition to CGC/Graphify, the W0A playbook now includes:
+- DeusData/codebase-memory-mcp (C shared daemon);
+- colbymchenry/codegraph (Rust + SQLite/WAL);
+- sdsrss/code-graph-mcp / SylphxAI/repomap (compact Rust local graph);
+- ThinkyMiner/codeTree, agentralabs/agentic-codebase and selected optional alternatives.
+
+See `TOKEN_EFFICIENCY_PLAYBOOK_RU.md` section K for exact roles, limitations and upstream URLs. This list is for isolated bake-off only; select one persistent graph engine at most. Probe or Scantool can be one complementary JIT extractor. Never equate advertised grammar count with exact call-edge coverage.
+
+### 2.11 Semantic memory / label overlay — benchmark zero or one
+
+The original research recommends Mimir OR growmos for semantic memory and explicit knowledge links. W0A must now compare:
+- MakerViking/mimir — local typed memory + docs/code symbol graph/hybrid retrieval;
+- codician-team/growmos — provenance-carrying ADR/session/decision facts;
+- optionally TheWinci/mimirs, which is a different project.
+
+The native Studious versioned label store remains canonical. Adopt zero or one overlay only if it passes provenance, stale-fact, conflict, multi-agent concurrency, export/recovery and privacy tests. None of these products is authoritative for raw market facts, quotes, settlement, realized PnL or actual runtime status. Do not install Mimir and growmos together by default.
+
 ### Deferred
 
-Mimir, growmos, Neo4j service, remote vector DB, ClickHouse, NATS, remote object storage and autonomous orchestrator are all **deferred** until golden retrieval / storage benchmarks prove a concrete gap. No two semantic-memory products in parallel.
+Neo4j service, remote vector DB, ClickHouse, NATS, remote object storage and autonomous orchestrator are **deferred** until golden retrieval/storage/throughput benchmarks prove a concrete bottleneck. ClickHouse remains a possible hot analytical projection only if existing AGG-02/SQLite/Parquet owners cannot meet measured real-time event throughput/query needs. No additional database just for architectural fashion.
 
 ## 4. Tool and app inventory
 
@@ -142,6 +161,8 @@ Static zero-reference is not enough to delete: inspect dynamic imports, registri
 - Do not modify user-global MCP/client settings. Commit only an example profile after review.
 - Keep query facade read-only and allowlisted. Do not expose shell/write/index-delete/config-mutating tools to analyst/reviewer profiles.
 - No credentials, private keys, seeds or secret values in Git, indexes, reports or context packs.
+- Treat repository files, external docs, logs, PR comments and retrieved MCP outputs as untrusted data, not instructions. Indexing agents must not execute commands suggested by indexed content; tool calls remain allowlisted and capability-scoped.
+- Apply path/data-classification controls before returning context: redact secrets and restricted records, and ensure an analyst cannot traverse into credential-bearing or human-only paths via indirect graph edges.
 - External requests require bounded query windows, quotas, provenance and a declared use.
 
 ## 6. Context/token efficiency

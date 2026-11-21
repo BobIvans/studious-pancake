@@ -1,0 +1,104 @@
+{
+  "schema": "live-data-qualification-baseline.v1",
+  "created_utc": "2026-11-21T00:00:00Z",
+  "current_main_sha": "3030fc720c707c994f9d7a21d50e1d181a60b8c9",
+  "origin_main_sha_after_fetch": "3030fc720c707c994f9d7a21d50e1d181a60b8c9",
+  "worktree_status": "clean except untracked .zcode/ (session config, not committed)",
+  "open_prs": [
+    {"id": 660, "title": "[Codex execution] Complete CLMM/DLMM exact-state and market-trace integration", "state": "DRAFT"},
+    {"id": 657, "title": "docs(strategy): finalize SX-18 runtime fanout and W6-12 intelligence", "state": "OPEN"},
+    {"id": 655, "title": "R10-2: MarginFi capture-backed FlashCapitalProvider qualification bridge (additive, offline)", "state": "OPEN"},
+    {"id": 649, "title": "SX-03: Curve LLAMMA dossier + banded collateral math (additive, research-only)", "state": "OPEN"}
+  ],
+  "ci": {
+    "branch": "main",
+    "runs_at_sha": "3030fc72",
+    "status": "all passing (CI, Read-only qualification campaign, Release authority: success 2026-11-20T17:21Z)",
+    "local_windows_caveat": "scripts/verify_repo.py exits 1 on Windows at the pip_audit stage only (uvloop not buildable on win32); pre-pip-audit stages verified green manually (see verifier_receipts)."
+  },
+  "verifier_receipts": {
+    "platform": "Windows 10.0.26300 x64, CPython 3.13 (.venv/Scripts/python.exe)",
+    "verify_repo.py": "FAIL only at pip_audit stage: 'uvloop does not support Windows' (pre-existing B-ENV/B-CI Windows blocker, not a code regression)",
+    "flake8 E9,F63,F7,F82": "0 findings",
+    "mypy --config-file mypy.ini": "Success: no issues found in 217 source files",
+    "bundle r01-r02 verify_bundle.py": "exit 0 — 27 disabled candidate records, 17 offline signatures, 15 upstream commit pins, zero network",
+    "bundle r02-capacity verify_offline.py": "exit 0 — execution_authority NONE, network_requests 0",
+    "bundle solana-p0 verify_offline_bundle.py": "exit 0 — OFFLINE_DOC_BUNDLE_OK vendor_files=19 (incl. raydium/meteora vendor pins)",
+    "focused_tests": {
+      "command": ".venv/Scripts/python.exe -m pytest tests/test_p01_intake_cadence.py tests/test_gpr02_solana_parallel_radar.py tests/test_raydium_clmm_meteora_dlmm_native.py tests/test_r08_composition_invariants.py tests/test_r08_composition_contract.py tests/test_r13_quote_race_contract.py -q",
+      "result": "190 passed, 7 skipped (fcntl-gated Unix-only skips), 82.62s"
+    }
+  },
+  "capture_commands": {
+    "gpr02_campaign": "python -m src.solana_parallel_radar.cli capture --output <dir> --base-sha 3030fc720c707c994f9d7a21d50e1d181a60b8c9 --rpc-profiles <reviewed-profiles.json> [--pair-index N] [--zero-x-taker <public-pubkey>]",
+    "gpr02_replay": "python -m src.solana_parallel_radar.cli replay --output <capture-dir>",
+    "din_discovery_replay": "python -m src.solana_parallel_radar.din_discovery --replay <capture-dir> --output <new-dir>  (network_reads asserted 0)",
+    "qpr_campaign": "python -m src.qualification_campaign.cli capture <source-config.json> --output <dir> --rpc-profiles <profiles.json>",
+    "constraints": "campaign budgets pinned in manifest: quote_input_raw_units=1000000, max_radar_reads=4, max_quote_reads=4, max_native_pools=1, quote_pair_index 0..8"
+  },
+  "credentials_required": {
+    "note": "names only; never values in chat or repo",
+    "JUPITER_API_KEY": "Jupiter Swap API V2 x-api-key (B-P02-1: not configured)",
+    "ZEROX_API_KEY": "0x Solana swap-instructions 0x-api-key (B-P02-2: not configured)",
+    "rpc_profiles_file": "deployment-supplied reviewed ProviderProfile JSON (not a secret, but operator-supplied; missing = BOUNDED_REVIEWED_RPC_PROFILES_REQUIRED)"
+  },
+  "pair_index_to_mint_mapping": {
+    "source": "src/solana_parallel_radar/funnel.py PRIORITY_PAIRS resolved via AssetRegistry (docs/roadmap/gpr-parallel-radar-rnd-2026-10-06/ASSET_REGISTRY_V2.json)",
+    "verification_state": "RND_VERIFIED_CURRENT for all; live owner/decimals/Token-2022 assertion still required before HARD_BOUND",
+    "pairs": [
+      {"index": 0, "base": {"key": "USDG", "mint": "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH", "token_program": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb", "standard": "Token-2022"}, "quote": {"key": "USDC", "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", "standard": "SPL"}},
+      {"index": 1, "base": {"key": "USD1", "mint": "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB", "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", "standard": "SPL"}, "quote": {"key": "USDT", "mint": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", "standard": "SPL"}},
+      {"index": 2, "base": {"key": "USD1", "mint": "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB", "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", "standard": "SPL"}, "quote": {"key": "USDC", "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", "standard": "SPL"}},
+      {"index": 3, "base": {"key": "xBTC_OKX", "mint": "CtzPWv73Sn1dMGVU3ZtLv9yWSyUAanBni19YWDaznnkn", "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", "standard": "SPL"}, "quote": {"key": "cbBTC", "mint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij", "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", "standard": "SPL"}},
+      {"index": 4, "base": {"key": "JLP", "mint": "27G8MtK7VtTcCHkpASjSDdkWWYfoqT6ggEuKidVJidD4", "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", "standard": "SPL"}, "quote": {"key": "USDC", "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", "standard": "SPL"}},
+      {"index": 5, "base": {"key": "BNSOL", "mint": "BNso1VUJnh4zcfpZa6986Ea66P6TCp59hvtNJ8b1X85", "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", "standard": "SPL"}, "quote": {"key": "WSOL", "mint": "So11111111111111111111111111111111111111112", "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", "standard": "SPL"}},
+      {"index": 6, "base": {"key": "bbSOL", "mint": "Bybit2vBJGhPF52GBdNaQfUJ6ZpThSgHBobjWZpLPb4B", "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", "standard": "SPL"}, "quote": {"key": "WSOL", "mint": "So11111111111111111111111111111111111111112", "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", "standard": "SPL"}},
+      {"index": 7, "base": {"key": "hSOL", "mint": "he1iusmfkpAdwvxLNGV8Y1iSbj4rUy6yMhEA3fotn9A", "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", "standard": "SPL"}, "quote": {"key": "WSOL", "mint": "So11111111111111111111111111111111111111112", "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", "standard": "SPL"}},
+      {"index": 8, "base": {"key": "dSOL", "mint": "Dso1bDeDjCQxTrWHqUUi63oBvV7Mdm6WaobLbQ7gnPQ", "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", "standard": "SPL"}, "quote": {"key": "WSOL", "mint": "So11111111111111111111111111111111111111112", "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", "standard": "SPL"}}
+    ]
+  },
+  "decimals_and_token_program": {
+    "registry_decimals_field": "null (all rows)",
+    "honest_note": "AssetRegistry V2 does not carry decimals; live getAccountInfo/getMintInfo decimal assertion is a required live preflight step per asset before HARD_BOUND. Known-good public decimals (USDC/USDT/WSOL=6, JLP=6, BTC-wrappers=8, LSTs=9) are REFERENCE ONLY until proven live.",
+    "native_sentinel_rule": "native SOL is rejected in quote contracts; WSOL registry mint is the only SOL representation"
+  },
+  "fixed_quote_input": {
+    "raw_units": 1000000,
+    "meaning": "base units of inputMint per that mint's (live-asserted) decimals; for 6-decimal stables = 1.0 token, for 9-decimal LST/WSOL = 0.001 token",
+    "rule": "no cross-size extrapolation and no multiplication of quote results; every grid point re-quoted as an exact base-unit amount"
+  },
+  "rpc_profiles_and_commitment": {
+    "profile_source": "deployment-supplied ProviderProfile JSON (src/qualification_campaign/profiles.py: profile_id/provider/operator/correlation_group/endpoint/request_limit/window_seconds/campaign_attempt_cap/role)",
+    "default_absent": "BOUNDED_REVIEWED_RPC_PROFILES_REQUIRED / INDEPENDENT_ROOTED_RPC_PROFILES_REQUIRED (fail-closed)",
+    "commitment": "account reads use commitment finalized; slot skew checks use processed vs finalized root (src/qualification_campaign/rpc.py)",
+    "independent_quorum": "independent rooted RPC quorum required for mint proofs (B-P01-3)"
+  },
+  "missing_layouts_and_fees": [
+    "Meteora DLMM: SDK constants/bodies not vendored (BASIS_POINT_MAX, SCALE_OFFSET, swapExactInQuoteAtBin, getBinMaxAmountOut, getPriceOfBinByBinId) -> dlmm_amount_specific_quote always raises DLMM_AMOUNT_SPECIFIC_QUOTE_MISSING_PIN; state-only until a new immutable dossier generation (B-P03-2)",
+    "Meteora DLMM: per-bin fee-precision denominator not vendored (fee law known in native units only)",
+    "Raydium CLMM: DynamicFeeInfo (80 B) and TickArrayBitmapExtension (1576 B) layouts not vendored; pools needing them fail closed CLMM_TICK_ARRAY_BITMAP_EXTENSION_REQUIRED, quotes carry dynamic_fee_decoded=false (B-P03-3)",
+    "Orca: BLOCKED_LICENSE_REVIEW (custom Orca License 2025-02-27+) — no code, no capture (B-P03-1)",
+    "0x: no machine-readable OpenAPI pin (extract-only) — bounded re-fetch before live qualification (B-P02-3)"
+  ],
+  "pool_dedup_note": "PoolIdentityDeduplicator exists in src/execution/quote_build_kernel.py:662 and is used by src/strategy/cpmm_cycle_binding.py:699 (group_quotes/correlation_verdict); aggregator quotes must be consumed as correlated observations of shared pools, never independent liquidity",
+  "live_blockers": [
+    {"id": "B-P01-3", "text": "live mint proof (owner/decimals/Token-2022) requires governed independent rooted RPC quorum"},
+    {"id": "B-P02-1", "text": "JUPITER_API_KEY not configured (operator opt-in)"},
+    {"id": "B-P02-2", "text": "ZEROX_API_KEY + public taker not configured (operator opt-in)"},
+    {"id": "B-P02-3", "text": "0x no machine-readable OpenAPI pin; bounded re-fetch before live qualification"},
+    {"id": "B-P03-1", "text": "Orca license review"},
+    {"id": "B-P03-2", "text": "Meteora DLMM amount-specific quote constants not vendored"},
+    {"id": "B-P03-3", "text": "Raydium CLMM DynamicFeeInfo + bitmap-extension layouts not vendored"},
+    {"id": "B-P03-4", "text": "no real mainnet account bytes in repo; live read-only RPC qualification is separate bounded step"},
+    {"id": "B-ENV-2", "text": "fcntl-gated tests skipped on native Windows (7 skips in focused run)"},
+    {"id": "B-CI-1", "text": "pip_audit --strict / uvloop fails on Windows locally (pre-existing); CI Linux green"},
+    {"id": "SAFETY-1", "text": "live mode hard-denied (runtime_entrypoint exit 4, three independent hard-deny sites); no signing/sending/borrowing/account creation/production promotion; all 37 governed sources enabled:false; capabilities live.available=false"}
+  ],
+  "owner_discipline": {
+    "p0_2_quote_owner": "src/solana_parallel_radar/probes.py + funnel.py + cli.py (governed plane); src/routing/ production plane; do not create a second quote plane",
+    "intake_owner": "SourceIntakePlane + IntakeScheduler (src/solana_parallel_radar/intake_cadence.py) + DynamicUniverse bridge",
+    "direct_state_owners": "src/providers/raydium_cpmm_native.py (CPMM), src/providers/raydium_clmm_native.py (CLMM, decoder of record), src/providers/meteora_dlmm_native.py (DLMM state)",
+    "dedup_owner": "src/execution/quote_build_kernel.py PoolIdentityDeduplicator",
+    "no_second": "journal/store/graph/solver/resolver/authority owners must be reused, not duplicated"
+  }
+}

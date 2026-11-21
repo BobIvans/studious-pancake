@@ -1,0 +1,54 @@
+{
+  "schema": "studious-pancake.offline-dossier-source-manifest.v1",
+  "dossier": "jupiter-lend-qualification-2026-11-21",
+  "generated_at": "2026-11-21",
+  "owner_lane": "R02-CAP-A + R03-A (one lender, one PR, one owner)",
+  "qualification_base": {
+    "flashloan_program_id": "jupgfSgfuAXv4B6R2Uxu85Z1qdzgju79s6MfZekN6XS",
+    "flashloan_idl_repository": "https://github.com/jup-ag/jupiter-lend",
+    "flashloan_idl_commit": "33a22cf7a5bfdd32ab1712dda4adfbeb9b348ad9",
+    "flashloan_idl_path": "target/idl/flashloan.json",
+    "flashloan_idl_blob": "0d0ae6d624b33355315e98baaf0a5d00d317beb8",
+    "flashloan_idl_version": "0.1.4",
+    "liquidity_program_id": "jupeiUmn818Jg1ekPURTpr4mFo29p46vygyykFJ3wZC",
+    "liquidity_idl_commit": "a484ddcf9b34ef6f6d575ad10b0673a18d9c8f31",
+    "liquidity_idl_blob": "09209f553900df7da61f84a106ad85767fdac71d",
+    "liquidity_idl_version": "0.1.8",
+    "program_source_repository": "https://github.com/Instadapp/fluid-solana-programs",
+    "program_source_commit": "626b177f235224bc5d074d39439cd2558f542886",
+    "program_source_license": "BSL-1.1 (study-only; cited symbols, never vendored)",
+    "idl_license_note": "jup-ag/jupiter-lend has no license file; IDLs are hash-pinned, not vendored"
+  },
+  "drift_reverification": {
+    "checked_at": "2026-11-21",
+    "channel": "api.github.com commits/HEAD + raw blob re-fetch",
+    "fluid_solana_programs_head": "626b177f235224bc5d074d39439cd2558f542886",
+    "fluid_solana_programs_drift": "none (HEAD equals the pinned commit)",
+    "jupiter_lend_head": "7960a14a5a760abc41db3ed1395dc5cb56a1f8db",
+    "jupiter_lend_head_date": "2026-10-09T10:32:34Z",
+    "jupiter_lend_drift": "DRIFTED; qualification base stays at the pinned IDL commits until a rooted deployed-build attestation exists",
+    "pinned_flashloan_idl_blob_reverified": "0d0ae6d624b33355315e98baaf0a5d00d317beb8 (byte-level match at the pinned commit)"
+  },
+  "retrieval": {
+    "date": "2026-11-21",
+    "channel": "raw.githubusercontent.com raw blob endpoint at the pinned commits"
+  },
+  "new_blobs": [],
+  "vendoring_note": "No upstream bytes are vendored: fluid-solana-programs is BSL-1.1 and jupiter-lend has no license. Provenance is commit + blob-hash based.",
+  "fee_rounding_rule": "U128_MUL_DIV_CEIL_SCALE_1E4_MAX_50",
+  "program_semantic_citations": {
+    "license_note": "BSL-1.1 source studied for conformance only; symbols cited, code never copied or vendored",
+    "fee": "programs/flashloan/src/state/state.rs calculate_flashloan_fee (safe_div_ceil) + get_expected_payback_amount; programs/flashloan/src/constants.rs (MIN_FLASHLOAN_AMOUNT=1000, FLASHLOAN_FEE_MAX=50, FOUR_DECIMALS=10000)",
+    "flash_pair": "programs/flashloan/src/lib.rs flashloan_borrow/flashloan_payback; programs/flashloan/src/validate.rs (same-tx payback check, CPI forbidden via stack height)",
+    "position": "programs/liquidity/src/state/user_borrow_position.rs UserBorrowPosition (zero_copy, repr(C, packed), 112 bytes)",
+    "scales": "programs/liquidity/src/constants.rs (EXCHANGE_PRICES_PRECISION=1e12, FOUR_DECIMALS, MIN_OPERATE_AMOUNT=10, MAX_TOKEN_AMOUNT_CAP=2^60-1); programs/liquidity/src/state/rate_model.rs (1e2 utilization scale)"
+  },
+  "safety": {
+    "execution_authority": "NONE",
+    "sign_enabled": false,
+    "send_enabled": false,
+    "borrowing_enabled": false,
+    "live_capture_performed": false,
+    "live_capture_authorized": false
+  }
+}

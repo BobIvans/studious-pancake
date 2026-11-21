@@ -340,7 +340,9 @@ class DataCatalogSnapshot:
         for entity in self.entities:
             if entity_type is not None and entity.entity_type != entity_type:
                 continue
-            haystack = canonical_json_bytes(entity.to_payload()).decode("utf-8").casefold()
+            haystack = (
+                canonical_json_bytes(entity.to_payload()).decode("utf-8").casefold()
+            )
             if needle in haystack:
                 matches.append(entity)
                 if len(matches) > limit:

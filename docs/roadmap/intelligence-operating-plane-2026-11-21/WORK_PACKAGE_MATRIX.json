@@ -114,7 +114,10 @@
         "Graphify",
         "SCIP language indexers",
         "Serena/LSP optional",
-        "Aider RepoMap/PageRank optional"
+        "Aider RepoMap/PageRank optional",
+        "Probe raw MCP/CLI (read-only search/query/extract/symbols)",
+        "ast-grep structural scanner",
+        "GitNexus / other graph mappers only if isolated benchmark justifies"
       ],
       "guardrails": [
         "Use same clean repo SHA and same 30-50 golden questions",
@@ -123,7 +126,9 @@
         "Graphify semantic LLM pass and remote cloud stay disabled",
         "CGC management tools are not exposed to analyst model profiles",
         "jCodeMunch excluded until commercial license is approved",
-        "Record exact package versions, transitive licenses, SBOM/security and environment"
+        "Record exact package versions, transitive licenses, SBOM/security and environment",
+        "Probe built-in edit/delegate/bash agent is disabled; only raw read/query tools are evaluated",
+        "Tools that auto-write AGENTS.md, hooks or MCP settings (for example GitNexus setup) must be run in scratch worktree only and their diffs reviewed"
       ],
       "deliverables": [
         "TOOL_CANDIDATE_MATRIX.json",

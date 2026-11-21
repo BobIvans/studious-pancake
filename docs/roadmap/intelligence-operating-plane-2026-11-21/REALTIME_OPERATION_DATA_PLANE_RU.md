@@ -99,7 +99,9 @@ Initial operation capture covers only explicitly supported `test`, `shadow`, and
 
 ## 5. Real-time meaning, delivery guarantees and health
 
-“Real-time” must be measured, not claimed. Define per-stage:
+“Real-time” must be measured, not claimed. Every configured source must declare a capability class: STREAMING, POLL_ONLY, ONE_SHOT or UNAVAILABLE, together with its poll cadence/subscription mode, quota, max window, freshness SLA, cursor semantics and coverage. The runtime dashboard and every context pack must carry this classification. If an adapter only supports one-shot capture, it must never be described as a continuous stream. Continuous collection means a supervised bounded collector loop using an available subscription or polling mechanism, with checkpoint/reconnect/backfill; it does not mean ingesting every transaction on the chain.
+
+Define per-stage:
 - occurred_at and observed/received/persisted timestamps;
 - event-to-store and event-to-query latency p50/p95/p99;
 - queue depth/oldest age, retry count, append failure and outbox lag;
@@ -126,7 +128,7 @@ No unbounded retries, unlimited queues or silent data truncation. Storage pressu
 | Agent/code work | GitHub Issues/PR/commit + Work Result Receipt | task/worktree/commit/PR IDs |
 | Derived graph/index | Rebuildable local/CI artifact keyed by repo SHA + schema/tool versions | stable entity/symbol IDs and provenance |
 
-Provide portable export bundles where useful: versioned manifest + JSONL events + Parquet raw/normalized data + checksums + schema/tool versions + replay instructions. Do not place high-volume binary data, credentials or secrets into Git. Provide a read-only query façade that follows refs to the canonical store and returns bounded evidence packs.
+Provide portable export bundles where useful: versioned manifest + JSONL events + Parquet raw/normalized data + checksums + schema/tool versions + replay instructions. Do not place high-volume binary data, credentials or secrets into Git. Provide a read-only query façade that follows refs to the canonical store and returns bounded evidence packs. Expose it to coding agents through a small local MCP profile with composite allowlisted queries (repo overview, strategy inventory/explain/compare, source/provider lineage, symbol/call path, operation trace, context-pack build); no shell/edit/delete/admin or market-write tools. Record the connected client's self-check separately from merely installing the server.
 
 ## 7. Retention, compression, replay and recovery
 
@@ -166,7 +168,7 @@ Daily/CI quality report includes parser coverage, index age, unresolved/dangling
 9. Assert no external transaction/signing/borrow/send path can be invoked by the tests.
 10. Measure event capture overhead and p50/p95/p99 latency/throughput under representative load.
 11. Prove data can be exported to a portable bundle and imported/replayed on a clean environment with matching hashes.
-12. Prove a context pack can answer: “What did strategy X do at time T, which exact functions ran, which source/lender evidence was used, why accepted/rejected, and what was the paper/shadow result?” with exact links and explicit unknowns.
+12. Prove a context pack and the allowlisted read-only MCP query can answer: “What did strategy X do at time T, which exact functions ran, which source/lender evidence was used, why accepted/rejected, and what was the paper/shadow result?” with exact links and explicit unknowns.
 
 ## 10. Definition of done
 
@@ -178,4 +180,4 @@ A fresh checkout plus the portable data bundle (or approved connected data store
 - tests, config, repo commit and evidence supporting each conclusion;
 - gaps, corrections, failures, dropped events and unknown relationships.
 
-The system does not claim literal unlimited retention or that all market data exists. It reports exact coverage and gaps. “Full bot capture” means all presently supported paper/shadow execution paths have been inventoried and instrumented, not merely one test fixture or demonstration strategy. No strategy becomes qualified based on incomplete telemetry. This is an implementation target; current functionality must be established by W0 and end-to-end tests.
+The system does not claim literal unlimited retention or that all market data exists. It reports exact coverage and gaps. A source marked POLL_ONLY or ONE_SHOT is never represented as STREAMING, and a local MCP server is not represented as connected until the client self-check succeeds. “Full bot capture” means all presently supported paper/shadow execution paths have been inventoried and instrumented, not merely one test fixture or demonstration strategy. No strategy becomes qualified based on incomplete telemetry. This is an implementation target; current functionality must be established by W0 and end-to-end tests.

@@ -673,9 +673,93 @@ KAMINO_CONFIG_FEES_ORIGINATION_FEE_SF_OFFSET = 4880  # ReserveFees.ts: borsh.u64
 KAMINO_CONFIG_FEES_FLASH_LOAN_FEE_SF_OFFSET = 4888  # ReserveFees.ts: borsh.u64
 KAMINO_CONFIG_FEES_PADDING_OFFSET = 4896  # ReserveFees.ts: 8 x u8
 # Last byte covered by a vendored layout: end of ReserveFees padding. The
-# account region at and beyond this offset is an UNAUDITED tail: it is hashed
-# for provenance but never interpreted (no guessed offsets, no guessed LEN).
+# account region at and beyond this offset is hashed for provenance; the
+# config-tail region 4904..5496 is separately decoded by
+# ``decode_kamino_reserve_config_tail`` below using the newly vendored
+# codegen types (N08 dossier kamino-reserve-qualification-2026-11-21).
 KAMINO_RESERVE_PINNED_PREFIX_LEN = 4904
+
+# ReserveConfig tail (borsh sequential after ReserveFees padding), pinned by
+# the vendored klend-sdk@3c3a38d4 codegen types BorrowRateCurve.ts (+ nested
+# CurvePoint), TokenInfo.ts (+ nested PriceHeuristic/ScopeConfiguration/
+# SwitchboardConfiguration/PythConfiguration) and WithdrawalCaps.ts:
+KAMINO_CONFIG_BORROW_RATE_CURVE_OFFSET = 4904  # 11 x CurvePoint(u32+u32)
+KAMINO_CONFIG_BORROW_FACTOR_PCT_OFFSET = 4992  # borsh.u64("borrowFactorPct")
+KAMINO_CONFIG_DEPOSIT_LIMIT_OFFSET = 5000  # borsh.u64("depositLimit")
+KAMINO_CONFIG_BORROW_LIMIT_OFFSET = 5008  # borsh.u64("borrowLimit")
+KAMINO_CONFIG_TOKEN_INFO_OFFSET = 5016  # TokenInfo layout (384 bytes)
+KAMINO_CONFIG_DEPOSIT_WITHDRAWAL_CAP_OFFSET = 5400  # WithdrawalCaps (32 bytes)
+KAMINO_CONFIG_DEBT_WITHDRAWAL_CAP_OFFSET = 5432  # WithdrawalCaps (32 bytes)
+KAMINO_CONFIG_ELEVATION_GROUPS_OFFSET = 5464  # 20 x u8
+KAMINO_CONFIG_DISABLE_USAGE_AS_COLL_OUTSIDE_EMODE_OFFSET = 5484  # borsh.u8
+KAMINO_CONFIG_UTILIZATION_LIMIT_BLOCK_BORROWING_ABOVE_PCT_OFFSET = 5485
+KAMINO_CONFIG_AUTODELEVERAGE_ENABLED_OFFSET = 5486  # borsh.u8
+KAMINO_CONFIG_PROPOSER_AUTHORITY_LOCKED_OFFSET = 5487  # borsh.u8
+KAMINO_CONFIG_BORROW_LIMIT_OUTSIDE_ELEVATION_GROUP_OFFSET = 5488  # borsh.u64
+KAMINO_CONFIG_PINNED_TAIL_END = 5496
+
+# Cross-checks against the pinned klend program constants
+# (klend@a087609 programs/klend/src/utils/consts.rs, BUSL-1.1 study-only
+# citation): RESERVE_SIZE = 8616, RESERVE_CONFIG_SIZE = 952,
+# LENDING_MARKET_SIZE = 4656, PROGRAM_VERSION = 1.
+KAMINO_PROGRAM_VERSION_PINNED = 1
+KAMINO_RESERVE_SIZE_PINNED = 8616
+KAMINO_RESERVE_CONFIG_SIZE_PINNED = 952
+KAMINO_LENDING_MARKET_SIZE_PINNED = 4656
+
+# LendingMarket.ts codegen layout (vendored, N08 dossier), account offsets
+# including the 8-byte Anchor discriminator. Only the eligibility prefix is
+# decoded; the remainder is hashed for provenance.
+KAMINO_MARKET_VERSION_OFFSET = 8  # borsh.u64("version")
+KAMINO_MARKET_BUMP_SEED_OFFSET = 16  # borsh.u64("bumpSeed")
+KAMINO_MARKET_OWNER_OFFSET = 24  # borshAddress("lendingMarketOwner")
+KAMINO_MARKET_OWNER_CACHED_OFFSET = 56  # borshAddress("lendingMarketOwnerCached")
+KAMINO_MARKET_QUOTE_CURRENCY_OFFSET = 88  # 32 x u8
+KAMINO_MARKET_REFERRAL_FEE_BPS_OFFSET = 120  # borsh.u16("referralFeeBps")
+KAMINO_MARKET_EMERGENCY_MODE_OFFSET = 122  # borsh.u8("emergencyMode")
+KAMINO_MARKET_AUTODELEVERAGE_ENABLED_OFFSET = 123  # borsh.u8
+KAMINO_MARKET_BORROW_DISABLED_OFFSET = 124  # borsh.u8("borrowDisabled")
+KAMINO_MARKET_PINNED_PREFIX_LEN = 128
+
+# Exact flash fee semantics pinned from klend@a087609 (BUSL-1.1, study-only
+# citation; files/symbols recorded in the N08 dossier):
+#   ReserveFees::calculate_flash_loan_fees -> calculate_fees with
+#   FeeCalculation::Exclusive; fee_f = amount_f.mul(rate) (fixed U68F60
+#   product, lossless for integer amounts), .max(minimum_fee = 1), then
+#   ``origination_fee: u64 = origination_fee_f.to_round()`` where ``to_round``
+#   is the ``fixed`` crate round-half-away-from-zero on U68F60 (fraction.rs).
+#   referral_fee = origination_fee_f.mul(bps_rate).to_floor() when a referrer
+#   is present (bps rate = bps/10000 via bps_u128_to_fraction), and
+#   protocol_fee = origination_fee - referral_fee.
+KAMINO_FEE_ROUNDING_RULE = "U68F60_MUL_TRUNC_TO_ROUND_HALF_UP_MIN_1"
+KAMINO_FEE_ROUNDING_SOURCE = (
+    "klend@a08760976f51a3a58c4a0c6ea27b4a0e565bca79 "
+    "programs/klend/src/state/reserve.rs ReserveFees::calculate_fees + "
+    "programs/klend/src/utils/fraction.rs (fixed U68F60); BUSL-1.1 "
+    "study-only citation, not vendored"
+)
+KAMINO_FLASH_FEE_DISABLED_SENTINEL_SF = 2**64 - 1  # u64::MAX => FlashLoansDisabled
+KAMINO_FLASH_FEE_MIN_UNITS = 1
+KAMINO_FEE_BPS_DENOMINATOR = 10_000  # bps_u128_to_fraction divisor
+
+# Flash borrow/repay semantics pinned from klend@a087609 (BUSL-1.1,
+# study-only citations recorded in the N08 dossier):
+KAMINO_FLASH_FEE_CHARGED_AT_REPAY = True  # borrow transfers the exact amount
+KAMINO_FLASH_BORROW_TRANSFERS_EXACT_AMOUNT = True
+KAMINO_FLASH_REPAY_TRANSFERS_AMOUNT_PLUS_REFERRER_FEE = True
+KAMINO_FLASH_PROTOCOL_FEE_TO_FEE_VAULT = True
+KAMINO_FLASH_REQUIRES_SAME_TX_MATCHING_REPAY = True
+KAMINO_FLASH_MULTIPLE_BORROWS_FORBIDDEN = True
+KAMINO_FLASH_MULTIPLE_REPAYS_FORBIDDEN = True
+KAMINO_FLASH_CPI_FORBIDDEN = True
+# withdraw_including_queued checks liquidity_amount <= totalAvailableAmount
+# only; the flash path performs NO borrow-limit, elevation-group or oracle
+# eligibility check (no oracle account exists in the flash instruction
+# structs) and may consume queued-withdrawal liquidity:
+KAMINO_FLASH_BORROW_CHECKS_TOTAL_AVAILABLE_AMOUNT_ONLY = True
+KAMINO_FLASH_BORROW_IGNORES_BORROW_LIMIT = True
+KAMINO_FLASH_BORROW_ORACLE_ELIGIBILITY_REQUIRED = False
+KAMINO_FLASH_REPAY_ERROR_FEE_GE_AMOUNT = "BorrowTooSmall"
 
 KAMINO_RESERVE_PINNED_FIELDS: dict[str, tuple[int, int]] = {
     "version": (KAMINO_RESERVE_VERSION_OFFSET, 8),
@@ -790,26 +874,25 @@ _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 # Constraints that are NOT proven by this offline reader. Every member is a
 # typed reason why decoded raw amounts must never be presented as effective
 # flash borrow capacity. Unknown is not zero.
+#
+# Cleared in the N08 qualification (dossier
+# kamino-reserve-qualification-2026-11-21, each with vendored codegen or
+# study-cited program semantics): BORROW_LIMIT_UNDECODABLE_OFFLINE,
+# CONFIG_TAIL_LAYOUT_UNPINNED, EMERGENCY_MODE_SEMANTICS_UNPINNED,
+# FLASH_FEE_DEDUCTION_SEMANTICS_UNAUDITED, FEE_ROUNDING_RULE_UNPINNED,
+# LENDING_MARKET_LAYOUT_UNPINNED, MINT_ACCOUNT_NOT_DECODED_OFFLINE,
+# ORACLE_HEALTH_ELIGIBILITY_UNPINNED (flash path has no oracle account and
+# no oracle check), ORIGINATION_FEE_PAYABLE_AMOUNT_UNPINNED,
+# REFERRER_FEE_VALUATION_UNPINNED, RESERVE_STATUS_ENUM_UNPINNED,
+# RESERVE_VERSION_SEMANTICS_UNPINNED, UTILIZATION_CONFIG_UNDECODABLE_OFFLINE.
 KAMINO_UNPINNED_CAPACITY_GAPS: tuple[str, ...] = (
-    "BORROW_LIMIT_UNDECODABLE_OFFLINE",
-    "CONFIG_TAIL_LAYOUT_UNPINNED",
     "CUMULATIVE_BORROW_RATE_UNAUDITED",
-    "EMERGENCY_MODE_SEMANTICS_UNPINNED",
-    "FLASH_FEE_DEDUCTION_SEMANTICS_UNAUDITED",
-    "FEE_ROUNDING_RULE_UNPINNED",
+    "ELEVATION_GROUP_BORROW_LIMIT_SEMANTICS_UNPINNED",
     "INTEREST_ACCRUAL_LAZY_UPDATE_UNAUDITED",
-    "LENDING_MARKET_LAYOUT_UNPINNED",
-    "MINT_ACCOUNT_NOT_DECODED_OFFLINE",
-    "ORACLE_HEALTH_ELIGIBILITY_UNPINNED",
-    "ORACLE_PRICE_STATUS_SEMANTICS_UNPINNED",
-    "ORIGINATION_FEE_PAYABLE_AMOUNT_UNPINNED",
     "MARKET_PRICE_SEMANTICS_UNAUDITED",
-    "REFERRER_FEE_VALUATION_UNPINNED",
-    "RESERVE_STATUS_ENUM_UNPINNED",
-    "RESERVE_VERSION_SEMANTICS_UNPINNED",
+    "ORACLE_PRICE_STATUS_SEMANTICS_UNPINNED",
     "RISK_CONFIG_SEMANTICS_UNAUDITED",
     "SUPPLY_VAULT_AUTHORITY_BINDING_UNPROVEN",
-    "UTILIZATION_CONFIG_UNDECODABLE_OFFLINE",
 )
 
 
@@ -1254,9 +1337,10 @@ def kamino_flash_loan_fee_rational(flash_loan_fee_sf_raw: int) -> Fraction:
     """Exact rational flash fee from the decoded ``fees.flashLoanFeeSf``.
 
     The pinned ``Fraction`` scale is 2^60 (fraction.ts: FRACTIONS = 60), so
-    the exact fee factor is ``raw / 2**60`` as a rational; no float, no
-    invented ceil/floor rule. The deployed transfer-rounding rule stays
-    unpinned and is surfaced as the ``FEE_ROUNDING_RULE_UNPINNED`` gap.
+    the exact fee factor is ``raw / 2**60`` as a rational; no float. The
+    deployed transfer-rounding rule is pinned by N08 as
+    ``KAMINO_FEE_ROUNDING_RULE`` (U68F60 mul-trunc + round-half-up, min 1)
+    from the study-cited klend@a087609 program source.
     """
 
     if type(flash_loan_fee_sf_raw) is not int or flash_loan_fee_sf_raw < 0:
@@ -1265,6 +1349,385 @@ def kamino_flash_loan_fee_rational(flash_loan_fee_sf_raw: int) -> Fraction:
             "flashLoanFeeSf raw value must be a non-negative integer",
         )
     return Fraction(flash_loan_fee_sf_raw, KLEND_ONE_SF)
+
+
+@dataclass(frozen=True, slots=True)
+class KaminoReserveConfigTailState:
+    """ReserveConfig tail decode (bytes 4904..5496), N08 qualification.
+
+    All offsets come from the newly vendored codegen types
+    (BorrowRateCurve/CurvePoint, TokenInfo + nested, WithdrawalCaps) at the
+    pinned klend-sdk commit; semantics stay typed and fail-closed.
+    """
+
+    borrow_rate_curve_points: tuple[tuple[int, int], ...]
+    borrow_factor_pct: int
+    deposit_limit: int
+    borrow_limit: int
+    deposit_withdrawal_cap: tuple[int, int, int, int]
+    debt_withdrawal_cap: tuple[int, int, int, int]
+    utilization_limit_block_borrowing_above_pct: int
+    autodeleverage_enabled: int
+    borrow_limit_outside_elevation_group: int
+
+
+def decode_kamino_reserve_config_tail(
+    reserve_bytes: bytes,
+) -> KaminoReserveConfigTailState:
+    """Decode the pinned ReserveConfig tail of a full 8616-byte Reserve.
+
+    Requires the full account length (KLend ``RESERVE_SIZE`` = 8616, pinned
+    from klend@a087609 utils/consts.rs) so the tail region 4904..5496 is
+    guaranteed to be inside the account. Fail-closed on short accounts: the
+    tail is then unknown, not zero.
+    """
+
+    raw = bytes(reserve_bytes)
+    if len(raw) != KAMINO_RESERVE_SIZE_PINNED:
+        raise KaminoCapacityReaderError(
+            KaminoCapacityRejectionCode.RESERVE_TRUNCATED_LAYOUT,
+            "config-tail decode requires the full pinned Reserve length "
+            f"of {KAMINO_RESERVE_SIZE_PINNED} bytes (got {len(raw)})",
+        )
+
+    def _u32(off: int) -> int:
+        return int.from_bytes(raw[off : off + 4], "little")
+
+    curve = tuple(
+        (
+            _u32(KAMINO_CONFIG_BORROW_RATE_CURVE_OFFSET + 8 * i),
+            _u32(KAMINO_CONFIG_BORROW_RATE_CURVE_OFFSET + 8 * i + 4),
+        )
+        for i in range(11)
+    )
+
+    def _caps(base: int) -> tuple[int, int, int, int]:
+        return (
+            int.from_bytes(raw[base : base + 8], "little", signed=True),
+            int.from_bytes(raw[base + 8 : base + 16], "little", signed=True),
+            _read_uint(raw, base + 16, 8, "withdrawalCaps.lastIntervalStartTimestamp"),
+            _read_uint(raw, base + 24, 8, "withdrawalCaps.configIntervalLengthSeconds"),
+        )
+
+    return KaminoReserveConfigTailState(
+        borrow_rate_curve_points=curve,
+        borrow_factor_pct=_read_uint(
+            raw, KAMINO_CONFIG_BORROW_FACTOR_PCT_OFFSET, 8, "borrowFactorPct"
+        ),
+        deposit_limit=_read_uint(
+            raw, KAMINO_CONFIG_DEPOSIT_LIMIT_OFFSET, 8, "depositLimit"
+        ),
+        borrow_limit=_read_uint(
+            raw, KAMINO_CONFIG_BORROW_LIMIT_OFFSET, 8, "borrowLimit"
+        ),
+        deposit_withdrawal_cap=_caps(KAMINO_CONFIG_DEPOSIT_WITHDRAWAL_CAP_OFFSET),
+        debt_withdrawal_cap=_caps(KAMINO_CONFIG_DEBT_WITHDRAWAL_CAP_OFFSET),
+        utilization_limit_block_borrowing_above_pct=raw[
+            KAMINO_CONFIG_UTILIZATION_LIMIT_BLOCK_BORROWING_ABOVE_PCT_OFFSET
+        ],
+        autodeleverage_enabled=raw[KAMINO_CONFIG_AUTODELEVERAGE_ENABLED_OFFSET],
+        borrow_limit_outside_elevation_group=_read_uint(
+            raw,
+            KAMINO_CONFIG_BORROW_LIMIT_OUTSIDE_ELEVATION_GROUP_OFFSET,
+            8,
+            "borrowLimitOutsideElevationGroup",
+        ),
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class KaminoLendingMarketState:
+    """Pinned eligibility-prefix decode of a klend LendingMarket account."""
+
+    address: Pubkey
+    owner_program: Pubkey
+    version: int
+    bump_seed: int
+    lending_market_owner: Pubkey
+    lending_market_owner_cached: Pubkey
+    quote_currency: bytes
+    referral_fee_bps: int
+    emergency_mode: int
+    autodeleverage_enabled: int
+    borrow_disabled: int
+    tail_sha256: str
+
+
+def decode_kamino_lending_market(
+    data: bytes,
+    *,
+    address: Pubkey,
+    owner_program: Pubkey,
+) -> KaminoLendingMarketState:
+    """Fail-closed decode of the klend LendingMarket eligibility prefix.
+
+    The market must belong to the pinned klend program, must not be in
+    emergency mode, and must not have borrowing disabled; the referral fee
+    bps (needed for the exact flash repay amount) is pinned from the vendored
+    LendingMarket.ts codegen layout.
+    """
+
+    raw = bytes(data)
+    if len(raw) < KAMINO_MARKET_PINNED_PREFIX_LEN:
+        raise KaminoCapacityReaderError(
+            KaminoCapacityRejectionCode.CAPACITY_STATE_INVALID,
+            "LendingMarket account shorter than the pinned eligibility prefix",
+        )
+    if owner_program != KLEND_PROGRAM_ID:
+        raise KaminoCapacityReaderError(
+            KaminoCapacityRejectionCode.CAPACITY_STATE_INVALID,
+            "LendingMarket owner program differs from the pinned klend program",
+        )
+    version = _read_uint(raw, KAMINO_MARKET_VERSION_OFFSET, 8, "market.version")
+    if version != KAMINO_PROGRAM_VERSION_PINNED:
+        raise KaminoCapacityReaderError(
+            KaminoCapacityRejectionCode.CAPACITY_STATE_INVALID,
+            "LendingMarket version differs from the pinned program version",
+        )
+    emergency_mode = raw[KAMINO_MARKET_EMERGENCY_MODE_OFFSET]
+    if emergency_mode != 0:
+        raise KaminoCapacityReaderError(
+            KaminoCapacityRejectionCode.RESERVE_EMERGENCY_MODE_NONZERO,
+            "LendingMarket emergency mode is nonzero",
+        )
+    borrow_disabled = raw[KAMINO_MARKET_BORROW_DISABLED_OFFSET]
+    if borrow_disabled != 0:
+        raise KaminoCapacityReaderError(
+            KaminoCapacityRejectionCode.CAPACITY_STATE_INVALID,
+            "LendingMarket borrow_disabled is nonzero",
+        )
+    return KaminoLendingMarketState(
+        address=address,
+        owner_program=owner_program,
+        version=version,
+        bump_seed=_read_uint(raw, KAMINO_MARKET_BUMP_SEED_OFFSET, 8, "bumpSeed"),
+        lending_market_owner=_read_pubkey(
+            raw, KAMINO_MARKET_OWNER_OFFSET, "lendingMarketOwner"
+        ),
+        lending_market_owner_cached=_read_pubkey(
+            raw, KAMINO_MARKET_OWNER_CACHED_OFFSET, "lendingMarketOwnerCached"
+        ),
+        quote_currency=raw[
+            KAMINO_MARKET_QUOTE_CURRENCY_OFFSET : KAMINO_MARKET_QUOTE_CURRENCY_OFFSET
+            + 32
+        ],
+        referral_fee_bps=_read_uint(
+            raw, KAMINO_MARKET_REFERRAL_FEE_BPS_OFFSET, 2, "referralFeeBps"
+        ),
+        emergency_mode=emergency_mode,
+        autodeleverage_enabled=raw[KAMINO_MARKET_AUTODELEVERAGE_ENABLED_OFFSET],
+        borrow_disabled=borrow_disabled,
+        tail_sha256=hashlib.sha256(raw[KAMINO_MARKET_PINNED_PREFIX_LEN:]).hexdigest(),
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class KaminoMintAccountState:
+    """SPL mint account decode (82-byte classic layout prefix)."""
+
+    address: Pubkey
+    owner_program: Pubkey
+    mint_authority: Pubkey | None
+    supply: int
+    decimals: int
+    is_initialized: bool
+    freeze_authority: Pubkey | None
+    extensions_present: bool
+
+
+def decode_kamino_mint_account(
+    data: bytes,
+    *,
+    address: Pubkey,
+    owner_program: Pubkey,
+    expected_mint: Pubkey,
+) -> KaminoMintAccountState:
+    """Fail-closed SPL/Token-2022 mint decode for a klend reserve resource.
+
+    Binds the mint address to the reserve liquidity mint, pins decimals and
+    authority state, and reports whether Token-2022 extensions follow the
+    82-byte classic prefix (extension semantics stay unaudited here).
+    """
+
+    raw = bytes(data)
+    if owner_program not in SUPPORTED_KAMINO_TOKEN_PROGRAMS:
+        raise KaminoCapacityReaderError(
+            KaminoCapacityRejectionCode.VAULT_TOKEN_PROGRAM_MISMATCH,
+            "mint owner program is not a supported SPL token program",
+        )
+    if len(raw) < 82:
+        raise KaminoCapacityReaderError(
+            KaminoCapacityRejectionCode.CAPACITY_STATE_INVALID,
+            "mint account shorter than the 82-byte SPL mint prefix",
+        )
+    if address != expected_mint:
+        raise KaminoCapacityReaderError(
+            KaminoCapacityRejectionCode.RESERVE_MINT_BINDING_MISMATCH,
+            "mint account address differs from the reserve liquidity mint",
+        )
+    authority_flag = int.from_bytes(raw[0:4], "little")
+    mint_authority = None if authority_flag == 0 else Pubkey.from_bytes(raw[4:36])
+    supply = _read_uint(raw, 36, 8, "mint.supply")
+    decimals = raw[44]
+    is_initialized = raw[45] == 1
+    if not is_initialized:
+        raise KaminoCapacityReaderError(
+            KaminoCapacityRejectionCode.CAPACITY_STATE_INVALID,
+            "mint account is not initialized",
+        )
+    freeze_flag = int.from_bytes(raw[46:50], "little")
+    freeze_authority = None if freeze_flag == 0 else Pubkey.from_bytes(raw[50:82])
+    return KaminoMintAccountState(
+        address=address,
+        owner_program=owner_program,
+        mint_authority=mint_authority,
+        supply=supply,
+        decimals=decimals,
+        is_initialized=is_initialized,
+        freeze_authority=freeze_authority,
+        extensions_present=owner_program == SPL_TOKEN_2022_PROGRAM_ID and len(raw) > 82,
+    )
+
+
+def calculate_kamino_flash_loan_fee(
+    liquidity_amount: int,
+    flash_loan_fee_sf: int,
+    *,
+    referral_fee_bps: int = 0,
+    has_referrer: bool = False,
+) -> int:
+    """Exact pinned flash protocol fee in base units (fail-closed).
+
+    Replicates klend@a087609 ``ReserveFees::calculate_fees`` with
+    ``FeeCalculation::Exclusive`` exactly, without floats:
+
+    1. ``fee_f_sf = amount * fee_sf`` (the fixed U68F60 product
+       ``amount_f.mul(rate)`` is lossless for integer amounts: both sides
+       scale by 2^60, so truncation loses nothing).
+    2. ``fee_f_sf = max(fee_f_sf, ONE_SF)`` (``minimum_fee = 1``, applied
+       BEFORE rounding, matching the program order).
+    3. ``fee = round_half_up(fee_f_sf / 2^60)`` (``to_round`` on the
+       ``fixed`` crate U68F60 = round half away from zero; amounts are
+       non-negative, so half-up).
+    4. Referral path (only when a referrer is actually provided):
+       ``referral_fee = floor(fee_f * bps_rate)`` in base units with
+       ``bps_rate = bps/10000``; ``protocol_fee = fee - referral_fee``.
+       Referral presence is a caller choice, so the default is no referrer.
+
+    Raises when the fee is nonsensical for the amount: fee >= amount fails
+    on-chain with ``BorrowTooSmall`` (minimum fee of 1 included).
+    """
+
+    if type(liquidity_amount) is not int or liquidity_amount <= 0:
+        raise KaminoCapacityReaderError(
+            KaminoCapacityRejectionCode.CAPACITY_STATE_INVALID,
+            "flash loan amount must be a positive integer",
+        )
+    if type(flash_loan_fee_sf) is not int or flash_loan_fee_sf < 0:
+        raise KaminoCapacityReaderError(
+            KaminoCapacityRejectionCode.CAPACITY_STATE_INVALID,
+            "flashLoanFeeSf must be a non-negative integer",
+        )
+    if flash_loan_fee_sf == KAMINO_FLASH_FEE_DISABLED_SENTINEL_SF:
+        raise KaminoCapacityReaderError(
+            KaminoCapacityRejectionCode.CAPACITY_STATE_INVALID,
+            "flash loans are disabled for this reserve (u64::MAX sentinel)",
+        )
+    if type(referral_fee_bps) is not int or not 0 <= referral_fee_bps <= 10_000:
+        raise KaminoCapacityReaderError(
+            KaminoCapacityRejectionCode.CAPACITY_STATE_INVALID,
+            "referral_fee_bps must be in [0, 10000]",
+        )
+
+    fee_f_sf = liquidity_amount * flash_loan_fee_sf
+    if fee_f_sf < KLEND_ONE_SF:
+        fee_f_sf = KLEND_ONE_SF
+    fee = (fee_f_sf + (KLEND_ONE_SF >> 1)) // KLEND_ONE_SF
+    if fee >= liquidity_amount:
+        raise KaminoCapacityReaderError(
+            KaminoCapacityRejectionCode.CAPACITY_STATE_INVALID,
+            "flash fee >= amount: on-chain BorrowTooSmall",
+        )
+    if has_referrer and referral_fee_bps > 0:
+        if referral_fee_bps == KAMINO_FEE_BPS_DENOMINATOR:
+            referral = fee
+        else:
+            referral = (fee_f_sf * referral_fee_bps) // (
+                KAMINO_FEE_BPS_DENOMINATOR * KLEND_ONE_SF
+            )
+        return fee - referral
+    return fee
+
+
+@dataclass(frozen=True, slots=True)
+class KaminoOfflineCapacityBound:
+    """Typed offline flash-capacity bound for one reserve resource.
+
+    ``bound_base_units`` is the exact program-proven maximum flash borrow
+    (``withdraw_including_queued``: ``liquidity_amount <= totalAvailableAmount``;
+    no borrow-limit, elevation-group or oracle check exists on the flash
+    path). ``repay_obligation_base_units`` is the exact same-tx repay amount
+    for that bound (bound + protocol fee; a referrer would add
+    ``floor(fee_f * bps/10000)`` on top, tracked as its own UNKNOWN input).
+    Both stay bound-level evidence: the observation never promotes them to
+    ``effective_capacity_base_units`` while provenance is offline-only.
+    """
+
+    bound_base_units: int
+    repay_obligation_base_units: int
+    fee_rule: str
+    blockers: tuple[str, ...]
+
+
+def derive_kamino_offline_flash_capacity_bound(
+    state: KaminoReserveState,
+) -> KaminoOfflineCapacityBound:
+    """Derive the program-proven offline flash borrow bound or fail closed.
+
+    Fail-closed blockers (unknown is not zero, none is defaulted):
+    flash-loan sentinel fee (u64::MAX => FlashLoansDisabled), nonzero
+    emergency mode, Obsolete reserve status, version mismatch, stale
+    LastUpdate. When any blocker applies the bound is ``None``-equivalent:
+    the function raises, because a bound derived from a reserve that the
+    program itself would reject is not a capacity fact.
+    """
+
+    if state.config.flash_loan_fee_sf == KAMINO_FLASH_FEE_DISABLED_SENTINEL_SF:
+        raise KaminoCapacityReaderError(
+            KaminoCapacityRejectionCode.CAPACITY_STATE_INVALID,
+            "flash loans disabled for this reserve (flashLoanFeeSf == u64::MAX)",
+        )
+    if state.config.emergency_mode != 0:
+        raise KaminoCapacityReaderError(
+            KaminoCapacityRejectionCode.RESERVE_EMERGENCY_MODE_NONZERO,
+            "reserve emergency mode is nonzero",
+        )
+    if state.config.status_raw == 1:  # ReserveStatus::Obsolete
+        raise KaminoCapacityReaderError(
+            KaminoCapacityRejectionCode.RESERVE_CONFIG_STATUS_UNKNOWN,
+            "reserve status is Obsolete; flash borrow would fail on-chain",
+        )
+    if state.version_raw != KAMINO_PROGRAM_VERSION_PINNED:
+        raise KaminoCapacityReaderError(
+            KaminoCapacityRejectionCode.CAPACITY_STATE_INVALID,
+            "reserve version differs from the pinned program version",
+        )
+    if state.last_update.stale != 0:
+        raise KaminoCapacityReaderError(
+            KaminoCapacityRejectionCode.RESERVE_LAST_UPDATE_STALE,
+            "reserve LastUpdate is stale; refresh is required on-chain",
+        )
+    amount = state.liquidity.total_available_amount
+    fee = calculate_kamino_flash_loan_fee(
+        amount,
+        state.config.flash_loan_fee_sf,
+    )
+    return KaminoOfflineCapacityBound(
+        bound_base_units=amount,
+        repay_obligation_base_units=amount + fee,
+        fee_rule=KAMINO_FEE_ROUNDING_RULE,
+        blockers=(),
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -1437,8 +1900,11 @@ class KaminoReserveCapacityObservation:
             raise ValueError(
                 "flash_loan_fee_rational must equal raw/2^60 exactly (no rounding)"
             )
-        if self.fee_rounding != "UNPINNED":
-            raise ValueError("offline reader must never claim a rounding rule")
+        if self.fee_rounding not in ("UNPINNED", KAMINO_FEE_ROUNDING_RULE):
+            raise ValueError(
+                "offline reader may claim only the pinned rounding rule or "
+                "UNPINNED; never an invented rule"
+            )
         if self.capacity_derivation is KaminoCapacityDerivation.UNPROVEN:
             if self.effective_capacity_base_units is not None:
                 raise ValueError(
@@ -1510,6 +1976,34 @@ class KaminoReserveCapacityObservation:
                 ),
                 "obligation_account_required": (
                     KAMINO_FLASH_IX_OBLIGATION_ACCOUNT_REQUIRED
+                ),
+            },
+            "flash_fee_semantics": {
+                "fee_rounding_rule": KAMINO_FEE_ROUNDING_RULE,
+                "fee_rounding_source": KAMINO_FEE_ROUNDING_SOURCE,
+                "fee_charged_at_repay": KAMINO_FLASH_FEE_CHARGED_AT_REPAY,
+                "borrow_transfers_exact_amount": (
+                    KAMINO_FLASH_BORROW_TRANSFERS_EXACT_AMOUNT
+                ),
+                "repay_transfers_amount_plus_referrer_fee": (
+                    KAMINO_FLASH_REPAY_TRANSFERS_AMOUNT_PLUS_REFERRER_FEE
+                ),
+                "protocol_fee_to_fee_vault": KAMINO_FLASH_PROTOCOL_FEE_TO_FEE_VAULT,
+                "disabled_sentinel_sf": KAMINO_FLASH_FEE_DISABLED_SENTINEL_SF,
+                "minimum_fee_units": KAMINO_FLASH_FEE_MIN_UNITS,
+                "fee_ge_amount_error": KAMINO_FLASH_REPAY_ERROR_FEE_GE_AMOUNT,
+                "same_tx_matching_repay_required": (
+                    KAMINO_FLASH_REQUIRES_SAME_TX_MATCHING_REPAY
+                ),
+                "multiple_borrows_forbidden": KAMINO_FLASH_MULTIPLE_BORROWS_FORBIDDEN,
+                "multiple_repays_forbidden": KAMINO_FLASH_MULTIPLE_REPAYS_FORBIDDEN,
+                "cpi_forbidden": KAMINO_FLASH_CPI_FORBIDDEN,
+                "checks_total_available_amount_only": (
+                    KAMINO_FLASH_BORROW_CHECKS_TOTAL_AVAILABLE_AMOUNT_ONLY
+                ),
+                "ignores_borrow_limit": KAMINO_FLASH_BORROW_IGNORES_BORROW_LIMIT,
+                "oracle_eligibility_required": (
+                    KAMINO_FLASH_BORROW_ORACLE_ELIGIBILITY_REQUIRED
                 ),
             },
             "observation": json.loads(_kamino_reader_canonical_json(self)),
@@ -1647,6 +2141,7 @@ def observe_kamino_reserve_capacity(
         effective_capacity_base_units=None,
         constraint_gaps=tuple(sorted(gaps)),
         blockers=blockers,
+        fee_rounding=KAMINO_FEE_ROUNDING_RULE,
     )
 
 

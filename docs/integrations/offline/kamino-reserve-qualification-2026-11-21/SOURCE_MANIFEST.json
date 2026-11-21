@@ -1,0 +1,60 @@
+{
+  "schema": "studious-pancake.offline-dossier-source-manifest.v1",
+  "dossier": "kamino-reserve-qualification-2026-11-21",
+  "generated_at": "2026-11-21",
+  "owner_lane": "R02-CAP-B + R03-B (one lender, one PR, one owner)",
+  "qualification_base": {
+    "sdk_repository": "https://github.com/Kamino-Finance/klend-sdk",
+    "sdk_commit": "3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8",
+    "sdk_package": "@kamino-finance/klend-sdk",
+    "sdk_version": "13.0.2",
+    "sdk_license": "MIT",
+    "program_repository": "https://github.com/Kamino-Finance/klend",
+    "program_commit": "a08760976f51a3a58c4a0c6ea27b4a0e565bca79",
+    "program_version": "1.25.0",
+    "program_license": "BUSL-1.1 (reference only; studied, never vendored)",
+    "program_id": "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD"
+  },
+  "drift_reverification": {
+    "checked_at": "2026-11-21",
+    "channel": "api.github.com commits/HEAD",
+    "klend_sdk_head": "6a26d6f1b5afb29953ffd139ee8c0c4ca5f26ce6",
+    "klend_sdk_head_date": "2026-10-20T09:17:51Z",
+    "klend_head": "686913ee421e0c5f3dc44c4c8344461ee0e4fb89",
+    "klend_head_date": "2026-11-06T14:28:27Z",
+    "verdict": "DRIFTED; qualification base intentionally stays at the pinned commits until a rooted deployed-build attestation exists"
+  },
+  "retrieval": {
+    "date": "2026-11-21",
+    "channel": "raw.githubusercontent.com raw blob endpoint at the pinned commit",
+    "reproduction": "git hash-object <local_path> == upstream_git_blob_sha"
+  },
+  "new_blobs": [
+    {"local": "vendor-reference/klend-types/BorrowRateCurve.ts.txt", "upstream": "src/@codegen/klend/types/BorrowRateCurve.ts", "upstream_git_blob_sha": "d2e169a34dc486b5a4c635d81f4aa1f85a1520ac"},
+    {"local": "vendor-reference/klend-types/CurvePoint.ts.txt", "upstream": "src/@codegen/klend/types/CurvePoint.ts", "upstream_git_blob_sha": "f2e39273412251c720175e5834d6d9cd99e196ea"},
+    {"local": "vendor-reference/klend-types/TokenInfo.ts.txt", "upstream": "src/@codegen/klend/types/TokenInfo.ts", "upstream_git_blob_sha": "54b02c7013f58f819ab2046177d02da4467ecd4e"},
+    {"local": "vendor-reference/klend-types/PriceHeuristic.ts.txt", "upstream": "src/@codegen/klend/types/PriceHeuristic.ts", "upstream_git_blob_sha": "e1aa1296113bcc08e57f1ba92d8e905656c214ad"},
+    {"local": "vendor-reference/klend-types/ScopeConfiguration.ts.txt", "upstream": "src/@codegen/klend/types/ScopeConfiguration.ts", "upstream_git_blob_sha": "955b2fb62e529a6fee765898828c61a0295eca42"},
+    {"local": "vendor-reference/klend-types/SwitchboardConfiguration.ts.txt", "upstream": "src/@codegen/klend/types/SwitchboardConfiguration.ts", "upstream_git_blob_sha": "04da9be3573ee23810c4f6017fd50a6cfd10971e"},
+    {"local": "vendor-reference/klend-types/PythConfiguration.ts.txt", "upstream": "src/@codegen/klend/types/PythConfiguration.ts", "upstream_git_blob_sha": "49b6f189e2c082a24cb4f8bfd2c68bae97fda1c9"},
+    {"local": "vendor-reference/klend-types/WithdrawalCaps.ts.txt", "upstream": "src/@codegen/klend/types/WithdrawalCaps.ts", "upstream_git_blob_sha": "ad50521ffd3f6d782d69ea346735767b74245720"},
+    {"local": "vendor-reference/klend-types/BigFractionBytes.ts.txt", "upstream": "src/@codegen/klend/types/BigFractionBytes.ts", "upstream_git_blob_sha": "3b70a96beb46a43fc11d3a096cde22fecb8424a0"},
+    {"local": "vendor-reference/klend-types/LendingMarket.ts.txt", "upstream": "src/@codegen/klend/accounts/LendingMarket.ts", "upstream_git_blob_sha": "80cffa8bc61feb51d491ca23a56b64e52908f667"}
+  ],
+  "program_semantic_citations": {
+    "license_note": "BUSL-1.1 source studied for conformance only; symbols cited, code never copied or vendored",
+    "consts": "programs/klend/src/utils/consts.rs: PROGRAM_VERSION=1, RESERVE_SIZE=8616, RESERVE_CONFIG_SIZE=952, LENDING_MARKET_SIZE=4656",
+    "fee": "programs/klend/src/state/reserve.rs ReserveFees::calculate_flash_loan_fees -> calculate_fees (FeeCalculation::Exclusive, minimum_fee=1, to_round); programs/klend/src/utils/fraction.rs (fixed U68F60, to_round=round-half-away-from-zero)",
+    "flash": "programs/klend/src/handlers/handler_flash_borrow_reserve_liquidity.rs, handler_flash_repay_reserve_liquidity.rs, programs/klend/src/lending_market/flash_ixs.rs, lending_operations.rs, lending_checks.rs",
+    "status": "programs/klend/src/state/reserve.rs enum ReserveStatus {Active=0, Obsolete=1, Hidden=2}"
+  },
+  "fee_rounding_rule": "U68F60_MUL_TRUNC_TO_ROUND_HALF_UP_MIN_1",
+  "safety": {
+    "execution_authority": "NONE",
+    "sign_enabled": false,
+    "send_enabled": false,
+    "borrowing_enabled": false,
+    "live_capture_performed": false,
+    "live_capture_authorized": false
+  }
+}

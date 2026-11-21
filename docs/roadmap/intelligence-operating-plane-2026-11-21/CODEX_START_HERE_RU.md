@@ -941,14 +941,17 @@ Detailed execution contract: [TOKEN_EFFICIENCY_PLAYBOOK_RU.md](TOKEN_EFFICIENCY_
 Mandatory techniques:
 - Tree-sitter/native AST signatures and imports for zero-LLM local structure extraction;
 - actual compiler/language-server references via SCIP/LSP where supported;
-- one persistent graph (CGC OR Graphify OR proven native implementation), not multiple parallel stores;
+- one persistent graph selected from the measured C/Rust/Python candidates (CBM C daemon / CodeGraph Rust / sdsrss Rust / CGC / Graphify / native), not multiple parallel stores;
 - query-time relevance/PageRank ranking and strict budget packing;
 - lazy 1–3-hop graph traversal rather than injecting full maps;
-- scope-aware exact function extraction via Probe or grep-ast;
+- scope-aware exact function extraction via one JIT tool (Probe OR Scantool OR grep-ast);
 - Git blob/tree hashes + incremental affected-node refresh;
 - stable tool definitions/prompt prefix where the provider exposes prompt caching; no ChatGPT cache guarantee;
 - deterministic BM25/lexical + graph search first; embeddings only after measured semantic-recall gap;
-- optional Joern CPG for CFG/DFG/taint only when deep data-flow/security questions justify it.
+- optional Joern CPG for CFG/DFG/taint only when deep data-flow/security questions justify it;
+- multi-resolution FULL/SKELETON/REFERENCE/OVERVIEW packs; temporal/as-of strategy and data-source labels; schema/ontology migration and stale-label revalidation;
+- optional single semantic memory overlay (MakerViking/mimir OR codician-team/growmos OR none) after provenance/export/concurrency benchmark;
+- deterministic Graph quality tests, index resource quotas, multi-client daemon safety and security filtering.
 
 Do not count signature-only compression as complete understanding. The model must retrieve actual function bodies, configs, tests and evidence when logic matters. Do not claim fixed 95–99% compression across all code. Exact output token counts require the target model tokenizer; otherwise label byte estimates.
 
@@ -971,3 +974,57 @@ The work package matrix now includes:
 - OCA-W11 — unify read-only query/export/replay across code, observations, raw market events, operation events, episodes and agent work receipts.
 
 A repo code graph without OCA-W10/W11 is **not** the complete user objective.
+
+
+# 17. Continuous scale, temporal labels and final tool-stack decision
+
+The latest extension of [TOKEN_EFFICIENCY_PLAYBOOK_RU.md](TOKEN_EFFICIENCY_PLAYBOOK_RU.md) adds the C/Rust daemon wave and requirements from the original research that must survive as the repo grows.
+
+## 17.1 Persistent graph bake-off — not a popularity contest
+
+On the same clean repo SHA and 30–50 manually verified questions compare:
+- DeusData/codebase-memory-mcp (C shared daemon);
+- colbymchenry/codegraph (Rust + SQLite/WAL);
+- sdsrss/code-graph-mcp or SylphxAI/repomap (compact Rust graph);
+- CodeGraphContext;
+- Graphify.
+
+Probe/Scantool are tested separately as just-in-time function extractors. SCIP/LSP is enabled selectively for buildable languages. The final deployment selects **one** persistent graph; at most one complementary JIT extractor; zero or one semantic memory overlay. Grammar counts, vendor benchmarks or sub-10ms claims do not decide adoption; only Studious golden-question precision, complete focus-function extraction, per-language coverage, refresh cost, RAM/disk, concurrency and token metrics do.
+
+Installers must run in an isolated HOME/client profile. Inspect every MCP/AGENTS/hooks file they write, disable remote/cloud processing and telemetry unless approved, and do not grant analyst agents edit/delete/shell/admin tools.
+
+## 17.2 Continuous index evolution
+
+The map must remain current as code and repository complexity grow:
+- Git tree/blob hashes, parser/grammar versions and graph schema versions are authoritative cache keys; mtime alone is not enough.
+- Incremental graph changes must invalidate downstream callers/references/tests/configs and labels, not just reparse changed files.
+- A nightly full rebuild checks the incremental result; PR/push/merge CI checks stale SHA, dangling edges, coverage and token caps.
+- Debounced watchers, one writer, branch/worktree isolation, cancellation and CPU/RAM/IO/WAL budgets prevent indexers from starving market capture and paper/shadow execution.
+- Static call edges and runtime-observed calls remain distinct.
+
+## 17.3 Semantic label store and historical reconstruction
+
+Keep a versioned deterministic label ontology for StrategyIdea/Version, ArbitrageFamily, DataSource, Provider, Venue/Pool, Protocol, FlashCapitalSource/Lender, Tool/MCP/CLI, ExecutionStage, RiskCheck, Capability and ResourceSet.
+
+Each label/edge carries source evidence, ontology version, exact repo SHA/blob hash, extractor/rule version, author/provenance, approval status, recorded time and valid time. Support as-of queries so an old paper/shadow attempt resolves the strategy/function/config/label state active at that historical repo SHA and event time. Revalidate affected labels after source/config/registry changes; mark STALE or NEEDS_REVIEW, never silently relabel history.
+
+Mimir/growmos are considered only as **one optional semantic-memory overlay**:
+- MakerViking/mimir for integrated local typed memory + docs/code graph/BM25/embeddings;
+- codician-team/growmos for provenance-carrying ADR/session facts and explicit remember/link/journal workflow;
+- choose neither if native labels + evidence refs suffice.
+Neither may become canonical raw market, quote, settlement, PnL or runtime event storage.
+
+## 17.4 Continuous quality, safety and scaling gates
+
+Daily/PR quality reports include:
+- per-language syntax, call-edge and compiler-resolution precision/recall;
+- docs/config/CI/MCP/tool inventory coverage;
+- dangling/ambiguous/dynamic call edges and unresolved source-to-function joins;
+- label confidence/provenance, stale drift, schema migration health and historical as-of correctness;
+- runtime producer/stage coverage, event drops/gaps, provider lag and data completeness;
+- p50/p95/p99 query, index build/update time, CPU/RAM/IO/disk growth and pack token counts;
+- portable export verification, restore/replay checksums and retention pin health.
+
+Security gates must treat indexed source/docs/external data as untrusted data, not agent instructions; protect secrets and path-scoped resources; isolate read vs write capabilities; pin dependency/license/SBOM provenance; and review every third-party installer side effect. No LLM proposal is allowed to auto-approve labels, delete tools/data, change risk policy or enable live behavior.
+
+**Completion remains conditional on W0B + W10 + W11**: a current full-repo map, actual supported paper/shadow runtime event capture across all supported paths, and a portable unified query/export/replay path. A graph screenshot or a passing unit test alone is not completion.

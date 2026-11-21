@@ -160,7 +160,8 @@
         "Compare Mimir/growmos only as the semantic label/memory plane, not as raw-event or code graph authority",
         "Adopt zero or one semantic memory overlay; never both by default",
         "All agent-authored memory facts must link to immutable repo/event/observation/episode evidence IDs and remain provisional without evidence",
-        "Growmos headless semantic ingestion that invokes a configured LLM must be disabled for deterministic zero-LLM indexing path"
+        "Growmos headless semantic ingestion that invokes a configured LLM must be disabled for deterministic zero-LLM indexing path",
+        "Primary same-SHA bake-off is timeboxed to representative C/Rust/Python daemon candidates plus JIT and semantic-memory layer; long-tail watchlist projects are not all mandatory installs or benchmark runs"
       ],
       "deliverables": [
         "TOOL_CANDIDATE_MATRIX.json",
@@ -171,7 +172,8 @@
         "TOKEN_EFFICIENCY_MEASUREMENTS.json",
         "PER_LANGUAGE_COVERAGE_MATRIX.json (syntax / calls / compiler resolution / docs / config support tiers)",
         "INSTALL_SIDE_EFFECTS_AND_SECURITY_RU.md",
-        "SEMANTIC_MEMORY_ADOPTION_DECISION_RU.md (native labels vs one Mimir/growmos overlay)"
+        "SEMANTIC_MEMORY_ADOPTION_DECISION_RU.md (native labels vs one Mimir/growmos overlay)",
+        "TOOL_CANDIDATE_WATCHLIST.json for long-tail projects from original research, with NOT_VERIFIED status until upstream/license/install/benchmark verified"
       ],
       "acceptance": [
         "Every candidate is tested on the same pinned SHA or explicitly marked NOT_RUN",
@@ -190,7 +192,8 @@
         "Semantic label/memory candidate benchmark tests provenance, deduplication, stale/superseded facts, conflict detection, export/recovery and multi-agent concurrency",
         "Any selected Mimir/growmos overlay is non-authoritative for raw market events, quotes, settlement, PnL or runtime status",
         "Memory facts link to exact Git SHA, event IDs, observation IDs or ADR/PR evidence; unsupported claims stay PROPOSED/UNKNOWN",
-        "No two semantic memory stores are deployed together unless a measured distinct requirement is approved"
+        "No two semantic memory stores are deployed together unless a measured distinct requirement is approved",
+        "Long-tail candidates are explicitly catalogued as VERIFIED / NOT_VERIFIED / INACTIVE / LICENSE_BLOCKED / NOT_RELEVANT with evidence; no pasted feature claims are assumed true"
       ]
     },
     {

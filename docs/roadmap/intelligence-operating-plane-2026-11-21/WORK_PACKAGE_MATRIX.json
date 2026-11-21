@@ -173,7 +173,9 @@
         "PER_LANGUAGE_COVERAGE_MATRIX.json (syntax / calls / compiler resolution / docs / config support tiers)",
         "INSTALL_SIDE_EFFECTS_AND_SECURITY_RU.md",
         "SEMANTIC_MEMORY_ADOPTION_DECISION_RU.md (native labels vs one Mimir/growmos overlay)",
-        "TOOL_CANDIDATE_WATCHLIST.json for long-tail projects from original research, with NOT_VERIFIED status until upstream/license/install/benchmark verified"
+        "TOOL_CANDIDATE_WATCHLIST.json for long-tail projects from original research, with NOT_VERIFIED status until upstream/license/install/benchmark verified",
+        "expanded same-SHA candidate comparison: sdsrss/code-graph-mcp, defendend/Claude-ast-index-search, aimasteracc/tree-sitter-analyzer, iliaal/codesage, n24q02m/crg, Glean and LadybugDB",
+        "separate bake-off reports for graph storage, AST navigation, call-resolution precision, temporal history, structural audit, JIT extraction and output/token compression"
       ],
       "acceptance": [
         "Every candidate is tested on the same pinned SHA or explicitly marked NOT_RUN",
@@ -193,7 +195,10 @@
         "Any selected Mimir/growmos overlay is non-authoritative for raw market events, quotes, settlement, PnL or runtime status",
         "Memory facts link to exact Git SHA, event IDs, observation IDs or ADR/PR evidence; unsupported claims stay PROPOSED/UNKNOWN",
         "No two semantic memory stores are deployed together unless a measured distinct requirement is approved",
-        "Long-tail candidates are explicitly catalogued as VERIFIED / NOT_VERIFIED / INACTIVE / LICENSE_BLOCKED / NOT_RELEVANT with evidence; no pasted feature claims are assumed true"
+        "Long-tail candidates are explicitly catalogued as VERIFIED / NOT_VERIFIED / INACTIVE / LICENSE_BLOCKED / NOT_RELEVANT with evidence; no pasted feature claims are assumed true",
+        "Candidate URLs, pinned commit/tag, retrieval date, exact license paths, transitive dependencies, security status and setup side effects are recorded",
+        "Every graph candidate is benchmarked on identical repo SHA and golden corpus; static/compiler-resolved/runtime-observed relationships are scored separately",
+        "Only one persistent graph backend and at most one JIT extractor can be selected; zero adoption is valid when native systems meet requirements"
       ]
     },
     {
@@ -953,7 +958,7 @@
     "Historical blockchain corrections and reorgs create explicit correction/retraction evidence rather than silent overwrite",
     "Live execution, signing, submission, borrowing, spending and production promotion remain outside this intelligence-plane scope"
   ],
-  "first_action": "From current main SHA 0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54, run OCA-W0 and OCA-W0A in parallel in isolated read-only worktrees; pin all upstreams and complete the existing repository/provider/tool inventory. Then execute W12 supply-chain gates and W13 provider contracts, followed by W14/W15 and dependency-gated W0B/W16–W19. Build a working safe vertical slice; do not stop at audit or install the entire candidate list. Do not merge without explicit human approval.",
+  "first_action": "Re-fetch current main and record its exact SHA. Run OCA-W0 and OCA-W0A in parallel in isolated read-only worktrees; complete canonical-owner and full tool/provider/strategy inventories. After inventory is pinned, run OCA-W12 and OCA-W0B in parallel with disjoint write scopes. OCA-W1 follows W0B; OCA-W13 follows W1; W14 follows W13/W5; W15 follows W1/W2/W3/W13/W14; W16–W19 follow their declared dependencies. Build a working safe vertical slice; do not stop at audit or install the entire candidate list. Do not merge without explicit human approval.",
   "token_efficiency_policy": {
     "repo_card_tokens_target": [
       300,
@@ -1044,5 +1049,41 @@
     ],
     "implementation_rule": "Implement capability contracts and measured adapters; do not install all candidate projects or add a duplicate canonical store.",
     "required_reading": "docs/roadmap/intelligence-operating-plane-2026-11-21/UNIVERSAL_KNOWLEDGE_DATA_PLANE_EXPANSION_RU.md"
+  },
+  "candidate_profiles": {
+    "primary_graph": [
+      "https://github.com/sdsrss/code-graph-mcp",
+      "https://github.com/colbymchenry/codegraph",
+      "https://github.com/CodeGraphContext/CodeGraphContext",
+      "https://github.com/Graphify-Labs/graphify"
+    ],
+    "symbol_navigation": [
+      "https://github.com/defendend/Claude-ast-index-search"
+    ],
+    "resolution_precision": [
+      "https://github.com/aimasteracc/tree-sitter-analyzer"
+    ],
+    "retrieval_risk": [
+      "https://github.com/iliaal/codesage"
+    ],
+    "temporal_graph": [
+      "https://github.com/n24q02m/crg"
+    ],
+    "conditional_graph_scale": [
+      "https://github.com/facebookincubator/Glean",
+      "https://github.com/LadybugDB/ladybug"
+    ],
+    "structural_audit": [
+      "https://github.com/ast-grep/ast-grep",
+      "https://github.com/Aider-AI/grep-ast"
+    ],
+    "token_efficiency": [
+      "https://github.com/rtk-ai/rtk",
+      "https://github.com/dweve-ai/hedl"
+    ],
+    "rca": [
+      "https://github.com/sebdenes/code-graph-rca"
+    ],
+    "policy": "Candidates are isolated evaluation profiles; no automatic vendoring, runtime installation or production authority."
   }
 }

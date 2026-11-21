@@ -317,6 +317,91 @@ class DataCatalogSnapshot:
             return json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2)
         return canonical_json_bytes(payload).decode("utf-8")
 
+    def require_entity(self, urn: str) -> CatalogEntity:
+        for entity in self.entities:
+            if entity.urn == urn:
+                return entity
+        raise KeyError(f"unknown catalogue entity: {urn}")
+
+    def search(
+        self,
+        query: str,
+        *,
+        entity_type: str | None = None,
+        limit: int = 50,
+    ) -> tuple[CatalogEntity, ...]:
+        """Bounded lexical search over metadata only; never searches raw payloads."""
+        if not isinstance(query, str) or not query.strip():
+            raise ValueError("catalogue search query is required")
+        if type(limit) is not int or not 1 <= limit <= 500:
+            raise ValueError("catalogue search limit must be between 1 and 500")
+        needle = query.casefold().strip()
+        matches = []
+        for entity in self.entities:
+            if entity_type is not None and entity.entity_type != entity_type:
+                continue
+            haystack = canonical_json_bytes(entity.to_payload()).decode("utf-8").casefold()
+            if needle in haystack:
+                matches.append(entity)
+                if len(matches) > limit:
+                    raise ValueError("catalogue search result limit exceeded")
+        return tuple(matches)
+
+    def trace_relationships(
+        self,
+        start_urn: str,
+        *,
+        direction: str = "both",
+        max_hops: int = 3,
+        limit: int = 256,
+    ) -> tuple[CatalogRelationship, ...]:
+        """Bounded breadth-first lineage traversal over evidenced relationships."""
+        self.require_entity(start_urn)
+        if direction not in {"outbound", "inbound", "both"}:
+            raise ValueError("lineage direction must be outbound, inbound or both")
+        if type(max_hops) is not int or not 0 <= max_hops <= 8:
+            raise ValueError("lineage max_hops must be between 0 and 8")
+        if type(limit) is not int or not 1 <= limit <= 2048:
+            raise ValueError("lineage limit must be between 1 and 2048")
+
+        frontier = {start_urn}
+        visited_nodes = {start_urn}
+        visited_edges: set[tuple[str, str, str, str]] = set()
+        selected: list[CatalogRelationship] = []
+        for _ in range(max_hops):
+            next_frontier: set[str] = set()
+            for relationship in self.relationships:
+                edge_key = (
+                    relationship.source_urn,
+                    relationship.relationship_type,
+                    relationship.target_urn,
+                    relationship.provenance,
+                )
+                if edge_key in visited_edges:
+                    continue
+                neighbor: str | None = None
+                if direction in {"outbound", "both"} and (
+                    relationship.source_urn in frontier
+                ):
+                    neighbor = relationship.target_urn
+                elif direction in {"inbound", "both"} and (
+                    relationship.target_urn in frontier
+                ):
+                    neighbor = relationship.source_urn
+                if neighbor is None:
+                    continue
+                visited_edges.add(edge_key)
+                selected.append(relationship)
+                if len(selected) > limit:
+                    raise ValueError("catalogue lineage result limit exceeded")
+                if neighbor not in visited_nodes:
+                    visited_nodes.add(neighbor)
+                    next_frontier.add(neighbor)
+            if not next_frontier:
+                break
+            frontier = next_frontier
+        return tuple(selected)
+
 
 def _entity(
     entity_type: str,

@@ -350,3 +350,35 @@ For flashloan research rank retrieval by task and evidence, not raw symbol popul
 A retrieval response must include repo SHA, graph generation, evidence IDs, full/partial status, token count (or labelled estimate), omitted IDs, unresolved links and a deterministic next-page cursor. Never return a summary when the analyst explicitly requested exact source; fetch source by ID. Do not ask the model to reconstruct omitted code from signatures.
 
 For maximum token efficiency, persist one compact repo card and stable catalogues, then expand only the task graph neighborhood. Use actual tokenizer measurements, stable IDs, deduplicated evidence refs, query result caching keyed by SHA+query+schema+budget and compact structured output. Compression applies to unrelated neighbors and CLI noise only—not target code, decimal/unit semantics, contract fields, risk limits, event IDs, evidence refs or negative results.
+
+
+## 12. Universal adaptive retrieval — minimize repeated context, not correctness
+
+The universal query tools are `task_context` and `expand_context` (normative API: `UNIVERSAL_TASK_CONTEXT_API_RU.md`). They are designed for any repository task, not only strategy research.
+
+**Default call pattern**
+1. Call `task_context(task, depth="adaptive", dimensions="auto", budget_tokens=client_policy)`.
+2. Inspect repo/index SHA, freshness, coverage, selected refs, omissions and retrieval confidence.
+3. Work from the initial T0–T2 slice.
+4. When implementation details are needed, call `expand_context(refs=[...], dimensions=["source","callers","callees","configs","tests"], depth="full", repo_sha=same_sha)`.
+5. Continue using returned IDs/cursors; do not reload the repo or duplicate source payloads.
+
+**Task-aware retrieval profiles**
+- Bug: failing symbol/traceback → callers/callees → state/config → fixtures/tests → related changes.
+- Feature/refactor: existing implementations/interfaces → consumers → dependencies → contracts → affected tests and blast radius.
+- Strategy: family/version/variants → exact implementation/economics → providers/data contracts → flash capital → tests/experiments/negative results → paper/shadow evidence.
+- Provider: adapter/method/schema/cursor → source health/freshness/gaps → strategy consumers and replay/tests.
+- PR review: diff → changed symbols → callers/consumers → contracts/security → tests and prior decisions.
+- Performance: measured profile → hot symbols → runtime call path → queues/IO/CPU/storage dependencies → benchmark.
+- Security/license: capabilities/data flows → secrets/untrusted input → dependency/SPDX/SBOM → affected workflows.
+
+**Compression rules**
+- Deduplicate by stable symbol/evidence IDs and content hashes.
+- Return exact target functions FULL; include only the nearest required dependency bodies. Use SKELETON for direct neighbors and REFERENCE/OVERVIEW for farther nodes.
+- Preserve financial/economic logic, exact decimal arithmetic, units, fees, slippage, timestamps, chain identity, schema fields, risk gates, negative results, tests and provenance.
+- Actual tokenizer count is mandatory when configured; otherwise label byte estimates. Never claim token savings without a same-query baseline/recall comparison.
+- If the pack budget is insufficient, report `BUDGET_LIMITED`, omissions and exact IDs for `expand_context`; never truncate a critical function or silently discard evidence.
+- Cache by exact repo SHA + graph generation + task/query + dimensions + depth + tokenizer + budget. Cache is never reused across branches/SHA/schema changes.
+- Prefix caching is optional and only valid when the connected model API actually exposes it; it is not assumed in the ChatGPT UI.
+
+**Universal objective:** ChatGPT should receive the minimum sufficient context for the current task, then retrieve more exact source/evidence only when required. It should never need to re-read the whole repository for every request.

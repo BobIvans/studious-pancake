@@ -215,3 +215,18 @@ Expected query operations:
 - build_context_pack: T0–T4 depth, target token budget, exact included refs, explicit omissions and deterministic continuation cursor.
 
 Each response returns repo SHA, graph generation, exact source/evidence refs, provenance, confidence/status, coverage, omissions and next expansion IDs. The ChatGPT analyst profile is read-only. A new chat receives the data through authorized GitHub access, an approved local read-only MCP connection, or an explicitly uploaded context pack; no implicit local-disk access is assumed.
+
+
+## 9. Universal adaptive task context API
+
+The generic interface contract is specified in `UNIVERSAL_TASK_CONTEXT_API_RU.md`. This is a mandatory reusable capability for all repository tasks, not a strategy-only helper.
+
+OCA-W0B must deliver the minimal native query service and CLI support for:
+- `task_context(task, repo_ref, repo_sha?, depth=adaptive, budget_tokens?, dimensions=auto)`: resolve the exact snapshot, check index freshness, return the smallest sufficient T0–T2 slice and exact next expansions;
+- `expand_context(refs, dimensions, depth, budget_tokens?, repo_sha)`: fetch exact source/tests/configs/contracts/providers/history/runtime evidence by stable IDs without repeating the full scan.
+
+OCA-W4 hardens adaptive ranking, progressive disclosure, tokenizer fitting, continuation, multi-resolution contexts and evidence-completeness evaluation. OCA-W11 exposes the same shared query service through the allowlisted local read-only MCP. CLI, MCP and portable export must call one backend; they must not implement separate retrieval logic.
+
+The initial retrieval route is exact IDs/symbols → lexical/FTS → typed graph → tests/config/contracts/change-impact → proven runtime evidence → optional semantic fallback only when a measured recall gap remains. Every response includes requested/indexed SHA, graph generation, freshness, actual tokens or labelled estimate, included/omitted refs, provenance and deterministic continuation cursor.
+
+Default `adaptive` depth means T0 overview + relevant T1 catalogue + bounded T2 task subgraph; T3 exact target code and dependencies are fetched as required, and T4 deep history/replay is available on demand. Never truncate critical target code mid-function. Budget overflow is explicit and recoverable through `expand_context`, not silent loss.

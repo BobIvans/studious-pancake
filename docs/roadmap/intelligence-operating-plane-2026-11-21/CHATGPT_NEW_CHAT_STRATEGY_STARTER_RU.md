@@ -100,3 +100,25 @@
 8. `TASK_PACKET`: только если требуется код; exact base SHA, write scope, acceptance, tests, отдельный worktree/PR.
 
 Любое изменение проходит через coding agent, reviewable PR, тесты, Work Result Receipt и человеческий merge approval. LIVE остаётся hard-denied. Не выполнять подписание, отправку, заимствование, расходование средств или production mutation.
+
+
+## 8. Универсальная команда для любой задачи по репозиторию
+
+Для bug fix, feature, refactor, architecture, test failure, performance, security, provider integration, strategy R&D или PR review используй один и тот же вход:
+
+```text
+task_context(task="<моя задача>", repo_ref="main", depth="adaptive", dimensions="auto")
+```
+
+Если нужно больше деталей:
+```text
+expand_context(refs=["IDs из первого ответа"], dimensions=["source","callers","callees","configs","tests","providers","runtime","history"], depth="full", repo_sha="<SHA первого ответа>")
+```
+
+Не проси пользователя заранее перечислять файлы. Самостоятельно выбирай релевантные dimensions по задаче. Начни с актуальной карты и небольшого graph slice; затем получай точные полные реализации, тесты, data contracts, provider evidence и историю только когда они нужны.
+
+Универсальная инструкция ChatGPT:
+
+> Для любой задачи по BobIvans/studious-pancake используй подключённый repo-intel MCP и актуальный SHA-bound graph через task_context. Проверяй freshness, получай минимальный достаточный контекст и раскрывай точный source/evidence через expand_context по мере необходимости. Максимизируй полезный контекст на каждый токен, но не теряй критическую логику, зависимости, финансовые семантики, тесты или provenance. Всегда указывай SHA, refs, UNKNOWN и omissions. Если MCP или актуальный индекс недоступны, используй authorized GitHub/source fallback и сообщи об этом; не притворяйся, что индекс был опрошен.
+
+MCP должен быть реально подключён в активном ChatGPT-клиенте. Наличие спецификации или локального сервера в репозитории само по себе не даёт новому чату доступ к нему.

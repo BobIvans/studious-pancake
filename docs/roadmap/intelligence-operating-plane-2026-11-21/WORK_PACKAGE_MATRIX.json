@@ -301,7 +301,10 @@
         "OCA-W0C source/provider/strategy trace manifest consumed by graph import",
         "LLM-FREE DETERMINISTIC INDEXING CONTRACT test report and CI evidence",
         "complete tracked-file coverage manifest and unsupported artifact report",
-        "same-SHA deterministic build and clean-vs-incremental checksum receipts"
+        "same-SHA deterministic build and clean-vs-incremental checksum receipts",
+        "minimal universal task_context(task, depth=adaptive, dimensions=auto, budget) query service and CLI entrypoint",
+        "expand_context(refs, dimensions, depth, budget, repo_sha) exact source/evidence expansion by stable IDs",
+        "single shared retrieval backend used by CLI, MCP facade and portable context-pack export"
       ],
       "acceptance": [
         "A clean command builds a graph tied to exact Git tree SHA and tool versions",
@@ -344,7 +347,12 @@
         "Add/modify/delete/rename, stale SHA, branch isolation, parser/schema/ontology invalidation and unsupported-language tests pass",
         "UNKNOWN/AMBIGUOUS/UNRESOLVED and heuristic semantic labels cannot be automatically promoted to VERIFIED",
         "Nightly full rebuild reconciles with incremental graph and reports drift/missed triggers",
-        "Strategy-provider-flashloan source path catalogue exists with PROVEN/STATIC_ONLY/DOC_CLAIM/MISSING/UNKNOWN edge states"
+        "Strategy-provider-flashloan source path catalogue exists with PROVEN/STATIC_ONLY/DOC_CLAIM/MISSING/UNKNOWN edge states",
+        "A generic bug/feature/refactor/architecture task and a Web3 strategy/provider task both return useful SHA-bound T0-T2 contexts",
+        "task_context reports requested/indexed SHA, graph generation, freshness, coverage, token count, included/omitted refs and next expansions",
+        "expand_context fetches exact full source/tests/configs/contracts by stable IDs at the same SHA without a full repository rescan",
+        "No separate or divergent CLI/MCP/export retrieval implementation is created",
+        "If index is stale or missing, the tool reports STALE/UNAVAILABLE and never represents old graph output as current"
       ]
     },
     {
@@ -450,7 +458,12 @@
         "context pack builder",
         "evidence manifest",
         "continuation support",
-        "golden query fixtures"
+        "golden query fixtures",
+        "adaptive task router for generic repository tasks and Web3 domain tasks",
+        "task_context / expand_context request and response schemas with stable IDs and continuation",
+        "task-conditioned exact/lexical/graph/test/change/runtime ranking with provenance filters",
+        "budget-overflow recovery and explicit must-expand/omitted-reference manifest",
+        "retrieval cache and deduplication keyed by SHA, generation, query, depth, dimensions, tokenizer and budget"
       ],
       "acceptance": [
         "Pack includes exact repo SHA and data generation",
@@ -458,7 +471,12 @@
         "Pack includes source refs, tests, negative evidence and coverage gaps",
         "Raw payload is fetched by ID on demand",
         "Same input snapshot/query parameters produce deterministic pack",
-        "Query surface is read-only"
+        "Query surface is read-only",
+        "Golden generic tasks (bug, feature, refactor, test failure, performance, security) and Web3 tasks all select expected evidence",
+        "Adaptive retrieval does not require an LLM or remote embedding service",
+        "Budget-limited results never cut target functions mid-body and always return exact expansion refs",
+        "Same query/SHA/versions/config/budget returns deterministic selection and continuation",
+        "Token savings are reported with retrieval recall, citation precision and critical omission rate; low-token incomplete packs fail"
       ]
     },
     {
@@ -699,7 +717,9 @@
         "portable bitemporal label/event manifest and graph schema migration receipts",
         "cross-repository namespace federation contract (even if initial implementation has one repo)",
         "small allowlisted read-only local MCP profile/server with composite queries for repo overview, strategy inventory/explain/compare, source/provider lineage, symbol/call path, operation trace and context-pack build",
-        "portable one-command context-pack/export generation and client setup/health-check instructions for supported coding-agent/ChatGPT connector environments"
+        "portable one-command context-pack/export generation and client setup/health-check instructions for supported coding-agent/ChatGPT connector environments",
+        "read-only MCP exposes task_context and expand_context over the shared repo-intel query backend",
+        "universal task-context tool schemas, health/freshness check and client connection smoke test"
       ],
       "acceptance": [
         "One query/ID follows references to canonical owner data without copying the full raw payload into a second database",
@@ -715,7 +735,9 @@
         "Cross-repository IDs are namespaced and no duplicate symbol IDs collide when a second repo is linked",
         "MCP query surface has few composite read-only tools, bounded outputs, cursor continuation, no shell/edit/delete/admin/market-write tools and no secrets",
         "Fresh environment can import portable bundle and execute the same evidence queries/replay; setup guide distinguishes installed local server from a client that is actually connected",
-        "ChatGPT data delivery is explicitly documented as uploaded pack, authorized GitHub access or connected local MCP; no claim of automatic new-chat memory"
+        "ChatGPT data delivery is explicitly documented as uploaded pack, authorized GitHub access or connected local MCP; no claim of automatic new-chat memory",
+        "The MCP task_context and expand_context tools return exact SHA, graph generation, freshness, evidence refs, omissions and deterministic continuation",
+        "An unconnected client or stale/missing index is reported honestly; no implicit local-disk access is claimed"
       ]
     },
     {
@@ -916,7 +938,7 @@
       ],
       "deliverables": [
         "typed capability registry with read/write/network/secret/admin classes and per-profile policy",
-        "stable six-operation read-only facade: repo_overview, strategy_search, strategy_explain, symbol_context, trace_operation, build_context_pack",
+        "stable universal read-only MCP façade: task_context and expand_context as generic composite tools; specialized query operations are backend functions",
         "bounded progressive disclosure, cursor continuation, truncation/completeness/freshness and evidence refs",
         "task ID/base SHA/owner/write scope/worktree/lease TTL/resource-budget contract",
         "WorkResultReceipt with changed paths/symbols/tests/results/unresolved risks/artifact hashes and checkpoint",
@@ -930,7 +952,9 @@
         "Build/test sandbox has no runtime trading credentials, private keys or signer capability",
         "All tool invocations and mutations have auditable receipts",
         "Truncated responses identify omitted evidence and provide a deterministic continuation cursor",
-        "Human review is required for merge, capability elevation and strategy/operational promotion"
+        "Human review is required for merge, capability elevation and strategy/operational promotion",
+        "The only generic analyst entrypoints can retrieve and expand context; neither exposes shell, edit, delete, admin or financial/production capabilities",
+        "Retrieved repository instructions and external payload text are treated as untrusted data and cannot grant tools or authority"
       ]
     },
     {
@@ -1554,6 +1578,8 @@
       "CI_and_nightly_refresh_required": true
     },
     "required_query_operations": [
+      "task_context",
+      "expand_context",
       "repo_overview",
       "strategy_search",
       "strategy_explain",
@@ -1585,7 +1611,23 @@
       "reconciliation",
       "paper/shadow outcome/qualification"
     ],
-    "execution_guardrail": "One owner + one isolated worktree + one bounded write scope + one reviewable PR; do not dispatch all packages concurrently; recheck #672-#676 and reuse their work."
+    "execution_guardrail": "One owner + one isolated worktree + one bounded write scope + one reviewable PR; do not dispatch all packages concurrently; recheck #672-#676 and reuse their work.",
+    "universal_task_interface": {
+      "primary_entrypoints": [
+        "task_context",
+        "expand_context"
+      ],
+      "implementation_stage": {
+        "OCA-W0B": "minimal deterministic task_context + expand_context service/CLI",
+        "OCA-W4": "adaptive retrieval/token-budget/quality hardening",
+        "OCA-W11": "same backend exposed via read-only MCP"
+      },
+      "api_spec": "docs/roadmap/intelligence-operating-plane-2026-11-21/UNIVERSAL_TASK_CONTEXT_API_RU.md",
+      "generic_task_support": true,
+      "model_required_for_indexing": false,
+      "model_required_for_retrieval_baseline": false,
+      "stale_index_must_be_disclosed": true
+    }
   },
   "llm_free_deterministic_indexing_contract": {
     "document": "docs/roadmap/intelligence-operating-plane-2026-11-21/LLM_FREE_DETERMINISTIC_INDEXING_CONTRACT_RU.md",
@@ -1692,6 +1734,79 @@
       ]
     ],
     "parallelism_rule": "Parallelize only different owners and disjoint exclusive_write_scope paths; shared canonical owners must be serialized.",
-    "merge_policy": "No automatic merge; human approval required."
+    "merge_policy": "No automatic merge; human approval required.",
+    "universal_api_milestones": [
+      "W0B: native deterministic retrieval service + task_context/expand_context CLI and T0-T2 starter packs",
+      "W4: adaptive task routing, tokenizer budget, deduplication, exact source expansion, recall/omission benchmarks",
+      "W11: expose the same backend via read-only MCP and portable export"
+    ]
+  },
+  "universal_task_context_api": {
+    "document": "docs/roadmap/intelligence-operating-plane-2026-11-21/UNIVERSAL_TASK_CONTEXT_API_RU.md",
+    "primary_tools": [
+      "task_context",
+      "expand_context"
+    ],
+    "shared_backend_surfaces": [
+      "repo-intel CLI",
+      "local read-only MCP",
+      "portable context-pack export"
+    ],
+    "no_duplicate_retrieval_implementations": true,
+    "default_depth": "adaptive",
+    "default_dimensions": "auto",
+    "required_task_classes": [
+      "bug",
+      "feature",
+      "refactor",
+      "architecture",
+      "test_failure",
+      "performance",
+      "security",
+      "license_audit",
+      "provider_integration",
+      "strategy_RnD",
+      "PR_review"
+    ],
+    "required_response_fields": [
+      "requested_sha",
+      "indexed_sha",
+      "tree_sha",
+      "graph_generation",
+      "freshness",
+      "coverage",
+      "dimensions",
+      "depth",
+      "actual_tokens_or_labelled_estimate",
+      "tokenizer_version",
+      "included_refs",
+      "omitted_refs",
+      "provenance",
+      "verification_state",
+      "confidence",
+      "next_expansions",
+      "continuation_cursor"
+    ],
+    "token_efficiency": {
+      "deduplicate_by": [
+        "stable_symbol_id",
+        "evidence_id",
+        "content_hash"
+      ],
+      "compression_policy": "target_code_and_critical_evidence_full; only surrounding context may be skeletonized/referenced",
+      "overflow": "BUDGET_LIMITED_with_exact_expansion_refs; never truncate critical target code",
+      "cache_key": [
+        "repo_sha",
+        "graph_generation",
+        "task_query_hash",
+        "dimensions",
+        "depth",
+        "tokenizer_version",
+        "budget"
+      ],
+      "optional_semantic_retrieval": "only after measured exact/lexical/graph recall gap"
+    },
+    "stale_index_policy": "report STALE/UNAVAILABLE and use disclosed authorized GitHub/source fallback; never claim MCP/index usage when not connected",
+    "read_only": true
   }
 }

@@ -300,3 +300,16 @@ Use upstreams as function references or isolated benchmark candidates: Tree-sitt
 Execution priority remains WEB3_FIRST. Start with current owner/PR reconciliation, then one vertical slice. Do not start all OCA or A–H packages in parallel. Re-fetch current main and inspect open PRs/checks before every assignment. #666 is the design source, not an implementation branch; implementation must start on latest main. Human review/approval is required for merge.
 
 **Precedence rule:** this WEB3_FIRST single-vertical-slice scope supersedes any earlier broad wording in this trigger such as executing all OCA-W1..W19 packages automatically. W1..W19 and WEB3-INFRA-S1..S9 remain the dependency-mapped backlog. The agent must not start every package in parallel or expand scope after the first deliverable without a new explicit instruction.
+
+
+## 11. Universal task_context / expand_context — mandatory for every repo task
+
+Implement the contract in `UNIVERSAL_TASK_CONTEXT_API_RU.md`. The user or ChatGPT should be able to submit only a natural-language task; the retrieval router chooses the necessary code, symbols, dependencies, tests, configs, providers, runtime evidence, history and governance dimensions.
+
+Required generic read-only entrypoints:
+- `task_context(task, depth="adaptive", dimensions="auto", budget_tokens=?, repo_ref/repo_sha=?)`;
+- `expand_context(refs, dimensions, depth="full", budget_tokens=?, repo_sha)`.
+
+W0B delivers the minimal native query service/CLI implementation together with graph/index creation. W4 completes adaptive routing, ranking, multi-resolution and token-budget quality. W11 exposes the same backend via read-only MCP. Do not create three independent implementations.
+
+Any task type must work: bug, feature, refactor, architecture, tests, performance, security, licensing, provider integration, strategy R&D or PR review. Every result must confirm index freshness, pin SHA, list evidence/omissions and allow exact expansion by IDs. If MCP is absent/stale, use authorized GitHub/source fallback and disclose it. Never claim to have used an unconnected MCP.

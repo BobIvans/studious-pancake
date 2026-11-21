@@ -500,3 +500,41 @@ Profiles:
 - предложить самый маленький MVP-A implementation.
 
 Не строить autonomous agent runtime, новую event database или новую trading authority в первой работе.
+
+
+---
+
+# 12. Универсальный task-context интерфейс для любой задачи
+
+После подключения repo-intel MCP используй `task_context` как стандартную первую операцию для **любой** задачи по репозиторию — не только Web3/flashloan.
+
+Пример вызова:
+```text
+task_context(
+  task="<моя задача естественным языком>",
+  repo_ref="main",
+  depth="adaptive",
+  dimensions="auto",
+  budget_tokens=<доступный контекстный бюджет>
+)
+```
+
+Сначала проверь в ответе requested SHA, indexed SHA, graph generation, freshness, coverage, confidence, included/omitted refs и token count. Работай только с актуальным snapshot либо явно помечай fallback.
+
+Когда первичного пакета недостаточно:
+```text
+expand_context(
+  refs=["stable-symbol-or-evidence-id"],
+  dimensions=["source","callers","callees","configs","tests"],
+  depth="full",
+  repo_sha="<тот же SHA>"
+)
+```
+
+Пользователь не обязан заранее знать, какие файлы нужно открыть. Router сам выбирает dimensions по задаче; точный исходный код, тесты, контракты и evidence загружаются по стабильным IDs. Одна реализация query backend используется из CLI, MCP и portable pack export.
+
+**Постоянная инструкция для ChatGPT:**
+
+> Для любой задачи по BobIvans/studious-pancake сначала используй подключённый repo-intel MCP через task_context и актуальный SHA-bound knowledge graph. Получай минимальный достаточный контекст, проверяй свежесть индекса, затем раскрывай точные функции, зависимости, конфиги, providers, тесты и evidence через expand_context по мере необходимости. Экономь токены progressive disclosure и дедупликацией, но не сжимай критическую логику или доказательства. Указывай SHA, source refs, UNKNOWN и omissions. Если MCP отсутствует или индекс устарел, используй разрешённый GitHub/source fallback и честно отметь ограничение.
+
+Если repo-intel MCP ещё не реализован/не подключён в текущем ChatGPT-сеансе, эта команда является желаемым workflow, а не доказательством фактического доступа.

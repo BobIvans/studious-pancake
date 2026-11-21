@@ -334,3 +334,19 @@ Candidates are function-specific:
 - Parquet/DuckDB first, with ClickHouse/Iceberg/lakeFS/Lance behind measured storage gates.
 
 No external candidate is installed because it is listed. Pin commit/version/license, inspect permissions/network/telemetry/installer side effects, run same-SHA golden benchmarks and keep rollback. Zero adoption is valid.
+
+
+## 14. Universal task-context interface for every repository task
+
+Implement `task_context` and `expand_context` as the two generic entrypoints over the single read-only query backend. The detailed request/response schemas, routing, freshness, fallback, security and acceptance rules are normative in `UNIVERSAL_TASK_CONTEXT_API_RU.md`.
+
+- `task_context(task, depth="adaptive", budget_tokens=?, dimensions="auto", repo_ref="main", repo_sha=?)` starts from the user's natural-language task, pins an exact repository snapshot, checks graph freshness, and retrieves relevant nodes and evidence.
+- `expand_context(refs, dimensions, depth="full", budget_tokens=?, repo_sha)` retrieves exact source and further dependencies by stable IDs from the first response. It must not rescan or resend unrelated repository content.
+- Use one backend from CLI, MCP and portable exports. The MCP exposes these as bounded read-only composite tools. Existing specialized operations (strategy/provider/trace/test/history queries) remain internal query functions called by the router, rather than forcing the user/model to choose a long tool list.
+- Adaptive retrieval works for every task category: bug fix, feature, refactor, architecture, test failure, performance, security/license audit, provider integration, strategy R&D and PR review.
+- Use exact symbol/ID matching, lexical retrieval, typed graph traversal, dependency/test/config/contract/change signals and proven runtime evidence. Semantic/vector search is optional fallback after measured recall gap.
+- Return a SHA-bound evidence pack with freshness state, graph generation, dimensions, depth, tokenizer and token count, included/omitted refs, unknowns, confidence/provenance and deterministic continuation.
+- A stale/unavailable index is never presented as current. Fall back to authorized GitHub/source or an uploaded pack and state the limitation.
+- Compression deduplicates and summarizes only surrounding context. Target logic, direct required dependencies, financial calculations, decimal/unit/time semantics, contracts, tests and evidence must remain full or be retrievable exactly by ID without omission.
+
+This is the universal interface: a new task should require only its natural-language description. The router, not the user, discovers what repo context is relevant.

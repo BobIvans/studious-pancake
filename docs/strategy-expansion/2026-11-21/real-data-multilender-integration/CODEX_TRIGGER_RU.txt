@@ -1,0 +1,93 @@
+CODEX EXECUTION TRIGGER — SUI REAL QUOTES → EXISTING FLASH-CAPITAL EVIDENCE → UNSIGNED PTB HANDOFF
+
+Repository: BobIvans/studious-pancake
+Start from latest origin/main and rebase/reconcile all open owners before implementation.
+Task pack: docs/strategy-expansion/2026-11-21/real-data-multilender-integration/
+
+WORKSTREAM BOUNDARIES — MUST FOLLOW
+- PR #664 owns the CAPTURE_ONLY campaign/control plane, campaign manifest/runbook, live-data authorization, source profiles/quotas/retention, readiness report and Paper Gate PG01. Its N06/N07/N08/N09 DAG owns Jupiter Lend/Project 0/Kamino/NAVI lender qualification, one lender per bounded PR.
+- PR #665 owns Solana Prop-AMM toolchain/source mirrors, pmm-sim local LiteSVM caller-profile benchmark, direct Prop-AMM venue-builder research and Jupiter V2/direct-route comparison.
+- PR #667 owns the Sui quote/state integration vertical slice described below. It consumes #664 campaign evidence and #665 outputs where relevant, but does not duplicate their owners.
+- Do not write the same canonical path as an active agent/PR. If R02/R03 owner is occupied, do fixture/adapter work in a disjoint path and report a typed dependency.
+
+MISSION
+Build a tested Sui quote-intelligence vertical slice that can accept real, governed state/quote evidence when authorized, replay offline deterministically, deduplicate underlying pools, and hand off a winning quote to existing Sui R02/R03/R05 owners. Do not claim paper qualification unless the installed canonical R06/QPR campaign independently passes.
+
+PHASE 0 — RECONCILE
+1. Read AGENTS.md, current main, PR #664/#665/#667 diffs, #661 Aftermath adapter lineage, R13 kernel freeze, Sui GPR/QPR state owner, R02-CAP-C/NAVI builder owner, R05 and R06.
+2. Refresh #664 NEXT_PR_DAG_V1 statuses. Do not re-implement N06/N07/N08/N09 or the campaign plane.
+3. Verify no active branch/worktree owns every source/test/config path before writing.
+
+PHASE 1 — SUI STATE AND CAMPAIGN EVIDENCE
+1. Reuse existing Sui GPR/QPR/DIN source owners. Sui mainnet state transports are governed gRPC and/or GraphQL only; never use retired Sui Foundation mainnet JSON-RPC, including fallback.
+2. Preserve the hard BLOCKED status LIVE_SUI_PROVIDERS_NOT_AUTHORIZED. Never weaken it or make env vars/credentials flip it.
+3. A live read is permitted only after the existing CAMPAIGN_START_V1 + QPR/provider governance already returns PASS for the exact source profiles and budgets. This PR is not an authorization.
+4. For rooted state, require two truly independent non-smoke providers with distinct provider/operator/correlation groups; same genesis, checkpoint sequence/digest and object ids/versions/digests; bounded time skew; raw payload hashes and source generations.
+5. If the current hard gate or quorum fails, run deterministic offline fixtures and emit typed BLOCKED. Do not invent checkpoint, slot, freshness, expiry or finality from an API timestamp.
+
+PHASE 2 — FIRST SUI QUOTE VERTICAL SLICE
+1. Start with the existing offline Aftermath normalizer in src/gpr_sui_shadow/providers/aftermath.py. Add only the missing provider transport/ingress/adapter glue in disjoint paths, then wire through existing R13 quote/build kernel only after owner review.
+2. Quote transport is read-only and injected; no hidden network client, key probing, or signing behavior. Keep network access disabled in unit tests.
+3. Normalize full CoinType input/output, exact integer base-unit amounts, source/provider/operator/correlation identity, request fingerprint, response hash, route legs, pool IDs, fee breakdown, errors and freshness exactly as returned.
+4. The Aftermath trade-route response does not itself establish checkpoint or complete minimum-output guarantee. Attach state evidence independently; never synthesize missing fields.
+5. Separate economic quote from /transactions/add-trade PTB composition. A quote response or opaque route reference is not a PTB. PTB builder work is allowed only against pinned official schema and existing R03 contract, with no sender.
+6. Aftermath is the first slice only. Add Cetus Aggregator V3, Bluefin7K, FlowX, OKX DEX, Rango and direct DeepBook one at a time after source schema, license/terms, auth, quota, fees, errors and build output are proven. Do not vendor Cetus/FlowX SDK source with unresolved license.
+
+PHASE 3 — SUI ASSET/PAIR UNIVERSE
+1. Reuse canonical asset registry. Sui identity is the full package::module::type CoinType, not ticker.
+2. Use SUI_ASSET_AND_PAIR_PLAN_RU.md as candidate pair families only. Instantiate pairs only from discovered, verified pool/book/router inventory; no static N×N token cross product.
+3. Keep native/bridged/staked CoinTypes separate. Resolve decimals from current metadata. Amounts remain integer base units.
+4. Use existing R13 PoolIdentity/PoolIdentityDeduplicator and source route lineage. Two aggregators observing the same pool are correlated; never count them as independent liquidity.
+5. Preserve losing quotes, negative outcomes and schema drift. Requote every amount used by nonlinear sizing; never scale a quote to another amount.
+
+PHASE 4 — FLASH-CAPITAL AND LENDER HANDOFF (NO DUPLICATE R02)
+1. Consume existing FlashCapitalGraph and R02 provider observations only; do not create or edit a second graph.
+2. NAVI qualification is owned by #664 N09 / R02-CAP-C and its R03-C builder owner. Do not edit src/multichain/sui.py or src/lending/unsigned_builders/navi_ptb_builder.py without explicit owner handoff.
+3. DeepBook flash-capacity qualification and any new DeepBook unsigned builder require a separate explicitly assigned owner. The shared pool is one resource for book liquidity and flash capacity; never double count.
+4. Scallop/Bucket/Suilend remain later slices: ScallopQuery read-only; Bucket USDB-only; Suilend research-only pending proven public general flashloan ABI.
+5. Cetus/Aftermath/FlowX are not to be registered as lenders without a proven public flashloan interface.
+6. If no same-chain, exact-CoinType, current, amount-sufficient, fee/rounding-qualified lender evidence exists, produce typed NO_CAPITAL_EDGE/BLOCKED. Do not build an execution-ready transaction.
+
+PHASE 5 — EXISTING R03 UNSIGNED PTB HANDOFF
+1. Reuse existing R03 unsigned-plan and Sui hot-potato receipt contracts; no new transaction builder or signer.
+2. A selected, composable route may be handed to an existing builder only when the lender deployment/config/package, shared object versions, CoinType/decimals, capacity, fee and exact repayment are proven.
+3. Required Sui order: borrow → composable swaps in the same PTB → exact output/fee guard → repay exact hot-potato receipt. No open receipt; no separate transaction for repayment.
+4. Distinguish quote-only, composable-PTB, unsigned-built, capacity-qualified and R05-simulated statuses. If the source returns quote-only, do not manufacture a swap PTB.
+5. If N09/R03 owner is not yet qualified, test only the handoff contract with fixtures and report the exact blocker.
+
+PHASE 6 — R05/R06 PAPER QUALIFICATION HANDOFF
+1. Feed the complete unsigned PTB plus same-generation state to existing R05 exact simulation. Never substitute a quote or pmm-sim result for full transaction simulation.
+2. Verify borrow/repay, hot-potato receipt, output guard, all fee rounding, gas and positive all-in net.
+3. Only the canonical installed R06/QPR service can promote to PAPER_QUALIFIED. This PR does not create its own paper runner or qualify a campaign.
+4. The first Solana paper track remains owned by #664 + #665 + Solana N06/N07/N08 + R03/R05/R06; Sui #667 is an additional independent chain lane, not a prerequisite for Solana paper qualification.
+
+TESTS
+- offline deterministic fixtures; pytest-socket; no live API in unit tests;
+- full CoinType mismatch / decimals mismatch / wrong input amount;
+- stale checkpoint, missing checkpoint, source disagreement, correlated provider;
+- same underlying pool across aggregators; no-pool-id / opaque route;
+- 429, timeout, schema drift, malformed fee, no route, stale quote;
+- quote-only vs PTB-build separation;
+- missing lender edge, insufficient cap, unknown fee/rounding;
+- NAVI version/object mismatch and unconsumed receipt (against fixture contract only);
+- missing output guard, R05 failure, replay mismatch;
+- verify no signing, sending, borrowing, wallet/account creation or production promotion paths are reachable.
+
+HARD STOP
+- no weakening of CAMPAIGN_START_V1, QPR, LIVE_SUI_PROVIDERS_NOT_AUTHORIZED or any source/provider gate;
+- no campaign launch, new provider subscription/spend or paid API-plan change without separate approval;
+- no private keys, wallet creation, account/object setup, transaction signing, submission, borrowing, deployment, relay activation or live promotion;
+- no Solana capture/quote/lender work owned by #664/#665 or their R02/R13 owners;
+- no pmm-sim benchmark duplication; #665 owns that evidence;
+- keep capture/provider/live/sign/send/borrow flags false in repo defaults.
+
+DELIVERABLES
+- implemented Aftermath Sui quote adapter vertical slice + deterministic tests, or exact typed blocker with no false wiring claim;
+- exact changed paths/base/head SHA and path-owner audit;
+- provider status separated into DOCUMENTED / ADAPTER / BOOT_WIRED / LIVE_READ / ROOTED / COMPARABLE / BUILDABLE / R02_QUALIFIED / R05_SIMULATED / R06_PAPER_QUALIFIED;
+- Sui pool/pair discoveries by full CoinType and underlying object/pool id;
+- route-to-existing-NAVI/DeepBook owner handoff and blockers, without editing those owners;
+- test output, replay hash and source provenance;
+- keep PR #667 Draft until implementation, tests, code-owner review and human acceptance pass.
+
+Do not stop after changing documentation. Deliver the smallest working Sui vertical slice in this PR, with offline/replay proof and explicit blockers for any live or lender qualification still outside its authority.

@@ -173,9 +173,29 @@
       "layer": "simulation",
       "url": "https://github.com/LimeChain/pmm-sim",
       "status": "PUBLIC_MIT_SIMULATOR",
-      "finding": "v0.2.0, Rust Edition 2024, LiteSVM 0.10 and Solana SDK 3.0 dependencies; README documents single/multi/direct/benchmark and named Prop AMM versions. Cargo.toml references mutable Magnus branch.",
-      "use": "Isolated pinned offline simulation/differential harness.",
-      "blocker": "Pin commit and transitive git deps; SDK isolation. Simulation cannot prove live solver quote, execution or fill."
+      "finding": "v0.2.0, Rust Edition 2024, LiteSVM 0.10 and Solana SDK 3.0 dependencies. README documents direct/single/multi/benchmark and supported Prop AMMs. Source inspection at pinned commit cc4ae891a2a765d92c89d4381f96dce4afd446bb confirms --spoof accepts Jupiter, DFlow, OKX Labs and Titan. src/builder.rs changes the instruction program_id to the selected aggregator id and src/env.rs loads the Magnus router spoof binary under that id in the LOCAL LiteSVM instance. This is a controlled simulated caller-profile experiment, not a genuine aggregator program and not a valid mainnet identity.",
+      "use": "Use spoof profiles in offline LiteSVM benchmarking only to measure caller-dependent quote differences; then pursue real integrations through the aggregator's official route/build interface if commercially and technically permitted.",
+      "blocker": "Pin pmm-sim and Magnus immutable revisions; use identical immutable account/program snapshot, pool, direction, slot and raw amount across all profiles. It cannot identify a currently better aggregator without executing the same-slot matrix. No spoof binary or caller impersonation in mainnet transactions.",
+      "code_review": {
+        "pinned_commit": "cc4ae891a2a765d92c89d4381f96dce4afd446bb",
+        "inspected_files": [
+          "src/builder.rs",
+          "src/env.rs",
+          "src/lib.rs",
+          "cfg/setup.toml",
+          "README.md"
+        ],
+        "spoof_profile_ids": [
+          "Jupiter",
+          "DFlow",
+          "OKX Labs",
+          "Titan"
+        ],
+        "mechanism": "Constructs an aggregator-specific router instruction, assigns the selected aggregator program id, and loads a Magnus router spoof binary at that id inside the local LiteSVM instance.",
+        "research_only": true,
+        "actual_aggregator_program": false,
+        "mainnet_identity_spoof_authorized": false
+      }
     },
     {
       "name": "LiteSVM",
@@ -227,9 +247,9 @@
       "layer": "router_builder",
       "url": "https://github.com/1000xsh/swaps",
       "status": "PUBLIC_MIT_DIRECT_INSTRUCTION_BUILDER",
-      "finding": "v0.1.1 Rust 2024 library fetches account plans, decodes snapshots and builds allocation-free swap instruction views. It does not quote or infer slippage. Upstream notes say HumidiFi ignores min_amount_out; Tessera direct top-level path has caveats; SolFi is slot/oracle-sensitive. Cargo.toml declares MIT, but no root LICENSE, LICENSE-MIT or LICENSE-APACHE file was found in this review. Require published crate archive/license package verification before mirroring or linking.",
+      "finding": "v0.1.1 Rust 2024 library fetches account plans, decodes snapshots and builds allocation-free swap instruction views. It does not quote or infer slippage. Upstream notes say HumidiFi ignores min_amount_out; Tessera direct top-level path has caveats; SolFi is slot/oracle-sensitive. Cargo.toml declares MIT, but no root LICENSE, LICENSE-MIT or LICENSE-APACHE file was found in this review. Require published crate archive/license package verification before mirroring or linking. Cargo.toml declares MIT, but no root LICENSE, LICENSE-MIT or LICENSE-APACHE file was found in this review. Require published crate archive/license package verification before mirroring or linking.",
       "use": "Potential per-venue direct builder, after immutable pin and exact account/program conformance.",
-      "blocker": "No quote engine. Venue-specific minout/guard and SDK/API compatibility must be proven. Resolve license metadata and package archive checksum first.",
+      "blocker": "No quote engine. Venue-specific minout/guard and SDK/API compatibility must be proven. Resolve license metadata and package archive checksum first. Resolve license metadata and package archive checksum first.",
       "license_status": "HOLD_LICENSE_PACKAGE_CHECK"
     },
     {
@@ -239,7 +259,13 @@
       "status": "VENDOR_CLAIMS_AND_PUBLIC_BETA_CLIENT",
       "finding": "Provider advertises optimized regional routing and dynamic tip ceiling/clearing/rebate mechanics; public iris-rs repo is beta and AGPL-3.0. Do not infer current minimum tip or actual clearing costs from old pasted values.",
       "use": "Separate later sender-qualification candidate.",
-      "blocker": "Need exact vendor endpoint docs, plan, pricing, rebate/billing rules, test data, legal/license review."
+      "blocker": "Need exact vendor endpoint docs, plan, pricing, rebate/billing rules, test data, legal/license review.",
+      "tip_profile": {
+        "documented_min_tip_lamports": 10000,
+        "tip_sol": "0.00001",
+        "path": "https://astralane.gitbook.io/docs/mandarin-docs/huan-ying-lai-dao-astralane/duan-dian-he-pei-zhi",
+        "note": "Official translated docs list 0.00001 SOL min for Iris. Tip rebates are conditional and docs say higher rebates are for transactions sent directly to Astralane, not shared with other RPCs/landing services; plan/terms confirmation needed."
+      }
     },
     {
       "name": "Helius Sender SWQoS-only",
@@ -248,7 +274,13 @@
       "status": "OFFICIAL_TIERED_SENDER",
       "finding": "SWQoS-only min tip listed as 0.000005 SOL, best-effort and outside priority tip buffer; Sender Max begins at 0.001 SOL with separate pathway/performance.",
       "use": "Separate future provider candidate with capability tier modeled explicitly.",
-      "blocker": "No automatic equivalence between min tip and competitive inclusion; price/latency/failure experiments required."
+      "blocker": "No automatic equivalence between min tip and competitive inclusion; price/latency/failure experiments required.",
+      "tip_profile": {
+        "documented_min_tip_lamports": 5000,
+        "tip_sol": "0.000005",
+        "path": "https://www.helius.dev/sender",
+        "note": "Single SWQoS path; best effort below 0.001 SOL, does not enter priority tip buffer; Helius says no credits, payment through tip."
+      }
     },
     {
       "name": "Syncro Sender / P2P.org",
@@ -339,6 +371,15 @@
       "finding": "Open repository workstream owns multi-strategy runtime fanout/composition. This pack must reuse its StrategyRegistry/OpportunityConsumer and bounded cancellation/deadline/backpressure concepts, not duplicate a second orchestrator.",
       "use": "Parallel opportunity evaluation through SX-18; compatible portfolio selection via existing SX-12 / ConflictScheduler.",
       "blocker": "Check latest PR status, rebase and coordinate file ownership before implementation."
+    },
+    {
+      "name": "pmm-sim simulated caller-profile differential experiment",
+      "layer": "research_method",
+      "url": "https://github.com/LimeChain/pmm-sim",
+      "status": "SOURCE_VERIFIED_METHOD_NOT_YET_RUN",
+      "finding": "Pinned upstream code supports local LiteSVM comparison of direct, native Magnus CPI and spoofed router profiles Jupiter/DFlow/OKX/Titan. The spoof profile loads a Magnus router binary under the aggregator program id in local SVM; this is not authentic aggregator execution.",
+      "use": "Run offline on a single pinned account/program snapshot and amount grid to identify caller-dependent Prop AMM pricing; use results to prioritize legitimate official aggregator integrations.",
+      "blocker": "No repository benchmark artifact currently reports per-AMM/per-caller results; exact preferential mapping is UNKNOWN until the matrix is run."
     }
   ],
   "policy": {

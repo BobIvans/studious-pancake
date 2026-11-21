@@ -1,0 +1,34 @@
+{
+  "schema": "studious-pancake.lane-receipt.v1",
+  "lane": "OCA-W0",
+  "date": "2026-11-22",
+  "branch": "codex/oca-w0-owners-audit-2026-11-22",
+  "base_main_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+  "deliverables": [
+    "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/W0_OWNERS_AND_EVENT_CORRELATION_AUDIT_2026-11-22.md",
+    "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/W0_OWNER_INVENTORY.json"
+  ],
+  "checks": {
+    "make_event_production_callsites_found": 0,
+    "owner_inventory_rows": 16,
+    "join_matrix_rows": 10,
+    "open_pr_reconciliation_rows": 6,
+    "pytest_collected_baseline": 64,
+    "network_probes": 0
+  },
+  "acceptance": {
+    "capabilities_traced_to_files_tests": true,
+    "event_envelope_traced": true,
+    "joins_marked_present_partial_missing_unknown": true,
+    "no_code_changes": true
+  },
+  "safety": {
+    "live": "HARD_DENIED",
+    "sign_enabled": false,
+    "send_enabled": false,
+    "execution_authority": "NONE",
+    "merge_authority": "HUMAN_ONLY"
+  },
+  "blockers": [],
+  "related": {"design_pr": 666, "design_head": "6214202b9604766b5483be4607db9bc7f5fc61e3"}
+}

@@ -1,0 +1,65 @@
+{
+  "schema": "studious.oca-w0.owner-inventory.v1",
+  "generated": "2026-11-22",
+  "lane": "OCA-W0",
+  "base_main_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+  "design_source": {
+    "pr": 666,
+    "head": "6214202b9604766b5483be4607db9bc7f5fc61e3"
+  },
+  "mode": "AUDIT_ONLY",
+  "owners": [
+    {"id": "agg02", "files": ["src/agg02/storage.py"], "key_symbols": ["DurableRawJournal", "AnalyticalDatasetPublisher", "DatasetReplayReader"], "tests": ["tests/test_agg02_market_data_capital.py"], "status": "IN_MAIN_VERIFIED"},
+    {"id": "market_observation", "files": ["src/market/observations.py"], "key_symbols": ["MarketObservationV2", "SourceCursor", "ObservationWatermark"], "tests": ["tests/market_data_evolution/test_market_data_evolution.py"], "status": "IN_MAIN_VERIFIED"},
+    {"id": "observability", "files": ["src/observability/store.py", "src/observability/events.py", "src/observability/authoritative_store_pr195.py"], "key_symbols": ["ObservabilityStore", "EventEnvelope", "make_event", "AuthoritativeObservabilityStore"], "tests": ["tests/observability/", "tests/test_pr195_authoritative_observability_store.py"], "status": "IN_MAIN_VERIFIED_STORE_ONLY", "producer_callsites": 0},
+    {"id": "market_episode", "files": ["src/market_data_evolution/contracts.py"], "key_symbols": ["MarketEpisode"], "tests": ["tests/market_data_evolution/"], "status": "IN_MAIN_VERIFIED"},
+    {"id": "external_contracts", "files": ["src/external_contracts/registry.py", "src/provider_governance/"], "key_symbols": ["ExternalContractRegistry", "ProviderEntitlement", "AdmissionRequest"], "tests": ["tests/external_contracts/"], "status": "IN_MAIN_VERIFIED"},
+    {"id": "asset_resolver", "files": ["src/assets/resolution/resolver.py"], "key_symbols": ["AssetResolver"], "tests": ["tests/test_dynamic_asset_resolution.py"], "status": "IN_MAIN_VERIFIED"},
+    {"id": "dynamic_universe", "files": ["src/discovery/dynamic_universe/universe.py"], "key_symbols": ["DynamicUniverse"], "tests": ["tests/test_dynamic_universe.py"], "status": "IN_MAIN_VERIFIED"},
+    {"id": "research_economic_graph", "files": ["src/research_economic_graph/graph.py"], "key_symbols": ["ResearchEconomicGraph", "SolanaResearchAdapter"], "tests": ["tests/test_gpr01_research_economic_graph.py"], "status": "IN_MAIN_VERIFIED"},
+    {"id": "universal_arbitrage_graph", "files": ["src/strategy/arbitrage_graph.py"], "key_symbols": ["UniversalArbitrageGraph", "AssetNode"], "tests": ["tests/test_shadow_arbitrage_graph.py"], "status": "IN_MAIN_VERIFIED"},
+    {"id": "correlation_ledger", "files": ["src/research/correlation_ledger/ledger.py"], "key_symbols": ["CorrelationLedger"], "tests": ["tests/test_dynamic_correlation_ledger.py"], "status": "IN_MAIN_VERIFIED"},
+    {"id": "flash_capital_graph", "files": ["src/economics/flash_capital_graph/graph.py"], "key_symbols": ["FlashCapitalGraph", "FlashCapitalEdge", "LiveCapitalProvider"], "tests": ["tests/test_dynamic_flash_capital.py"], "status": "IN_MAIN_VERIFIED"},
+    {"id": "strategy_registries", "files": ["src/strategy/registry.py", "src/strategy/strategy_contract.py", "src/inventory/research.py", "src/research/pr357_contracts.py", "src/mechanism_discovery/pr356_contracts.py"], "key_symbols": ["StrategyRegistry", "StrategyContractV1", "StrategyFamily", "StrategyEvidenceCard"], "tests": ["tests/strategy_evolution/", "tests/research/", "tests/mechanism_discovery/"], "status": "IN_MAIN_VERIFIED", "note": "no StrategyIdea/StrategyVersion classes exist; labels join via these registries"},
+    {"id": "market_source_catalog", "files": ["src/market/source_catalog.py", "src/resources/market_source_catalog.json"], "key_symbols": [], "tests": [], "status": "IN_MAIN_VERIFIED", "note": "37 catalog rows; rows are not active connectors"},
+    {"id": "runtime_authority", "files": ["src/runtime/core_v1_composition.py", "src/runtime/core_v1_dependency_resolver.py", "src/durability/unified_authority_pr02.py", "src/economics/durable_reservations.py"], "key_symbols": [], "tests": [], "status": "IN_MAIN_VERIFIED"},
+    {"id": "repo_intel_primitives", "files": ["src/intelligence/"], "key_symbols": ["repo_snapshot.start_snapshot", "repo_source.analyze_source", "repo_groups.attach_tests_and_contracts", "context_pack.build_context_pack", "context_benchmark"], "tests": ["tests/intelligence/"], "status": "IN_MAIN_VERIFIED", "missing_subpackages": ["repo_graph", "provider_contracts", "strategy_requirements", "temporal_ontology", "incremental_engine", "agent_access", "verification", "universal_data_plane", "logsites", "operation_context"]},
+    {"id": "authority_map", "files": ["src/authority_map.py"], "key_symbols": [], "tests": ["scripts/validate_authority_map.py"], "status": "IN_MAIN_VERIFIED", "note": "closest canonical-owner registry; no src/ownership package exists"}
+  ],
+  "joins": [
+    {"from": "agg02", "to": "market_observation", "status": "PARTIAL", "evidence": ["src/intelligence/episode_builder.py", "src/agg02/storage.py:AnalyticalDatasetPublisher", "src/agg02/storage.py:DatasetReplayReader"]},
+    {"from": "market_observation", "to": "market_episode", "status": "PRESENT", "evidence": ["src/market_data_evolution/contracts.py", "src/intelligence/episode_builder.py"]},
+    {"from": "strategy", "to": "provider_data_requirements", "status": "PARTIAL", "evidence": ["src/strategy/strategy_contract.py:StrategyContractV1"], "gap": "no StrategyDataRequirement/CompatibilityEvaluator (W14)"},
+    {"from": "provider_catalog", "to": "adapters", "status": "PARTIAL", "evidence": ["src/market/source_catalog.py", "src/resources/market_source_catalog.json"], "gap": "catalog rows are not active connectors"},
+    {"from": "providers", "to": "flash_capital_capacity", "status": "PARTIAL", "evidence": ["src/economics/flash_capital_graph/graph.py"], "gap": "effective capacity UNKNOWN per TASK_INDEX"},
+    {"from": "decisions", "to": "operation_outcomes", "status": "MISSING", "evidence": [], "gap": "no production EventEnvelope producer (see trace)"},
+    {"from": "event_envelope", "to": "cross_owner_correlation", "status": "MISSING", "evidence": [], "gap": "correlation fields exist on envelope; zero producers"},
+    {"from": "strategy", "to": "tests", "status": "PARTIAL", "evidence": ["src/intelligence/repo_groups.py:attach_tests_and_contracts"], "gap": "no stable symbol/callsite IDs (W3)"},
+    {"from": "repo_snapshot", "to": "context_packs", "status": "PRESENT", "evidence": ["src/intelligence/context_pack.py"]},
+    {"from": "graph_derivation", "to": "canonical_registries", "status": "MISSING", "evidence": [], "gap": "no derived symbol graph exists (W0B)"}
+  ],
+  "event_envelope_trace": {
+    "make_event_definition": ["src/observability/events.py:43-46"],
+    "make_event_production_callsites": [],
+    "default_provenance": {"runtime_id": "test-runtime", "producer_code_version": "unknown", "config_checksum": "unknown"},
+    "event_envelope_direct_constructions": ["src/observability/cross_plane_pr196/reconciler.py:412"],
+    "raw_event_envelope_constructions": ["src/data_plane/external_datasets.py:173", "src/research/pr358_integrated.py:97"],
+    "store_instantiations": ["src/observability/authoritative_store_pr195.py:41", "src/observability/authoritative_store_pr195.py:51", "src/observability/replay.py:131"],
+    "read_side": ["src/observability/archive_claims.py", "src/observability/archive_verify.py", "src/observability/export.py", "src/observability/metrics.py", "src/observability/replay.py"],
+    "conclusion": "PRODUCER_MISSING; store/export/replay complete; no real-time operation work log claimable; runtime context dimensions must report UNAVAILABLE until W10"
+  },
+  "cli_test_baseline": {
+    "cli_planes": ["campaign run", "repo scan|status|benchmark|coverage|export|delta|archive|backup|restore", "storage status|forecast|retention-dry-run|compact|prune|rollups|pressure", "report build|bundle|compare", "laya triage-observations|triage-episodes|score-repo"],
+    "console_entry_points": ["flashloan-bot", "flashloan-connections", "flashloan-contracts", "flashloan-checks", "flashloan-release-evidence", "flashloan-external-resources", "flashloan-bot-healthcheck"],
+    "pytest_collected": {"scope": "tests/observability + tests/test_pr195_authoritative_observability_store.py + tests/intelligence", "count": 64, "python": "3.13.15", "date": "2026-11-22", "flags": "--disable-socket --allow-unix-socket -m 'not live and not manual'"}
+  },
+  "open_pr_reconciliation": [
+    {"number": 666, "head": "6214202b", "base": "0a0c8ad9", "state": "OPEN_DRAFT", "overlap": "none (design docs; this PR adds new audit/ files only)"},
+    {"number": 672, "head": "55d2ae37", "base": "0a0c8ad9", "state": "OPEN", "overlap": "none (src/contracts/registry.py)"},
+    {"number": 673, "head": "7e124696", "base": "0a0c8ad9", "state": "OPEN", "overlap": "none with W0 docs; W0B/W11 must reuse its data_catalog.py, not duplicate"},
+    {"number": 674, "head": "5f3d09cc", "base": "0a0c8ad9", "state": "OPEN", "overlap": "none (docs-only)"},
+    {"number": 675, "head": "4cf2afc4", "base": "0a0c8ad9", "state": "OPEN", "overlap": "none (docs-only)"},
+    {"number": 676, "head": "a83a6b5a", "base": "0a0c8ad9", "state": "OPEN_DRAFT", "overlap": "none with W0 docs; shares src/resources/schema_registry.json with #673 (conflict flag)"}
+  ],
+  "safety": {"live": "HARD_DENIED", "sign_enabled": false, "send_enabled": false, "execution_authority": "NONE", "network_probes": 0}
+}

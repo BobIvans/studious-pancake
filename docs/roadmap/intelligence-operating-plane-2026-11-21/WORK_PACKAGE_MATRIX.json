@@ -240,7 +240,8 @@
         "FULL/SKELETON/REFERENCE/OVERVIEW multi-resolution AST context API",
         "content-addressed parser/graph cache by Git blob/tree hash and tool/schema version",
         "background index resource manager with debounce/coalescing, single-writer lock and CPU/RAM/IO budgets",
-        "daily/PR graph quality and label drift report"
+        "daily/PR graph quality and label drift report",
+        "complete strategy-idea catalogue incorporating accessible GitHub Issues, PR discussion/reviews and commit history, with inaccessible-history scope disclosed"
       ],
       "acceptance": [
         "A clean command builds a graph tied to exact Git tree SHA and tool versions",
@@ -274,7 +275,8 @@
         "Multi-resolution context preserves target function body and exact evidence; skeletonization only reduces non-target neighborhood",
         "Index quality reports supported/partial/unsupported coverage, unresolved calls, dynamic dispatch gaps, dangling edges, parser failures and stale age",
         "Versioned label ontology and label records are machine-readable and durable; canonical verified labels are rebuildable/exportable independent of whichever optional memory overlay is selected",
-        "Label store supports exact provenance references, stale/superseded/conflicting labels, human approval and migration across ontology versions"
+        "Label store supports exact provenance references, stale/superseded/conflicting labels, human approval and migration across ontology versions",
+        "Strategy discovery reports source corpus coverage (Git tree, docs, tests, Issues, PRs, reviews, commit history); inaccessible or unindexed sources are explicit"
       ]
     },
     {
@@ -578,7 +580,9 @@
         "stage timeline covering discovery, observations, strategy decisions, quote, flash-capital, route/sizing, planning/compiler, simulation, reconciliation and paper/shadow outcome",
         "durable append/outbox/replay and observability-degraded/incomplete receipts",
         "capture coverage and latency/drop/lag report",
-        "coverage matrix for every currently supported strategy/provider/venue/flash-capital route and lifecycle stage (WIRED / PARTIAL / NO_RUNTIME_PATH / BLOCKED / UNKNOWN)"
+        "coverage matrix for every currently supported strategy/provider/venue/flash-capital route and lifecycle stage (WIRED / PARTIAL / NO_RUNTIME_PATH / BLOCKED / UNKNOWN)",
+        "continuous bounded runtime capture lifecycle for configured supported paper/shadow collectors (start/stop/health/reconnect/backfill/checkpoint), reusing existing stream/journal owners",
+        "long-running capture soak report with event-to-store lag, queue/backpressure, provider/source freshness and loss/gap accounting"
       ],
       "acceptance": [
         "W0 proves the existing production producer paths before changes are made",
@@ -595,7 +599,10 @@
         "Capture coverage is measured by stage and producer; absent runtime stages are shown as NOT_OBSERVED, not inferred from class/type presence",
         "Do not declare whole-bot telemetry complete when only the initial vertical is instrumented; uncovered supported paths remain explicit gaps and block a full-coverage claim",
         "Static and runtime-observed call edges remain separate; runtime frequency/last-seen is only recorded from actual traces/events",
-        "Trace and source data include occurred_at, recorded_at, repo SHA and strategy/config generation so as-of reconstruction is possible"
+        "Trace and source data include occurred_at, recorded_at, repo SHA and strategy/config generation so as-of reconstruction is possible",
+        "When a supported paper/shadow runtime is running, operation events and configured decision-relevant market observations continue to be captured across repeated cycles/reconnects; one-shot capture is not presented as continuous streaming",
+        "Run a bounded long-running soak and restart/reconnect/backfill test; measure capture lag and prove no silent loss of critical decision events",
+        "If an upstream source only supports bounded polling or one-shot reads, the source capability is explicitly marked POLL_ONLY / ONE_SHOT / STREAMING with cadence, limits, freshness and coverage; do not claim full-network or true stream capture"
       ],
       "scope_note": "W0 must enumerate the exact existing producer files. Any producer file outside the new adapter directories must be added as an explicit allowlisted touch path with owner/test impact; do not widen to whole src/strategy."
     },
@@ -622,7 +629,9 @@
         "coverage, freshness, lag, gaps, corrections, unresolved joins and retention-pin report",
         "rebuild/restore/replay validation",
         "portable bitemporal label/event manifest and graph schema migration receipts",
-        "cross-repository namespace federation contract (even if initial implementation has one repo)"
+        "cross-repository namespace federation contract (even if initial implementation has one repo)",
+        "small allowlisted read-only local MCP profile/server with composite queries for repo overview, strategy inventory/explain/compare, source/provider lineage, symbol/call path, operation trace and context-pack build",
+        "portable one-command context-pack/export generation and client setup/health-check instructions for supported coding-agent/ChatGPT connector environments"
       ],
       "acceptance": [
         "One query/ID follows references to canonical owner data without copying the full raw payload into a second database",
@@ -635,7 +644,10 @@
         "No second canonical raw event/market store or mandatory external database is added",
         "Historical pack can query the code graph and label ontology as of the exact operation repo SHA and event time",
         "Graph/event/schema migrations preserve provenance and can replay prior exported bundle",
-        "Cross-repository IDs are namespaced and no duplicate symbol IDs collide when a second repo is linked"
+        "Cross-repository IDs are namespaced and no duplicate symbol IDs collide when a second repo is linked",
+        "MCP query surface has few composite read-only tools, bounded outputs, cursor continuation, no shell/edit/delete/admin/market-write tools and no secrets",
+        "Fresh environment can import portable bundle and execute the same evidence queries/replay; setup guide distinguishes installed local server from a client that is actually connected",
+        "ChatGPT data delivery is explicitly documented as uploaded pack, authorized GitHub access or connected local MCP; no claim of automatic new-chat memory"
       ]
     }
   ],

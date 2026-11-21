@@ -148,6 +148,7 @@ def test_catalog_search_and_lineage_are_bounded_and_evidence_linked() -> None:
     assert {item.relationship_type for item in lineage} == {
         "HAS_API_CONTRACT",
         "HAS_PINNED_ARTIFACT",
+        "EXACT_ID_MATCHES_MARKET_SOURCE",
     }
     assert all(item.provenance for item in lineage)
     assert all(item.evidence_refs for item in lineage)

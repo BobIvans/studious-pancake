@@ -1,0 +1,38 @@
+[
+  {
+    "profile_id": "campaign_rpc_primary_a",
+    "provider": "rpc-provider-a-replace-me",
+    "operator": "operator-a-replace-me",
+    "correlation_group": "campaign-cg-a-replace-me",
+    "endpoint": "https://replace-after-operator-review.invalid/",
+    "official_docs": "https://solana.com/docs/references/clusters",
+    "credential_ref": "anonymous-public-read",
+    "credential_generation": "anonymous-v1",
+    "auth_header": null,
+    "request_limit": 12,
+    "window_seconds": 60,
+    "campaign_attempt_cap": 100,
+    "smoke_only": false,
+    "role": "rpc",
+    "allowed_query_parameters": [],
+    "schema_version": "prequal.provider-profile.v1"
+  },
+  {
+    "profile_id": "campaign_rpc_secondary_b",
+    "provider": "rpc-provider-b-replace-me",
+    "operator": "operator-b-replace-me",
+    "correlation_group": "campaign-cg-b-replace-me",
+    "endpoint": "https://replace-after-operator-review.invalid/",
+    "official_docs": "https://solana.com/docs/references/clusters",
+    "credential_ref": "anonymous-public-read",
+    "credential_generation": "anonymous-v1",
+    "auth_header": null,
+    "request_limit": 12,
+    "window_seconds": 60,
+    "campaign_attempt_cap": 100,
+    "smoke_only": false,
+    "role": "rpc",
+    "allowed_query_parameters": [],
+    "schema_version": "prequal.provider-profile.v1"
+  }
+]

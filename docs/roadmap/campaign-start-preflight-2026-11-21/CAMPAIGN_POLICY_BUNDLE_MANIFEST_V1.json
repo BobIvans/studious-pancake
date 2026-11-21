@@ -1,0 +1,21 @@
+{
+  "schema": "studious-pancake.capture-policy-bundle.v1",
+  "generated_at": "2026-11-21",
+  "purpose": "Docs-level binding of the CAPTURE_ONLY campaign policy bundle for CAMPAIGN_MANIFEST_CAPTURE_ONLY_V2.json. This is a pinned manifest of component files; release.policy_bundle_sha256 in the V2 manifest = raw-bytes sha256 of THIS file. It does not replace the full 15-component REQUIRED_POLICY_COMPONENTS cluster (src/policy_governance_pr143.py) that governs execution admission; that full cluster remains out of scope for a CAPTURE_ONLY data campaign.",
+  "hash_conventions": {
+    "raw_bytes_sha256": "sha256 of the file's raw bytes (scripts/qualify_release.py:174 convention)",
+    "canonical_json_sha256": "sha256 of json.dumps(value, sort_keys=True, separators=(',',':'), allow_nan=False) (src/qualification_campaign/identity.py digest(); used by runtime authority generation_bindings)"
+  },
+  "components": [
+    {"file": "config/qualification/din00-source-status.json", "hash_kind": "raw_bytes_sha256", "sha256": "55d10925f899bfa178d9fb92554d31cfbc90317de786bc1cb7118928f4fa0200", "role": "DIN-00 source admission ledger (37 providers, all disabled)"},
+    {"file": "config/qualification/gpr02-solana-contracts.json", "hash_kind": "raw_bytes_sha256", "sha256": "d16c7ada02524d11b7b7007ad4e98f7475c13259afce206f5dca23e7c7b20e54", "role": "offline provider contract/docs pins consumed by radar capture"},
+    {"file": "config/qualification/representative-sources.json", "hash_kind": "raw_bytes_sha256", "sha256": "438f66fe6c7228e3b4c8751b4f0b278171dc517c0f6f4515193b9d7deabeab1c", "role": "reviewed source intake config (prequal.source-intake-config.v1)"},
+    {"file": "src/resources/rooted_runtime_truth_policy.json", "hash_kind": "raw_bytes_sha256", "sha256": "c98c82a4f79689f97905270934a78358950633f24ca9edfb2a09ce8aed37fe13", "role": "rooted runtime truth policy (already bound inside runtime authority generation_bindings)"},
+    {"file": "src/resources/retention_policy.json", "hash_kind": "raw_bytes_sha256", "sha256": "3cae2c5b4e1ca47a1b0493b137fd06d80212163d856b15f1f51ce79d7fdc8d29", "role": "retention policy referenced by the evidence journal budget"}
+  ],
+  "operator_approval": {
+    "authorized_by": null,
+    "authorized_at_utc": null,
+    "note": "The bundle binding is computed offline from committed repo files; campaign start still requires explicit operator approval of the V2 manifest (quotas, retention, profiles) and of any real capture run."
+  }
+}

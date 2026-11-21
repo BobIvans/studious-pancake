@@ -408,8 +408,8 @@ def validate_openlineage_run_event(payload: object) -> None:
     if (
         not isinstance(producer, str)
         or re.fullmatch(
-            r"https://github\\.com/BobIvans/studious-pancake/blob/"
-            r"[0-9a-f]{40}/src/intelligence/openlineage\\.py",
+            r"https://github\.com/BobIvans/studious-pancake/blob/"
+            r"[0-9a-f]{40}/src/intelligence/openlineage\.py",
             producer,
         )
         is None

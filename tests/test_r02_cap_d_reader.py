@@ -37,7 +37,9 @@ from src.providers.marginfi.bank_discovery import (
     GAP_LAST_UPDATE_UNPINNED,
     GAP_LIABILITY_SHARE_VALUE_UNPINNED,
     GAP_LIQUIDITY_SHARES_UNPINNED,
+    GAP_LAST_UPDATE_STALENESS_POLICY_UNPINNED,
     GAP_ORACLE_PRICE_UNPROVEN,
+    GAP_SHARE_VALUATION_ROUNDING_UNAUDITED,
     LIQUIDITY_VAULT_AUTHORITY_SEED,
     READER_CAPACITY_DERIVATION_UNPROVEN,
     READER_DECODER_GENERATION,
@@ -295,12 +297,16 @@ def test_capacity_observation_reports_resource_state_without_effective_cap(
     assert obs.bank_data_sha256 == hashlib.sha256(fixture.bank_bytes).hexdigest()
     assert obs.vault_data_sha256 == hashlib.sha256(fixture.vault_bytes).hexdigest()
     assert obs.group_data_sha256 is None
-    # Unknown is not zero: effective capacity and share fields stay unknown.
+    # Unknown is not zero: effective capacity stays unknown; N07 rebind share
+    # layouts are pinned, so the synthetic (zeroed) fixture decodes to zeros.
     assert obs.effective_capacity_base_units is None
-    assert obs.raw_asset_share_value_i80f48 is None
-    assert obs.raw_liability_share_value_i80f48 is None
-    assert obs.raw_liquidity_shares_i80f48 is None
-    assert obs.raw_liability_shares_i80f48 is None
+    assert obs.raw_asset_share_value_i80f48 == 0
+    assert obs.raw_liability_share_value_i80f48 == 0
+    assert obs.raw_liquidity_shares_i80f48 == 0
+    assert obs.raw_liability_shares_i80f48 == 0
+    assert obs.last_update_i64 == 0
+    assert obs.deposit_limit == 0
+    assert obs.bank_body_len == 1856
     assert obs.capacity_derivation == READER_CAPACITY_DERIVATION_UNPROVEN
     assert set(obs.blockers) == {
         BLOCKER_MISSING_EFFECTIVE_FLASH_CAP,
@@ -309,15 +315,20 @@ def test_capacity_observation_reports_resource_state_without_effective_cap(
     for gap in (
         GAP_BANK_PDA_SEED_UNPINNED,
         GAP_ACCOUNT_PDA_SEED_UNPINNED,
+        GAP_ORACLE_PRICE_UNPROVEN,
+        GAP_GROUP_PAUSE_UNPROVEN,
+        GAP_LAST_UPDATE_STALENESS_POLICY_UNPINNED,
+        GAP_SHARE_VALUATION_ROUNDING_UNAUDITED,
+    ):
+        assert gap in obs.constraint_gaps
+    for cleared in (
         GAP_ASSET_SHARE_VALUE_UNPINNED,
         GAP_LIABILITY_SHARE_VALUE_UNPINNED,
         GAP_LIQUIDITY_SHARES_UNPINNED,
         GAP_LAST_UPDATE_UNPINNED,
         GAP_EMISSIONS_UNPINNED,
-        GAP_ORACLE_PRICE_UNPROVEN,
-        GAP_GROUP_PAUSE_UNPROVEN,
     ):
-        assert gap in obs.constraint_gaps
+        assert cleared not in obs.constraint_gaps
     assert obs.status == "BLOCKED_LIVE_STATE"
     assert obs.slot is None
     assert obs.slot_rooted is False
@@ -737,8 +748,10 @@ def test_discovery_aggregates_multiple_banks() -> None:
 
 
 def test_unknown_is_not_zero_invariants(fixture: Fixture) -> None:
-    with pytest.raises(ValueError, match="must stay unknown"):
-        replace(fixture.observation, raw_asset_share_value_i80f48=1 << 48)
+    # N07 rebind: pinned share layouts may carry decoded non-negative raw
+    # values; negatives still fail closed.
+    with pytest.raises(ValueError, match="non-negative integer or None"):
+        replace(fixture.observation, raw_asset_share_value_i80f48=-(1 << 48))
     with pytest.raises(ValueError, match="unknown is not zero"):
         replace(fixture.observation, effective_capacity_base_units=5_000_000)
     with pytest.raises(ValueError, match="execution authority"):
@@ -917,3 +930,106 @@ def test_marginfi_rejection_code_alias_guard() -> None:
     assert MarginfiBankDiscoveryRejectionCode.BANK_OWNER_MISMATCH.value == (
         "R02CAPD_BANK_OWNER_MISMATCH"
     )
+
+
+# ---------------------------------------------------------------------------
+# N07 rebind: 0.1.12 IDL-pinned bank layout decode + offline borrow bound.
+# ---------------------------------------------------------------------------
+
+
+def test_n07_bank_layout_offsets_match_pr028_anchors() -> None:
+    from src.providers.marginfi.layouts import (
+        P0_BANK_0_1_12_CORE_BODY_LEN,
+        P0_BANK_0_1_12_FULL_BODY_LEN,
+        P0_BANK_0_1_12_TRAILING_PADDING_LEN,
+        P0_BANK_CONFIG_BORROW_LIMIT_OFFSET,
+        P0_BANK_CONFIG_DEPOSIT_LIMIT_OFFSET,
+        P0_BANK_CONFIG_OPERATIONAL_STATE_OFFSET,
+    )
+
+    assert P0_BANK_0_1_12_CORE_BODY_LEN + P0_BANK_0_1_12_TRAILING_PADDING_LEN == (
+        P0_BANK_0_1_12_FULL_BODY_LEN
+    )
+    # PR-028 anchor cross-checks (proving the rebind is coherent):
+    assert P0_BANK_CONFIG_BORROW_LIMIT_OFFSET == 768
+    assert P0_BANK_CONFIG_OPERATIONAL_STATE_OFFSET == 600
+    assert P0_BANK_CONFIG_DEPOSIT_LIMIT_OFFSET == 352
+
+
+def test_n07_full_length_bank_rebind_decode(fixture: Fixture) -> None:
+    # The 0.1.12 deployment appends 2048 bytes of trailing padding to the
+    # same core layout; the reader must accept and decode it identically.
+    full_bytes = fixture.bank_bytes + bytes(2048)
+    decoded = decode_bank_capture(
+        fixture.pins,
+        MarginfiCapture(address=str(_pk(2)), owner=PROGRAM_ID, data=full_bytes),
+    )
+    assert decoded.body_len == 3904
+    assert decoded.asset_share_value_raw_i80f48 == 0
+    assert decoded.total_liability_shares_raw_i80f48 == 0
+    assert decoded.deposit_limit == 0
+    assert decoded.emissions_mint is None
+
+
+def test_n07_operational_state_names_are_pinned() -> None:
+    from src.providers.marginfi.bank_discovery import P0_OPERATIONAL_STATE_NAMES
+
+    assert P0_OPERATIONAL_STATE_NAMES == {
+        0: "Paused",
+        1: "Operational",
+        2: "ReduceOnly",
+        3: "KilledByBankruptcy",
+        4: "Uninitialized",
+        5: "ReduceOnlyWithBorrowingPower",
+        6: "CircuitBroken",
+    }
+
+
+def test_n07_offline_borrow_capacity_bound_positive(fixture: Fixture) -> None:
+    from src.providers.marginfi.bank_discovery import (
+        derive_p0_offline_borrow_capacity_bound,
+    )
+
+    bound = derive_p0_offline_borrow_capacity_bound(fixture.observation)
+    # Zeroed synthetic shares -> liabilities 0; bound = min(vault, limit).
+    assert bound.bound_base_units == 5_000_000
+    fee = bound.origination_fee_base_units
+    assert fee == -(-5_000_000 * (1 << 46) // (1 << 48))  # exact ceil
+    assert bound.repay_obligation_base_units == 5_000_000 + fee
+    assert bound.capacity_exhausted is False
+    assert bound.fee_rule == FEE_ROUNDING_RULE
+    # Unknown group pause is not assumed away.
+    assert "R02CAPD_GROUP_PAUSE_UNKNOWN" in bound.blockers
+
+
+def test_n07_offline_borrow_capacity_bound_negative_matrix(fixture: Fixture) -> None:
+    from dataclasses import replace
+
+    from src.providers.marginfi.bank_discovery import (
+        derive_p0_offline_borrow_capacity_bound,
+    )
+
+    # Non-operational banks fail closed.
+    not_operational = replace(fixture.observation, operational=False)
+    with pytest.raises(MarginfiBankDiscoveryError, match="not Operational"):
+        derive_p0_offline_borrow_capacity_bound(not_operational)
+    # Missing share inputs refuse to fabricate a bound.
+    no_shares = replace(
+        fixture.observation,
+        raw_liability_share_value_i80f48=None,
+        raw_liability_shares_i80f48=None,
+    )
+    with pytest.raises(MarginfiBankDiscoveryError, match="refusing to fabricate"):
+        derive_p0_offline_borrow_capacity_bound(no_shares)
+    # Liabilities beyond the borrow limit floor the bound to a real zero.
+    # shares = 10,000,001.0 (raw 10,000,001 x 2^48), value = 1.0 (raw 2^48):
+    # liabilities = 10,000,001 base units > borrow limit 10,000,000.
+    exhausted = replace(
+        fixture.observation,
+        raw_liability_shares_i80f48=10_000_001 << 48,
+        raw_liability_share_value_i80f48=1 << 48,
+    )
+    bound = derive_p0_offline_borrow_capacity_bound(exhausted)
+    assert bound.capacity_exhausted is True
+    assert bound.bound_base_units == 0
+    assert bound.total_liabilities_base_units == 10_000_001

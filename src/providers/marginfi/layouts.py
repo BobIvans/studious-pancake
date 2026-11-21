@@ -18,6 +18,46 @@ from .errors import MarginfiRejection, MarginfiRejectionCode
 
 ZERO_PUBKEY = bytes(32)
 
+# ---------------------------------------------------------------------------
+# N07 rebind: marginfi 0.1.12 IDL-pinned Bank layout. Vendored byte-exact as
+# docs/integrations/offline/p0-flashloan-rebind-2026-11-21/vendor-reference/
+# idl/marginfi_0.1.12.json (from 0dotxyz/p0-ts-sdk@8a8353bb..., MIT). All
+# offsets are body-relative (after the 8-byte Anchor discriminator), borsh
+# sequential. Cross-checks that prove the rebind is coherent:
+# - every offset that PR-028 also pins matches exactly (mint 0, mint_decimals
+#   32, group 33, liquidity_vault 104, operational_state 600, oracle_setup
+#   601, oracle_keys 602, borrow_limit 768, risk_tier 776, asset_tag 777,
+#   flags 832);
+# - the PR-028 bank struct_size 1856 equals the 0.1.12 IDL body (3904) minus
+#   the trailing `_padding_1` array `[[u64; 8]; 32]` (2048 bytes).
+# ---------------------------------------------------------------------------
+P0_BANK_0_1_12_CORE_BODY_LEN = 1856
+P0_BANK_0_1_12_FULL_BODY_LEN = 3904
+P0_BANK_0_1_12_TRAILING_PADDING_LEN = 2048
+P0_BANK_ASSET_SHARE_VALUE_OFFSET = 72  # WrappedI80F48 (16 bytes, signed)
+P0_BANK_LIABILITY_SHARE_VALUE_OFFSET = 88  # WrappedI80F48
+P0_BANK_TOTAL_LIABILITY_SHARES_OFFSET = 248  # WrappedI80F48
+P0_BANK_TOTAL_ASSET_SHARES_OFFSET = 264  # WrappedI80F48
+P0_BANK_LAST_UPDATE_OFFSET = 280  # i64
+P0_BANK_CONFIG_OFFSET = 288  # BankConfig (544 bytes)
+P0_BANK_CONFIG_DEPOSIT_LIMIT_OFFSET = 352  # config + 64: depositLimit u64
+P0_BANK_CONFIG_BORROW_LIMIT_OFFSET = 768  # config + 480 (matches PR-028)
+P0_BANK_CONFIG_OPERATIONAL_STATE_OFFSET = 600  # config + 312 (matches PR-028)
+P0_BANK_EMISSIONS_RATE_OFFSET = 840  # u64
+P0_BANK_EMISSIONS_REMAINING_OFFSET = 848  # WrappedI80F48
+P0_BANK_EMISSIONS_MINT_OFFSET = 864  # pubkey
+# BankOperationalState variants pinned from the 0.1.12 IDL (unit enum, u8):
+P0_BANK_OPERATIONAL_STATE_NAMES = {
+    0: "Paused",
+    1: "Operational",
+    2: "ReduceOnly",
+    3: "KilledByBankruptcy",
+    4: "Uninitialized",
+    5: "ReduceOnlyWithBorrowingPower",
+    6: "CircuitBroken",
+}
+P0_BANK_RISK_TIER_NAMES = {0: "Collateral", 1: "Isolated"}
+
 
 @dataclass(frozen=True, slots=True)
 class DecodedGroup:
@@ -51,6 +91,18 @@ class DecodedBank:
     origination_fee_raw_i80f48: int
     borrow_limit: int
     flags: int
+    # N07 rebind additions (marginfi 0.1.12 IDL-pinned fields; additive with
+    # defaults so legacy PR-028 callers stay valid):
+    asset_share_value_raw_i80f48: int | None = None
+    liability_share_value_raw_i80f48: int | None = None
+    total_asset_shares_raw_i80f48: int | None = None
+    total_liability_shares_raw_i80f48: int | None = None
+    last_update_i64: int | None = None
+    deposit_limit: int | None = None
+    emissions_rate: int | None = None
+    emissions_remaining_raw_i80f48: int | None = None
+    emissions_mint: str | None = None
+    body_len: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,6 +156,7 @@ def _account_body(
     discriminator: bytes,
     struct_size: int,
     label: str,
+    accepted_total_sizes: tuple[int, ...] = (),
 ) -> bytes:
     if account is None:
         raise MarginfiRejection(
@@ -117,7 +170,7 @@ def _account_body(
         )
     data = bytes(account.data)
     expected_size = 8 + struct_size
-    if len(data) != expected_size:
+    if len(data) != expected_size and len(data) not in accepted_total_sizes:
         raise MarginfiRejection(
             MarginfiRejectionCode.DATA_LENGTH_MISMATCH,
             f"{label} length {len(data)} != pinned {expected_size}",
@@ -238,7 +291,13 @@ def decode_bank(account: Any, pin: Any, *, bank_address: str) -> DecodedBank:
         discriminator=bytes.fromhex(str(layout["discriminator_hex"])),
         struct_size=int(layout["struct_size"]),
         label="bank",
+        # N07 rebind: the 0.1.12 IDL bank carries the same core layout plus a
+        # trailing `_padding_1` array; accept the full-length deployment too.
+        accepted_total_sizes=(
+            8 + P0_BANK_0_1_12_CORE_BODY_LEN + P0_BANK_0_1_12_TRAILING_PADDING_LEN,
+        ),
     )
+    body_len = len(body)
     offsets = layout["offsets"]
     flags = _u64(body, int(offsets["flags"]), "bank flags")
     token_2022_flag = int(pin.raw["flags"]["bank_is_token_2022"])
@@ -288,6 +347,38 @@ def decode_bank(account: Any, pin: Any, *, bank_address: str) -> DecodedBank:
             MarginfiRejectionCode.UNPROVEN_FEE,
             "negative origination fee is not supported",
         )
+    asset_share_raw = _i128(
+        body, P0_BANK_ASSET_SHARE_VALUE_OFFSET, "bank asset_share_value"
+    )
+    liability_share_raw = _i128(
+        body, P0_BANK_LIABILITY_SHARE_VALUE_OFFSET, "bank liability_share_value"
+    )
+    total_asset_shares_raw = _i128(
+        body, P0_BANK_TOTAL_ASSET_SHARES_OFFSET, "bank total_asset_shares"
+    )
+    total_liability_shares_raw = _i128(
+        body, P0_BANK_TOTAL_LIABILITY_SHARES_OFFSET, "bank total_liability_shares"
+    )
+    if (
+        min(
+            asset_share_raw,
+            liability_share_raw,
+            total_asset_shares_raw,
+            total_liability_shares_raw,
+        )
+        < 0
+    ):
+        raise MarginfiRejection(
+            MarginfiRejectionCode.SHARE_MATH_INVALID,
+            "negative share or share-value field is invalid for a bank",
+        )
+    deposit_limit = _u64(
+        body, P0_BANK_CONFIG_DEPOSIT_LIMIT_OFFSET, "bank config deposit_limit"
+    )
+    emissions_rate = _u64(body, P0_BANK_EMISSIONS_RATE_OFFSET, "bank emissions_rate")
+    emissions_mint_raw = _slice(
+        body, P0_BANK_EMISSIONS_MINT_OFFSET, 32, "bank emissions_mint"
+    )
     return DecodedBank(
         mint=_pubkey(body, int(offsets["mint"]), "bank mint"),
         mint_decimals=_u8(body, int(offsets["mint_decimals"]), "bank mint decimals"),
@@ -310,6 +401,22 @@ def decode_bank(account: Any, pin: Any, *, bank_address: str) -> DecodedBank:
         origination_fee_raw_i80f48=fee_raw,
         borrow_limit=_u64(body, int(offsets["borrow_limit"]), "bank borrow limit"),
         flags=flags,
+        asset_share_value_raw_i80f48=asset_share_raw,
+        liability_share_value_raw_i80f48=liability_share_raw,
+        total_asset_shares_raw_i80f48=total_asset_shares_raw,
+        total_liability_shares_raw_i80f48=total_liability_shares_raw,
+        last_update_i64=_i64(body, P0_BANK_LAST_UPDATE_OFFSET, "bank last_update"),
+        deposit_limit=deposit_limit,
+        emissions_rate=emissions_rate,
+        emissions_remaining_raw_i80f48=_i128(
+            body, P0_BANK_EMISSIONS_REMAINING_OFFSET, "bank emissions_remaining"
+        ),
+        emissions_mint=(
+            None
+            if emissions_mint_raw == ZERO_PUBKEY
+            else str(Pubkey.from_bytes(emissions_mint_raw))
+        ),
+        body_len=body_len,
     )
 
 

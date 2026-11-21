@@ -1,0 +1,50 @@
+{
+  "schema": "studious-pancake.offline-dossier-source-manifest.v1",
+  "dossier": "p0-flashloan-rebind-2026-11-21",
+  "generated_at": "2026-11-21",
+  "owner_lane": "R02-CAP-D + R03-D (one lender, one PR, one owner)",
+  "qualification_base": {
+    "sdk_repository": "https://github.com/0dotxyz/p0-ts-sdk",
+    "sdk_commit": "8a8353bb662459e5957b0cbbd2121f4fddb37fc3",
+    "sdk_package": "@0dotxyz/p0-ts-sdk",
+    "sdk_git_version": "2.10.0",
+    "sdk_license": "MIT",
+    "idl_path": "src/idl/marginfi_0.1.12.json",
+    "idl_version": "0.1.12",
+    "program_id": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA",
+    "legacy_pr028_source": "0dotxyz/marginfi-v2@d4c70c84f8a9692405a2c32cbd7095bb1fe3f428"
+  },
+  "drift_reverification": {
+    "checked_at": "2026-11-21",
+    "channel": "api.github.com commits/HEAD",
+    "p0_ts_sdk_head": "464699c20e5596ff8fa1514976ad5420821a0aed",
+    "p0_ts_sdk_head_date": "2026-11-03T08:36:56Z",
+    "verdict": "DRIFTED; qualification base intentionally stays at the pinned commit until a rooted deployed-build attestation exists"
+  },
+  "retrieval": {
+    "date": "2026-11-21",
+    "channel": "raw.githubusercontent.com raw blob endpoint at the pinned commit",
+    "reproduction": "git hash-object <local_path> == upstream_git_blob_sha"
+  },
+  "new_blobs": [
+    {"local": "vendor-reference/idl/marginfi_0.1.12.json.txt", "upstream": "src/idl/marginfi_0.1.12.json", "upstream_git_blob_sha": "470aed70c225cf3613ef6c6bd92be44c5deed450"},
+    {"local": "vendor-reference/sdk/instructions.ts.txt", "upstream": "src/instructions.ts", "upstream_git_blob_sha": "46ad6a680dd27d232e8511b5463563ed4dffe070"},
+    {"local": "vendor-reference/sdk/pda.utils.ts.txt", "upstream": "src/utils/pda.utils.ts", "upstream_git_blob_sha": "59a64a30b7476c84a63c8830ef71dde881a234cb"},
+    {"local": "vendor-reference/sdk/share-conversions.utils.ts.txt", "upstream": "src/services/bank/utils/compute/share-conversions.utils.ts", "upstream_git_blob_sha": "d6a3f70e7961a7c5c1a7e9a44acd4a6d4d53f517"}
+  ],
+  "rebind_findings": {
+    "end_flashloan_group_account": "0.1.12 IDL adds readonly `group` to lending_account_end_flashloan (absent from PR-028 pin)",
+    "bank_layout": "0.1.12 body 3904 = PR-028 core 1856 + trailing _padding_1 2048; all overlapping anchors match exactly",
+    "bank_operational_state_enum": ["Paused", "Operational", "ReduceOnly", "KilledByBankruptcy", "Uninitialized", "ReduceOnlyWithBorrowingPower", "CircuitBroken"],
+    "vault_pda_seeds": ["liquidity_vault_auth", "liquidity_vault", "insurance_vault_auth", "insurance_vault", "fee_vault_auth", "fee_vault", "feestate", "emissions_auth_seed", "emissions_vault"]
+  },
+  "safety": {
+    "execution_authority": "NONE",
+    "sign_enabled": false,
+    "send_enabled": false,
+    "borrowing_enabled": false,
+    "account_creation_attempted": false,
+    "live_capture_performed": false,
+    "live_capture_authorized": false
+  }
+}

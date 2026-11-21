@@ -1,0 +1,1 @@
+{"attempt": 1, "batch_id": "b0001_humidifi_FksffE_MAGNUS_NATIVE_wsol2usdc_1000", "duration_ms": 80, "offline_status": "ZERO_CONFIGURED_RPC_ATTEMPTS", "per_amount_status": {"1000": "OK_COMPLETE_ROUND_TRIP"}, "rc": 0, "type": "attempt", "worker_id": "w1"}

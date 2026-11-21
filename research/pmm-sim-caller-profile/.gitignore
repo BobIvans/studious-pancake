@@ -6,3 +6,4 @@ snapshot/**/raw_logs/
 target/
 results/**/batches/
 batches/
+!**/journal/*.jsonl

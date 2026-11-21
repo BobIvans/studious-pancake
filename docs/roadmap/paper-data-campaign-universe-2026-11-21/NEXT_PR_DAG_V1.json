@@ -7,10 +7,12 @@
     {
       "id": "N01",
       "title": "humidi-fi-venue-dossier",
-      "owner_paths": ["docs/integrations/offline/<new dated dir>/HUMIDIFI_SOLANA.md", "SOURCE_MANIFEST.json"],
+      "owner_paths": ["docs/integrations/offline/humidifi-venue-2026-11-21/HUMIDIFI_SOLANA.md", "docs/integrations/offline/humidifi-venue-2026-11-21/SOURCE_MANIFEST.json"],
+      "owner": "PR #665 implementation slice (codex/prop-amm-competitive-toolchain-2026-11-21) — N01 ownership taken 2026-11-21 per explicit user decision; previously MISSING_OWNER",
       "depends_on": [],
       "execution_class": "docs pin + offline contract vectors (first per-venue prop-AMM PR; not one generic AMM)",
       "evidence_required": "program/deployment ID, account discovery method, instruction source/bindings revision + license, CU/fee model, account closure, reproducible vectors, quote parity vs Jupiter comparator",
+      "evidence_delivered": "program ID + account discovery method + instruction-source pins with license + one-time user-authorized read-only capture + pmm-sim caller-profile benchmark matrix; CU/fee model and quote parity vs Jupiter comparator remain UNKNOWN/BLOCKED_PROVIDER_CALLS_DISABLED",
       "safety_note": "research only; no unsupported direct submission; flow-integrity policy applies"
     },
     {

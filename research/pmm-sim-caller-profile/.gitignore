@@ -1,0 +1,6 @@
+# Raw harness outputs are receipted into results/ (CSV + JSON digests); raw parquet,
+# progress-bar logs and any build artifacts are not committed.
+snapshot/**/raw_logs/
+*.log
+*.parquet
+target/

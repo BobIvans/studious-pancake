@@ -1,0 +1,22 @@
+{
+  "accounts_converted": 19,
+  "humidifi_program_elf_sha256_captured": "433bdfe7e9b6dea7ea4ea263f9dad7735cf75a6af7c05fde5bed0e9e402d3f62",
+  "note": "humidifi.so is CAPTURED deployed bytes (GENUINE provenance); magnus-router*.so are harness-shipped (SYNTHETIC provenance, local LiteSVM only)",
+  "programs_sha256": {
+    "bisonfi.so": "2fd4a4159814db74a84231828df75e6b5779e9e653439910c64ab9510ed25fd2",
+    "goonfi.so": "0b9bb2d37e0f1f65778b4e129aa8f86cd7f6c6f760afe48570b363632766b8ab",
+    "humidifi.so": "433bdfe7e9b6dea7ea4ea263f9dad7735cf75a6af7c05fde5bed0e9e402d3f62",
+    "magnus-router-spoof-dflow.so": "77928479585a8d06f35c78d52138bd921771edd52e32efe502f7f3d106101456",
+    "magnus-router-spoof-jupiter.so": "d93758f1b8342808be90c183bfa68bca18aa6d37296e223e5060e9f4d7255283",
+    "magnus-router-spoof-okxlabs.so": "8f6e800763c1c01683d31ba73f2233a7d3342be0763fe94ea7884063d41aae58",
+    "magnus-router-spoof-titan.so": "c563cd8f51b540d7189111b86709248ff6d27138c9280ab0d72671b1e7993dce",
+    "magnus-router.so": "d9ac5bcfb6e74f3d468c653758bf0bf60e5a5c28038fbbe2f969b5756c9bc94a",
+    "obric-v2.so": "4851c9be2f509f29ba48395837440f525edae01ac74a3490e7ff096ed5250ba8",
+    "solfi-v2.so": "1b7bc2ea64e9d2cc94191f9d2a4a1c56fc36f9167591aa67b4afef88dcd3e1f4",
+    "tessera.so": "e5a8ba9d4d886cdadc74a00dd6b4de41929af779916c2e01fea0d59ae62d7e7c",
+    "zerofi.so": "1ed29fc433ebd6f0df205e3d29af77fb7dd601c837f0c71199af649e0082412b"
+  },
+  "schema": "studious-pancake.pmm-sim-runnable-snapshot.v1",
+  "source_snapshot_slot": 472269598,
+  "whole_snapshot_digest": "63c6aabf437680b79e4f52aec3a430e027fa1995e9caceb2f8b0eb9befe17f97"
+}

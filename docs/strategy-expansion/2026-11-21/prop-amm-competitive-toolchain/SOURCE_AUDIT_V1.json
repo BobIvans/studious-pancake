@@ -172,12 +172,20 @@
       "name": "LimeChain pmm-sim",
       "layer": "simulation",
       "url": "https://github.com/LimeChain/pmm-sim",
-      "status": "PUBLIC_MIT_SIMULATOR",
+      "status": "MIRRORED_AND_PIN_VERIFIED_MIT_SIMULATOR",
       "finding": "v0.2.0, Rust Edition 2024, LiteSVM 0.10 and Solana SDK 3.0 dependencies. README documents direct/single/multi/benchmark and supported Prop AMMs. Source inspection at pinned commit cc4ae891a2a765d92c89d4381f96dce4afd446bb confirms --spoof accepts Jupiter, DFlow, OKX Labs and Titan. src/builder.rs changes the instruction program_id to the selected aggregator id and src/env.rs loads the Magnus router spoof binary under that id in the LOCAL LiteSVM instance. This is a controlled simulated caller-profile experiment, not a genuine aggregator program and not a valid mainnet identity.",
       "use": "Use spoof profiles in offline LiteSVM benchmarking only to measure caller-dependent quote differences; then pursue real integrations through the aggregator's official route/build interface if commercially and technically permitted.",
       "blocker": "Pin pmm-sim and Magnus immutable revisions; use identical immutable account/program snapshot, pool, direction, slot and raw amount across all profiles. It cannot identify a currently better aggregator without executing the same-slot matrix. No spoof binary or caller impersonation in mainnet transactions.",
       "code_review": {
         "pinned_commit": "cc4ae891a2a765d92c89d4381f96dce4afd446bb",
+        "verification_2026_11_21": {
+          "upstream_master_head_at_verification": "cc4ae891a2a765d92c89d4381f96dce4afd446bb",
+          "upstream_pushed_at": "2026-03-04T12:41:53Z",
+          "license_blob_sha_github": "22b052cab7a2f7ae61e516d61ec4b4f744c7284e",
+          "drift_finding": "git tags 0.2.0 (b93f3244) and 0.3.0 (134b891c) do not point at the pin; Cargo.toml package version 0.2.0 confirmed at pin",
+          "magnus_branch_extend-router-ixs_head": "9ecd34b634031f5dfdf5747c33a329605ea6e7c4 (unchanged, equals pinned rev)",
+          "mirror": "vendor/strategy-research/pmm-sim-cc4ae891 (SHA256SUMS, 170 files)"
+        },
         "inspected_files": [
           "src/builder.rs",
           "src/env.rs",

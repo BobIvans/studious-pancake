@@ -1,0 +1,114 @@
+{
+  "schema_version": "studious-pancake.humidifi-venue-offline-sources.v1",
+  "prepared_at_utc": "2026-11-21",
+  "repository_base_sha_audited": "2628041ab145432759e38e65ce8c4c5517c778fc",
+  "dag_node": "N01 humidi-fi-venue-dossier (docs/roadmap/paper-data-campaign-universe-2026-11-21/NEXT_PR_DAG_V1.json)",
+  "owner": "PR #665 implementation slice (codex/prop-amm-competitive-toolchain-2026-11-21) — takes N01 ownership per user decision 2026-11-21",
+  "cross_reference": "Pack mirror registry for the harness source lives in docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/VENDORED_SOURCE_MANIFEST_V1.json; this manifest pins the HUMIDIFI VENUE (deployed program, markets, instruction layout). This is the DAG-prescribed per-venue manifest, not a competing registry.",
+  "hash_policy": {
+    "github_blob_sha1": "Exact GitHub Git blob object ID from the upstream repository at the recorded commit. Verify with git hash-object on an identical checked-in snapshot.",
+    "sha256": "SHA-256 computed locally for audit output; repository verifier recomputes. Not claimed as a provider-supplied signature."
+  },
+  "safety": {
+    "sign_enabled": false,
+    "send_enabled": false,
+    "credentials_used": "NONE",
+    "live_provider_calls": "ONE_TIME_READONLY_RPC_CAPTURE_2026_11_21 (user-authorized; getAccountInfo/getMultipleAccounts read-only, public RPC, no subscriptions)",
+    "activation_flags": {
+      "capture": false,
+      "paid_feed": false,
+      "provider_activation": false,
+      "simulation_live_network": false,
+      "sign": false,
+      "send": false,
+      "borrow": false,
+      "live": false
+    }
+  },
+  "sources": {
+    "humidifi_mainnet_program": {
+      "provider": "HumidiFi (Prop AMM operator)",
+      "program_id_mainnet": "9H6tua7jkLhdm3w8BvgpTn5LZNU7g4ZynDmCiNN3q6Rp",
+      "program_id_source": "LimeChain/magnus crates/shared/src/lib.rs module pmm_humidifi declare_id! at rev 9ecd34b634031f5dfdf5747c33a329605ea6e7c4",
+      "upstream_repository": "LimeChain/magnus",
+      "upstream_commit": "9ecd34b634031f5dfdf5747c33a329605ea6e7c4",
+      "upstream_path": "crates/shared/src/lib.rs",
+      "upstream_git_blob_sha1": "f43ad2b0ba7a93b6b78cce0ab690ec82301cde49",
+      "on_chain_owner_verified": "PENDING_CAPTURE (owner field checked during 2026-11-21 one-time capture)",
+      "retrieved_at_utc": "2026-11-21",
+      "snapshot_status": "PINNED_SOURCE_REFERENCE_AND_FACTS",
+      "notes": "Program ID taken from pinned research source; on-chain owner equality asserted during capture before any benchmark row uses the snapshot."
+    },
+    "magnus_router_program": {
+      "provider": "LimeChain (open-source router)",
+      "program_id_mainnet": "F9Z9WiieTtL4giMt3eBFEsB5vmAFotLz37FWC7NcbzpT",
+      "upstream_repository": "LimeChain/magnus",
+      "upstream_commit": "9ecd34b634031f5dfdf5747c33a329605ea6e7c4",
+      "upstream_path": "crates/router-client/src/generated/programs.rs",
+      "upstream_git_blob_sha1": "2dd501ec39df56ebfd63fb40bb9e7db1ea8ea506",
+      "snapshot_status": "PINNED_SOURCE_REFERENCE_AND_FACTS",
+      "notes": "MAGNUS_NATIVE benchmark profile CPIs through this router. Genuineness of a MAGNUS_NATIVE row requires the deployed router binary; harness-shipped magnus-router.so (sha256 d9ac5bcfb6e74f3d468c653758bf0bf60e5a5c28038fbbe2f969b5756c9bc94a) is upstream-shipped, not captured."
+    },
+    "instruction_layout_provenance": {
+      "upstream_repository": "LimeChain/pmm-sim",
+      "upstream_commit": "cc4ae891a2a765d92c89d4381f96dce4afd446bb",
+      "upstream_git_blob_sha1": "n/a (mirrored tree, SHA256SUMS in vendor/strategy-research/pmm-sim-cc4ae891/)",
+      "local_mirror": "vendor/strategy-research/pmm-sim-cc4ae891",
+      "license": "MIT (LimeChain/pmm-sim), MIT (LimeChain/magnus)",
+      "snapshot_status": "PINNED_SOURCE_REFERENCE_AND_FACTS",
+      "notes": "HumidiFi swap v1/v2/v3 instruction construction and account layout are read from the pinned pmm-sim/magnus source. This is a research-harness binding, not an official SDK."
+    },
+    "market_discovery": {
+      "method": "Static market list from pinned pmm-sim cfg/setup.toml (sha256 859b6e4e200c63cba68e254bfb4f792b5478c2a6c07ad02febd19b605675d8fc); each market/ATA existence + owner verified during one-time capture",
+      "markets": [
+        {"swap_version": "v1", "pair": "WSOL-USDC", "market": "FksffEqnBRixYGR791Qw2MgdU7zNCpHVFYBL4Fa4qVuH", "base_ta": "C3FzbX9n1YD2dow2dCmEv5uNyyf22Gb3TLAEqGBhw5fY", "quote_ta": "3RWFAQBRkNGq7CMGcTLK3kXDgFTe9jgMeFYqk8nHwcWh"},
+        {"swap_version": "v1", "pair": "WSOL-USDC", "market": "DB3sUCP2H4icbeKmK6yb6nUxU5ogbcRHtGuq7W2RoRwW", "base_ta": "8BrVfsvzb1DZqCactbYWoKSv24AfsLBuXJqzpzYCwznF", "quote_ta": "HsQcHFFNUVTp3MWrXYbuZchBNd4Pwk8636bKzLvpfYNR"},
+        {"swap_version": "v1", "pair": "WSOL-USDC", "market": "6n9VhCwQ7EwK6NqFDjnHPzEk6wZdRBTfh43RFgHQWHuQ", "base_ta": "Cv9St5tDTGwpbG5UVvM6QvFmf3FYSXc14W9BYvQN5wAZ", "quote_ta": "7Rf8Gu8YemSoGjZT3z1cL5BT9HLbGywcyaz8Mrbhd1MH"},
+        {"swap_version": "v1", "pair": "WSOL-USDC", "market": "AvGeFw71N5sNfV97mZ1uNrHg4yfufRicCJUrS9j2ehTX", "base_ta": "ECEPWwZJ1U1Vjsj1X5sUbZYETKMSCjYHuoTMVitCn64t", "quote_ta": "FBWtVVvzsRuAAzVX8ua1hden9KmgPrC2rFijuwEn1ngJ"},
+        {"swap_version": "v1", "pair": "WSOL-USDC", "market": "5dhYayH9qvzNyCPoh2hKN8TJqumoGsWdyZ9UfPLXBfD9", "base_ta": "86DHdQfRpghMCmXYKDg93bXtmi3doBL5NeY9DYwAj6rz", "quote_ta": "FqEVwrQJsJ4AciwJRYLPQEdstDfUYJp6z3f6XYb6MnSb"},
+        {"swap_version": "v2", "pair": "WSOL-USDC", "market": "FksffEqnBRixYGR791Qw2MgdU7zNCpHVFYBL4Fa4qVuH", "base_ta": "C3FzbX9n1YD2dow2dCmEv5uNyyf22Gb3TLAEqGBhw5fY", "quote_ta": "3RWFAQBRkNGq7CMGcTLK3kXDgFTe9jgMeFYqk8nHwcWh", "add1": "4nXmcNY1NjNd9sjA3qajUdUYpVDvwxTzGZT9oS4KpaD1", "vote": "J1to1yufRnoWn81KYg1XkTWzmKjnYSnmE2VY8DGUJ9Qv"},
+        {"swap_version": "v2", "pair": "WSOL-USDC", "market": "DB3sUCP2H4icbeKmK6yb6nUxU5ogbcRHtGuq7W2RoRwW", "base_ta": "8BrVfsvzb1DZqCactbYWoKSv24AfsLBuXJqzpzYCwznF", "quote_ta": "HsQcHFFNUVTp3MWrXYbuZchBNd4Pwk8636bKzLvpfYNR"},
+        {"swap_version": "v2", "pair": "WSOL-USDC", "market": "6n9VhCwQ7EwK6NqFDjnHPzEk6wZdRBTfh43RFgHQWHuQ", "base_ta": "Cv9St5tDTGwpbG5UVvM6QvFmf3FYSXc14W9BYvQN5wAZ", "quote_ta": "7Rf8Gu8YemSoGjZT3z1cL5BT9HLbGywcyaz8Mrbhd1MH"},
+        {"swap_version": "v2", "pair": "WSOL-USDC", "market": "AvGeFw71N5sNfV97mZ1uNrHg4yfufRicCJUrS9j2ehTX", "base_ta": "ECEPWwZJ1U1Vjsj1X5sUbZYETKMSCjYHuoTMVitCn64t", "quote_ta": "FBWtVVvzsRuAAzVX8ua1hden9KmgPrC2rFijuwEn1ngJ"},
+        {"swap_version": "v2", "pair": "WSOL-USD1", "market": "5dhYayH9qvzNyCPoh2hKN8TJqumoGsWdyZ9UfPLXBfD9", "base_ta": "86DHdQfRpghMCmXYKDg93bXtmi3doBL5NeY9DYwAj6rz", "quote_ta": "FqEVwrQJsJ4AciwJRYLPQEdstDfUYJp6z3f6XYb6MnSb"},
+        {"swap_version": "v3", "pair": "WSOL-USDC", "market": "FksffEqnBRixYGR791Qw2MgdU7zNCpHVFYBL4Fa4qVuH", "base_ta": "C3FzbX9n1YD2dow2dCmEv5uNyyf22Gb3TLAEqGBhw5fY", "quote_ta": "3RWFAQBRkNGq7CMGcTLK3kXDgFTe9jgMeFYqk8nHwcWh", "add1": "4nXmcNY1NjNd9sjA3qajUdUYpVDvwxTzGZT9oS4KpaD1", "vote": "J1to1yufRnoWn81KYg1XkTWzmKjnYSnmE2VY8DGUJ9Qv"},
+        {"swap_version": "v3", "pair": "WSOL-USDC", "market": "DB3sUCP2H4icbeKmK6yb6nUxU5ogbcRHtGuq7W2RoRwW", "base_ta": "8BrVfsvzb1DZqCactbYWoKSv24AfsLBuXJqzpzYCwznF", "quote_ta": "HsQcHFFNUVTp3MWrXYbuZchBNd4Pwk8636bKzLvpfYNR", "add1": "4nXmcNY1NjNd9sjA3qajUdUYpVDvwxTzGZT9oS4KpaD1", "vote": "J1to1yufRnoWn81KYg1XkTWzmKjnYSnmE2VY8DGUJ9Qv"},
+        {"swap_version": "v3", "pair": "WSOL-USDC", "market": "6n9VhCwQ7EwK6NqFDjnHPzEk6wZdRBTfh43RFgHQWHuQ", "base_ta": "Cv9St5tDTGwpbG5UVvM6QvFmf3FYSXc14W9BYvQN5wAZ", "quote_ta": "7Rf8Gu8YemSoGjZT3z1cL5BT9HLbGywcyaz8Mrbhd1MH", "add1": "4nXmcNY1NjNd9sjA3qajUdUYpVDvwxTzGZT9oS4KpaD1", "vote": "J1to1yufRnoWn81KYg1XkTWzmKjnYSnmE2VY8DGUJ9Qv"},
+        {"swap_version": "v3", "pair": "WSOL-USDC", "market": "AvGeFw71N5sNfV97mZ1uNrHg4yfufRicCJUrS9j2ehTX", "base_ta": "ECEPWwZJ1U1Vjsj1X5sUbZYETKMSCjYHuoTMVitCn64t", "quote_ta": "FBWtVVvzsRuAAzVX8ua1hden9KmgPrC2rFijuwEn1ngJ", "add1": "4nXmcNY1NjNd9sjA3qajUdUYpVDvwxTzGZT9oS4KpaD1", "vote": "J1to1yufRnoWn81KYg1XkTWzmKjnYSnmE2VY8DGUJ9Qv"},
+        {"swap_version": "v3", "pair": "WSOL-USD1", "market": "5dhYayH9qvzNyCPoh2hKN8TJqumoGsWdyZ9UfPLXBfD9", "base_ta": "86DHdQfRpghMCmXYKDg93bXtmi3doBL5NeY9DYwAj6rz", "quote_ta": "FqEVwrQJsJ4AciwJRYLPQEdstDfUYJp6z3f6XYb6MnSb", "add1": "4nXmcNY1NjNd9sjA3qajUdUYpVDvwxTzGZT9oS4KpaD1", "vote": "J1to1yufRnoWn81KYg1XkTWzmKjnYSnmE2VY8DGUJ9Qv"}
+      ],
+      "snapshot_status": "PINNED_SOURCE_REFERENCE_AND_FACTS"
+    },
+    "humidifi_one_time_capture_2026_11_21": {
+      "snapshot_status": "RAW_ACCOUNT_CAPTURE_ONLY",
+      "auth": "NONE (public RPC, credential-free)",
+      "methods_used": ["getSlot", "getAccountInfo", "getMultipleAccounts"],
+      "slot": 472269598,
+      "whole_snapshot_digest": "63c6aabf437680b79e4f52aec3a430e027fa1995e9caceb2f8b0eb9befe17f97",
+      "humidifi_program_bytes_sha256_captured_elf": "433bdfe7e9b6dea7ea4ea263f9dad7735cf75a6af7c05fde5bed0e9e402d3f62",
+      "humidifi_program_data_address": "G9S64i58RRWJA28vZiNhnP56Ux4Ef7hfMgHNREnZZSom",
+      "evidence_root": "research/pmm-sim-caller-profile/snapshot/472269598/",
+      "notes": "One-time user-authorized read-only capture; no subscriptions, no signing, no sending. CAPTURE_ONLY evidence — never PAPER_QUALIFIED, never live.",
+      "drift_findings_2026_11_21": [
+        "Captured HumidiFi program ELF (sha256 433bdfe7...) differs from the upstream-shipped cfg/programs/humidifi.so (sha256 a17c87d4...) — the program was upgraded since the upstream March snapshot; benchmark runs use the captured ELF for genuine-provenance rows.",
+        "Magnus router program F9Z9WiieTtL4giMt3eBFEsB5vmAFotLz37FWC7NcbzpT NOT FOUND on mainnet at the pinned ID — deployed Magnus router identity is UNKNOWN; MAGNUS_NATIVE rows stay SYNTHETIC_SIMULATION_BY_DEFAULT.",
+        "Upstream setup.toml CPI helper accounts add1=4nXmcNY1... / vote=J1to1yuf... referenced for some v2/v3 rows are NOT FOUND on mainnet (closed or stale config); recorded UNKNOWN, markets/token-accounts/mints verified present."
+      ]
+    }
+  },
+  "semantic_contract": {
+    "quote_model": "UNKNOWN (exact vs indexed unverified; Prop AMM off-chain pricing not documented)",
+    "slot_finality": "Exact at captured slot; state is stale for any other slot",
+    "units": "raw integer amounts; WSOL 9 decimals, USDC 6 decimals, USD1 6 decimals",
+    "token_program": "SPL Token (TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA); Token-2022 status UNKNOWN",
+    "cu_fee_model": "UNKNOWN at dossier time; CU measured per benchmark row from LiteSVM; operator fee/price model UNKNOWN",
+    "account_closure_semantics": "UNKNOWN",
+    "min_amount_out": "HumidiFi IGNORES min_amount_out per upstream pmm-sim notes — production direct-route promotion BLOCKED without same-transaction post-balance guard"
+  },
+  "promotion_blockers": [
+    "BLOCKED_UNTIL_SAME_TX_POST_BALANCE_GUARD (min_amount_out ignored by HumidiFi)",
+    "BLOCKED_SNAPSHOT_STALENESS (benchmark rows valid only at captured slot)",
+    "BLOCKED_PROVIDER_CALLS_DISABLED (genuine aggregator-route comparison requires official API, currently disabled)",
+    "UNKNOWN is not zero: quote model, CU/fee model, account closure remain UNKNOWN until separately pinned"
+  ]
+}

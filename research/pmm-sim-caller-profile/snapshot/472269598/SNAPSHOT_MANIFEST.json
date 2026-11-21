@@ -1,0 +1,50 @@
+{
+  "account_count": 21,
+  "accounts_not_found_optional": [
+    "F9Z9WiieTtL4giMt3eBFEsB5vmAFotLz37FWC7NcbzpT",
+    "4nXmcNY1NjNd9sjA3qajUdUYpVDvwxTzGZT9oS4KpaD1"
+  ],
+  "captured_at_utc": "2026-11-21T20:16:27Z",
+  "commitment": "confirmed",
+  "endpoint_class": "public_credential_free_read_only_rpc",
+  "endpoint_url": "https://api.mainnet-beta.solana.com",
+  "humidifi_program_bytes_sha256": "d23d59b760be64785715648631e6400136ed959b4c942ec9c92dd4c221da2515",
+  "humidifi_program_data_address": "G9S64i58RRWJA28vZiNhnP56Ux4Ef7hfMgHNREnZZSom",
+  "humidifi_program_id": "9H6tua7jkLhdm3w8BvgpTn5LZNU7g4ZynDmCiNN3q6Rp",
+  "magnus_router_deployed_state": "NOT_FOUND_ON_MAINNET_AT_PINNED_ID (UNKNOWN, honestly recorded; MAGNUS_NATIVE rows stay SYNTHETIC_SIMULATION_BY_DEFAULT)",
+  "magnus_router_id": "F9Z9WiieTtL4giMt3eBFEsB5vmAFotLz37FWC7NcbzpT",
+  "methods_used": [
+    "getSlot",
+    "getMultipleAccounts"
+  ],
+  "owner_assertions": "PASS",
+  "per_account_sha256": {
+    "3RWFAQBRkNGq7CMGcTLK3kXDgFTe9jgMeFYqk8nHwcWh": "88491c2d24f7cd8a75fbeaea501b4f53a0a37615dff265ab819fb746ac2b0fe4",
+    "5dhYayH9qvzNyCPoh2hKN8TJqumoGsWdyZ9UfPLXBfD9": "e09cefddf9f65d897bc9d89ed6b9559e43a57d080d635c32bea2b03883a5e8a8",
+    "6n9VhCwQ7EwK6NqFDjnHPzEk6wZdRBTfh43RFgHQWHuQ": "2a1a0662032b44e160a3dca130af163a6e39dca6933598a8248c587aab243087",
+    "7Rf8Gu8YemSoGjZT3z1cL5BT9HLbGywcyaz8Mrbhd1MH": "93b3538747713ccfd5367ec6c51ec6a107166ebb6e8392e076e92ae6a84a92d9",
+    "86DHdQfRpghMCmXYKDg93bXtmi3doBL5NeY9DYwAj6rz": "8048d3c37e2ec6b246d35e8d63aa4241d868748e2369590d9908b6b49dd94abc",
+    "8BrVfsvzb1DZqCactbYWoKSv24AfsLBuXJqzpzYCwznF": "9020734f29bc2978b7de57dc361183852645e716f40f4ea3dacd7a9e5f26a4f6",
+    "9H6tua7jkLhdm3w8BvgpTn5LZNU7g4ZynDmCiNN3q6Rp": "fc6fa94d7df13eddd6027aff18fbb497e0b0b08444a177b8ee0f330e7885c55a",
+    "AvGeFw71N5sNfV97mZ1uNrHg4yfufRicCJUrS9j2ehTX": "1a258404f6f4ed767959747b3c759ab8b9d8080ca0deaac3587ee94e3b082b55",
+    "C3FzbX9n1YD2dow2dCmEv5uNyyf22Gb3TLAEqGBhw5fY": "484a93f2478e517cd3c9acfa74d3e61a9ef3c459e0e666ecdbe521762e971ccc",
+    "Cv9St5tDTGwpbG5UVvM6QvFmf3FYSXc14W9BYvQN5wAZ": "d01f16d4cd2baa6516bb2c53af0010bbb2b78a51204afbdd7248c13175005df7",
+    "DB3sUCP2H4icbeKmK6yb6nUxU5ogbcRHtGuq7W2RoRwW": "afd82a7f821937b86eda94bad2bfc8e8839a1a0f974b49a880718498ef0385e0",
+    "ECEPWwZJ1U1Vjsj1X5sUbZYETKMSCjYHuoTMVitCn64t": "9d0d7c939b8ae315b5061742ca6f6eedc9ab663d4b6e9ddb31f57ecb39017d90",
+    "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v": "732a4e9a004e965165cefe13b8a6b98e413ab738392c318fdeb5f8faf50cdcb8",
+    "FBWtVVvzsRuAAzVX8ua1hden9KmgPrC2rFijuwEn1ngJ": "8640d50e52d8012995ae6b904abeeddbffeaf648c314bf366b8ea4080a15eb14",
+    "FksffEqnBRixYGR791Qw2MgdU7zNCpHVFYBL4Fa4qVuH": "b859da846c77d36e36cbf468484192911ce2ee60d9d637f82d6d5c7b2db29272",
+    "FqEVwrQJsJ4AciwJRYLPQEdstDfUYJp6z3f6XYb6MnSb": "63018e1fbafecb0a341e33d1d6913c5c2c21ffdf348e3819d49240e69abb68d5",
+    "G9S64i58RRWJA28vZiNhnP56Ux4Ef7hfMgHNREnZZSom": "c03239325e4477e62fcf6723c52c691c9729ea053d692019450ae517dc77056a",
+    "HsQcHFFNUVTp3MWrXYbuZchBNd4Pwk8636bKzLvpfYNR": "65577da6399be53ab3603c318fc7b52b734e7efc8bfd901d3ddb1d005b348b3e",
+    "J1to1yufRnoWn81KYg1XkTWzmKjnYSnmE2VY8DGUJ9Qv": "45617060f8776a261b52d13b2c78c276244ce8d51337449234c2843135cb2153",
+    "So11111111111111111111111111111111111111112": "3006283e5b8be3d30a567fe4d60026a8f4016883ee972df2e21bf1dc1df4e710",
+    "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB": "c0c6108092ac1d9803045239c646ebf97d4ba0462bafd86a30937408efca45ba"
+  },
+  "schema": "studious-pancake.pmm-sim-snapshot.v1",
+  "signing_sending": "NONE",
+  "slot": 472269598,
+  "snapshot_status": "RAW_ACCOUNT_CAPTURE_ONLY \u2014 never PAPER_QUALIFIED, never live",
+  "subscriptions": "NONE",
+  "whole_snapshot_digest": "63c6aabf437680b79e4f52aec3a430e027fa1995e9caceb2f8b0eb9befe17f97"
+}

@@ -37,12 +37,12 @@
     },
     {
       "family": "prop_amm_research",
-      "owner": "MISSING_OWNER (existing venue/direct-provider research and SUPER-03 boundaries only; not one generic AMM)",
-      "status": "BLOCKED",
+      "owner": "PR #665 implementation slice (codex/prop-amm-competitive-toolchain-2026-11-21) for the HumidiFi venue (N01); all other venues still require one PR per venue (existing venue/direct-provider research and SUPER-03 boundaries only; not one generic AMM)",
+      "status": "N01_DOSSIER_DELIVERED_RESEARCH_ONLY",
       "execution_class": "Research -> local atomic only after proof",
-      "current_blocker": "MISSING_OWNER: no per-venue source/deployment/program/instruction dossier exists for HumidiFi, SolFi, Tessera, BisonFi, GoonFi, Obric, ZeroFi etc.",
+      "current_blocker": "HumidiFi: min_amount_out ignored (same-tx post-balance guard required), snapshot staleness (rows valid only at captured slot), provider calls disabled (genuine aggregator comparison BLOCKED). Remaining venues (SolFi, Tessera, BisonFi, GoonFi, Obric, ZeroFi): MISSING_OWNER per-venue dossiers.",
       "data_needs": "exact program/deployment ID, account discovery method, instruction source/bindings revision + license, fee/price impact, CU, required accounts, token extensions, failure/revert semantics, quote parity vs Jupiter comparator (Jupiter results are comparison metadata only; resolve underlying physical pool lineage)",
-      "next_bounded_task": "One PR per venue starting with HumidiFi: dossier + lawful reproducible vectors + differential test of public SDK/IDL or reverse-engineered bindings; pmm-sim/3rd-party SDK is research harness only until commit/license/versions/deployed behavior pinned (M01). No unsupported direct submission or hidden order-flow usage; flow-integrity policy of pack section 5 applies."
+      "next_bounded_task": "HumidiFi N01 dossier + pmm-sim caller-profile matrix delivered in PR #665; per-venue dossier PRs for the remaining venues; pmm-sim/3rd-party SDK stays research harness only (commit/license/versions pinned M01: pmm-sim cc4ae891 MIT + magnus 9ecd34b6 MIT). No unsupported direct submission or hidden order-flow usage; flow-integrity policy of pack section 5 applies."
     },
     {
       "family": "post_state_dislocation",

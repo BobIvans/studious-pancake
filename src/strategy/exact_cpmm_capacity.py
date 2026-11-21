@@ -215,6 +215,13 @@ class QualifiedCpmmState:
         )
 
     @property
+    def venue_kind(self):
+        """Typed venue family for the mixed-venue adapter registry."""
+        from .cpmm_cycle_binding import VenueKind
+
+        return VenueKind.RAYDIUM_CPMM
+
+    @property
     def identity(self) -> str:
         return _hash(
             {

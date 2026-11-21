@@ -290,13 +290,27 @@ def test_clmm_tick_array_rejects_pool_start_and_pda_mismatch():
 
 
 def test_clmm_quote_crosses_initialized_ticks_and_accounts_fees():
-    scene = _clmm_scene(ticks={60: {30: (1_000_000_000_000, 2_000_000_000_000)}})
-    quote = clmm_exact_in_quote(
-        scene["pool"], scene["config"], scene["arrays"], 10**10, zero_for_one=True
+    # Two initialized ticks: crossing 90 leaves the remainder to be consumed
+    # as a partial step inside the (85, 90) segment; the pinned program never
+    # drifts past the last boundary of the supplied array set.
+    scene = _clmm_scene(
+        ticks={
+            60: {
+                30: (1_000_000_000_000, 2_000_000_000_000),
+                25: (1_000_000_000_000, 2_000_000_000_000),
+            }
+        }
     )
-    assert quote.amount_in + quote.fee_amount == 10**10
+    quote = clmm_exact_in_quote(
+        scene["pool"],
+        scene["config"],
+        scene["arrays"],
+        7_000_000_000,
+        zero_for_one=True,
+    )
+    assert quote.amount_in + quote.fee_amount == 7_000_000_000
     assert quote.amount_out > 0
-    assert quote.tick_end <= 90
+    assert 85 < quote.tick_end <= 90
     assert 90 in quote.crossed_ticks
     # A partial step leaves the current tick unchanged and crosses nothing.
     dust = clmm_exact_in_quote(
@@ -315,7 +329,14 @@ def test_clmm_quote_crosses_initialized_ticks_and_accounts_fees():
 
 
 def test_clmm_quote_amount_sensitivity_across_boundaries():
-    scene = _clmm_scene(ticks={60: {30: (1_000_000_000_000, 2_000_000_000_000)}})
+    scene = _clmm_scene(
+        ticks={
+            60: {
+                30: (1_000_000_000_000, 2_000_000_000_000),
+                25: (1_000_000_000_000, 2_000_000_000_000),
+            }
+        }
+    )
     small = clmm_exact_in_quote(
         scene["pool"], scene["config"], scene["arrays"], 1_000, zero_for_one=True
     )
@@ -323,12 +344,30 @@ def test_clmm_quote_amount_sensitivity_across_boundaries():
         scene["pool"],
         scene["config"],
         scene["arrays"],
-        10**10,
+        7_000_000_000,
         zero_for_one=True,
     )
     assert big.amount_out > small.amount_out
     assert len(big.crossed_ticks) >= len(small.crossed_ticks)
     assert big.tick_end <= small.tick_end
+
+
+def test_clmm_quote_walk_past_supplied_arrays_fails_closed():
+    # Pinned behavior: a walk that needs the next tick array with input
+    # remaining never drifts silently to the price extreme. For tick spacing
+    # < 15 the pinned program demands the TickArrayBitmapExtension account
+    # (MissingTickArrayBitmapExtensionAccount); for spacing >= 15 the in-pool
+    # bitmap spans the full tick range and the miss is LiquidityInsufficient
+    # (covered by the extension-aware search unit vectors below).
+    scene = _clmm_scene(ticks={60: {30: (1_000_000_000_000, 2_000_000_000_000)}})
+    with pytest.raises(NativeCaptureError, match="BITMAP_EXTENSION_REQUIRED"):
+        clmm_exact_in_quote(
+            scene["pool"],
+            scene["config"],
+            scene["arrays"],
+            7_000_000_000,
+            zero_for_one=True,
+        )
 
 
 def test_clmm_quote_crossing_to_zero_liquidity_fails_closed():
@@ -541,14 +580,16 @@ def test_dlmm_reachable_walk_state_only():
             )
         )
     state = dlmm_reachable_state(pair, tuple(arrays), swap_for_y=True, max_bins=6)
-    assert state.amount_specific_quote == "DLMM_AMOUNT_SPECIFIC_QUOTE_MISSING_PIN"
+    assert state.amount_specific_quote.startswith("DLMM_WALK_STATE_ONLY")
     assert state.evidence_state == "VENUE_STATE_DECODED"
     ids = [b[0] for b in state.reachable_bins]
     # swap_for_y walks the active id downward (pinned advance rule).
     assert ids[0] == 3 and all(b < a for a, b in zip(ids, ids[1:]))
     assert set(ids) <= {3, 2, 1, 0, -1}
     assert len(state.bin_arrays_used) == 2
-    with pytest.raises(NativeCaptureError, match="MISSING_PIN"):
+    # The legacy untyped sink stays fail-closed; the exact quote requires the
+    # contracted dlmm_swap_exact_in_quote API.
+    with pytest.raises(NativeCaptureError, match="USE_CONTRACTED_API"):
         dlmm_amount_specific_quote(state)
 
 

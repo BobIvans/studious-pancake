@@ -1,0 +1,24 @@
+CODEX TRIGGER — CLMM/DLMM + MARKET TRACE + LENDER READINESS
+
+Execute the assignment in PR #660:
+https://github.com/BobIvans/studious-pancake/pull/660
+
+Read, in full:
+- docs/roadmap/clmm-dlmm-market-trace-qualification-2026-11-15/CODEX_START_HERE_RU.md
+- docs/roadmap/clmm-dlmm-market-trace-qualification-2026-11-15/API_SOURCE_READINESS_MATRIX_RU.md
+- docs/roadmap/clmm-dlmm-market-trace-qualification-2026-11-15/ROUTE_AND_TRACE_PLAN_RU.md
+- docs/roadmap/clmm-dlmm-market-trace-qualification-2026-11-15/SOURCE_PIN_MATRIX_V1.json
+
+First refresh main/PRs/branches/worktrees. Do not duplicate PR #659. Wait for #659 to merge and rebase on its final head before route integration. Reuse owners from #491/#507/#512/#561/#593/#604/#613/#638 and current R10-1.
+
+Complete two exact venue paths:
+1) Raydium CLMM: full TickArrayBitmapExtension, 80-byte DynamicFeeInfo + DynamicFeeConfig, fee_on modes, tick traversal and exact fees from the pinned official program revision.
+2) Meteora DLMM: mirror the minimal official SDK quote/math closure; implement exact per-bin swapQuote with directional bin arrays, bitmap extension, dynamic fee, protocol fee, Token-2022 transfer semantics, exact consumed input and integer rounding.
+
+Bind both venue quote engines to existing MarketObservationV2 → graph → post-#659 cycle-binding → R13-K physical-pool dedup → PR118 per-size evaluation → existing economics/evidence path. Reuse existing source catalog, governed transport, RPC/stream owners, Jupiter/0x quote comparators, R02 CAP-A and R03 Jupiter Lend unsigned builder.
+
+Produce a precise source-readiness matrix and bounded read-only capture runbook. Use SOL/USDC as a discovery seed only; never assume pool presence from a ticker. Add mixed 2/3/4-hop exact replay and negative cases for stale/incomplete ticks/bins, fee drift, unsupported Token-2022 hooks, aliases, partial fills, unknown capacity and missing simulation. Separate fixture/replay from live evidence and report stage denominators.
+
+Jupiter Lend: docs advertise zero-fee/no-collateral flashloans, but validate current on-chain flashloan_fee and actual TokenReserve/vault/debt ceiling/capacity through existing CAP-A; never hardcode zero. Connect only unsigned borrow→route→payback contract. Do not add a signer, wallet/key, ATA/account creation, sign/send call, borrowing or live enablement. No credentials requested or probed.
+
+No new graph, solver, quote kernel, store, transport, source catalog, RPC quorum or signer. Commit code/tests/source pins/replay and blocker report to the #660 branch after #659 is merged. Keep PR draft until every acceptance item passes; no docs-only merge presented as implementation.

@@ -17,9 +17,12 @@ from solders.pubkey import Pubkey
 from src.providers.raydium_clmm_native import (
     AMM_CONFIG_LEN,
     CLMM_PROGRAM,
+    DYNAMIC_FEE_CONFIG_LEN,
     POOL_STATE_LEN,
+    TICK_ARRAY_BITMAP_EXTENSION_LEN,
     TICK_ARRAY_STATE_LEN,
     TICK_STATE_LEN,
+    clmm_bitmap_extension_pda,
     sqrt_price_at_tick,
 )
 from tests.native_cpmm_fixtures import address
@@ -148,4 +151,72 @@ def clmm_tick_array_bytes(
         struct.pack_into("<Q", data, base + 20, gross)
     data[10124] = len(initialized or {})
     struct.pack_into("<Q", data, 10125, 700)  # recent_epoch
+    return bytes(data)
+
+
+def clmm_pool_bytes_v2(  # noqa: ANN201 - fixture builder
+    **kwargs,
+):
+    """Extended pool builder: dynamic_fee_raw passthrough (1096..1176)."""
+    dynamic_fee_raw = kwargs.pop("dynamic_fee_raw", None)
+    data, pool, mints = clmm_pool_bytes(**kwargs)
+    if dynamic_fee_raw is not None:
+        buffer = bytearray(data)
+        buffer[1096:1176] = dynamic_fee_raw
+        data = bytes(buffer)
+    return data, pool, mints
+
+
+def clmm_bitmap_extension_bytes(
+    pool_address: str,
+    *,
+    positive_bits: dict[int, set[int]] | None = None,
+    negative_bits: dict[int, set[int]] | None = None,
+) -> bytes:
+    """TickArrayBitmapExtension bytes.
+
+    ``positive_bits``/``negative_bits`` map slot index (0..13) -> set of bit
+    offsets (0..511) to flip.
+    """
+    data = bytearray(TICK_ARRAY_BITMAP_EXTENSION_LEN)
+    data[:8] = _discriminator("TickArrayBitmapExtension")
+    data[8:40] = bytes(Pubkey.from_string(pool_address))
+    for slot, bits in (positive_bits or {}).items():
+        for bit in bits:
+            word = 40 + 64 * slot + 8 * (bit // 64)
+            struct.pack_into(
+                "<Q",
+                data,
+                word,
+                struct.unpack_from("<Q", data, word)[0] | (1 << (bit % 64)),
+            )
+    for slot, bits in (negative_bits or {}).items():
+        for bit in bits:
+            word = 488 + 64 * slot + 8 * (bit // 64)
+            struct.pack_into(
+                "<Q",
+                data,
+                word,
+                struct.unpack_from("<Q", data, word)[0] | (1 << (bit % 64)),
+            )
+    return bytes(data)
+
+
+def clmm_dynamic_fee_config_bytes(
+    *,
+    index: int = 0,
+    filter_period: int = 60,
+    decay_period: int = 300,
+    reduction_factor: int = 5_000,
+    dynamic_fee_control: int = 1_000,
+    max_volatility_accumulator: int = 100_000,
+) -> bytes:
+    data = bytearray(DYNAMIC_FEE_CONFIG_LEN)
+    data[:8] = _discriminator("DynamicFeeConfig")
+    struct.pack_into("<H", data, 8, index)
+    struct.pack_into("<H", data, 10, filter_period)
+    struct.pack_into("<H", data, 12, decay_period)
+    struct.pack_into("<H", data, 14, reduction_factor)
+    struct.pack_into("<I", data, 16, dynamic_fee_control)
+    struct.pack_into("<I", data, 20, max_volatility_accumulator)
     return bytes(data)

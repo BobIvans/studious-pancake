@@ -1,0 +1,1079 @@
+{
+  "budget_bytes": 4000,
+  "budget_tokens": 1000,
+  "files_scored": 3478,
+  "latency_note": "environment-dependent; informational only",
+  "latency_seconds": 2.021,
+  "mean_recall": 0.6667,
+  "questions": 42,
+  "repo_bytes": 30417795,
+  "repo_root": "oca-w0a",
+  "results": [
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "tests/test_agg02_market_data_capital.py",
+        "config/market_data_evolution.json",
+        "src/agg02/storage.py",
+        "src/agg02/__init__.py",
+        "src/agg02/historical_membership.py",
+        "src/market_economics_pr148.py",
+        "src/market/native_cpmm_capture.py",
+        "src/market/streams.py",
+        "src/market_economic_kernel_pr154.py",
+        "tests/test_shadow_market_data_aggregation.py"
+      ],
+      "id": "GQ-001",
+      "missed_required_refs": [],
+      "pack_refs": [
+        "tests/test_recoverable_stream_journal.py",
+        "docs/web3-market-scale/design-input/data/rnd3_results_template.json"
+      ],
+      "recall": 1.0,
+      "required_refs": [
+        "src/agg02/storage.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "src/market/observations.py",
+        "docs/shadow_market_data_aggregation.md",
+        "tests/market_data_evolution/test_market_data_evolution.py",
+        "scripts/shadow_market_graph_demo.py",
+        "tests/test_shadow_market_data_aggregation.py",
+        "src/strategy/market_graph_ingest.py",
+        "tests/test_agg02_market_data_capital.py",
+        "scripts/clmm_dlmm_market_trace_replay.py",
+        "src/market_data_evolution/contracts.py",
+        "tests/test_mpr042_market_truth.py"
+      ],
+      "id": "GQ-002",
+      "missed_required_refs": [],
+      "pack_refs": [
+        "docs/MPR-042_WATERMARKED_MARKET_TRUTH.md",
+        "src/market/__init__.py",
+        "src/market/snapshots.py"
+      ],
+      "recall": 1.0,
+      "required_refs": [
+        "src/market/observations.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "docs/external_contracts.yaml",
+        "docs/roadmap/gpr-parallel-radar-rnd-2026-10-06/GPR-03_SOURCE_CONTRACTS.md",
+        "docs/roadmap_pr195_product_contract.md",
+        "docs/web3-market-scale/design-input/data/deep_web3_layer_contracts.json",
+        "scripts/validate_contracts.py",
+        "scripts/verify_mpr_next_08_jupiter_v2_contract.py",
+        "src/config/product_contract_pr195.py",
+        "src/lending/unsigned_builders/contract.py",
+        "src/lending_indexer/contracts.py",
+        "src/mechanism_discovery/pr356_contracts.py"
+      ],
+      "id": "GQ-003",
+      "missed_required_refs": [
+        "src/observability/events.py"
+      ],
+      "pack_refs": [
+        ".github/workflows/contract-drift.yml",
+        ".github/workflows/mpr-next-08-jupiter-v2-contract.yml"
+      ],
+      "recall": 0.0,
+      "required_refs": [
+        "src/observability/events.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "tests/test_shadow_arbitrage_graph.py",
+        "docs/shadow_arbitrage_graph.md",
+        "src/strategy/arbitrage_graph.py",
+        "src/routing/route_graph.py",
+        "docs/strategy-expansion/2026-11-14/BUILD_BIGGER_UNIVERSE_GRAPH_ARCHIVE_RECONCILIATION_RU.md",
+        "docs/web3-market-scale/design-input/18_COMPOSITION_AND_RESOURCE_GRAPH_RU.md",
+        "src/strategy/market_graph_ingest.py",
+        "docs/strategy-expansion/2026-11-14/BUILD_BIGGER_UNIVERSE_GRAPH_ARCHIVE_MANIFEST_V1.json",
+        "docs/strategy-expansion/2026-11-14/BUILD_BIGGER_UNIVERSE_GRAPH_WORKPACKAGES_V1.json",
+        "scripts/shadow_market_graph_demo.py"
+      ],
+      "id": "GQ-004",
+      "missed_required_refs": [],
+      "pack_refs": [
+        "docs/roadmap/agent-execution-master-2026-11-13/tasks/R04_CAPITAL_AWARE_ROUTE_SELECTOR.md",
+        "tests/test_shadow_graph_review.py",
+        "src/economics/flash_capital_graph/__init__.py"
+      ],
+      "recall": 1.0,
+      "required_refs": [
+        "src/strategy/arbitrage_graph.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "src/execution/exact_simulation.py",
+        "docs/roadmap/agent-execution-master-2026-11-13/tasks/R05_EXACT_ATOMIC_SIMULATION.md",
+        ".github/workflows/pr036-exact-simulation.yml",
+        "tests/execution/test_exact_simulation_pr036.py",
+        "src/execution/unsigned_plan_simulation_seam.py",
+        "tests/test_r05_simulation_seam.py",
+        "docs/integrations/offline/providers-wave1-2026-11-13/OPENOCEAN_SOLANA.md",
+        "docs/pr227_exact_money_atomic_evidence.md",
+        "src/execution/economic_reconciliation/exact_adapter.py",
+        "src/execution/pr209_exact_atomic_semantics_gate.py"
+      ],
+      "id": "GQ-005",
+      "missed_required_refs": [],
+      "pack_refs": [
+        "docs/architecture/pr036_exact_simulation.md",
+        "config/external_connections/profiles/solana_rpc.example.json"
+      ],
+      "recall": 1.0,
+      "required_refs": [
+        "src/execution/exact_simulation.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "docs/pr034_atomic_marginfi_jupiter_planner.md",
+        "src/planning/atomic_marginfi_jupiter.py",
+        "tests/test_pr034_atomic_marginfi_jupiter.py",
+        "tests/test_pr058_atomic_vertical.py",
+        "tests/test_r14_kamino_planner_wiring.py",
+        "src/paper_shadow/atomic_runtime_stages.py",
+        "src/paper_shadow/atomic_vertical.py",
+        "tests/test_pr075_atomic_runtime_stages.py",
+        "src/execution/atomic_kernel_pr197.py",
+        "tests/test_pr197_atomic_kernel.py"
+      ],
+      "id": "GQ-006",
+      "missed_required_refs": [],
+      "pack_refs": [
+        "config/release_profiles/core-marginfi-jupiter-v1.json",
+        "docs/pr222_atomic_sender_free_execution.md",
+        "tests/fixtures/providers/jupiter_swap_v2_build_sanitized.json"
+      ],
+      "recall": 1.0,
+      "required_refs": [
+        "src/planning/atomic_marginfi_jupiter.py"
+      ]
+    },
+    {
+      "budget_limited": false,
+      "expansion_refs": [],
+      "id": "GQ-007",
+      "missed_required_refs": [
+        "src/assets/resolution/resolver.py"
+      ],
+      "pack_refs": [],
+      "recall": 0.0,
+      "required_refs": [
+        "src/assets/resolution/resolver.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "docs/architecture/pr041_durable_lifecycle_recovery.md",
+        "docs/mpr10_lifecycle_queue_observability_gate.md",
+        "docs/pr080_canonical_sender_lifecycle.md",
+        "docs/pr093_canonical_sender_lifecycle_disabled.md",
+        "docs/pr106_canonical_sender_lifecycle_disabled.md",
+        "docs/pr121_single_durable_lifecycle_truth.md",
+        "docs/pr131_account_lifecycle.md",
+        "docs/pr191_immutable_lifecycle_exactly_once_accounting.md",
+        "docs/pr195_durable_lifecycle_followup.md",
+        "docs/roadmap-pr02-unified-lifecycle-authority.md"
+      ],
+      "id": "GQ-008",
+      "missed_required_refs": [
+        "src/discovery/dynamic_universe/universe.py"
+      ],
+      "pack_refs": [
+        ".github/workflows/mpr10-lifecycle-queue-observability.yml",
+        ".github/workflows/pr195-durable-lifecycle.yml"
+      ],
+      "recall": 0.0,
+      "required_refs": [
+        "src/discovery/dynamic_universe/universe.py"
+      ]
+    },
+    {
+      "budget_limited": false,
+      "expansion_refs": [],
+      "id": "GQ-009",
+      "missed_required_refs": [
+        "src/research/correlation_ledger/ledger.py"
+      ],
+      "pack_refs": [],
+      "recall": 0.0,
+      "required_refs": [
+        "src/research/correlation_ledger/ledger.py"
+      ]
+    },
+    {
+      "budget_limited": false,
+      "expansion_refs": [],
+      "id": "GQ-010",
+      "missed_required_refs": [
+        "src/strategy/strategy_contract.py"
+      ],
+      "pack_refs": [],
+      "recall": 0.0,
+      "required_refs": [
+        "src/strategy/strategy_contract.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "tests/test_agg02_market_data_capital.py",
+        "config/market_data_evolution.json",
+        "docs/roadmap/market-data-layer-evolution-mega.md",
+        "docs/web3-market-scale/design-input/data/market_class_registry.json",
+        "docs/roadmap/paper-data-campaign-universe-2026-11-21/MARKET_UNIVERSE_AND_STRATEGY_PRIORITY_RU.md",
+        "scripts/verify_market_data_evolution.py",
+        "src/agg02/__init__.py",
+        "tests/market_data_evolution/test_market_data_evolution.py",
+        "tests/test_shadow_market_data_aggregation.py",
+        "docs/shadow_market_data_aggregation.md"
+      ],
+      "id": "GQ-011",
+      "missed_required_refs": [],
+      "pack_refs": [
+        ".github/workflows/market-data-layer-evolution.yml",
+        "release_artifacts/market_data_evolution/evidence.json",
+        "release_artifacts/local_intelligence_v2/offline_report/DATA_QUALITY.json"
+      ],
+      "recall": 1.0,
+      "required_refs": [
+        "tests/test_agg02_market_data_capital.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "tests/test_pr195_authoritative_observability_store.py",
+        "src/observability/authoritative_store_pr195.py",
+        "src/observability/store.py",
+        "docs/pr201_observability_readiness_deployment.md",
+        "src/operations/pr201_observability_readiness.py",
+        "tests/observability/test_pr017_observability.py",
+        "tests/test_pr132_observability_integrity.py",
+        "tests/test_pr198_immutable_observability_export.py",
+        "src/observability/export.py",
+        "tests/test_pr201_observability_readiness.py"
+      ],
+      "id": "GQ-012",
+      "missed_required_refs": [
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/tests/observability/test_pr017_observability.py",
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/tests/observability/test_pump_events.py"
+      ],
+      "pack_refs": [
+        "docs/pr132_observability_integrity.md",
+        "docs/roadmap/prequal-rnd-2026-10-06/package/15_OBSERVABILITY_NEGATIVE_EVIDENCE_RU.md"
+      ],
+      "recall": 0.0,
+      "required_refs": [
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/tests/observability/test_pr017_observability.py",
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/tests/observability/test_pump_events.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "tests/test_dynamic_flash_capital.py",
+        "src/economics/flash_capital_graph/flash_mint_options.py",
+        "src/economics/flash_capital_graph/graph.py",
+        "docs/strategy-expansion/2026-11-14/BUILD_BIGGER_UNIVERSE_GRAPH_WORKPACKAGES_V1.json",
+        "docs/strategy-expansion/2026-11-14/MASTER_FLASHLOAN_MARKET_INTEGRATION_AND_BUILD_BIGGER_UNIVERSE_RU.md",
+        "tests/test_dynamic_promotion_campaign.py",
+        ".github/workflows/dynamic-universe-read-only.yml",
+        "docs/roadmap/dynamic-universe-master-2026-10-07/CODEX_START_HERE.md",
+        "docs/strategy-expansion/2026-11-14/BUILD_BIGGER_UNIVERSE_GRAPH_ARCHIVE_MANIFEST_V1.json",
+        "docs/strategy-expansion/2026-11-14/BUILD_BIGGER_UNIVERSE_GRAPH_ARCHIVE_RECONCILIATION_RU.md"
+      ],
+      "id": "GQ-013",
+      "missed_required_refs": [],
+      "pack_refs": [
+        "docs/roadmap/universal-source-execution-rnd-2026-10-07/FLASH_CAPITAL_GRAPH.md",
+        ".github/workflows/gpr01-research-economic-graph.yml",
+        "src/economics/flash_capital_graph/__init__.py"
+      ],
+      "recall": 1.0,
+      "required_refs": [
+        "tests/test_dynamic_flash_capital.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "tests/test_pr195_authoritative_observability_store.py",
+        "src/observability/authoritative_store_pr195.py",
+        "src/observability/store.py",
+        "tests/observability/test_pr017_observability.py",
+        "docs/pr198_immutable_observability_archive.md",
+        "tests/test_pr198_immutable_observability_export.py",
+        "src/observability/__init__.py",
+        "src/pr167_observability_governance.py",
+        "docs/pr132_observability_integrity.md",
+        "docs/pr201_observability_readiness_deployment.md"
+      ],
+      "id": "GQ-014",
+      "missed_required_refs": [],
+      "pack_refs": [
+        "docs/pr195_authoritative_database_schema_epochs.md"
+      ],
+      "recall": 1.0,
+      "required_refs": [
+        "tests/test_pr195_authoritative_observability_store.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "release_artifacts/local_intelligence_v2/FINAL_REPORT.json",
+        "release_artifacts/local_intelligence_v2/FINAL_REPORT.md",
+        "release_artifacts/local_intelligence_v2/FINAL_REPORT.txt",
+        "tests/intelligence/test_cli_reports.py",
+        "scripts/verify_local_intelligence_v2.py",
+        "src/intelligence/reports.py",
+        "CODEX_LOCAL_INTELLIGENCE_V2_START_HERE.md",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/W0A_TOOL_BAKEOFF_2026-11-22.md",
+        "docs/strategy/local-intelligence-v2/OPERATIONS.md",
+        "release_artifacts/local_intelligence_v2/offline_report/REPORT.txt"
+      ],
+      "id": "GQ-015",
+      "missed_required_refs": [],
+      "pack_refs": [
+        "docs/strategy/local-intelligence-v2/CLI_AND_REPORTS_RU.md",
+        "scripts/verify_shadow_soak_report.py",
+        "release_artifacts/local_intelligence_v2/offline_report/CHANGE_VS_BASELINE.json",
+        "release_artifacts/local_intelligence_v2/offline_report/DATA_QUALITY.json",
+        "src/intelligence/__init__.py",
+        "tests/intelligence/__init__.py",
+        "release_artifacts/local_intelligence_v2/receipts/RETRIEVAL_BENCHMARK.json"
+      ],
+      "recall": 1.0,
+      "required_refs": [
+        "tests/intelligence/test_cli_reports.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "tests/test_ton_radar_dynamic_universe.py",
+        "src/discovery/dynamic_universe/ton_radar.py",
+        "tests/test_dynamic_universe.py",
+        "docs/roadmap/p0-offline-execution-master-2026-11-13/tasks/P0-1_SOLANA_INTAKE_DYNAMIC_UNIVERSE.md",
+        "src/discovery/dynamic_universe/campaign.py",
+        "docs/roadmap/dynamic-universe-master-2026-10-07/CODEX_START_HERE.md",
+        "docs/strategy-expansion/2026-11-14/MASTER_FLASHLOAN_MARKET_INTEGRATION_AND_BUILD_BIGGER_UNIVERSE_RU.md",
+        "src/discovery/dynamic_universe/ingestors.py",
+        "docs/roadmap/universal-source-execution-rnd-2026-10-07/DYNAMIC_UNIVERSE_AND_RELATIONS.md",
+        "tests/test_ton_radar_dedust_swapcoffee.py"
+      ],
+      "id": "GQ-016",
+      "missed_required_refs": [],
+      "pack_refs": [
+        ".github/workflows/dynamic-universe-read-only.yml",
+        "docs/roadmap/prequal-rnd-2026-10-06/package/20_ROLLING_PAIR_UNIVERSE_RU.md",
+        "src/discovery/dynamic_universe/__init__.py",
+        "src/solana_parallel_radar/__init__.py"
+      ],
+      "recall": 1.0,
+      "required_refs": [
+        "tests/test_ton_radar_dynamic_universe.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "docs/roadmap/agent-execution-master-2026-11-13/reports/R08_RUNTIME_COMPOSITION_AUDIT_2026-11-14.md",
+        "config/runtime_authority_map.json",
+        "src/container_runtime.py",
+        "src/pr215_typed_config_time_dependency.py",
+        "tests/test_pr215_typed_config_time_dependency.py",
+        "src/config/runtime.py",
+        "tests/runtime/test_capability_boolean_contract.py",
+        "src/resources/runtime_authority_map.json",
+        "tests/test_pr023_runtime_truth.py",
+        "docs/runtime_contract_pr023.md"
+      ],
+      "id": "GQ-017",
+      "missed_required_refs": [
+        "config/capabilities.json"
+      ],
+      "pack_refs": [
+        "docs/pr215_typed_config_time_dependency_gate.md",
+        "src/config/__init__.py",
+        "config/dependency_vulnerability_allowlist.json"
+      ],
+      "recall": 0.0,
+      "required_refs": [
+        "config/capabilities.json"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "docs/architecture/mpr_4x_02_runtime_authority.md",
+        "config/runtime_authority_map.json",
+        "src/resources/runtime_authority_map.json",
+        "src/runtime_authority.py",
+        "tests/architecture/test_mpr_4x_02_runtime_authority.py",
+        "tests/test_new_mega_pr01_runtime_authority.py",
+        "config/runtime_authority.json",
+        "src/resources/runtime_authority.json",
+        "docs/roadmap/agent-execution-master-2026-11-13/reports/R08_RUNTIME_COMPOSITION_AUDIT_2026-11-14.md",
+        "src/resources/runtime_authority_map_pr01.json"
+      ],
+      "id": "GQ-018",
+      "missed_required_refs": [],
+      "pack_refs": [
+        "docs/roadmap/prequal-rnd-2026-10-06/package/06_RUNTIME_RELEASE_AUTHORITY_UNIFICATION_RU.md",
+        "scripts/validate_runtime_authority_map.py",
+        "src/runtime_authority_pr01.py"
+      ],
+      "recall": 1.0,
+      "required_refs": [
+        "src/resources/runtime_authority.json"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "src/resources/market_source_catalog.json",
+        "docs/roadmap/paper-data-campaign-universe-2026-11-21/STRATEGY_SOURCE_OWNER_CROSSWALK_V1.json",
+        "docs/strategy-expansion/2026-11-14/MASTER_FLASHLOAN_MARKET_INTEGRATION_AND_BUILD_BIGGER_UNIVERSE_RU.md",
+        "docs/web3-market-scale/design-input/28_PARALLELISM_AND_RESOURCE_SCHEDULING_RU.md",
+        "src/resources/production_debt.json",
+        "src/resources/production_surface_manifest.json",
+        "docs/web3-market-scale/design-input/data/market_class_registry.json",
+        "docs/web3-market-scale/design-input/data/unified_source_catalog.json",
+        "src/runtime/instance_resources.py",
+        "docs/roadmap/agent-execution-master-2026-11-13/PROJECT_STATUS.json"
+      ],
+      "id": "GQ-019",
+      "missed_required_refs": [],
+      "pack_refs": [
+        "tests/runtime/test_mpr_rp03_instance_resources.py",
+        "src/resources/contracts/lending/kamino_klend_source_identity_review_2026-07-22.json",
+        "src/resources/__init__.py",
+        "config/flake_detection_policy.json",
+        ".mypy_cache/3.13/@plugins_snapshot.json"
+      ],
+      "recall": 1.0,
+      "required_refs": [
+        "src/resources/market_source_catalog.json"
+      ]
+    },
+    {
+      "budget_limited": false,
+      "expansion_refs": [],
+      "id": "GQ-020",
+      "missed_required_refs": [],
+      "pack_refs": [
+        "pytest.ini",
+        "scripts/clean_markers.py"
+      ],
+      "recall": 1.0,
+      "required_refs": [
+        "pytest.ini"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "docs/roadmap/agent-execution-master-2026-11-13/tasks/R10_STRATEGIES_AND_INTELLIGENCE.md",
+        "docs/web3-market-scale/design-input/28_PARALLELISM_AND_RESOURCE_SCHEDULING_RU.md",
+        "src/strategy/strategies.py",
+        "docs/web3-market-scale/design-input/04_STRATEGIES_RU.md",
+        "docs/web3-market-scale/design-input/data/strategies.json",
+        "tests/test_pr194_proof_critical_scheduling.py",
+        "tests/strategies/stable_peg/test_mpr2622_stable_peg.py",
+        "src/strategies/stable_peg/__init__.py",
+        "src/strategies/stable_peg/math.py",
+        "src/strategies/stable_peg/models.py"
+      ],
+      "id": "GQ-021",
+      "missed_required_refs": [
+        "src/strategy/conflict_scheduler.py"
+      ],
+      "pack_refs": [
+        "docs/pr194_proof_critical_scheduling.md",
+        "tests/strategies/stable_peg/test_mpr2622_architecture.py"
+      ],
+      "recall": 0.0,
+      "required_refs": [
+        "src/strategy/conflict_scheduler.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "src/strategy/multihop_solver.py",
+        "tests/test_agg05_multihop_solver.py",
+        "src/data_plane/bounded_provider_plane_pr197.py",
+        "tests/test_pr197_bounded_provider_plane.py",
+        "docs/roadmap/pre-api-market-route-qualification-2026-11-15/CODEX_START_HERE_RU.md",
+        "tests/test_mega8_02_graph_solver.py",
+        "docs/roadmap/clmm-dlmm-market-trace-qualification-2026-11-15/ROUTE_AND_TRACE_PLAN_RU.md",
+        "docs/mpr041_canonical_economic_route_semantics.md",
+        "docs/roadmap/pre-api-market-route-qualification-2026-11-15/STRATEGY_BUILDING_BLOCKS_AND_ROUTES_RU.md",
+        "src/providers/jupiter/router.py"
+      ],
+      "id": "GQ-022",
+      "missed_required_refs": [],
+      "pack_refs": [
+        "docs/roadmap/agent-execution-master-2026-11-13/tasks/R04_CAPITAL_AWARE_ROUTE_SELECTOR.md"
+      ],
+      "recall": 1.0,
+      "required_refs": [
+        "src/strategy/multihop_solver.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "docs/strategy-expansion/2026-11-14/BUILD_BIGGER_UNIVERSE_GRAPH_WORKPACKAGES_V1.json",
+        "tests/test_dynamic_relations.py",
+        "tests/test_relation_h_residuals.py",
+        "tests/test_mpr2607_campaign_evidence_residuals.py",
+        "src/research/correlation_ledger/residuals.py",
+        ".github/workflows/pr194-hermetic-package-surface.yml",
+        "docs/mpr2607_residual_shadow_qualification.md",
+        "docs/pr107_reviewed_limited_live_canary_package.md",
+        "docs/pr194_hermetic_package_surface.md",
+        "docs/pr194_trusted_build_package_ci_foundation.md"
+      ],
+      "id": "GQ-023",
+      "missed_required_refs": [
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/src/strategy/relation_generators/__init__.py",
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/src/strategy/relation_generators/generators.py",
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/src/strategy/relation_generators/heat.py"
+      ],
+      "pack_refs": [
+        "docs/roadmap/universal-source-execution-rnd-2026-10-07/DYNAMIC_UNIVERSE_AND_RELATIONS.md",
+        "docs/mpr2618/package_source.md"
+      ],
+      "recall": 0.0,
+      "required_refs": [
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/src/strategy/relation_generators/__init__.py",
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/src/strategy/relation_generators/generators.py",
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/src/strategy/relation_generators/heat.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "docs/mpr03_economics_persistence_ops_gate.md",
+        "src/mega_pr02_v3_economics_transport_gate.py",
+        "src/mpr03_economics_persistence_ops_gate.py",
+        "src/mpr04_protocol_bound_economics.py",
+        "src/research/pr356_allocation.py",
+        "src/research/pr356_allocation_completion.py",
+        "tests/test_mega_pr02_v3_economics_transport_gate.py",
+        "tests/test_mpr03_economics_persistence_ops_gate.py",
+        "tests/test_mpr04_protocol_bound_economics.py",
+        "docs/roadmap/r01-r02-live-capital-readers-2026-10-08/offline/PROVIDER_ECONOMICS_AND_SELECTOR.md"
+      ],
+      "id": "GQ-024",
+      "missed_required_refs": [
+        "src/economics/split_flow.py"
+      ],
+      "pack_refs": [
+        ".github/workflows/mpr04-protocol-bound-economics.yml",
+        "docs/pr148_market_economics_kernel.md",
+        "src/economics/flash_capital_graph/__init__.py"
+      ],
+      "recall": 0.0,
+      "required_refs": [
+        "src/economics/split_flow.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "src/economics/non_monotonic_sizing.py",
+        "tests/test_pr118_non_monotonic_sizing.py",
+        "tests/test_optimal_trade_sizing.py",
+        "src/economics/exact_amounts.py",
+        "tests/economics/test_exact_amounts_pr006.py",
+        "tests/test_pr113_amount_coupled_discovery.py"
+      ],
+      "id": "GQ-025",
+      "missed_required_refs": [],
+      "pack_refs": [
+        "docs/pr118_non_monotonic_sizing.md"
+      ],
+      "recall": 1.0,
+      "required_refs": [
+        "src/economics/non_monotonic_sizing.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "src/mechanism_discovery/pr356_contracts.py",
+        "config/pr356_owner_map.json",
+        "src/research/pr356_allocation.py",
+        "src/research/pr356_completion_contracts.py",
+        "src/strategy/strategy_contract.py",
+        "tests/test_sx01_strategy_contract.py",
+        "src/research/pr357_contracts.py",
+        "src/mechanism_discovery/pr356_discovery.py",
+        "src/research/pr356_integrated_loop.py",
+        "src/mechanism_discovery/pr356_discovery_completion.py"
+      ],
+      "id": "GQ-026",
+      "missed_required_refs": [],
+      "pack_refs": [
+        "docs/web3-market-scale/design-input/data/deep_web3_layer_contracts.json",
+        "flashloan_release_evidence.py"
+      ],
+      "recall": 1.0,
+      "required_refs": [
+        "src/mechanism_discovery/pr356_contracts.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "src/providers/raydium_cpmm_native.py",
+        "tests/test_native_cpmm_qualification.py",
+        "src/paper_shadow/native_cpmm_qualification.py",
+        "src/strategy/exact_cpmm_capacity.py",
+        "src/market/native_cpmm_capture.py",
+        "src/strategy/cpmm_cycle_binding.py",
+        "docs/integrations/offline/solana-p0/DIRECT_STATE_RAYDIUM_ORCA_METEORA.md",
+        "src/direct_venue/cpmm_math.py",
+        "docs/web3-market-scale/examples/native-cpmm-3hop.report.json",
+        "docs/web3-market-scale/examples/native-cpmm-4hop.report.json"
+      ],
+      "id": "GQ-027",
+      "missed_required_refs": [],
+      "pack_refs": [
+        "docs/web3-market-scale/raydium_math_review.json",
+        ".github/workflows/mega-pr01-canonical-paper-platform.yml",
+        "tests/fixtures/p01_intake/raydium_positive_p2.json",
+        "tests/fixtures/p01_intake/raydium_429.json",
+        "tests/fixtures/p01_intake/raydium_empty_page.json",
+        "tests/fixtures/p01_intake/raydium_schema_drift.json"
+      ],
+      "recall": 1.0,
+      "required_refs": [
+        "src/providers/raydium_cpmm_native.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "src/lending/jupiter_lend.py",
+        "src/lending/unsigned_builders/jupiter_builder.py",
+        "tests/fixtures/r03/jupiter_lend_golden.json",
+        "src/planning/atomic_marginfi_jupiter.py",
+        "tests/test_r03_jupiter_builder.py",
+        "docs/mpr2615-controlled-multi-lender-expansion.md",
+        "docs/pr067_kamino_lending_conformance.md",
+        "src/lending/agg03_financing_ports.py",
+        "src/lending/sp_q01_protocol_admission.py",
+        "tests/lending/test_agg03_financing_adapters.py"
+      ],
+      "id": "GQ-028",
+      "missed_required_refs": [],
+      "pack_refs": [
+        "config/release_profiles/core-jupiter-lend-jupiter-v1.json",
+        "docs/adr/PR-031-jupiter-quota-scheduler.md"
+      ],
+      "recall": 1.0,
+      "required_refs": [
+        "src/lending/jupiter_lend.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "src/lending/kamino_real_conformance.py",
+        "tests/lending/test_kamino_pr095_real_conformance.py",
+        "docs/pr067_kamino_lending_conformance.md",
+        "src/lending/kamino_conformance.py",
+        "tests/lending/test_kamino_pr067_conformance.py",
+        "src/lending/unsigned_builders/kamino_builder.py",
+        "src/providers/protocol_conformance.py",
+        "tests/test_pr198_protocol_account_conformance.py",
+        "tests/test_r14_kamino_planner_wiring.py",
+        "src/mega_pr02_protocol_conformance_release_gate.py"
+      ],
+      "id": "GQ-029",
+      "missed_required_refs": [],
+      "pack_refs": [
+        "docs/pr095_kamino_real_conformance.md",
+        ".github/workflows/pr196-external-protocol-conformance.yml",
+        "docs/integrations/offline/kamino-flash-builder-2026-11-14/vendor-reference/klend/programId.ts.txt"
+      ],
+      "recall": 1.0,
+      "required_refs": [
+        "src/lending/kamino_real_conformance.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "docs/strategy-expansion/2026-11-14/BUILD_BIGGER_UNIVERSE_GRAPH_WORKPACKAGES_V1.json",
+        "src/solana_parallel_radar/intake_cadence.py",
+        "tests/test_p01_intake_cadence.py",
+        "src/gpr_sui_shadow/intake.py",
+        "src/release_gate/actual_evidence.py",
+        "src/release_gate/executable_evidence.py",
+        "docs/roadmap/p0-offline-execution-master-2026-11-13/tasks/P0-1_SOLANA_INTAKE_DYNAMIC_UNIVERSE.md",
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "docs/pr227_exact_money_atomic_evidence.md",
+        "docs/web3-market-scale/design-input/32_PARALLEL_WORK_PACKAGES_RU.md"
+      ],
+      "id": "GQ-030",
+      "missed_required_refs": [
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/src/gpr_sui_shadow/__init__.py",
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/src/gpr_sui_shadow/bcs.py",
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/src/gpr_sui_shadow/campaign.py",
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/src/gpr_sui_shadow/decoders.py",
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/src/gpr_sui_shadow/intake.py",
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/src/gpr_sui_shadow/models.py",
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/src/gpr_sui_shadow/providers/__init__.py",
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/src/gpr_sui_shadow/providers/aftermath.py",
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/src/gpr_sui_shadow/sources.py",
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/src/gpr_sui_shadow/verification.py"
+      ],
+      "pack_refs": [
+        "docs/pr079_real_shadow_soak_evidence.md",
+        "docs/pr107_reviewed_limited_live_canary_package.md",
+        "tests/fixtures/p01_intake/manifest_drift.json",
+        "tests/fixtures/p01_intake/raydium_429.json"
+      ],
+      "recall": 0.0,
+      "required_refs": [
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/src/gpr_sui_shadow/__init__.py",
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/src/gpr_sui_shadow/bcs.py",
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/src/gpr_sui_shadow/campaign.py",
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/src/gpr_sui_shadow/decoders.py",
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/src/gpr_sui_shadow/intake.py",
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/src/gpr_sui_shadow/models.py",
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/src/gpr_sui_shadow/providers/__init__.py",
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/src/gpr_sui_shadow/providers/aftermath.py",
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/src/gpr_sui_shadow/sources.py",
+        "C:/Users/ivans/Downloads/studious-pancake-main (IDE)/sp-worktrees/oca-w0a/src/gpr_sui_shadow/verification.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "docs/roadmap/agent-execution-master-2026-11-13/reports/R13_QUOTE_BUILD_RACE_AUDIT_2026-11-14.md",
+        "tests/test_r13_quote_race_contract.py",
+        "tests/test_gpr02_solana_parallel_radar.py",
+        "src/execution/quote_build_kernel.py",
+        "src/solana_parallel_radar/probes.py",
+        "src/solana_parallel_radar/cli.py",
+        "docs/roadmap/p0-offline-execution-master-2026-11-13/tasks/P0-2_JUPITER_0X_QUOTES.md",
+        "docs/integrations/offline/providers-wave1-2026-11-13/OPENOCEAN_SOLANA.md",
+        "docs/roadmap/agent-execution-master-2026-11-13/tasks/R13_MULTIPROVIDER_QUOTES_AND_BUILDS.md",
+        "tests/test_agg06_solana_venues.py"
+      ],
+      "id": "GQ-031",
+      "missed_required_refs": [],
+      "pack_refs": [
+        "docs/integrations/offline/solana-p0/vendor-reference/meteora/swap_quote_example.ts.txt",
+        "src/resources/contracts/routing/openocean_solana_v4_review_2026-07-21.json",
+        ".github/workflows/gpr02-solana-parallel-radar.yml"
+      ],
+      "recall": 1.0,
+      "required_refs": [
+        "src/solana_parallel_radar/probes.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "src/market/native_cpmm_capture.py",
+        "src/paper_shadow/native_cpmm_qualification.py",
+        "src/providers/raydium_cpmm_native.py",
+        "tests/test_native_cpmm_qualification.py",
+        "docs/web3-market-scale/examples/native-cpmm-3hop.report.json",
+        "docs/web3-market-scale/examples/native-cpmm-4hop.report.json",
+        "docs/web3-market-scale/examples/native-cpmm-3hop.synthetic.json",
+        "docs/web3-market-scale/examples/native-cpmm-4hop.synthetic.json",
+        "tests/native_cpmm_fixtures.py",
+        "docs/web3-market-scale/NATIVE_QUALIFICATION_RU.md"
+      ],
+      "id": "GQ-032",
+      "missed_required_refs": [],
+      "pack_refs": [
+        "docs/roadmap/prequal-rnd-2026-10-06/package/07_RPC_QUORUM_AND_NATIVE_CAPTURE_RU.md",
+        "docs/web3-market-scale/native_verification.json"
+      ],
+      "recall": 1.0,
+      "required_refs": [
+        "src/market/native_cpmm_capture.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "src/market/streams.py",
+        "src/market/native_cpmm_capture.py",
+        "tests/test_agg02_market_data_capital.py",
+        "docs/shadow_market_sources_ru.md",
+        "docs/web3-market-scale/execution_matrix.json",
+        "src/resources/market_source_catalog.json",
+        "tests/research/test_pr358_market_relation_exchange.py",
+        "docs/roadmap/clmm-dlmm-market-trace-qualification-2026-11-15/CODEX_START_HERE_RU.md",
+        "docs/shadow_market_data_aggregation.md",
+        "docs/web3-market-scale/design-input/data/market_class_registry.json"
+      ],
+      "id": "GQ-033",
+      "missed_required_refs": [],
+      "pack_refs": [
+        "tests/test_recoverable_stream_journal.py",
+        "docs/web3-market-scale/design-input/data/rnd3_results_template.json"
+      ],
+      "recall": 1.0,
+      "required_refs": [
+        "src/market/streams.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "src/resources/market_source_catalog.json",
+        "docs/shadow_market_sources_ru.md",
+        "docs/strategy-expansion/2026-11-14/MASTER_FLASHLOAN_MARKET_INTEGRATION_AND_BUILD_BIGGER_UNIVERSE_RU.md",
+        "src/mechanism_discovery/marketpack_adapters.py",
+        "docs/web3-market-scale/design-input/data/market_class_registry.json",
+        "docs/web3-market-scale/design-input/data/unified_source_catalog.json",
+        "config/market_data_evolution.json",
+        "docs/integrations/offline/solana-p0/SOLANA_DISCOVERY_SOURCES.md",
+        "docs/web3-market-scale/design-input/data/source_catalog_baseline_43.json",
+        "src/market/discovery.py"
+      ],
+      "id": "GQ-034",
+      "missed_required_refs": [],
+      "pack_refs": [
+        "docs/web3-market-scale/design-input/data/market_class_references.json",
+        "tools/occ_automation/config/qualification_request.pr543.reference.json",
+        "src/discovery/dynamic_universe/__init__.py"
+      ],
+      "recall": 1.0,
+      "required_refs": [
+        "src/market/discovery.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "src/agg02/storage.py",
+        "tests/test_agg02_market_data_capital.py",
+        "tests/test_agg13_external_datasets.py",
+        ".github/workflows/pr227-exact-money-atomic-evidence.yml",
+        ".github/workflows/super-02-capital-exact-paper.yml",
+        "docs/architecture/pr036_exact_simulation.md",
+        "docs/mega_pr_a2_exact_attempt_runtime.md",
+        "docs/paper_shadow/pr152_exact_sender_free_attempt.md",
+        "docs/pr074_exact_fee_capital_workflow.md",
+        "docs/pr209_exact_atomic_semantics_gate.md"
+      ],
+      "id": "GQ-035",
+      "missed_required_refs": [],
+      "pack_refs": [
+        ".github/workflows/pr036-exact-simulation.yml",
+        ".github/workflows/pr209-exact-atomic-semantics-gate.yml"
+      ],
+      "recall": 1.0,
+      "required_refs": [
+        "src/agg02/storage.py"
+      ]
+    },
+    {
+      "budget_limited": false,
+      "expansion_refs": [],
+      "id": "GQ-036",
+      "missed_required_refs": [
+        "src/economics/flash_capital_graph/graph.py"
+      ],
+      "pack_refs": [],
+      "recall": 0.0,
+      "required_refs": [
+        "src/economics/flash_capital_graph/graph.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "docs/integrations/offline/evm-financing-wave2-2026-11-14/verify_offline_bundle.py",
+        "docs/integrations/offline/evm-financing-wave2-2026-11-14/SOURCE_MANIFEST.json",
+        "docs/integrations/offline/evm-financing-wave2-2026-11-14/README.md",
+        "tests/test_r02_cap_a_offline_replay.py",
+        "tests/test_r02_cap_d_offline_replay.py",
+        "docs/roadmap/p0-offline-execution-master-2026-11-13/P0_IMPLEMENTATION_PLAN.md",
+        "docs/integrations/offline/evm-financing-wave2-2026-11-14/EVM_CALLBACK_ATOMICITY_WAVE2.md",
+        "docs/integrations/offline/evm-financing-wave2-2026-11-14/FLUID_LIQUIDITY_WAVE2.md",
+        "src/execution/agg03_financing_decoder.py",
+        "docs/integrations/offline/evm-financing-wave2-2026-11-14/AAVE_V3_FLASHLOAN_SIMPLE_WAVE2.md"
+      ],
+      "id": "GQ-037",
+      "missed_required_refs": [
+        "src/multichain/evm_financing.py"
+      ],
+      "pack_refs": [
+        "docs/integrations/offline/evm-financing-wave2-2026-11-14/OVERLAP_NOTES.md",
+        "tests/test_offline_safety.py",
+        "release_artifacts/local_intelligence_v2/offline_report/CHANGE_VS_BASELINE.json",
+        "release_artifacts/local_intelligence_v2/offline_report/DATA_QUALITY.json"
+      ],
+      "recall": 0.0,
+      "required_refs": [
+        "src/multichain/evm_financing.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "tests/test_agg11_multichain_execution_models.py",
+        "docs/audits/FLASHLOAN_BOT_PRODUCTION_AUDIT_AND_PR_ROADMAP_2026-07-19.md",
+        "docs/strategy-expansion/2026-11-14/MASTER_FLASHLOAN_MARKET_INTEGRATION_AND_BUILD_BIGGER_UNIVERSE_RU.md",
+        "src/liquidation/models.py",
+        "tests/test_mpr2602_full_flashloan_vertical.py",
+        "docs/integrations/offline/evm-financing-wave2-2026-11-14/AAVE_V3_FLASHLOAN_SIMPLE_WAVE2.md",
+        "docs/integrations/offline/evm-financing-wave2-2026-11-14/EULER_EVK_FLASH_WAVE2.md",
+        "docs/integrations/offline/kamino-flash-builder-2026-11-14/vendor-reference/klend/flashRepayReserveLiquidity.ts.txt",
+        "docs/integrations/offline/sui-market-wave2-2026-11-14/DEEPBOOK_V3_FLASH_WAVE2.md",
+        "docs/roadmap/r02-capacity-recovery-2026-10-08/offline/vendor/navi/flashloan.ts.txt"
+      ],
+      "id": "GQ-038",
+      "missed_required_refs": [
+        "src/multichain/sui.py"
+      ],
+      "pack_refs": [
+        "docs/integrations/offline/kamino-flash-builder-2026-11-14/vendor-reference/klend/flashBorrowReserveLiquidity.ts.txt",
+        "flashloan_release_evidence.py",
+        "docs/integrations/offline/kamino-flash-builder-2026-11-14/vendor-reference/klend/programId.ts.txt",
+        "src/economics/flash_capital_graph/__init__.py"
+      ],
+      "recall": 0.0,
+      "required_refs": [
+        "src/multichain/sui.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "src/execution/agg03_financing_decoder.py",
+        "src/lending/agg03_financing_ports.py",
+        "tests/lending/test_agg03_financing_ports.py",
+        "tests/test_agg01_financing_contracts.py",
+        "docs/roadmap/universal-source-execution-rnd-2026-10-07/SLUMLORD_ATA_RENT.md",
+        "src/lending/slumlord.py",
+        "src/execution/financing_evidence.py",
+        "src/lending/financing.py",
+        "src/lending/financing_planner_adapter.py",
+        "tests/execution/test_financing_reconciliation.py"
+      ],
+      "id": "GQ-039",
+      "missed_required_refs": [],
+      "pack_refs": [
+        "docs/integrations/offline/evm-financing-wave2-2026-11-14/OVERLAP_NOTES.md"
+      ],
+      "recall": 1.0,
+      "required_refs": [
+        "src/lending/slumlord.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "docs/strategy/local-intelligence-v2/MASTER_CONTEXT_RU.md",
+        "src/intelligence/context_pack.py",
+        ".github/workflows/mega-context-wave3.yml",
+        ".mypy_cache/3.13/contextlib.data.json",
+        "config/mega_context_wave3_status.json",
+        "scripts/verify_mega_context_wave3.py",
+        "src/market_data_evolution/packs.py",
+        "src/mechanism_discovery/marketpacks.py",
+        "src/mega_context_wave3.py",
+        "src/pr171_chain_context.py"
+      ],
+      "id": "GQ-040",
+      "missed_required_refs": [],
+      "pack_refs": [
+        "docs/roadmap/mega-context-wave3.md",
+        "config/mega_context_wave3_source_discrepancies.json"
+      ],
+      "recall": 1.0,
+      "required_refs": [
+        "src/intelligence/context_pack.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "src/authority_map.py",
+        "src/runtime_authority.py",
+        "config/runtime_authority_map.json",
+        "src/resources/runtime_authority_map.json",
+        "tests/test_pr01_authority_map.py",
+        "docs/architecture/mpr_4x_02_runtime_authority.md",
+        "docs/mpr13_cryptographic_submission_authority.md",
+        "docs/mpr26_crash_consistent_durable_authority_gate.md",
+        "docs/pr213_canonical_authority_cli_debt_ledger.md",
+        "docs/roadmap-pr02-unified-lifecycle-authority.md"
+      ],
+      "id": "GQ-041",
+      "missed_required_refs": [],
+      "pack_refs": [
+        "docs/pr01_repository_authority_consolidation.md",
+        "scripts/validate_authority_map.py"
+      ],
+      "recall": 1.0,
+      "required_refs": [
+        "src/authority_map.py"
+      ]
+    },
+    {
+      "budget_limited": true,
+      "expansion_refs": [
+        "src/intelligence/repo_snapshot.py",
+        "docs/integrations/offline/ton-wave2-2026-11-14/REPORT.md",
+        "docs/roadmap/clmm-dlmm-market-trace-qualification-2026-11-15/IMPLEMENTATION_REPORT_2026-11-21.md",
+        "docs/roadmap/p0-offline-execution-master-2026-11-13/P0_3_REPORT.md",
+        "docs/roadmap/p0-offline-execution-master-2026-11-13/P0_1_REPORT.md",
+        "docs/assurance2606/report.md",
+        "release_artifacts/local_intelligence_v2/FINAL_REPORT.json",
+        "docs/pr177_repository_hygiene_artifact_governance.md",
+        "docs/strategy/local-intelligence-v2/CLI_AND_REPORTS_RU.md",
+        "release_artifacts/local_intelligence_v2/FINAL_REPORT.md"
+      ],
+      "id": "GQ-042",
+      "missed_required_refs": [],
+      "pack_refs": [
+        "tests/intelligence/test_repo.py",
+        "release_artifacts/local_intelligence_v2/receipts/REPO_STATUS.json",
+        ".mypy_cache/3.13/@plugins_snapshot.json",
+        "release_artifacts/local_intelligence_v2/offline_report/CHANGE_VS_BASELINE.json",
+        "release_artifacts/local_intelligence_v2/offline_report/DATA_QUALITY.json"
+      ],
+      "recall": 1.0,
+      "required_refs": [
+        "src/intelligence/repo_snapshot.py"
+      ]
+    }
+  ],
+  "schema": "studious.intelligence.benchmark-report.v1",
+  "tokenizer": "byte-estimate-v1 (utf-8 bytes / 4; no model tokenizer installed)",
+  "tokens_after_budget_cap": 1000,
+  "tokens_before_whole_repo": 7604448,
+  "unresolved_required_refs": []
+}

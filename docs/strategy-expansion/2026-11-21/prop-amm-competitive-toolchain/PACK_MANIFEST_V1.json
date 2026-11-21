@@ -1,0 +1,40 @@
+{
+  "schema": "prop_amm_toolchain_pack_manifest.v1",
+  "created": "2026-11-21",
+  "purpose": "offline-first strategy and adapter integration work for Prop AMM flashloan route qualification",
+  "branch": "codex/prop-amm-competitive-toolchain-2026-11-21",
+  "dependencies": [
+    "PR #659 CPMM route ownership",
+    "PR #660 CLMM/DLMM exact-state ownership",
+    "PR #664 broad source/campaign governance pack",
+    "R13 quote normalization",
+    "R02/R03/R05/R06/QPR",
+    "PR118 sizing and ConflictScheduler",
+    "PR130 Jito policy",
+    "MPR04 signer boundary",
+    "MPR05 installed shadow qualification"
+  ],
+  "status": "DOCS_AND_TASK_CONTRACT_ONLY",
+  "execution_authority": "NONE",
+  "activation_flags": {
+    "capture_enabled": false,
+    "paid_feed_enabled": false,
+    "provider_activation_enabled": false,
+    "simulation_live_network_enabled": false,
+    "sign_enabled": false,
+    "send_enabled": false,
+    "borrow_enabled": false,
+    "live_enabled": false
+  },
+  "primary_pack_files": [
+    "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/CODEX_START_HERE_RU.md",
+    "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/PROP_AMM_TOOLCHAIN_AND_STRATEGY_RU.md",
+    "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/ADAPTER_CONTRACTS_AND_TESTS_RU.md",
+    "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/RELAY_AND_ORDERFLOW_POLICY_RU.md",
+    "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/IMPLEMENTATION_DAG_AND_ACCEPTANCE_RU.md",
+    "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/CODEX_TRIGGER_RU.txt"
+  ],
+  "audit_file": "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/SOURCE_AUDIT_V1.json",
+  "acceptance_file": "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/IMPLEMENTATION_DAG_AND_ACCEPTANCE_RU.md",
+  "safety_file": "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/RELAY_AND_ORDERFLOW_POLICY_RU.md"
+}

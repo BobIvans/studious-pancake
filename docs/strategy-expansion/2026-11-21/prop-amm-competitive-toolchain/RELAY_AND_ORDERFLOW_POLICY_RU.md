@@ -83,3 +83,64 @@ Bound by route edge and operator max-cost config. Never use unbounded increase/r
 ## 5. Current default
 
 No send or provider access is enabled by this pack. Data capture requires its own authorized source manifest; paper requires campaign authority and R06/QPR; sign/send requires isolated signer MPR04 and current live boundaries. $10 ceiling from PR #664 is a proposed future aggregate canary budget and is disabled, not an allowance for current feed subscriptions or per-attempt tips.
+
+
+## 6. Current official provider tip matrix (supersedes conflicting older example figures above)
+
+Current reviewed documentation distinguishes these endpoint/product floors:
+
+| Provider / product | Minimum on-chain tip | What it means |
+|---|---:|---|
+| Jito bundle | 1,000 lamports (0.000001 SOL) | Bundle consideration floor; not a competitive bid. PR130 JITO_SINGLE policy governs this repo. |
+| Helius SWQoS-only | 5,000 lamports (0.000005 SOL) | One SWQoS path; best effort below 0.001 SOL and outside the priority tip buffer. |
+| Helius Sender Max | 1,000,000 lamports (0.001 SOL) | Internal multipath Sender service plus priority tip buffer/auction. |
+| Astralane Iris | 10,000 lamports (0.00001 SOL) | Official translated endpoint document; confirm account plan. |
+| Astralane sendPaladin | 100,000 lamports (0.0001 SOL) plus documented CU price floor | Distinct method; do not conflate with Iris. |
+| Syncro public | 200,000 lamports (0.0002 SOL) | Current P2P docs; built-in multi-channel delivery. |
+| Syncro private | 150,000 lamports (0.00015 SOL) | Current P2P docs; API-key endpoint and built-in multi-channel delivery. |
+| bloXroute Trader API | 1,000,000 lamports (0.001 SOL) | Required on-chain transfer to bloXroute wallet; internal multi-path broadcast and retry-until-land/expiry. |
+| 0slot | UNKNOWN | No current authoritative minimum/tip billing terms verified in this audit. |
+| Sanctum / BoltTx / Nozomi | UNKNOWN | Do not put guessed amounts into config; require current official endpoint and billing terms. |
+
+Provider references:
+- Jito: https://docs.jito.wtf/lowlatencytxnsend/
+- Helius: https://www.helius.dev/sender
+- Astralane Iris: https://astralane.gitbook.io/docs/mandarin-docs/huan-ying-lai-dao-astralane/duan-dian-he-pei-zhi
+- Astralane tip rebate: https://astralane.gitbook.io/docs/low-latency/submit-transactions/tip-refunds
+- Syncro: https://docs.p2p.org/docs/syncro-sender-pricing-rate-limits
+- Syncro multipath/retry: https://docs.p2p.org/docs/syncro-sender-optimizing-performance
+- bloXroute: https://docs.bloxroute.com/solana/trader-api/introduction/tip-and-tipping-addresses and https://docs.bloxroute.com/solana/trader-api/quick-start/transaction-submission
+
+Important provider semantics:
+- Helius says Sender has no credits and payment is through its SOL tip; Sender Max routes internally across high-speed paths.
+- Syncro says a single sendTransaction already routes through multiple channels; do not client-retry to simulate its internal paths.
+- bloXroute says Trader API broadcasts through multiple paths and retries until land or expiry; repeated client resubmission is not required.
+- Astralane rebate eligibility varies with whether the transaction is shared with other RPCs/landing services; direct-only submission can qualify for higher rebates.
+- Minimum tips are floors, not competitive bids or inclusion guarantees.
+- Save exact public pricing and rebate/tip rules with provider product tier and retrieval date. No 0slot amount is inferred.
+
+## 7. Relay tip transfer is not winner-aware
+
+The tip destination and amount are part of the signed transaction message:
+1. One transaction with one provider tip: if it lands, the fixed tip goes to that account regardless of which relay forwarded the bytes.
+2. One transaction with tip transfers to every provider: if it succeeds, every tip instruction executes. You pay all tips, not only the provider that forwarded it.
+3. One signed transaction fanned out to several providers: the same signature is deduplicated on-chain, so the trade should execute once. But its embedded tip still goes to the fixed recipient; off-chain provider billing/eligibility may be separate. Do not assume non-winning relays are free.
+4. Different signed variants with a different tip for each provider have different signatures. More than one can land and execute the same arbitrage/flashloan flow, potentially causing duplicate trades and multiple tip transfers.
+5. There is no generic Solana instruction that asks which off-chain relay delivered the transaction and pays only that relay. A winning-relay-only rule would require a documented provider-side rebate/billing feature, not a normal SystemProgram transfer.
+
+## 8. Provider-native multipath versus cross-provider fan-out
+
+- Provider-native multipath: one request to Helius Sender Max, Syncro or bloXroute is internally propagated over that vendor's own pathways. This is one vendor endpoint contract and one tip profile.
+- Cross-provider fan-out: the bot submits the same signed bytes to Jito, Helius, Astralane, Syncro and bloXroute. The tip recipient does not switch based on which path wins; billing and rebate eligibility differ. Astralane explicitly says sending the same transaction to other RPCs/landing services can reduce its higher rebate tier.
+- bloXroute's Global plus closest-region parallel recommendation is a provider-specific regional submission pattern inside bloXroute. It is not evidence that cross-vendor fan-out incurs charges only once.
+
+## 9. Current bot policy
+
+- Preserve PR130 first-production path: JITO_SINGLE, one strategy transaction, one in-transaction Jito tip, non-ALT tip account, no standalone tip, no multi-transaction bundle.
+- Keep one provider profile per signed transaction.
+- For future provider selection, measure each provider independently using controlled harmless test transactions or separately approved canaries, not alternate signatures of one live flashloan.
+- Use provider-specific all-in cost, landing probability, p50/p95/p99 time, expiry, retry, failure fee, rebate/refund and finality evidence.
+- For each independent opportunity in a conflict-free portfolio, one provider may be selected per transaction. Different independent transactions can later be dispatched concurrently after signer/portfolio/resource gates pass.
+- Do not place all provider tip transfers inside each flashloan transaction.
+
+Full machine-readable profile: RELAY_PROVIDER_TIP_PROFILES_V1.json. Unknown means BLOCKED, never zero.

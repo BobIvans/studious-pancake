@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from src.contracts.registry import get_schema_registry
 from src.external_contracts.registry import ExternalContractRegistry
 from src.intelligence.data_catalog import (

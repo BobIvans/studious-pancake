@@ -23,7 +23,6 @@ from src.intelligence.openlineage import (
 )
 from src.observability.events import Environment, EventType, Outcome, make_event
 
-
 REPO_SHA = "a" * 40
 
 
@@ -125,27 +124,26 @@ def test_openlineage_projection_matches_run_event_schema_and_is_deterministic() 
     assert first == second
     assert first["schemaURL"] == OPENLINEAGE_CORE_SCHEMA_URL
     assert first["eventType"] == "RUNNING"
-    assert first["producer"].endswith(
-        f"/{REPO_SHA}/src/intelligence/openlineage.py"
-    )
+    assert first["producer"].endswith(f"/{REPO_SHA}/src/intelligence/openlineage.py")
     assert first["run"]["runId"] == second["run"]["runId"]
     assert get_schema_registry().validate_payload(
         OPENLINEAGE_RUN_EVENT_SCHEMA_ID, first
     )
     validate_openlineage_run_event(first)
-    assert json.loads(serialize_run_event(
-        envelope,
-        event_type=OpenLineageEventType.RUNNING,
-        job_namespace="studious://studious-pancake",
-        job_name="paper-market-observation",
-        repo_sha=REPO_SHA,
-        inputs=(
-            DatasetRef("studious://market", "raw-observations"),
-        ),
-        outputs=(
-            DatasetRef("studious://market", "normalized-observations"),
-        ),
-    ))["schemaURL"] == OPENLINEAGE_CORE_SCHEMA_URL
+    assert (
+        json.loads(
+            serialize_run_event(
+                envelope,
+                event_type=OpenLineageEventType.RUNNING,
+                job_namespace="studious://studious-pancake",
+                job_name="paper-market-observation",
+                repo_sha=REPO_SHA,
+                inputs=(DatasetRef("studious://market", "raw-observations"),),
+                outputs=(DatasetRef("studious://market", "normalized-observations"),),
+            )
+        )["schemaURL"]
+        == OPENLINEAGE_CORE_SCHEMA_URL
+    )
 
 
 def test_openlineage_projection_uses_run_scoped_facets_and_explicit_edges() -> None:
@@ -205,8 +203,9 @@ def test_openlineage_projection_keeps_strategy_and_live_authority_separate() -> 
     assert strategy["live_authorized"] is False
 
 
-def test_openlineage_run_id_is_stable_per_attempt_and_distinct_between_attempts(
-) -> None:
+def test_openlineage_run_id_is_stable_per_attempt_and_distinct_between_attempts() -> (
+    None
+):
     first = _projection(_event(generation=2))
     same_attempt = _projection(_event(generation=2))
     next_attempt = _projection(_event(generation=3))
@@ -218,9 +217,9 @@ def test_openlineage_run_id_is_stable_per_attempt_and_distinct_between_attempts(
 def test_openlineage_rejects_unpinned_custom_facet_schema_url() -> None:
     payload = _projection()
     tampered = copy.deepcopy(payload)
-    tampered["run"]["facets"]["studious_runtime_context"]["_schemaURL"] = (
-        "https://example.invalid/unpinned-facet-schema.json"
-    )
+    tampered["run"]["facets"]["studious_runtime_context"][
+        "_schemaURL"
+    ] = "https://example.invalid/unpinned-facet-schema.json"
 
     with pytest.raises(OpenLineageProjectionError, match="schema URL is not pinned"):
         validate_openlineage_run_event(tampered)
@@ -229,9 +228,9 @@ def test_openlineage_rejects_unpinned_custom_facet_schema_url() -> None:
 def test_openlineage_rejects_custom_facet_with_different_producer() -> None:
     payload = _projection()
     tampered = copy.deepcopy(payload)
-    tampered["run"]["facets"]["studious_runtime_context"]["_producer"] = (
-        "https://example.invalid/other-producer"
-    )
+    tampered["run"]["facets"]["studious_runtime_context"][
+        "_producer"
+    ] = "https://example.invalid/other-producer"
 
     with pytest.raises(OpenLineageProjectionError, match="producer does not match"):
         validate_openlineage_run_event(tampered)

@@ -25,7 +25,8 @@ from enum import StrEnum
 import hashlib
 import json
 import math
-from typing import Mapping, Sequence
+from collections.abc import Collection
+from typing import Any, Mapping, Sequence
 
 from src.economics.capital import CapitalEngineError
 from src.economics.durable_reservations import (
@@ -226,12 +227,25 @@ def evaluate_paper_gate(gate: PaperGateInputs) -> CpmmBindingRejection:
     return CpmmBindingRejection.PAPER_COMPLETE_UNAVAILABLE_OFFLINE
 
 
-def classify_route_support(*, venue_kind: VenueKind, hop_count: int) -> RouteSupport:
-    """Supported-vs-blocked route matrix: CPMM 2/3/4 hops exact, 5 hops and
-    every other venue family stays shortlist-only or blocked."""
+def classify_route_support(
+    *,
+    venue_kind: VenueKind,
+    hop_count: int,
+    exact_venues: Collection[VenueKind] = (),
+) -> RouteSupport:
+    """Supported-vs-blocked route matrix: venue families with a registered
+    exact evaluator (CPMM always; CLMM/DLMM once their qualified adapters are
+    supplied via ``exact_venues``) support 2/3/4 hops exactly; 5 hops stays
+    shortlist-only and every other family stays blocked."""
 
     _integer(hop_count, "hop_count", minimum=1)
-    if venue_kind is not VenueKind.RAYDIUM_CPMM:
+    if venue_kind is VenueKind.RAYDIUM_CPMM:
+        exact = True
+    elif venue_kind in (VenueKind.RAYDIUM_CLMM, VenueKind.METEORA_DLMM):
+        exact = venue_kind in exact_venues
+    else:
+        return RouteSupport.BLOCKED
+    if not exact:
         return RouteSupport.BLOCKED
     if hop_count in (2, 3, 4):
         return RouteSupport.EXACT_SUPPORTED
@@ -268,6 +282,26 @@ class TwoLegExactEvaluation:
         )
 
 
+def mixed_route_semantic_route_id(legs: Sequence[object]) -> str:
+    """Ordered mixed-venue semantic route id over any exact-leg states."""
+    return _hash(
+        {
+            "schema": "r10-1.mixed-route-semantic-id.v1",
+            "ordered_venues": [
+                {
+                    "program_id": leg.venue.program_id,
+                    "market_id": leg.venue.market_id,
+                    "venue_kind": getattr(
+                        leg, "venue_kind", VenueKind.RAYDIUM_CPMM
+                    ).value,
+                }
+                for leg in legs
+            ],
+            "assets": [legs[0].asset_a.identity, legs[0].asset_b.identity],
+        }
+    )
+
+
 def two_leg_semantic_route_id(
     first: QualifiedCpmmState, second: QualifiedCpmmState
 ) -> str:
@@ -289,6 +323,30 @@ def two_leg_semantic_route_id(
     )
 
 
+def _resolve_venue_evaluator(
+    pool: object,
+    *,
+    adapter: QualifiedRaydiumCpmmAdapter | None,
+    adapters: Mapping[VenueKind, object] | None,
+):
+    """Resolve the exact evaluator for one leg by its declared venue kind."""
+    kind = getattr(pool, "venue_kind", VenueKind.RAYDIUM_CPMM)
+    if not isinstance(kind, VenueKind):
+        raise CpmmBindingError(
+            CpmmBindingRejection.UNSUPPORTED_VENUE_KIND,
+            "leg state must declare a VenueKind",
+        )
+    if kind is VenueKind.RAYDIUM_CPMM:
+        return adapter or QualifiedRaydiumCpmmAdapter()
+    resolved = (adapters or {}).get(kind)
+    if resolved is None:
+        raise CpmmBindingError(
+            CpmmBindingRejection.UNSUPPORTED_VENUE_KIND,
+            f"no qualified exact evaluator registered for {kind.value}",
+        )
+    return resolved
+
+
 def evaluate_exact_two_leg_route(
     first: QualifiedCpmmState,
     second: QualifiedCpmmState,
@@ -299,9 +357,15 @@ def evaluate_exact_two_leg_route(
     max_snapshot_age_seconds: float = 5.0,
     max_slot_skew: int = 0,
     adapter: QualifiedRaydiumCpmmAdapter | None = None,
+    adapters: Mapping[VenueKind, object] | None = None,
 ) -> TwoLegExactEvaluation:
     """Sequential exact two-leg evaluation: leg 2 input is leg 1's
-    conservative guaranteed output in raw base units.  No quote scaling."""
+    conservative guaranteed output in raw base units.  No quote scaling.
+
+    ``adapters`` extends the exact evaluator registry per venue family
+    (CLMM/DLMM qualified adapters); the CPMM default adapter is unchanged.
+    Every leg state must declare its ``venue_kind``; a family without a
+    registered adapter is a typed UNSUPPORTED_VENUE_KIND rejection."""
 
     _integer(input_amount, "input_amount", minimum=1)
     if first.venue == second.venue:
@@ -328,13 +392,17 @@ def evaluate_exact_two_leg_route(
                 CpmmBindingRejection.STALE_OR_FUTURE_STATE,
                 f"stale or future state for venue {pool.venue.market_id}",
             )
-    evaluator = adapter or QualifiedRaydiumCpmmAdapter()
-    evaluator.qualify_state(first)
-    evaluator.qualify_state(second)
-    leg_one = evaluator.evaluate(
+    leg_evaluators: list[object] = []
+    for pool in (first, second):
+        leg_evaluators.append(
+            _resolve_venue_evaluator(pool, adapter=adapter, adapters=adapters)
+        )
+    leg_evaluators[0].qualify_state(first)
+    leg_evaluators[1].qualify_state(second)
+    leg_one = leg_evaluators[0].evaluate(
         first, input_asset=settlement_asset, requested_input=input_amount
     )
-    leg_two = evaluator.evaluate(
+    leg_two = leg_evaluators[1].evaluate(
         second,
         input_asset=leg_one.output_asset,
         requested_input=leg_one.conservative_output,

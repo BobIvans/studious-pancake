@@ -1,0 +1,169 @@
+{
+  "schema": "studious-pancake.clmm-dlmm-mixed-route-replay.v1",
+  "generated_at": "2026-11-21",
+  "evidence_scope": "clmm-dlmm-mixed-replay:fixture-only",
+  "contains_live_evidence": false,
+  "venue_models": {
+    "raydium_clmm": {
+      "source_revision": "6d7a0f82d2f293c553c69aaf943377367c6c4cc6",
+      "decoder_revision": "raydium-clmm-state.v1",
+      "state": "exact_in_quote_with_bitmap_extension_and_dynamic_fee"
+    },
+    "meteora_dlmm": {
+      "source_revision": "1532e540db41ac405dbf4c5bb2ddfceaa1f98ff1",
+      "decoder_revision": "meteora-dlmm-state.v1",
+      "quote_revision": "meteora-dlmm-quote-sdk1532e54.v1",
+      "state": "exact_in_quote_from_pinned_sdk_closure"
+    }
+  },
+  "stage_metrics": {
+    "topology_route_count": 14,
+    "shortlist_route_count": 0,
+    "unique_semantic_route_count": 8,
+    "aliased_or_correlated_route_count": 0,
+    "exact_quote_route_count": 1,
+    "exact_qualified_route_count": 1,
+    "net_positive_route_count": 1,
+    "size_grid_evaluated_count": 8,
+    "flashloan_eligible_count": 1,
+    "capital_eligible_count": 1,
+    "builder_eligible_count": 0,
+    "simulation_pass_count": 0,
+    "paper_attempt_count": 1,
+    "paper_rejected_count": 1,
+    "paper_complete_count": 0,
+    "rejections": [
+      [
+        "cpmm-binding-no-exact-evaluation",
+        2
+      ],
+      [
+        "cpmm-binding-unsupported-venue-kind",
+        5
+      ]
+    ],
+    "evidence_scope": "clmm-dlmm-mixed-replay:fixture-only",
+    "contains_live_evidence": false
+  },
+  "records": [
+    {
+      "route_kind": "mixed-exact",
+      "semantic_route_id": "848cd7a03d2cf528ab6d3e66041494e33225ab3b6cb571ececb8a63b7ebfbe71",
+      "support": "exact-supported",
+      "status": "paper-blocked",
+      "hop_count": 2,
+      "rejection": "NO_QUALIFIED_LENDER_EDGE",
+      "detail": "paper seam blocked; candidate preserved with typed reason",
+      "ordered_venues": [
+        "dlmm-sol-b",
+        "clmm-b-sol"
+      ]
+    },
+    {
+      "route_kind": "mixed-exact",
+      "semantic_route_id": "ce6c5f699c01d67252a289166469a73d9a0fe37bdb6ceec85544308d4a34dddf",
+      "support": "exact-supported",
+      "status": "rejected",
+      "hop_count": 3,
+      "rejection": "cpmm-binding-unsupported-venue-kind",
+      "detail": "cpmm-binding-unsupported-venue-kind: no qualified exact evaluator for raydium-cpmm",
+      "ordered_venues": [
+        "dlmm-sol-b",
+        "clmm-b-c",
+        "cpmm-c-sol"
+      ]
+    },
+    {
+      "route_kind": "mixed-exact",
+      "semantic_route_id": "85719568230ccf1c23b5e8bcba7a1768bb9778036c6714fd7464999f3e137d1b",
+      "support": "exact-supported",
+      "status": "rejected",
+      "hop_count": 3,
+      "rejection": "cpmm-binding-unsupported-venue-kind",
+      "detail": "cpmm-binding-unsupported-venue-kind: no qualified exact evaluator for raydium-cpmm",
+      "ordered_venues": [
+        "clmm-b-sol",
+        "cpmm-c-sol",
+        "clmm-b-c"
+      ]
+    },
+    {
+      "route_kind": "mixed-exact",
+      "semantic_route_id": "3e1278c4d4be15bc5a289101984e8e99f28ac9eaf0636c3aef24621616e9221c",
+      "support": "exact-supported",
+      "status": "rejected",
+      "hop_count": 3,
+      "rejection": "cpmm-binding-unsupported-venue-kind",
+      "detail": "cpmm-binding-unsupported-venue-kind: no qualified exact evaluator for raydium-cpmm",
+      "ordered_venues": [
+        "clmm-b-c",
+        "cpmm-c-sol",
+        "clmm-b-sol"
+      ]
+    },
+    {
+      "route_kind": "mixed-exact",
+      "semantic_route_id": "99b8df1d505b9b8a4ac999accd753cd80258d4fa8e9c9204e2e8e1628c73d821",
+      "support": "exact-supported",
+      "status": "rejected",
+      "hop_count": 3,
+      "rejection": "cpmm-binding-no-exact-evaluation",
+      "detail": "cpmm-binding-no-exact-evaluation: input asset identity is not part of the CLMM pool",
+      "ordered_venues": [
+        "clmm-b-c",
+        "dlmm-sol-b",
+        "clmm-b-sol"
+      ]
+    },
+    {
+      "route_kind": "mixed-exact",
+      "semantic_route_id": "1ead1215f124cb7189d3292992f2d17538dc83f41c97986c7e8fd1f98f8cea74",
+      "support": "exact-supported",
+      "status": "rejected",
+      "hop_count": 3,
+      "rejection": "cpmm-binding-no-exact-evaluation",
+      "detail": "cpmm-binding-no-exact-evaluation: input asset identity is not part of the CLMM pool",
+      "ordered_venues": [
+        "clmm-b-c",
+        "clmm-b-sol",
+        "dlmm-sol-b"
+      ]
+    },
+    {
+      "route_kind": "mixed-exact",
+      "semantic_route_id": "6d07c97c86c59cd70f527021947d9ddb5daf9dfb9c83019180bd141c08d05bc3",
+      "support": "exact-supported",
+      "status": "rejected",
+      "hop_count": 4,
+      "rejection": "cpmm-binding-unsupported-venue-kind",
+      "detail": "cpmm-binding-unsupported-venue-kind: no qualified exact evaluator for raydium-cpmm",
+      "ordered_venues": [
+        "dlmm-sol-b",
+        "clmm-b-sol",
+        "clmm-b-c",
+        "cpmm-c-sol"
+      ]
+    },
+    {
+      "route_kind": "mixed-exact",
+      "semantic_route_id": "19d7239b24fa4d280bc662af8efd0ab396ba9d87594dd582209af8f725a7d564",
+      "support": "exact-supported",
+      "status": "rejected",
+      "hop_count": 4,
+      "rejection": "cpmm-binding-unsupported-venue-kind",
+      "detail": "cpmm-binding-unsupported-venue-kind: no qualified exact evaluator for raydium-cpmm",
+      "ordered_venues": [
+        "dlmm-sol-b",
+        "cpmm-c-sol",
+        "clmm-b-c",
+        "clmm-b-sol"
+      ]
+    }
+  ],
+  "replay_digest": "09c9fa84b68ca75b03f16005e0baeb7892885a4169e809c66c8083ddff084005",
+  "notes": [
+    "Fixture/replay evidence only; no live source, RPC or credential was touched.",
+    "Jupiter Lend connects only as the R02 capacity / R03 unsigned-plan gate; paper stays typed fail-closed (no qualified lender edge offline).",
+    "No signer, private key, signing, sending, borrowing, spending, provider activation or production promotion is performed or enabled by this run."
+  ]
+}

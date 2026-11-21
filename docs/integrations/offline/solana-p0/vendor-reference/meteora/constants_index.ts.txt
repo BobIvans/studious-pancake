@@ -1,0 +1,140 @@
+import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
+import { BN } from "@coral-xyz/anchor";
+import IDL from "../idl/idl.json";
+import Decimal from "decimal.js";
+
+export const LBCLMM_PROGRAM_IDS = {
+  devnet: "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+  localhost: "LbVRzDTvBDEcrthxfZ4RL6yiq3uZw8bS6MwtdY6UhFQ",
+  "mainnet-beta": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+};
+
+export const ALT_ADDRESS = {
+  "mainnet-beta": "JA5F83HUK9L78Y12TRLCsJZbu3Tv8pCK1GfK8mVNp1sz",
+  devnet: "BD6E8oYV52P829MxDq3sEtqWKJrHh9pDSUHeaWR1jRBs",
+};
+
+export const ADMIN = {
+  devnet: "6WaLrrRfReGKBYUSkmx2K6AuT21ida4j8at2SUiZdXu8",
+  localhost: "bossj3JvwiNK7pvjr149DqdtJxf2gdygbcmEPTkb2F1",
+};
+
+export enum Network {
+  MAINNET = "mainnet-beta",
+  TESTNET = "testnet",
+  DEVNET = "devnet",
+  LOCAL = "localhost",
+}
+
+export const BASIS_POINT_MAX = 10000;
+export const SCALE_OFFSET = 64;
+export const SCALE = new BN(1).shln(SCALE_OFFSET);
+
+export const FEE_PRECISION = new BN(1_000_000_000);
+export const MAX_FEE_RATE = new BN(100_000_000);
+
+// Bin array version 3 is release_0.11.0 which support limit order.
+export const BIN_ARRAY_DEFAULT_VERSION = 3;
+
+// https://solscan.io/tx/214YL6DULEBs6cURSXfb2DJT1shcv6Us2yXtU5bz1wpfc1EJxREiUBvHC8zCP5koFUcEg53RY5UwNMBv1p1mhjiS
+export const BIN_ARRAY_FEE = 0.05214112;
+// https://solscan.io/tx/5JYQFRB4R6SrF1DXBXKnkRf1qooCrMRpnSAv6D6MzMK98ih8gRtwToh3WRtNcDkvDw8pqtDvGZ9tyZrdXXZLJgd9
+export const POSITION_FEE = 0.04189984;
+export const TOKEN_ACCOUNT_FEE = 0.00148844;
+// https://solscan.io/tx/62bkPjKdoByqa5J65z8RQSTZ9tvyXi6x5GLEfkCuQbJgviCAMWqmsyXn5sbuRmkKZy2zkBzitSRUvKsxFxBbJdn4
+export const POOL_FEE = 0.00524256;
+export const BIN_ARRAY_BITMAP_FEE = 0.00861568;
+
+export const BIN_ARRAY_FEE_BN = new BN(
+  new Decimal(BIN_ARRAY_FEE).mul(LAMPORTS_PER_SOL).toString(),
+);
+export const POSITION_FEE_BN = new BN(
+  new Decimal(POSITION_FEE).mul(LAMPORTS_PER_SOL).toString(),
+);
+export const TOKEN_ACCOUNT_FEE_BN = new BN(
+  new Decimal(TOKEN_ACCOUNT_FEE).mul(LAMPORTS_PER_SOL).toString(),
+);
+export const POOL_FEE_BN = new BN(
+  new Decimal(POOL_FEE).mul(LAMPORTS_PER_SOL).toString(),
+);
+export const BIN_ARRAY_BITMAP_FEE_BN = new BN(
+  new Decimal(BIN_ARRAY_BITMAP_FEE).mul(LAMPORTS_PER_SOL).toString(),
+);
+
+const CONSTANTS = Object.entries(IDL.constants);
+
+export const MAX_BIN_ARRAY_SIZE = new BN(
+  CONSTANTS.find(([_, v]) => v.name == "MAX_BIN_PER_ARRAY")?.[1].value ?? 0,
+);
+export const DEFAULT_BIN_PER_POSITION = new BN(
+  CONSTANTS.find(([_, v]) => v.name == "DEFAULT_BIN_PER_POSITION")?.[1].value ??
+    0,
+);
+export const BIN_ARRAY_BITMAP_SIZE = new BN(
+  CONSTANTS.find(([_, v]) => v.name == "BIN_ARRAY_BITMAP_SIZE")?.[1].value ?? 0,
+);
+export const EXTENSION_BINARRAY_BITMAP_SIZE = new BN(
+  CONSTANTS.find(([_, v]) => v.name == "EXTENSION_BINARRAY_BITMAP_SIZE")?.[1]
+    .value ?? 0,
+);
+
+export const POSITION_MAX_LENGTH = new BN(
+  CONSTANTS.find(([_, v]) => v.name == "POSITION_MAX_LENGTH")?.[1].value ?? 0,
+);
+
+export const MAX_RESIZE_LENGTH = new BN(
+  CONSTANTS.find(([_, v]) => v.name == "MAX_RESIZE_LENGTH")?.[1].value ?? 0,
+);
+
+export const MAX_BIN_ID_PER_BIN_STEP = Number(
+  CONSTANTS.find(([_, v]) => v.name == "MAX_BIN_ID_PER_BIN_STEP")?.[1].value ?? 0,
+);
+
+export const SIMULATION_USER = new PublicKey(
+  "HrY9qR5TiB2xPzzvbBu5KrBorMfYGQXh9osXydz4jy9s",
+);
+
+export const PRECISION = new Decimal("18446744073709551616"); // 2^64
+
+export const MAX_CLAIM_ALL_ALLOWED = 2;
+
+export const MAX_BIN_LENGTH_ALLOWED_IN_ONE_TX = 26;
+
+export const MAX_ACTIVE_BIN_SLIPPAGE = 3;
+
+export const ILM_BASE = new PublicKey(
+  "MFGQxwAmB91SwuYX36okv2Qmdc9aMuHTwWGUrp4AtB1",
+);
+
+export const MAX_EXTRA_BIN_ARRAYS = 3;
+export const U64_MAX = new BN("18446744073709551615");
+
+export const MAX_BINS_PER_POSITION = new BN(
+  CONSTANTS.find(([_, v]) => v.name == "POSITION_MAX_LENGTH")?.[1].value ?? 0,
+);
+
+export const MAX_BIN_PER_LIMIT_ORDER = new BN(
+  CONSTANTS.find(([_, v]) => v.name == "MAX_BIN_PER_LIMIT_ORDER")?.[1].value ??
+    0,
+);
+
+export const LIMIT_ORDER_FEE_SHARE = new BN(
+  CONSTANTS.find(([_, v]) => v.name == "LIMIT_ORDER_FEE_SHARE")?.[1].value ?? 0,
+);
+
+export enum FunctionType {
+  // Undetermined pair type means the function type cannot be represented by PairFunctionType enum itself. The system will decide whether it's LO or LM based on whether rewards was initialized.
+  Undetermined = 0,
+  LiquidityMining = 1,
+  LimitOrder = 2,
+}
+
+export enum ConcreteFunctionType {
+  LimitOrder = 0,
+  LiquidityMining = 1,
+}
+
+export enum CollectFeeMode {
+  InputOnly = 0,
+  OnlyY = 1,
+}

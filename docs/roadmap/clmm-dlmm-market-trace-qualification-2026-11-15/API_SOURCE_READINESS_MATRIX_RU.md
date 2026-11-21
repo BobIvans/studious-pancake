@@ -72,3 +72,29 @@
 - Optional Helius key/URL only if an existing provider profile requires it.
 
 Never commit values. Never send secrets to Codex prompt, PR body, fixture, logs, screenshots or replay reports.
+
+
+## Status refresh 2026-11-21 (post-implementation, PR #660)
+
+Added status vocabulary values now in effect:
+
+- EXACT_QUOTE_IMPLEMENTED (fixture/replay class): the direct venue quote engine exists
+  and is differential-tested offline; it is not live-verified.
+- ROOTED_STATE_UNQUALIFIED / LIVE_READ_NOT_AUTHORIZED: unchanged; no capture campaign
+  has been run.
+
+| Source | Role | Status after this PR |
+|---|---|---|
+| Raydium CLMM program (pinned 6d7a0f82) | direct state + exact math | EXACT_QUOTE_IMPLEMENTED: TickArrayBitmapExtension decode/traversal, 80-byte DynamicFeeInfo + DynamicFeeConfig decode/validation, dynamic-fee state machine, fee_on 0/1/2, exact-in quote with typed rejections. Loop-level tick bookkeeping deviation documented; live differential vectors pending. |
+| Meteora DLMM SDK (pinned 1532e540) | direct state + exact quote math | EXACT_QUOTE_IMPLEMENTED: full quote/math closure vendored and ported (bin/fee/math/u64xu64/weight/token_2022/constants/derive), BinArrayBitmapExtension walk, exact-in per-bin quote with dynamic fee, protocol share, Token-2022 transfer-fee epoch selection, transfer-hook/unknown-extension rejection, partial-fill flag non-promotable. |
+| DEX Screener / Raydium API V3 / Meteora Data API | discovery only | BOUNDED_DISCOVERY_IN_REPO; unchanged; no live call performed. |
+| Jupiter Swap API V2 / 0x Solana | aggregator quote comparators | OFFLINE_ADAPTER; LIVE_READ_NOT_AUTHORIZED; 0x version/header revalidation still required before any first request. |
+| Solana RPC | direct account state | governed transport owners exist; ROOTED_STATE_UNQUALIFIED; two independent operators required before any quorum claim. |
+| Helius | optional change trigger | optional; unchanged. |
+| Jupiter Lend (CAP-A reader + R03 builder) | flash capital seam | offline reader + unsigned plan owners unchanged and reused; CAPITAL_UNQUALIFIED; flashloan_fee never hardcoded; capacity UNKNOWN until rooted. |
+| Signer boundary | separate authority | SIGNING_DISABLED; untouched. |
+
+Evidence rule unchanged: documented != configured credential != successful live read !=
+rooted state != exact quote != qualified route != lender eligibility != simulation !=
+paper result. The bounded read-only capture runbook (CAPTURE_RUNBOOK_2026-11-21.md) is
+prepared, not activated.

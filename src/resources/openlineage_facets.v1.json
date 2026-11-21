@@ -389,13 +389,13 @@
           ],
           "minimum": 0
         },
-        "coverage_ratio": {
+        "coverage_ratio_ppm": {
           "type": [
-            "number",
+            "integer",
             "null"
           ],
           "minimum": 0,
-          "maximum": 1
+          "maximum": 1000000
         },
         "gap_refs": {
           "type": "array",

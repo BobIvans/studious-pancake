@@ -52,6 +52,25 @@ class PayloadLimits:
 
 
 @dataclass(frozen=True, slots=True)
+class SchemaCompatibilityReport:
+    """Fixture-based evidence for a version-to-version compatibility check.
+
+    A passing report proves only that the supplied fixtures passed both schemas
+    in the requested direction. It is not a formal proof of JSON Schema
+    subsumption and must not be described as one.
+    """
+
+    previous_schema_id: str
+    candidate_schema_id: str
+    mode: str
+    compatible: bool
+    backward_fixtures_checked: int
+    forward_fixtures_checked: int
+    findings: tuple[str, ...]
+    evidence_level: str = "fixture-sampled-not-schema-subsumption-proof"
+
+
+@dataclass(frozen=True, slots=True)
 class SchemaRecord:
     schema_id: str
     owner_module: str
@@ -248,6 +267,101 @@ class SchemaRegistry:
                 ) from exc
         return encoded
 
+    def check_compatibility(
+        self,
+        *,
+        previous_schema_id: str,
+        candidate_schema_id: str,
+        mode: str = "BACKWARD",
+        backward_fixtures: Sequence[object] = (),
+        forward_fixtures: Sequence[object] = (),
+    ) -> SchemaCompatibilityReport:
+        """Check a schema version transition using caller-supplied golden fixtures.
+
+        BACKWARD means the new reader accepts payloads written to the previous
+        schema. FORWARD means the previous reader accepts payloads written to
+        the candidate schema. FULL requires both directions. The fixture sets
+        must first validate against their originating schema.
+        """
+        normalized_mode = mode.upper()
+        if normalized_mode not in {"BACKWARD", "FORWARD", "FULL"}:
+            raise SchemaRegistryError(
+                "compatibility mode must be BACKWARD, FORWARD or FULL"
+            )
+
+        previous = self.require(previous_schema_id)
+        candidate = self.require(candidate_schema_id)
+        previous_family, previous_version = _schema_family_version(previous_schema_id)
+        candidate_family, candidate_version = _schema_family_version(
+            candidate_schema_id
+        )
+        if previous_family != candidate_family:
+            raise SchemaRegistryError(
+                "schema versions must belong to the same schema family"
+            )
+        if candidate_version <= previous_version:
+            raise SchemaRegistryError(
+                "candidate schema version must be newer than previous version"
+            )
+        if candidate.status == "retired":
+            raise SchemaRegistryError("candidate schema version is retired")
+        if (
+            previous.validation_mode != "json-schema"
+            or candidate.validation_mode != "json-schema"
+        ):
+            raise SchemaRegistryError(
+                "version compatibility requires JSON-Schema-validated records"
+            )
+
+        needs_backward = normalized_mode in {"BACKWARD", "FULL"}
+        needs_forward = normalized_mode in {"FORWARD", "FULL"}
+        backward_samples = tuple(backward_fixtures)
+        forward_samples = tuple(forward_fixtures)
+        if needs_backward and not backward_samples:
+            raise SchemaRegistryError(
+                "BACKWARD compatibility requires previous-version fixtures"
+            )
+        if needs_forward and not forward_samples:
+            raise SchemaRegistryError(
+                "FORWARD compatibility requires candidate-version fixtures"
+            )
+
+        findings: list[str] = []
+
+        if needs_backward:
+            for index, payload in enumerate(backward_samples):
+                try:
+                    self.validate_payload(previous_schema_id, payload)
+                except PayloadValidationError as exc:
+                    findings.append(f"BACKWARD_SOURCE_FIXTURE_INVALID:{index}:{exc}")
+                    continue
+                try:
+                    self.validate_payload(candidate_schema_id, payload)
+                except PayloadValidationError as exc:
+                    findings.append(f"BACKWARD_INCOMPATIBLE:{index}:{exc}")
+
+        if needs_forward:
+            for index, payload in enumerate(forward_samples):
+                try:
+                    self.validate_payload(candidate_schema_id, payload)
+                except PayloadValidationError as exc:
+                    findings.append(f"FORWARD_SOURCE_FIXTURE_INVALID:{index}:{exc}")
+                    continue
+                try:
+                    self.validate_payload(previous_schema_id, payload)
+                except PayloadValidationError as exc:
+                    findings.append(f"FORWARD_INCOMPATIBLE:{index}:{exc}")
+
+        return SchemaCompatibilityReport(
+            previous_schema_id=previous_schema_id,
+            candidate_schema_id=candidate_schema_id,
+            mode=normalized_mode,
+            compatible=not findings,
+            backward_fixtures_checked=len(backward_samples) if needs_backward else 0,
+            forward_fixtures_checked=len(forward_samples) if needs_forward else 0,
+            findings=tuple(findings),
+        )
+
     def payload_digest(
         self,
         *,
@@ -261,6 +375,13 @@ class SchemaRegistry:
             schema_id=schema_id,
             payload=encoded,
         )
+
+
+def _schema_family_version(schema_id: str) -> tuple[str, int]:
+    family, marker, version_text = schema_id.rpartition(".v")
+    if not marker or not family or not version_text.isdigit():
+        raise SchemaRegistryError(f"invalid versioned schema identity: {schema_id}")
+    return family, int(version_text)
 
 
 def _record(item: dict[str, Any]) -> SchemaRecord:

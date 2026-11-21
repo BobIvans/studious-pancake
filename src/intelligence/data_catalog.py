@@ -143,17 +143,27 @@ def _external_contract_catalog_digest(
 
 
 def _json_value(value: object) -> object:
-    """Normalize approved metadata values without accepting arbitrary objects."""
+    """Freeze approved JSON metadata without accepting arbitrary objects."""
     if value is None or type(value) in {str, int, bool}:
         return value
     if isinstance(value, Mapping):
-        return {
+        frozen = {
             str(key): _json_value(item)
             for key, item in sorted(value.items(), key=lambda pair: str(pair[0]))
         }
+        return MappingProxyType(frozen)
     if isinstance(value, (tuple, list)):
-        return [_json_value(item) for item in value]
+        return tuple(_json_value(item) for item in value)
     raise TypeError(f"unsupported catalogue metadata value: {type(value).__name__}")
+
+
+def _thaw_json(value: object) -> object:
+    """Return ordinary JSON containers for schema validation and export."""
+    if isinstance(value, Mapping):
+        return {str(key): _thaw_json(item) for key, item in value.items()}
+    if isinstance(value, tuple):
+        return [_thaw_json(item) for item in value]
+    return value
 
 
 @dataclass(frozen=True, slots=True)
@@ -178,10 +188,10 @@ class CatalogEntity:
         ):
             raise ValueError("catalogue entity identity and owner are required")
         normalized = _json_value(self.properties)
-        if not isinstance(normalized, dict):
+        if not isinstance(normalized, Mapping):
             raise ValueError("catalogue entity properties must be an object")
         canonical_json_bytes(normalized)
-        object.__setattr__(self, "properties", MappingProxyType(normalized))
+        object.__setattr__(self, "properties", normalized)
 
     def to_payload(self) -> dict[str, object]:
         return {
@@ -190,7 +200,7 @@ class CatalogEntity:
             "name": self.name,
             "owner_module": self.owner_module,
             "description": self.description,
-            "properties": dict(self.properties),
+            "properties": _thaw_json(self.properties),
         }
 
 

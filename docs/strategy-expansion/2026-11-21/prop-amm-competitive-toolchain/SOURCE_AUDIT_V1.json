@@ -380,6 +380,24 @@
       "finding": "Pinned upstream code supports local LiteSVM comparison of direct, native Magnus CPI and spoofed router profiles Jupiter/DFlow/OKX/Titan. The spoof profile loads a Magnus router binary under the aggregator program id in local SVM; this is not authentic aggregator execution.",
       "use": "Run offline on a single pinned account/program snapshot and amount grid to identify caller-dependent Prop AMM pricing; use results to prioritize legitimate official aggregator integrations.",
       "blocker": "No repository benchmark artifact currently reports per-AMM/per-caller results; exact preferential mapping is UNKNOWN until the matrix is run."
+    },
+    {
+      "name": "0xfnzero/solana-streamer",
+      "layer": "parser_and_stream_facade",
+      "url": "https://github.com/0xfnzero/solana-streamer",
+      "status": "PUBLIC_MIT_SDK_V6",
+      "finding": "README/Cargo metadata identifies solana-streamer-sdk v6.0.0, MIT, facade over sol-parser-sdk 0.11.0 with Yellowstone gRPC, ShredStream and RPC helper APIs. Uses Solana SDK 4.0.1/Client 4.2.2 and Yellowstone 13.5.x dependencies.",
+      "use": "Potential read-only adapter facade in isolated Rust harness, subject to canonical source governance and replay tests.",
+      "blocker": "No provider subscription included. Must not create second daemon or import adjacent sol-trade-sdk signing/submission components."
+    },
+    {
+      "name": "rpcpool/yellowstone-grpc",
+      "layer": "yellowstone_grpc_protocol_plugin",
+      "url": "https://github.com/rpcpool/yellowstone-grpc",
+      "status": "OPEN_SOURCE_PLUGIN_AGPL3_PROTO_CRATE_APACHE2",
+      "finding": "Canonical Yellowstone Geyser gRPC plugin repository. Root repository LICENSE is AGPL-3.0; yellowstone-grpc-proto crate Cargo.toml declares Apache-2.0, and geyser plugin inherits workspace license. README says it is a gRPC interface/plugin, not a free hosted endpoint.",
+      "use": "Protocol and schema reference; evaluate the separately Apache-2.0 proto crate if useful. Reuse approved hosted provider endpoints or existing source profile.",
+      "blocker": "Do not mirror entire AGPL plugin without license review. Open-source server/plugin does not create a free public data feed."
     }
   ],
   "policy": {

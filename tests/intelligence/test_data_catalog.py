@@ -167,3 +167,15 @@ def test_catalog_search_and_lineage_fail_closed_on_invalid_bounds() -> None:
         snapshot.trace_relationships(provider.urn, max_hops=9)
     with pytest.raises(ValueError, match="lineage result limit"):
         snapshot.trace_relationships(provider.urn, max_hops=3, limit=1)
+
+
+def test_catalogue_entities_expose_deeply_immutable_properties() -> None:
+    snapshot = build_data_catalog_snapshot()
+    source = next(
+        entity for entity in snapshot.entities
+        if entity.entity_type == "market-source"
+    )
+
+    assert isinstance(source.properties["domains"], tuple)
+    with pytest.raises(TypeError):
+        source.properties["new_field"] = "not-allowed"  # type: ignore[index]

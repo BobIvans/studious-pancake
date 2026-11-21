@@ -60,8 +60,14 @@ def test_data_catalog_is_a_valid_deterministic_read_only_projection() -> None:
     source_count = len(load_market_source_catalog().sources)
     contract_count = len(ExternalContractRegistry.load_default().contracts)
     schema_count = len(get_schema_registry().records)
-    assert sum(item["entity_type"] == "market-source" for item in entities) == source_count
-    assert sum(item["entity_type"] == "external-contract" for item in entities) == contract_count
+    assert (
+        sum(item["entity_type"] == "market-source" for item in entities)
+        == source_count
+    )
+    assert (
+        sum(item["entity_type"] == "external-contract" for item in entities)
+        == contract_count
+    )
     assert sum(item["entity_type"] == "schema" for item in entities) == schema_count
     assert sum(item["entity_type"] == "canonical-dataset" for item in entities) == 4
 

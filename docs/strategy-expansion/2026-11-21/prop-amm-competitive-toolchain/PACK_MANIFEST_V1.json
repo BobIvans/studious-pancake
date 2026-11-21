@@ -37,6 +37,7 @@
     "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/PARALLEL_OPPORTUNITY_AND_ATOMIC_EXECUTION_RU.md",
     "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/VENDORED_SOURCE_MANIFEST_V1.json",
     "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/PMM_SIM_CALLER_PROFILE_RESEARCH_RU.md",
+    "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/RELAY_PROVIDER_TIP_PROFILES_V1.json",
     "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/CODEX_TRIGGER_RU.txt"
   ],
   "audit_file": "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/SOURCE_AUDIT_V1.json",
@@ -50,7 +51,9 @@
     "selection": "existing SX-12 portfolio optimizer plus ConflictScheduler account read/write resource locks",
     "execution": "distinct self-contained atomic flashloan transactions only; default concurrency 1",
     "signing": "MPR04 isolated signer; exact message hash and second-person approval; disabled",
-    "sending": "PR130 JITO_SINGLE policy; no multi-relay fanout; disabled"
+    "sending": "PR130 JITO_SINGLE policy; no multi-relay fanout; disabled",
+    "research": "pmm-sim synthetic caller profiles are allowed only in local LiteSVM benchmark; production requires genuine official aggregator route.",
+    "delivery": "one fixed tip destination per signed transaction; provider-native multipath is a single provider product; no cross-provider winner-paid assumption"
   },
   "caller_profile_research": "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/PMM_SIM_CALLER_PROFILE_RESEARCH_RU.md",
   "relay_tip_profile": "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/RELAY_PROVIDER_TIP_PROFILES_V1.json"

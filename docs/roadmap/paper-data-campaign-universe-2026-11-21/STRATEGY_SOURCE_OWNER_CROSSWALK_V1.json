@@ -1,0 +1,202 @@
+{
+  "schema": "studious-pancake.strategy-source-owner-crosswalk.v1",
+  "generated_at": "2026-11-21",
+  "reconciled_main_sha": "ea204222df86a0697cc6bce0e9ec60f7db31ffd8",
+  "source_pack": [
+    "docs/roadmap/paper-data-campaign-universe-2026-11-21/CODEX_START_HERE_RU.md",
+    "docs/roadmap/paper-data-campaign-universe-2026-11-21/CODEX_TRIGGER_RU.txt",
+    "docs/roadmap/paper-data-campaign-universe-2026-11-21/MARKET_UNIVERSE_AND_STRATEGY_PRIORITY_RU.md",
+    "docs/roadmap/paper-data-campaign-universe-2026-11-21/DATA_CAPTURE_TO_PAPER_GATES_RU.md",
+    "docs/roadmap/paper-data-campaign-universe-2026-11-21/RELAY_BID_AND_10_USD_POLICY_RU.md",
+    "docs/roadmap/paper-data-campaign-universe-2026-11-21/SOURCE_AND_PROVIDER_READINESS_V1.json",
+    "docs/roadmap/paper-data-campaign-universe-2026-11-21/CAMPAIGN_MANIFEST_TEMPLATE_V1.json"
+  ],
+  "open_pr_reconciliation": {
+    "merged": ["#658", "#659", "#660 (merge commit ea204222df86a0697cc6bce0e9ec60f7db31ffd8, 2026-11-21T10:43:27Z)", "#661", "#662", "#663 (R08-step1)"],
+    "open": ["#649 SX-03 LLAMMA", "#655 R10-2 MarginFi", "#657 SX-18/W6-12 docs", "#665 prop-amm toolchain (draft)", "#666 intelligence operating plane (draft)", "#667 real-data multilender (draft)"],
+    "no_path_overlap_statement": "All PR #664 deliverable files live under docs/roadmap/paper-data-campaign-universe-2026-11-21/; changed-path lists of every open PR were recorded on 2026-11-21 and none touches that directory. No src/, config/, tests/ or scripts/ changes are made by PR #664."
+  },
+  "families": [
+    {
+      "family": "cpmm_exact_cycles",
+      "owner": "#659 / src/strategy/cpmm_cycle_binding.py (offline replay scripts/r10_1_pre_api_route_replay.py)",
+      "status": "IN_MAIN_VERIFIED",
+      "execution_class": "Local atomic candidate",
+      "current_blocker": "none (preserve)",
+      "data_needs": "current canonical observation/data-capture stages; no-live proof",
+      "next_bounded_task": "Reconcile into current canonical observation/data-capture stages; collect no-live proof. No new work in PR #664."
+    },
+    {
+      "family": "raydium_clmm_meteora_dlmm",
+      "owner": "PR #660 MERGED ea204222df86a0697cc6bce0e9ec60f7db31ffd8 / src/providers/raydium_clmm_native.py; src/providers/meteora_dlmm_native.py; src/strategy/clmm_dlmm_binding.py; scripts/clmm_dlmm_market_trace_replay.py",
+      "status": "IN_MAIN_VERIFIED",
+      "execution_class": "Local atomic candidate",
+      "current_blocker": "DLMM_AMOUNT_SPECIFIC_QUOTE_MISSING_PIN (B-P03-2); CLMM_TICK_ARRAY_BITMAP_EXTENSION_REQUIRED (B-P03-3); Orca BLOCKED_LICENSE_REVIEW (B-P03-1)",
+      "data_needs": "CLMM tick arrays + bitmap extension + dynamic fee; DLMM active/directionally reachable BinArrays + bitmap extension + dynamic fee + clock/epoch + token extensions; rooted capture per docs/roadmap/clmm-dlmm-market-trace-qualification-2026-11-15/CAPTURE_RUNBOOK_2026-11-21.md",
+      "next_bounded_task": "Bounded pin PRs under #660 ownership only (DLMM amount-specific quote pin, CLMM tick-array bitmap extension, Orca license review); do not duplicate or overwrite #660 lineage."
+    },
+    {
+      "family": "prop_amm_research",
+      "owner": "MISSING_OWNER (existing venue/direct-provider research and SUPER-03 boundaries only; not one generic AMM)",
+      "status": "BLOCKED",
+      "execution_class": "Research -> local atomic only after proof",
+      "current_blocker": "MISSING_OWNER: no per-venue source/deployment/program/instruction dossier exists for HumidiFi, SolFi, Tessera, BisonFi, GoonFi, Obric, ZeroFi etc.",
+      "data_needs": "exact program/deployment ID, account discovery method, instruction source/bindings revision + license, fee/price impact, CU, required accounts, token extensions, failure/revert semantics, quote parity vs Jupiter comparator (Jupiter results are comparison metadata only; resolve underlying physical pool lineage)",
+      "next_bounded_task": "One PR per venue starting with HumidiFi: dossier + lawful reproducible vectors + differential test of public SDK/IDL or reverse-engineered bindings; pmm-sim/3rd-party SDK is research harness only until commit/license/versions/deployed behavior pinned (M01). No unsupported direct submission or hidden order-flow usage; flow-integrity policy of pack section 5 applies."
+    },
+    {
+      "family": "post_state_dislocation",
+      "owner": "EXP-01 / EXP-03 + PR118 (src/economics/non_monotonic_sizing.py) + post-#660 CLMM/DLMM binding",
+      "status": "RESEARCH_ONLY",
+      "execution_class": "Signal + exact local route candidate",
+      "current_blocker": "no event-to-state experiment harness exists",
+      "data_needs": "observed pool update or confirmed swap event, coherent after-state, all-venue/amount evaluation, first-seen/first-positive/last-positive times, consumed input, survival/crowding, time-shuffled null control",
+      "next_bounded_task": "One PR: public/authorized event-to-state experiment (M02/M03) with time-shuffled/null control; never framed as mempool sniping; shred feeds are pre-propagation data, rooted/finalized state confirms the market."
+    },
+    {
+      "family": "stablecoin_residual",
+      "owner": "#491 stable-peg owner",
+      "status": "RESEARCH_ONLY",
+      "execution_class": "Local atomic or conditional hyperedge",
+      "current_blocker": "R10 historical anchor gap; issuer/redeem anchors unproven",
+      "data_needs": "issuer/redeem anchor semantics, exact same-chain venue edges, negative stable mint/pool identity tests",
+      "next_bounded_task": "One PR proving issuer/redeem anchors where relevant + exact same-chain venue edges + negative mint/pool identity tests."
+    },
+    {
+      "family": "lst_spot_residual",
+      "owner": "LST residual relations; shells in src/strategy/strategies.py",
+      "status": "IMPLEMENTED_UNBOUND",
+      "execution_class": "Spot route local atomic; redemption conditional",
+      "current_blocker": "exact mint/pool binding missing; Token-2022 extension guard (M04) not modeled",
+      "data_needs": "issuer exchange rate, instantaneous exit rights, exact mint/pool identity, Token-2022 transfer-fee/hook state",
+      "next_bounded_task": "One PR binding SOL<->JitoSOL/mSOL/JupSOL spot pools by exact mint/pool (M04 Token-2022 feasibility guard); issuer exchange rate and instantaneous exit rights verified separately; only direct DEX swap edges can be atomic."
+    },
+    {
+      "family": "pump_migration",
+      "owner": "Existing Pump boundary + EXP-02",
+      "status": "RESEARCH_ONLY",
+      "execution_class": "Discovery/event signal",
+      "current_blocker": "no migration event source dossier; post-migration pool identity unproven",
+      "data_needs": "DBC->DAMM migration event source, post-migration pool identity, fee/Token-2022 state",
+      "next_bounded_task": "One PR: migration event source dossier + post-migration pool identity; never predict a migration as a live pool; discovery/residual signals only until post-state exact quote."
+    },
+    {
+      "family": "clob_amm_later",
+      "owner": "#507/#512 and src/providers/orderbook/",
+      "status": "RESEARCH_ONLY",
+      "execution_class": "Local atomic only if one-tx fill/settlement proven",
+      "current_blocker": "deferred this wave; separate exactness contracts (M08) not met",
+      "data_needs": "verified subscriptions, sequence/gap recovery, exact L2 depth, lot/tick, VWAP, IOC/partial fill, settlement",
+      "next_bounded_task": "Deferred; do not merge CLOB into AMM math."
+    },
+    {
+      "family": "liquidation_monitoring",
+      "owner": "src/liquidation/, src/lending_indexer/",
+      "status": "RESEARCH_ONLY",
+      "execution_class": "Conditional/local atomic only if closure proven",
+      "current_blocker": "deferred this wave; collateral unwind and lender eligibility unproven (M09)",
+      "data_needs": "rooted account trajectories, oracle freshness, exact liquidation rights, repay + collateral unwind, provider capacity",
+      "next_bounded_task": "Deferred; monitor only; do not promote to flashloan route until collateral can be seized and exactly unwound same-tx with repayment covered."
+    },
+    {
+      "family": "sui_later",
+      "owner": "DeepBook/Cetus/NAVI owners + Sui wave dossiers (NAVI = R02-CAP-C + R03-C; deepbook RESEARCH_CANDIDATE)",
+      "status": "RESEARCH_ONLY",
+      "execution_class": "Sui-local atomic candidate only",
+      "current_blocker": "deferred; NAVI OFFLINE_CONTRACT_CHECKPOINT_UNQUALIFIED; deepbook RESEARCH_CANDIDATE",
+      "data_needs": "package/object/checkpoint/coin type identity, PTB receipt/hot-potato semantics; one market/protocol at a time",
+      "next_bounded_task": "Deferred until Sui checkpoint/PTB rules are satisfied."
+    },
+    {
+      "family": "evm_pilot",
+      "owner": "DV-05 / provider expansion",
+      "status": "EXCLUDED",
+      "execution_class": "EVM-local atomic only",
+      "current_blocker": "Tier E; not first wave; one EVM pilot only after Solana/Sui data gates",
+      "data_needs": "route gap + deployable exact pool + lender resource evidence",
+      "next_bounded_task": "Deferred; not a simultaneous multi-chain rollout."
+    },
+    {
+      "family": "lender_jupiter_lend",
+      "owner": "src/lending/jupiter_lend.py; R02-CAP-A; R03-A",
+      "status": "OFFLINE_CONTRACT_CAPACITY_UNQUALIFIED",
+      "execution_class": "Capital control-plane (one lender implementation/reader per PR)",
+      "current_blocker": "capacity UNKNOWN: deployed flashloan fee, reserve/vault/debt cap/available liquidity not read from live state; docs are not live capacity",
+      "data_needs": "resource identity, deployed owner/version, mint/decimals, reserve/vault, utilization/ceilings/liabilities, exact fee+rounding, availability, slot/freshness, independent provenance",
+      "next_bounded_task": "One R02-CAP-A capacity qualification PR (reader proof + R03-A builder conformance); aggregators/wrappers are not independent capital."
+    },
+    {
+      "family": "lender_project0",
+      "owner": "R02-CAP-D + R03-D",
+      "status": "OFFLINE_CONTRACT_DEPLOYMENT_REBIND_REQUIRED",
+      "execution_class": "Capital control-plane (one lender implementation/reader per PR)",
+      "current_blocker": "current deployed program/bank/flash semantics, asset, cap, fee, callback, account eligibility not re-pinned",
+      "data_needs": "same as lender_jupiter_lend data_needs",
+      "next_bounded_task": "One R02-CAP-D + R03-D deployment rebind PR. Priority Solana provider candidate."
+    },
+    {
+      "family": "lender_kamino",
+      "owner": "R02-CAP-B + R03-B",
+      "status": "OFFLINE_SDK_PIN_DEPLOYED_STATE_UNQUALIFIED",
+      "execution_class": "Capital control-plane (one lender implementation/reader per PR)",
+      "current_blocker": "actual flash borrow instruction must be distinguished from standard obligation borrowing; deployed state unqualified",
+      "data_needs": "same as lender_jupiter_lend data_needs; no account creation",
+      "next_bounded_task": "One R02-CAP-B + R03-B SDK pin + deployed-state qualification PR. Priority Solana provider candidate."
+    },
+    {
+      "family": "lender_navi",
+      "owner": "R02-CAP-C + R03-C (Sui)",
+      "status": "OFFLINE_CONTRACT_CHECKPOINT_UNQUALIFIED",
+      "execution_class": "Capital control-plane (one lender implementation/reader per PR)",
+      "current_blocker": "Sui coin types, package ids, object versions/checkpoint and hot-potato repay semantics unqualified",
+      "data_needs": "checkpoint/object identity + PTB receipt semantics",
+      "next_bounded_task": "One R02-CAP-C + R03-C checkpoint qualification PR, later wave."
+    },
+    {
+      "family": "lender_save_solend",
+      "owner": "MISSING_OWNER",
+      "status": "RESEARCH_CANDIDATE",
+      "execution_class": "Capital control-plane",
+      "current_blocker": "no current flashloan API/deployed reserve/fees/cap/repayment/same-tx composition proof",
+      "data_needs": "current flashloan support proof + resource identity",
+      "next_bounded_task": "Support-proof dossier PR before any implementation."
+    },
+    {
+      "family": "lender_marginfi",
+      "owner": "PR #655 / R10-2 (open branch agent/r10-marginfi-capital-edges)",
+      "status": "DEPRIORITIZED_SEPARATE_GATE",
+      "execution_class": "Capital control-plane",
+      "current_blocker": "current user/security/economic gates open; no duplicate reserve resource",
+      "data_needs": "kept separate from campaign until gates pass",
+      "next_bounded_task": "Keep separate; preserve PR #655 ownership; do not duplicate reserve resources."
+    },
+    {
+      "family": "discovery_and_data_sources",
+      "owner": "Single source of truth: SOURCE_AND_PROVIDER_READINESS_V1.json sources[] (25 entries); owners: source_catalog src/market/source_catalog.py + src/resources/market_source_catalog.json; discovery src/market/discovery.py; observation src/market/observations.py + src/market/streams.py; graph src/strategy/market_graph_ingest.py + src/strategy/arbitrage_graph.py + post-#659 cycle binding; provider_governance src/provider_governance/ + src/qualification_campaign/ + src/routing/transport.py + src/data_plane/",
+      "status": "mixed_as_pinned_in_pack_json",
+      "execution_class": "Read-only governed capture",
+      "current_blocker": "per-source statuses as pinned: dexscreener/geckoterminal/raydium_api_v3/meteora_dlmm_data EXISTING_DISCOVERY_ADAPTER; jupiter_swap_v2/0x_solana OFFLINE_CONTRACT; titan DOCUMENTED_RESEARCH_CANDIDATE; openocean_solana BLOCKED_SCHEMA_DRIFT; solana_governed_rpc_primary/secondary LIVE_READ_NOT_AUTHORIZED; yellowstone_grpc/helius_laserstream/doublezero_edge/pyth_hermes/switchboard DOCUMENTED_RESEARCH_CANDIDATE; localshred_lite/orbitflare_shredstream VENDOR_CLAIM_UNVERIFIED",
+      "data_needs": "governed read-only discovery with rotation by pair/venue/market diversity + 0.2 negative-control fraction; aggregators are route comparators only, not independent liquidity",
+      "next_bounded_task": "No new source catalog; refresh openocean schema drift in a bounded dossier PR before campaign."
+    },
+    {
+      "family": "transaction_delivery",
+      "owner": "jito_block_engine / helius_sender / astralane_iris / bloxroute / 0slot all RESEARCH_ONLY_DISABLED; execution_delivery_policy owner src/submission/jito_mev_policy.py + docs/pr130_jito_mev_policy.md + MPR-04 boundary",
+      "status": "RESEARCH_ONLY_DISABLED",
+      "execution_class": "Research only, zero submission",
+      "current_blocker": "astralane_iris and 0slot have no repo pins at all; helius/jito numbers are dated 2026-11-21 observations that expire",
+      "data_needs": "identical offline/historical benchmark attempts per provider (inclusion rate, landing latency, effective tip distribution, ACK-to-settlement delta, failure modes)",
+      "next_bounded_task": "Benchmark-dossier PR set with identical offline benchmark methodology (see EXECUTION_DELIVERY_RESEARCH_PACK_V1.md in this PR); no submission, no tip, no transport/adapter in this PR."
+    },
+    {
+      "family": "paper_gate",
+      "owner": "R06 campaign owner + installed canonical paper service + QPR (src/paper_shadow/; src/qualification_campaign/); MPR-05 for installed 72-hour qualification",
+      "status": "BLOCKED_NOT_STARTABLE",
+      "execution_class": "Installed sender-free paper qualification",
+      "current_blocker": "requires gates.r02_capital_required_for_paper + gates.r03_unsigned_builder_required_for_paper + gates.r05_full_simulation_required_for_paper + MPR-05 installed 72h soak where applicable + exact QPR/R06/campaign-authority PASS + explicit human authorization",
+      "data_needs": "deterministic network-disabled replay with zero outbound calls; durable terminal outcomes for all admitted candidates; no UNKNOWN terminal",
+      "next_bounded_task": "Do not start R06 until its exact QPR/R02/R03/R05/installed-composition PASS; a data-only CAPTURE_ONLY campaign may run before that but must report exact blockers and may never be reported as PAPER_QUALIFIED."
+    }
+  ],
+  "reminder": "Unknown is not zero; fixtures are never live evidence; this crosswalk starts no campaign."
+}

@@ -25,12 +25,14 @@ regex = '''gh[pousr]_[0-9A-Za-z_]{20,}'''
 keywords = ["ghp_", "gho_", "ghu_", "ghs_", "ghr_"]
 
 [allowlist]
-description = "Allow documented low-risk placeholders in sanitized offline provider fixtures only. Do not allowlist credential-shaped root configs or tests."
+description = "Allow documented low-risk placeholders in sanitized offline provider fixtures, and vendor-docs HTML snapshots whose Mintlify site-chrome CSS class names (sk-assistant-*) trip the sk- token rule (PR #668 false positive; not secrets). Do not allowlist credential-shaped root configs or tests."
 paths = [
   '''tests/fixtures/providers/.*_sanitized\.json''',
+  '''docs/roadmap/.*/docs-pins-snapshots-.*\.html''',
 ]
 regexes = [
   '''USDC_MINT_FIXTURE''',
   '''WSOL_MINT_FIXTURE''',
   '''JUPITER_PROGRAM_FIXTURE''',
+  '''sk-assistant-[A-Za-z0-9_-]+''',
 ]

@@ -1,0 +1,261 @@
+{
+  "schema_version": "studious-pancake.source-and-provider-readiness.v1",
+  "checked_at": "2026-11-21",
+  "repository_main_sha": "3030fc720c707c994f9d7a21d50e1d181a60b8c9",
+  "campaign_default": "CAPTURE_ONLY",
+  "status_vocabulary": [
+    "DOCUMENTED",
+    "EXISTING_DISCOVERY_ADAPTER",
+    "OFFLINE_CONTRACT",
+    "ROOTED_STATE_UNQUALIFIED",
+    "EXACT_QUOTE_UNQUALIFIED",
+    "LIVE_READ_NOT_AUTHORIZED",
+    "VENDOR_CLAIM_UNVERIFIED",
+    "BLOCKED",
+    "RESEARCH_ONLY",
+    "EXCLUDED"
+  ],
+  "invariants": {
+    "discovery_is_not_exact_depth": true,
+    "aggregator_route_is_not_independent_liquidity": true,
+    "unknown_is_not_zero": true,
+    "data_feed_is_not_transaction_sender": true,
+    "relay_ack_is_not_settlement": true,
+    "signer_send_borrow_disabled": true
+  },
+  "existing_owners": {
+    "source_catalog": "src/market/source_catalog.py + src/resources/market_source_catalog.json",
+    "discovery": "src/market/discovery.py",
+    "observation": "src/market/observations.py + src/market/streams.py",
+    "graph": "src/strategy/market_graph_ingest.py + src/strategy/arbitrage_graph.py + post-#659 cycle binding",
+    "sizing": "src/economics/non_monotonic_sizing.py (PR118)",
+    "provider_governance": "src/provider_governance/ + src/qualification_campaign/ + src/routing/transport.py + src/data_plane/",
+    "core_v1_simulation_rpc": "src/runtime/core_v1_dependency_resolver.py (R08-step1 governed_rpc_transport, simulation composition only)",
+    "paper": "R06 campaign owner + installed canonical paper service + QPR; MPR-05 for installed 72-hour qualification",
+    "lender_graph": "src/economics/flash_capital_graph/",
+    "execution_delivery_policy": "src/submission/jito_mev_policy.py + docs/pr130_jito_mev_policy.md + MPR-04 boundary"
+  },
+  "sources": [
+    {
+      "id": "dexscreener",
+      "role": "discovery",
+      "status": "EXISTING_DISCOVERY_ADAPTER",
+      "docs": "https://docs.dexscreener.com/api/reference",
+      "cost": "public limited; quotas endpoint-specific and rechecked at intake",
+      "limitations": "Pool metadata, not on-chain exact depth."
+    },
+    {
+      "id": "geckoterminal",
+      "role": "discovery_reference",
+      "status": "EXISTING_DISCOVERY_ADAPTER",
+      "docs": "https://apiguide.geckoterminal.com/faq",
+      "cost": "public beta, rate limited; historic repo source matrix says 30 calls/min",
+      "limitations": "OHLCV/price/indexed pools not amount-specific direct quote."
+    },
+    {
+      "id": "raydium_api_v3",
+      "role": "pool_discovery_config",
+      "status": "EXISTING_DISCOVERY_ADAPTER",
+      "docs": "https://api-v3.raydium.io/docs/",
+      "limitations": "Use exact pool IDs/config hints; direct exact quote uses local onchain decoder."
+    },
+    {
+      "id": "meteora_dlmm_data",
+      "role": "pool_discovery",
+      "status": "EXISTING_DISCOVERY_ADAPTER",
+      "docs": "https://github.com/MeteoraAg/docs/blob/main/developer-guides/dlmm/api-reference/overview.mdx",
+      "limitations": "Indexed API ≠ complete BinArray state or exact quote."
+    },
+    {
+      "id": "jupiter_swap_v2",
+      "role": "aggregator_quote_comparator",
+      "status": "OFFLINE_CONTRACT",
+      "docs": "https://developers.jup.ag/docs/api-reference/swap/order",
+      "auth": "x-api-key or entitled keyless low-rate access; refresh current rate plans",
+      "limitations": "Resolve underlying pool lineage; correlated with direct venue liquidity."
+    },
+    {
+      "id": "0x_solana",
+      "role": "aggregator_quote_build_comparator",
+      "status": "OFFLINE_CONTRACT",
+      "docs": "https://docs.0x.org/api-reference/solana-swap-ap-is/swap/instructions",
+      "auth": "0x-api-key; public taker; Open Beta contract to recheck",
+      "limitations": "Returned instructions inert; no signing/sending; pool lineage must be resolved."
+    },
+    {
+      "id": "titan_solana",
+      "role": "quote_build_comparator",
+      "status": "DOCUMENTED_RESEARCH_CANDIDATE",
+      "docs": "https://docs.titan.exchange/",
+      "limitations": "Re-pin current V3 quote/build/payer semantics, auth, quota and exact underlying pool route before use."
+    },
+    {
+      "id": "openocean_solana",
+      "role": "quote_comparator",
+      "status": "BLOCKED_SCHEMA_DRIFT",
+      "docs": "https://docs.openocean.finance/docs/overview/fetching-quote",
+      "limitations": "Repo source ledger records schema drift; refresh gasPriceDecimals, amount units, auth and fee contract before campaign."
+    },
+    {
+      "id": "solana_governed_rpc_primary",
+      "role": "rooted_state_reader",
+      "status": "LIVE_READ_NOT_AUTHORIZED",
+      "docs": "https://solana.com/docs/rpc/http/getmultipleaccounts",
+      "methods": [
+        "getMultipleAccounts",
+        "getAccountInfo",
+        "getProgramAccounts"
+      ],
+      "limits": {
+        "max_pubkeys_per_getMultipleAccounts": 100
+      },
+      "limitations": "An RPC response has a context slot; multiple batches keep separate contexts. Must record operator/correlation group and rooted/finalized commitment."
+    },
+    {
+      "id": "solana_governed_rpc_secondary",
+      "role": "independent_rooted_state_reader",
+      "status": "LIVE_READ_NOT_AUTHORIZED",
+      "docs": "https://solana.com/docs/rpc/http/getmultipleaccounts",
+      "limitations": "Must be independently operated from primary; two URLs/accounts of one operator are not quorum."
+    },
+    {
+      "id": "yellowstone_grpc",
+      "role": "account_slot_stream",
+      "status": "DOCUMENTED_RESEARCH_CANDIDATE",
+      "docs": "https://github.com/rpcpool/yellowstone-grpc",
+      "limitations": "Notifications trigger refresh; complete rooted account snapshot still required."
+    },
+    {
+      "id": "helius_laserstream",
+      "role": "account_transaction_stream",
+      "status": "DOCUMENTED_RESEARCH_CANDIDATE",
+      "docs": "https://www.helius.dev/docs/laserstream",
+      "limitations": "Current plan/quota/auth, stream retention and independent operator group need intake."
+    },
+    {
+      "id": "doublezero_edge",
+      "role": "shred_feed",
+      "status": "DOCUMENTED_RESEARCH_CANDIDATE",
+      "docs": "https://docs.doublezero.xyz/",
+      "limitations": "Jito ShredStream replacement candidate; trial and commercial pricing/region require fresh check. Optional."
+    },
+    {
+      "id": "localshred_lite",
+      "role": "shred_feed",
+      "status": "VENDOR_CLAIM_UNVERIFIED",
+      "docs": "https://dedicatednodes.io/",
+      "limitations": "Do not rely on same-speed/free/early-intent claims until packet loss, coverage, reordering, legality and replay are measured."
+    },
+    {
+      "id": "orbitflare_shredstream",
+      "role": "shred_feed",
+      "status": "VENDOR_CLAIM_UNVERIFIED",
+      "docs": "https://orbitflare.com/",
+      "limitations": "Re-verify offer/endpoint/terms and test actual coverage before campaign selection."
+    },
+    {
+      "id": "pyth_hermes",
+      "role": "oracle_reference",
+      "status": "DOCUMENTED_RESEARCH_CANDIDATE",
+      "docs": "https://docs.pyth.network/",
+      "limitations": "Oracle reference/freshness/confidence only, not DEX exact quote."
+    },
+    {
+      "id": "switchboard",
+      "role": "oracle_reference",
+      "status": "DOCUMENTED_RESEARCH_CANDIDATE",
+      "docs": "https://docs.switchboard.xyz/",
+      "limitations": "Oracle reference only; program/account/slot proof required."
+    },
+    {
+      "id": "jupiter_lend",
+      "role": "flash_lender",
+      "status": "OFFLINE_CONTRACT_CAPACITY_UNQUALIFIED",
+      "docs": "https://developers.jup.ag/docs/lend/flashloan",
+      "repo_owner": "src/lending/jupiter_lend.py; R02-CAP-A; R03-A",
+      "limitations": "Read current deployed flashloan fee, reserve/vault/debt cap/available liquidity; docs are not live capacity."
+    },
+    {
+      "id": "project0",
+      "role": "flash_lender",
+      "status": "OFFLINE_CONTRACT_DEPLOYMENT_REBIND_REQUIRED",
+      "docs": "https://github.com/0dotxyz/p0-ts-sdk",
+      "repo_owner": "R02-CAP-D + R03-D",
+      "limitations": "Priority Solana provider candidate; verify current deployed program, bank, flash semantics, asset, cap, fee, callback and account eligibility."
+    },
+    {
+      "id": "kamino",
+      "role": "flash_lender",
+      "status": "OFFLINE_SDK_PIN_DEPLOYED_STATE_UNQUALIFIED",
+      "docs": "https://github.com/Kamino-Finance/klend-sdk",
+      "repo_owner": "R02-CAP-B + R03-B",
+      "limitations": "Priority Solana provider candidate; distinguish actual flash borrow instruction from standard obligation borrowing; no account creation."
+    },
+    {
+      "id": "save_solend",
+      "role": "flash_lender",
+      "status": "RESEARCH_CANDIDATE",
+      "docs": "https://docs.save.finance/",
+      "limitations": "Only promote if current flashloan API, deployed reserve, fees, cap, repayment and same-tx composition are proven."
+    },
+    {
+      "id": "marginfi",
+      "role": "flash_lender",
+      "status": "DEPRIORITIZED_SEPARATE_GATE",
+      "docs": "https://docs.marginfi.com/",
+      "repo_owner": "PR #655 / R10-2",
+      "limitations": "Keep separate; resolve current user/security/economic gates and no duplicate reserve resource."
+    },
+    {
+      "id": "navi",
+      "role": "sui_flash_lender",
+      "status": "OFFLINE_CONTRACT_CHECKPOINT_UNQUALIFIED",
+      "docs": "https://naviprotocol.gitbook.io/navi-protocol-developer-docs",
+      "repo_owner": "R02-CAP-C + R03-C",
+      "limitations": "Sui coin types, package ids, object versions/checkpoint and hot-potato repay semantics."
+    },
+    {
+      "id": "deepbook",
+      "role": "sui_pool_flash_liquidity",
+      "status": "RESEARCH_CANDIDATE",
+      "docs": "https://docs.sui.io/standards/deepbook",
+      "limitations": "Treat pool-local flash capability per actual package and hot-potato receipt; not generic lender."
+    },
+    {
+      "id": "jito_block_engine",
+      "role": "transaction_delivery",
+      "status": "RESEARCH_ONLY_DISABLED",
+      "docs": "https://docs.jito.wtf/lowlatencytxnsend/",
+      "limitations": "Jito bid only applies to its auction/mechanism; one-tip first-live policy exists; no sender activation."
+    },
+    {
+      "id": "helius_sender",
+      "role": "transaction_delivery",
+      "status": "RESEARCH_ONLY_DISABLED",
+      "docs": "https://www.helius.dev/docs/sending-transactions/sender",
+      "limitations": "SWQoS-only and Sender Max have different published minimum tip behavior; verify tier/region/leader coverage; no send."
+    },
+    {
+      "id": "astralane_iris",
+      "role": "transaction_delivery",
+      "status": "RESEARCH_ONLY_DISABLED",
+      "docs": "https://docs.astralane.io/",
+      "limitations": "Treat dynamic tip ceiling/rebate as vendor claim; compare net landing cost/latency."
+    },
+    {
+      "id": "bloxroute",
+      "role": "transaction_delivery",
+      "status": "RESEARCH_ONLY_DISABLED",
+      "docs": "https://docs.bloxroute.com/solana/trader-api/introduction",
+      "limitations": "Compare multi-path routing and min tips, regions and inclusion receipts; no send."
+    },
+    {
+      "id": "0slot",
+      "role": "transaction_delivery",
+      "status": "RESEARCH_ONLY_DISABLED",
+      "docs": "https://docs.0slot.trade/",
+      "limitations": "Compare SWQoS tier, TPS, tip and eligibility; no send."
+    }
+  ],
+  "reminder": "All current docs/tariffs must be refreshed before live source intake. Documentation, test fixtures, free-tier claims and API HTTP 200 do not establish live access, rooted state, quote correctness or capacity."
+}

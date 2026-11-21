@@ -307,7 +307,10 @@ class SchemaRegistry:
             )
         if candidate.status == "retired":
             raise SchemaRegistryError("candidate schema version is retired")
-        if previous.validation_mode != "json-schema" or candidate.validation_mode != "json-schema":
+        if (
+            previous.validation_mode != "json-schema"
+            or candidate.validation_mode != "json-schema"
+        ):
             raise SchemaRegistryError(
                 "version compatibility requires JSON-Schema-validated records"
             )

@@ -787,7 +787,7 @@ Acceptance:
 
 # 12. Самое первое действие coding agent
 
-**Выполнить только W0.** Не начинать W1-W6 до integration matrix. В репозитории уже есть большая часть нужного фундамента; параллельная реализация того же самого увеличит сложность и создаст вторую истину.
+**Запустить W0 и W0A параллельно.** W0 проверяет canonical owners/runtime wiring; W0A независимо сравнивает Tree-sitter, CodeGraphContext, Graphify, SCIP/LSP и текущий native index на одном SHA. Не начинать изменения event schema до W0 evidence, но **не останавливаться после аудита**: затем выполнить W0B и все dependency-ready work packages. Сначала reuse; потом только доказанные additive gaps.
 
 Первый отчёт обязан ответить:
 - Какие Local Intelligence V2 backlog items реально реализованы и протестированы на текущем main?
@@ -825,7 +825,7 @@ Acceptance:
 
 Текущая Environment model test/shadow/paper; LIVE остаётся hard-denied. Event types с submission/bundle названиями не являются разрешением на live submission.
 
-## 13.2 Первый coding-agent task — только W0
+## 13.2 Первый coding-agent stage — W0 + parallel code-intelligence bake-off
 
 W0 теперь обязан:
 - проверить actual EventEnvelope producers и полный путь до ObservabilityStore/export/replay;
@@ -838,20 +838,22 @@ W0 теперь обязан:
 - сформировать EVENT_CORRELATION_MATRIX.json и INTEGRATION_MATRIX.json;
 - вернуть exact SHA, команды, pass/fail/skip и evidence refs.
 
-Не внедрять W1+ до отчёта W0.
+Не менять event schemas до отчёта W0. При этом W0A идёт параллельно, а W0B (первая рабочая repo knowledge graph) запускается после W0 и W0A. Дальше агент продолжает dependency-ready packages без отдельного ожидания пользователя; merge остаётся только human-approved.
 
 ## 13.3 Новая implementation sequence
 
 Подробные acceptance criteria находятся в Operations Aggregator document. Упорядочить work packages так:
 
 - W0 — current owner/event correlation audit;
+- W0A — parallel tool/polyglot index bake-off (same SHA, golden questions, licenses, latency, RAM/disk, token budgets);
+- W0B — first working repo-wide knowledge graph, compact strategy/tool/source catalogues, read-only queries and context packs;
 - W1 — correlation completeness matrix and exact join contract;
 - W2 — deterministic OperationEpisode projection over existing owners;
 - W3 — stable logsite/Statement IDs for one high-value vertical;
 - W4 — bounded operation/strategy context pack CLI/API;
 - W5 — strategy/resource conflict and parallel admission reports;
 - W6 — bounded SQD/Antseer read-only evidence profiles;
-- W7 — Graphify/polyglot and model-specific token/retrieval benchmark;
+- W7 — golden retrieval/token-efficiency benchmark across selected indexes and packs;
 - W8 — operations cockpit, report bundles and reviewer workflow;
 - W9 — measured storage scale gate; ClickHouse/NATS/remote archive only if measured need.
 
@@ -891,3 +893,40 @@ Discovery, quote fanout, independent sizing and sender-free simulations can run 
 
 Coding agent должен иметь reproducible local tools (Git, current CLI, tests, optional Graphify) и narrow read-only MCP profiles (SQD/Antseer only for research tasks). Не загружать весь 65-tool Antseer catalog в каждый context; не требовать коммерческий jCodeMunch license без approval; не добавлять ClickHouse до benchmark. Tool connection считается доступной только после успешного self-check конкретного агента/клиента.
 
+
+
+# 14. Repo Knowledge Graph — обязателен для каждой будущей strategy/code задачи
+
+Новый документ [REPO_KNOWLEDGE_GRAPH_RU.md](REPO_KNOWLEDGE_GRAPH_RU.md) задаёт полный contract индекса:
+- все source files + docs + roadmaps + configs + schemas + tests + workflows + packages + CLI/MCP/apps + RPC/data tools;
+- StrategyIdea/StrategyVersion → exact symbols/callers/callees → configs → source/provider/venue/flash-capital → tests → runtime episodes/evidence;
+- Tool/App inventory с versions, license, owners, permissions, consumers, duplicate/unreferenced candidates;
+- provenance каждого edge: STATIC_EXTRACTED / COMPILER_RESOLVED / CANONICAL_REGISTRY / RUNTIME_OBSERVED / DOC_CLAIM / HUMAN_CONFIRMED / LLM_PROPOSED;
+- incremental refresh по Git SHA/blob hashes, stale-index rejection, branch isolation;
+- T0 repo card ~300–500 tokens, one-line catalogues, T2 task subgraph ~1–2k tokens, exact evidence retrieval by ID.
+
+### 14.1 Tool selection policy
+
+Native Local Intelligence V2 остаётся canonical base. На одном SHA выполнить bake-off:
+- CodeGraphContext — code callers/callees/paths, MIT main project, isolated developer tool;
+- Graphify — wider Tree-sitter graph and docs/config nodes; current PyPI package `graphifyy`, semantic model pass off;
+- SCIP/LSP — precision for only supported language/build paths;
+- Aider RepoMap/PageRank — relevance ranking for token budget.
+Выбрать максимум один primary external graph backend. Не ставить всё одновременно, не копировать чужие функции без exact license/source attribution, не добавлять runtime dependencies ради developer index.
+
+Serena main app имеет GPL-3.0-or-later; jCodeMunch остаётся license-gated. Проверять транзитивные лицензии, SBOM и security.
+
+### 14.2 Полный execution trigger
+
+[AGENT_W0_START_TRIGGER_RU.md](AGENT_W0_START_TRIGGER_RU.md) теперь запускает весь bootstrap:
+1. W0 + W0A — независимые audit/tool-evaluation tracks параллельно;
+2. W0B — работающий graph/index, compact catalogs, query facade и context packs;
+3. W1–W9 — по dependency graph, параллельно только при disjoint write scopes;
+4. incremental refresh + CI, Work Result Receipt и strategy-session pack;
+5. tool/app cleanup inventory без автоматического удаления.
+
+**Нельзя остановиться после W0 и вернуть только отчёт/план.** Требуется первая работающая, тестируемая версия; если часть blocked, сделать safe subset и выдать точный blocker.
+
+### 14.3 Новый стратегический чат
+
+Использовать [CHATGPT_NEW_CHAT_STRATEGY_STARTER_RU.md](CHATGPT_NEW_CHAT_STRATEGY_STARTER_RU.md). Перед новой Web3/flashloan гипотезой ChatGPT обязан запросить latest SHA-bound pack, сравнить существующие идеи/символы/источники/tests/outcomes и выдать DUPLICATE / EXTENSION / NOVEL с точными ссылками. Новая сессия не получает локальный индекс автоматически: pack нужно загрузить, открыть через GitHub или read-only MCP.

@@ -649,6 +649,287 @@
         "Fresh environment can import portable bundle and execute the same evidence queries/replay; setup guide distinguishes installed local server from a client that is actually connected",
         "ChatGPT data delivery is explicitly documented as uploaded pack, authorized GitHub access or connected local MCP; no claim of automatic new-chat memory"
       ]
+    },
+    {
+      "id": "OCA-W12",
+      "name": "License, SBOM and software supply-chain governance gate",
+      "priority": "P0",
+      "status": "BLOCKED_ON_W0_AND_W0A",
+      "depends_on": [
+        "OCA-W0",
+        "OCA-W0A"
+      ],
+      "mode": "PATH_LEVEL_LICENSE_AND_PROVENANCE_GOVERNANCE",
+      "exclusive_write_scope": [
+        "policy/licenses/",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/licenses/",
+        "tools/license-audit/",
+        "tests/test_license_governance_*.py",
+        ".github/workflows/dependency-governance.yml"
+      ],
+      "deliverables": [
+        "versioned dependency/source license ledger for packages, nested paths, rulesets, dataflow packs, models, embeddings, datasets and external executables",
+        "SPDX expression + exact version/commit/blob + source URL/retrieval time + transitive dependency inventory per candidate",
+        "path-aware mixed-license allow/deny/exception policy and NOTICE attribution checks",
+        "SBOM output and reproducible license/security/secret scan commands",
+        "subprocess/executable integration record: launch model, IPC/protocol, files exchanged, patches, distribution and hosted-service use",
+        "CodeQL CLI entitlement check, GitNexus noncommercial gate, ELv2 conditions, libgit2 linking-exception handling and mixed-license path tests"
+      ],
+      "acceptance": [
+        "Every adopted or evaluated component has a pinned source identity and license evidence; unknown license is BLOCKED",
+        "Root LICENSE is never treated as the license for every nested directory or rules/model/data package",
+        "Commercial use is not incorrectly rejected solely because a project uses Elastic License 2.0; hosted-service/key/notices limits are recorded",
+        "CodeQL CLI binary terms are distinct from github/codeql query-source license; closed-source automated use is blocked without the applicable entitlement",
+        "GitNexus PolyForm Noncommercial use is blocked for commercial production absent separate grant",
+        "libgit2 GPL-2.0 with Linking Exception is assessed under the actual exception; modified libgit2 remains separately reviewed",
+        "Subprocess boundary is not treated as automatic GPL/compliance exemption",
+        "SBOM, advisory, source, duplicate, secret and notice gates run in CI or have an exact documented permission blocker",
+        "No scanner result is represented as legal approval; reviewer and decision are recorded"
+      ]
+    },
+    {
+      "id": "OCA-W13",
+      "name": "Generic provider catalogue, versioned adapter contracts and data quality evidence",
+      "priority": "P0",
+      "status": "BLOCKED_ON_W0_AND_W1",
+      "depends_on": [
+        "OCA-W0",
+        "OCA-W1"
+      ],
+      "mode": "ADDITIVE_READ_ONLY_PROVIDER_CONTRACTS",
+      "exclusive_write_scope": [
+        "src/intelligence/provider_contracts/",
+        "tests/test_provider_contracts_*.py",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/contracts/providers/"
+      ],
+      "must_reuse": [
+        "src/market/source_catalog.py",
+        "src/agg02/",
+        "src/market/observations.py",
+        "src/market/streams.py",
+        "src/intelligence/evidence_refs.py"
+      ],
+      "deliverables": [
+        "ProviderCapabilityRegistry and versioned adapter contract",
+        "DataContract with required fields, units, decimals, timestamp/null semantics and compatibility",
+        "ProviderCapability, SourceHealthEpisode, EntityIdentity, NormalizationRule, DataQualityEvidence, SourceDisagreement and DataLineageEdge schemas",
+        "source mode classification STREAMING / POLL_ONLY / ONE_SHOT / UNAVAILABLE with observed-vs-declared evidence",
+        "cursor, watermark, event/ingest/recorded times, freshness, lag, coverage, gaps, reconnects, quotas and rate-limit receipts",
+        "raw payload ID/hash references, dedup keys, correction/retraction/reorg and backfill/replay semantics",
+        "chain identity and block/transaction/log/finality/canonicality evidence contract"
+      ],
+      "acceptance": [
+        "A new provider can be added through a versioned adapter contract without modifying individual strategy business logic",
+        "Provider capability is proven by tests/capture receipts, not inferred from docs or a successful HTTP response",
+        "Raw provider payload remains owned by AGG-02 or an existing canonical archive; contracts store references/hashes",
+        "Unknown, stale, incomplete, contradictory and corrected values remain explicit and queryable",
+        "Blockchain facts include chain identity, block number/hash, tx hash, log index and finality/canonicality where applicable",
+        "Reorg/correction/retraction creates an auditable correction/replay event and never silently overwrites history",
+        "Adapter pagination, quotas, retries, cursor resume and rate limits have positive and negative tests",
+        "Provider registry and schemas expose version/freshness/coverage and do not enable provider by default"
+      ]
+    },
+    {
+      "id": "OCA-W14",
+      "name": "Strategy Data Requirements and provider compatibility qualification",
+      "priority": "P0",
+      "status": "BLOCKED_ON_W13_AND_W5",
+      "depends_on": [
+        "OCA-W13",
+        "OCA-W5"
+      ],
+      "mode": "DECLARATIVE_STRATEGY_REQUIREMENTS",
+      "exclusive_write_scope": [
+        "src/intelligence/strategy_requirements/",
+        "tests/test_strategy_requirements_*.py",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/contracts/strategy-data/"
+      ],
+      "deliverables": [
+        "StrategyDataRequirement schema keyed by strategy family/id/version and code/config generation",
+        "required capability, chain/protocol/venue/entity, replay, freshness, coverage, source-independence and correction requirements",
+        "stale-data, missing-data, disagreement and reorg handling policies",
+        "ProviderCapabilityRegistry + StrategyRequirementRegistry + CompatibilityEvaluator",
+        "compatibility outcomes COMPATIBLE / PARTIAL / INCOMPATIBLE / UNKNOWN with exact evidence and reason codes",
+        "qualification history and dependency invalidation when provider, schema, code or strategy requirement changes"
+      ],
+      "acceptance": [
+        "Strategies depend on capabilities/contracts, not hard-coded provider implementation classes",
+        "Thresholds are sourced from strategy-specific tests/qualification evidence; no universal fabricated freshness/coverage value",
+        "An adapter's existence does not imply strategy compatibility or strategy qualification",
+        "Provider/schema/source-health changes enumerate affected strategies and request requalification where policy requires",
+        "UNKNOWN requirements or missing quality evidence cannot be upgraded to QUALIFIED",
+        "Economic eligibility, data availability, flash-capital availability and runtime authority remain separate states"
+      ]
+    },
+    {
+      "id": "OCA-W15",
+      "name": "Typed temporal ontology, provenance-aware multi-layer graph and schema migrations",
+      "priority": "P1",
+      "status": "BLOCKED_ON_W1_W2_W3_W13_W14",
+      "depends_on": [
+        "OCA-W1",
+        "OCA-W2",
+        "OCA-W3",
+        "OCA-W13",
+        "OCA-W14"
+      ],
+      "mode": "DERIVED_TYPED_TEMPORAL_KNOWLEDGE_GRAPH",
+      "exclusive_write_scope": [
+        "src/intelligence/temporal_ontology/",
+        "tests/test_temporal_ontology_*.py",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/contracts/ontology/"
+      ],
+      "deliverables": [
+        "versioned layered node/edge ontology for code, build/config, strategy, market, provider/data, runtime, outcome and engineering/governance",
+        "stable cross-layer IDs and explicit edge families for static/compiler/runtime-observed relations",
+        "bitemporal fields valid_from/valid_to, recorded_at and source_event_time plus repo SHA/blob, config generation, schema and ontology versions",
+        "edge provenance, source/evidence refs, resolver/producer version, confidence and verification states",
+        "as-of repo SHA + operation-time queries and schema/ontology migration receipts",
+        "graph reconciliation for dangling, stale, duplicate, contradictory and invalid-time nodes/edges"
+      ],
+      "acceptance": [
+        "A static CALLS edge is never represented as runtime-observed execution",
+        "Ambiguous/unresolved/inferred edges are explicit and cannot masquerade as verified edges",
+        "Historical episode reconstruction resolves the strategy/config/schema/provider/code version actually valid at the time",
+        "Schema migrations are deterministic, reversible or have a verified forward-recovery plan, and preserve evidence references",
+        "Graph is a derived projection; canonical facts stay with existing owners",
+        "Full reconciliation can detect and report incremental graph drift"
+      ]
+    },
+    {
+      "id": "OCA-W16",
+      "name": "Incremental computation, dependency invalidation and resource governor",
+      "priority": "P1",
+      "status": "BLOCKED_ON_W0B_AND_W15",
+      "depends_on": [
+        "OCA-W0B",
+        "OCA-W15"
+      ],
+      "mode": "BOUNDED_INCREMENTAL_DERIVATION",
+      "exclusive_write_scope": [
+        "src/intelligence/incremental_engine/",
+        "tests/test_incremental_engine_*.py",
+        "benchmarks/intelligence/incremental/"
+      ],
+      "deliverables": [
+        "separate signature/declaration/import index and body/content index",
+        "content-addressed derived artifacts keyed by Git blob/tree plus parser/grammar/resolver/schema/ontology/normalizer versions",
+        "dependency-aware invalidation, early cutoff on unchanged output hashes and incremental test/index selection",
+        "rename/delete/branch-switch/rebase/force-push handling with stale-generation rejection",
+        "cancellation, priority scheduling, queue coalescing, single-writer leases and branch snapshots",
+        "resource governor for CPU/RAM/IO/disk/WAL/queue/time",
+        "periodic full-vs-incremental consistency reconciliation and auditable drift report"
+      ],
+      "acceptance": [
+        "No cache is keyed by path or mtime alone",
+        "Only affected downstream derivations are recomputed when dependency evidence proves the boundary",
+        "An unchanged recomputation stops propagation through early cutoff",
+        "Full rebuild and incremental update produce equivalent canonical outputs on golden fixtures",
+        "Indexing cannot starve paper/shadow event capture; backpressure pauses/deprioritizes index work before critical runtime work",
+        "Branch/worktree indexes cannot leak state across tasks or accept stale SHA results",
+        "Unsupported parser paths and failures remain visible in coverage"
+      ]
+    },
+    {
+      "id": "OCA-W17",
+      "name": "Agent access policy, task isolation, work receipts and read-only MCP facade",
+      "priority": "P1",
+      "status": "BLOCKED_ON_W0B_W11_W12",
+      "depends_on": [
+        "OCA-W0B",
+        "OCA-W11",
+        "OCA-W12"
+      ],
+      "mode": "READ_ONLY_ANALYST_AND_ISOLATED_CODING_WORKER",
+      "exclusive_write_scope": [
+        "src/intelligence/agent_access/",
+        "tests/test_agent_access_*.py",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/security/agent-access/"
+      ],
+      "deliverables": [
+        "typed capability registry with read/write/network/secret/admin classes and per-profile policy",
+        "stable six-operation read-only facade: repo_overview, strategy_search, strategy_explain, symbol_context, trace_operation, build_context_pack",
+        "bounded progressive disclosure, cursor continuation, truncation/completeness/freshness and evidence refs",
+        "task ID/base SHA/owner/write scope/worktree/lease TTL/resource-budget contract",
+        "WorkResultReceipt with changed paths/symbols/tests/results/unresolved risks/artifact hashes and checkpoint",
+        "sandbox policy for CPU/RAM/disk/time, network allowlist, secret exclusion and prompt-injection isolation",
+        "separate administrative plane for index maintenance and any write operations, never exposed to analyst agents"
+      ],
+      "acceptance": [
+        "MCP tools/list is stable for a given authorized profile; no request-driven schema mutation",
+        "Analyst query surface exposes no shell/edit/delete/admin/secret/market-write action",
+        "Each coding worker is isolated to a task worktree and leased write scope",
+        "Build/test sandbox has no runtime trading credentials, private keys or signer capability",
+        "All tool invocations and mutations have auditable receipts",
+        "Truncated responses identify omitted evidence and provide a deterministic continuation cursor",
+        "Human review is required for merge, capability elevation and strategy/operational promotion"
+      ]
+    },
+    {
+      "id": "OCA-W18",
+      "name": "Coverage-driven verification, retrieval correctness and test economics",
+      "priority": "P1",
+      "status": "BLOCKED_ON_W0B_W7_W15",
+      "depends_on": [
+        "OCA-W0B",
+        "OCA-W7",
+        "OCA-W15"
+      ],
+      "mode": "EVIDENCE_BACKED_TEST_SELECTION",
+      "exclusive_write_scope": [
+        "src/intelligence/verification/",
+        "tests/test_verification_intelligence_*.py",
+        "benchmarks/verification/",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/benchmarks/verification/"
+      ],
+      "deliverables": [
+        "symbol/callsite-to-test/coverage-context mapping and affected-test selection",
+        "critical safety/smoke/invariant/protocol/strategy regression test always-run policy",
+        "flaky test registry with owner, history, pass rate and quarantine reason",
+        "failure minimization/shrinking for reproducible failures and targeted mutation testing for high-risk invariants",
+        "AST structural audit rules and breaking schema/API/contract diff gates",
+        "retrieval precision/recall, ambiguity, evidence completeness and omission-loss benchmark"
+      ],
+      "acceptance": [
+        "Test selection is an optimization and never permanently removes or suppresses critical tests",
+        "Every selected/skipped test decision exposes coverage/dependency evidence and policy version",
+        "Flaky quarantine has owner, expiry/review and cannot hide invariant failure",
+        "Failure shrinking preserves original case and hashes both original/minimized inputs",
+        "Mutation testing is scoped to high-risk logic and reports surviving mutations",
+        "Retrieval tests distinguish precision/recall, citation correctness, ambiguity and missing evidence",
+        "All benchmarks pin repo SHA, tool versions, corpus and result artifacts"
+      ]
+    },
+    {
+      "id": "OCA-W19",
+      "name": "Conditional lineage, schema-registry, event transport and durable workflow bake-off",
+      "priority": "P2",
+      "status": "CONDITIONAL",
+      "depends_on": [
+        "OCA-W13",
+        "OCA-W15",
+        "OCA-W9"
+      ],
+      "mode": "MEASURED_ADOPTION_ONLY",
+      "exclusive_write_scope": [
+        "benchmarks/intelligence/integration-bakeoff/",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/integration-bakeoff/"
+      ],
+      "deliverables": [
+        "same-workload reference test for OpenLineage, DataHub, Apicurio Registry, NATS JetStream, Debezium and Temporal",
+        "decision matrix of existing native journal/queue/schema functions versus external infrastructure",
+        "failure/restart/replay/schema compatibility/operational cost benchmark",
+        "explicit NOT_REQUIRED_YET decision when current owners satisfy throughput and recovery requirements"
+      ],
+      "acceptance": [
+        "No tool is deployed merely because it exists in the shortlist",
+        "NATS is evaluated as transport, not canonical storage; Debezium only for actual CDC use cases",
+        "OpenLineage facets extend existing provenance and do not replace EventEnvelope/AGG-02 contracts",
+        "DataHub is not assumed to contain all target DEX/RPC provider integrations",
+        "Apicurio is adopted only when Git + CI schema versioning is insufficient",
+        "Temporal is adopted only when current workflow receipts/retries cannot satisfy measured durability needs",
+        "Infrastructure cost, operational burden, security surface and rollback are measured before adoption"
+      ]
     }
   ],
   "global_invariants": [
@@ -662,9 +943,17 @@
     "Implementation PRs require human approval",
     "All decision-relevant runtime events and raw evidence refs are durably captured or explicit missing/gap receipts are produced; no silent loss",
     "Only existing supported test/shadow/paper runtime modes are instrumented; no live execution authority",
-    "A single logical read-only query plane references multiple canonical physical stores; do not copy all raw data into a new database"
+    "A single logical read-only query plane references multiple canonical physical stores; do not copy all raw data into a new database",
+    "Provider adapters are versioned and expose observed STREAMING/POLL_ONLY/ONE_SHOT/UNAVAILABLE capability states with cursors, watermarks, freshness, gaps and replay evidence",
+    "Strategy versions declare data requirements and are evaluated against provider capabilities; adapter presence is not qualification",
+    "Bitemporal graph facts preserve valid-time, recorded-time, repo SHA, schema/ontology version and evidence provenance",
+    "License and SBOM checks are path-aware; subprocess boundaries do not automatically exempt licensing obligations",
+    "Indexer resource budgets must not starve decision-relevant market capture or paper/shadow runtime",
+    "Read-only MCP query facade is stable, bounded and allowlisted; management/write/admin actions remain separate",
+    "Historical blockchain corrections and reorgs create explicit correction/retraction evidence rather than silent overwrite",
+    "Live execution, signing, submission, borrowing, spending and production promotion remain outside this intelligence-plane scope"
   ],
-  "first_action": "Run OCA-W0 and OCA-W0A in parallel. W0A must include the C/Rust daemon wave and multi-resolution/blob-cache extractors. Then build W0B with one chosen graph backend and a compact JIT layer. Do not declare completion without temporal labels/as-of support, runtime OCA-W10 capture across all supported paper/shadow paths and OCA-W11 cross-store export/replay.",
+  "first_action": "From current main SHA 0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54, run OCA-W0 and OCA-W0A in parallel in isolated read-only worktrees; pin all upstreams and complete the existing repository/provider/tool inventory. Then execute W12 supply-chain gates and W13 provider contracts, followed by W14/W15 and dependency-gated W0B/W16–W19. Build a working safe vertical slice; do not stop at audit or install the entire candidate list. Do not merge without explicit human approval.",
   "token_efficiency_policy": {
     "repo_card_tokens_target": [
       300,
@@ -738,5 +1027,22 @@
       "realized_pnl",
       "runtime_execution_status"
     ]
+  },
+  "expanded_design_doc": "docs/roadmap/intelligence-operating-plane-2026-11-21/UNIVERSAL_KNOWLEDGE_DATA_PLANE_EXPANSION_RU.md",
+  "last_verified_main_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+  "last_verified_at": "2026-11-21",
+  "expanded_scope": {
+    "work_package_ids": [
+      "OCA-W12",
+      "OCA-W13",
+      "OCA-W14",
+      "OCA-W15",
+      "OCA-W16",
+      "OCA-W17",
+      "OCA-W18",
+      "OCA-W19"
+    ],
+    "implementation_rule": "Implement capability contracts and measured adapters; do not install all candidate projects or add a duplicate canonical store.",
+    "required_reading": "docs/roadmap/intelligence-operating-plane-2026-11-21/UNIVERSAL_KNOWLEDGE_DATA_PLANE_EXPANSION_RU.md"
   }
 }

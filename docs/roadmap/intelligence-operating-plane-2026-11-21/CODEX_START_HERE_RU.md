@@ -800,3 +800,94 @@ Acceptance:
 - Какой наименьший additive change закроет самый ценный gap?
 
 После этого coordinator выдаёт W1/W2/W3 как отдельные work packages по разным owners. Merge — только после exact-head tests/evidence review и человеческого approval.
+
+
+---
+
+# 13. Расширение scope: Operations Context Aggregator + ChatGPT/Coding Agent MVP
+
+Эта спецификация теперь включает не только code graph/context retrieval, но и полноценный **Operations Context Aggregator (OCA)** для связывания runtime facts с Web3 market evidence, стратегиями, кодом и историческими результатами.
+
+Обязательные документы читать в таком порядке:
+
+1. Этот файл — master entrypoint и ограничения.
+2. [OPERATIONS_CONTEXT_AGGREGATOR_RU.md](OPERATIONS_CONTEXT_AGGREGATOR_RU.md) — operation event model, data planes, code/runtime correlation, flashloan parallelism/resource conflicts, source adapters, compression/storage, reports и OCA work order.
+3. [CHATGPT_CODING_AGENT_CONTEXT_WORKFLOW_RU.md](CHATGPT_CODING_AGENT_CONTEXT_WORKFLOW_RU.md) — MVP для текущей стадии ChatGPT + coding agents, Task Packet, Work Result Receipt, Git worktree workflow, zero-LLM indexing и способы передачи context pack в ChatGPT.
+4. [TOOL_ACCESS_PROFILES_RU.md](TOOL_ACCESS_PROFILES_RU.md) — local tools, optional MCP profiles, license/data-residency restrictions, narrow tool surfaces and reproducible installation.
+
+## 13.1 Важное новое обнаружение: существующий EventEnvelope — центральный operation fact
+
+На audited main уже есть EventEnvelope в src/observability/events.py и durable store в src/observability/store.py. Использовать его, не создавать второй event schema/store.
+
+Он уже включает trace_id, logical_opportunity_id, plan_hash, attempt_id/generation, tx_signature, jito_bundle_id, stage, outcome, reason_code, provider_id, venue_id, evidence_ref, producer_code_version, config_checksum и idempotency_key. Также существуют append-only event log, tamper-evident chain, attempt/opportunity projections, replay/export/archive, authoritative schema и operator-readiness owners.
+
+Критический audit gap: проверить, как фактически заполняются и сохраняются strategy_id/version, exact repo SHA, config generation, source observation IDs, chain/block/slot identity, resource lock sets и stable code callsite. Не предполагать, что field присутствует в dataclass — проверить реальные producers и serialized rows.
+
+Текущая Environment model test/shadow/paper; LIVE остаётся hard-denied. Event types с submission/bundle названиями не являются разрешением на live submission.
+
+## 13.2 Первый coding-agent task — только W0
+
+W0 теперь обязан:
+- проверить actual EventEnvelope producers и полный путь до ObservabilityStore/export/replay;
+- проверить соединение operations events с AGG-02/MarketObservation/MarketEpisode;
+- определить наличие strategy/source/provider/config/repo identity в реальных event rows;
+- проверить logsite/symbol mapping (если отсутствует — зафиксировать gap);
+- прочитать src/strategy/conflict_scheduler.py, shadow_workers.py, shadow_portfolio.py и доказать текущие boundaries для параллельной работы;
+- сверить Local Intelligence V2 CLI и текущие команды на свежем main;
+- установить coverage по языкам и типам артефактов;
+- сформировать EVENT_CORRELATION_MATRIX.json и INTEGRATION_MATRIX.json;
+- вернуть exact SHA, команды, pass/fail/skip и evidence refs.
+
+Не внедрять W1+ до отчёта W0.
+
+## 13.3 Новая implementation sequence
+
+Подробные acceptance criteria находятся в Operations Aggregator document. Упорядочить work packages так:
+
+- W0 — current owner/event correlation audit;
+- W1 — correlation completeness matrix and exact join contract;
+- W2 — deterministic OperationEpisode projection over existing owners;
+- W3 — stable logsite/Statement IDs for one high-value vertical;
+- W4 — bounded operation/strategy context pack CLI/API;
+- W5 — strategy/resource conflict and parallel admission reports;
+- W6 — bounded SQD/Antseer read-only evidence profiles;
+- W7 — Graphify/polyglot and model-specific token/retrieval benchmark;
+- W8 — operations cockpit, report bundles and reviewer workflow;
+- W9 — measured storage scale gate; ClickHouse/NATS/remote archive only if measured need.
+
+## 13.4 Режим разработки, пока нет автономных AI agents
+
+Использовать ChatGPT как стратег/архитектор/reviewer, coding agents — как исполнителей отдельных Task Packets. Каждая задача содержит exact base SHA, allowed read/write paths, single owner/worktree, acceptance tests and context-pack manifest. Каждый coding agent возвращает Work Result Receipt с head SHA, changed files, test counts, artifact hashes, blocker list and index freshness.
+
+Не строить автономный swarm сейчас. Сначала сделать надёжными task packets, worktree ownership, deterministic code index, operation context packs и receipts. Это даст immediate value уже для одного ChatGPT + одного coding agent и масштабируется до нескольких coding agents.
+
+## 13.5 Автоматический проход через индекс и labels
+
+Новый код должен индексироваться автоматически через local CLI/hooks и authoritative CI on push/PR:
+- Git SHA + file hashes;
+- AST/symbols/dependencies;
+- deterministic labels из canonical registries/manifests;
+- tests/configs/owner links;
+- coverage/stale-index report.
+
+Это работает без LLM. Semantic labels, intent и ambiguous strategy mapping остаются PROPOSED/UNKNOWN до human review или LLM-assisted suggestion. Runtime OperationEnvelope дополняет статический индекс фактическими событиями; OCA связывает эти два потока.
+
+Важно: автоматическая индексация не отправляет данные в ChatGPT сама по себе. ChatGPT получает их по explicit context-pack upload, GitHub connector/repository access или явно подключённому local read-only MCP.
+
+## 13.6 Parallel strategy execution — ресурсная, а не label-based параллельность
+
+Parallelism строить по ResourceSet и immutable state snapshot, не только по strategy_id:
+- Solana writable account/pool locks;
+- EVM sender nonce lane;
+- shared lender reserves/capital;
+- shared venue/pool liquidity;
+- account/ATA lifecycle;
+- provider quota/rate budgets;
+- global risk/capital budgets.
+
+Discovery, quote fanout, independent sizing and sender-free simulations can run in parallel. Conflicting mutable resource operations pass through existing conflict scheduler and canonical reservation authorities. No new signer/sender/live authority.
+
+## 13.7 Tool access
+
+Coding agent должен иметь reproducible local tools (Git, current CLI, tests, optional Graphify) и narrow read-only MCP profiles (SQD/Antseer only for research tasks). Не загружать весь 65-tool Antseer catalog в каждый context; не требовать коммерческий jCodeMunch license без approval; не добавлять ClickHouse до benchmark. Tool connection считается доступной только после успешного self-check конкретного агента/клиента.
+

@@ -1,0 +1,41 @@
+{
+  "schema_version": "mpr2602.connections.v1",
+  "connections": [
+    {
+      "provider_id": "campaign_rpc_primary_a",
+      "kind": "outbound_rpc",
+      "enabled": false,
+      "reviewed": false,
+      "review_ref": null,
+      "endpoint": "https://replace-after-operator-review.invalid/",
+      "credential": {
+        "ref": "replace-with-credential-reference-or-anonymous-public-read",
+        "generation": "replace-with-generation",
+        "env_name": "CAMPAIGN_RPC_A_KEY"
+      },
+      "entitlement": null,
+      "http_methods": ["POST"],
+      "rpc_methods": ["getGenesisHash", "getMultipleAccounts", "getSlot", "getBlockHeight"],
+      "query_parameters": [],
+      "quota_pool_ref": "campaign:operator:operator-a-replace-me"
+    },
+    {
+      "provider_id": "campaign_rpc_secondary_b",
+      "kind": "outbound_rpc",
+      "enabled": false,
+      "reviewed": false,
+      "review_ref": null,
+      "endpoint": "https://replace-after-operator-review.invalid/",
+      "credential": {
+        "ref": "replace-with-credential-reference-or-anonymous-public-read",
+        "generation": "replace-with-generation",
+        "env_name": "CAMPAIGN_RPC_B_KEY"
+      },
+      "entitlement": null,
+      "http_methods": ["POST"],
+      "rpc_methods": ["getGenesisHash", "getMultipleAccounts", "getSlot", "getBlockHeight"],
+      "query_parameters": [],
+      "quota_pool_ref": "campaign:operator:operator-b-replace-me"
+    }
+  ]
+}

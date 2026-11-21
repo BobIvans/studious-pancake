@@ -171,6 +171,25 @@ These requirements must be represented in W0B/W1/W7/W10/W11 acceptance and in CI
 - Define byte budgets, index growth/day, compression ratio, page-cache/WAL/checkpoint behavior, backup/restore and disk-pressure admission. Pressure blocks new governed ingestion before pinned evidence is deleted.
 - Portable export includes graph schema + compact index manifests + Git commit + JSONL operation events + existing Parquet datasets + hashes and replay receipts. Do not dump giant binary DB into Git.
 
+### O. Semantic memory / label graph: clarify the original Mimir vs growmos requirement
+
+The original source recommended **one** durable semantic memory layer (Mimir OR growmos) for agent-authored knowledge and explicit log↔code↔strategy relations. The expanded PR now has a first-class versioned label ontology and durable event lineage contract. Do not omit semantic labels, but do not deploy two overlapping memory products.
+
+Benchmark these distinct projects by their actual role:
+
+| Project | What it does according to current upstream | Role and decision |
+|---|---|---|
+| **MakerViking/mimir** — https://github.com/MakerViking/mimir | Single local SQLite store for typed memories, docs, code symbols and code graph; BM25 + local ONNX/vector retrieval, MCP; content-hash incremental index, project scoping and export. MIT or Apache-2.0 components according to repository | **Strong integrated memory/label candidate.** Could remove the need for a separate docs/memory daemon, but does not replace AGG-02/EventEnvelope raw stores. Check current Windows build, exact per-language code graph coverage, multi-client writes and schema export. Own benchmark is not a Studious result. |
+| **codician-team/growmos** — https://github.com/codician-team/growmos | Provenance-carrying JSONL knowledge graph for docs/ADRs/README/session facts; remember/link/journal, task-packet extraction/resolution, profiles, fact-check, gold-set eval and MCP. MIT | **Strong semantic decision/architecture knowledge overlay.** Source-code facts are linked when explicitly extracted/remembered by agents; it is not a complete source parser or raw market-event store. Headless ingest may call a configured LLM; deterministic/manual pipeline must be explicit. |
+| **TheWinci/mimirs** — https://github.com/TheWinci/mimirs | Local MCP codebase memory with Tree-sitter AST-aware chunking, local embeddings/SQLite and code/doc search | Additional retrieval candidate; distinguish it from MakerViking's Mimir and inspect its actual project/cross-session data model before adoption. |
+
+**Implementation rule:** W0A compares Mimir and growmos only as the semantic/label memory plane, not as code parser winners. W0B must first implement the versioned deterministic label-store contract using Studious canonical IDs/provenance. Adopt **zero or one** memory overlay after benchmark:
+- If local Mimir's integrated code+docs+memory retrieval passes corpus coverage, export/recovery, privacy, concurrency and token tests, consider it as the single memory/search facade.
+- If the priority is agent-authored ADR/decision provenance with reviewable JSONL, test growmos as an overlay.
+- If neither proves a gap that native versioned labels/context packs cannot cover, keep the native label store only.
+
+No semantic memory product becomes canonical for financial/runtime facts. It may store decisions/interpretations with evidence references, never raw quotes/PnL facts as an unverified truth source. Every memory relation points back to immutable Git/event/observation/episode IDs; claims without a valid evidence ref stay PROPOSED/UNKNOWN.
+
 ## 4. The actual retrieval algorithm
 
 For every user task, build packs in stages:

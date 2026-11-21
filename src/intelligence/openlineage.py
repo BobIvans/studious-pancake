@@ -148,7 +148,7 @@ class DataQualityContext:
     event_time: str | None = None
     ingest_time: str | None = None
     freshness_ms: int | None = None
-    coverage_ratio: float | None = None
+    coverage_ratio_ppm: int | None = None
     gap_refs: tuple[str, ...] = ()
     correction_kind: str | None = None
     normalization_version: str | None = None

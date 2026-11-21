@@ -3,7 +3,7 @@
 
 **Цель:** ChatGPT и coding agents должны уметь за минуты понять, какие идеи, стратегии, данные, приложения и функции уже существуют, как они связаны, что реально работает, что только описано, что не используется и где лежат первичные доказательства.
 
-**Это не ещё одна canonical database и не попытка загрузить весь репозиторий в LLM.** Это versioned, rebuildable read-only projection над текущими владельцами истины и внешними code-intelligence tools.
+**Это не ещё одна canonical database и не попытка загрузить весь репозиторий в LLM.** Это versioned, rebuildable read-only projection над текущими владельцами истины и внешними code-intelligence tools. Для runtime event capture и durable flashloan-bot work log см. [REALTIME_OPERATION_DATA_PLANE_RU.md](REALTIME_OPERATION_DATA_PLANE_RU.md); один статический code graph не считается завершением общей задачи.
 
 ---
 
@@ -169,3 +169,12 @@ A useful first increment is working only when:
 - tests prove reproducibility, secret exclusion, no cross-branch contamination and no invented relationships.
 
 The full runtime/strategy correlation remains layered on the existing OCA work packages; the code graph alone does not prove a strategy was executed or profitable.
+
+
+## 9. Runtime event / data graph — обязательная вторая половина
+
+Карта должна соединять static symbols не только с docs/tests, но и с actual executed operations через durable IDs. Это требует реальных event producers в поддерживаемых test/paper/shadow paths; статический indexer не способен вывести, какие функции реально выполнялись.
+
+См. [REALTIME_OPERATION_DATA_PLANE_RU.md](REALTIME_OPERATION_DATA_PLANE_RU.md) и OCA-W10/W11. На каждом event attach exact repo/config/strategy generation, stable callsite/symbol, trace/span, opportunity/attempt, source/observation and episode refs where known. Query plane следует по IDs к существующим owners; raw payload не копируется в graph DB.
+
+Graph node may carry runtime frequency/last-observed only when event provenance and time window are available. Otherwise leave NOT_OBSERVED. Runtime calls inferred from static graph must never be presented as executed calls.

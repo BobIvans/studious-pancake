@@ -1,0 +1,163 @@
+{
+  "schema": "studious-pancake.clmm-dlmm-market-trace-source-pins.v1",
+  "prepared_at": "2026-11-15",
+  "repository_main_at_creation": "731915149365d7b31f5f93deb1b08e894372b0f8",
+  "dependency_pr": {
+    "number": 659,
+    "status": "open_unmerged_at_creation",
+    "purpose": "R10-1 CPMM exact cycle binding; rebase this task on merged result"
+  },
+  "sources": [
+    {
+      "id": "raydium_clmm_program",
+      "role": "direct_state_and_exact_math",
+      "repository": "https://github.com/raydium-io/raydium-clmm",
+      "commit": "6d7a0f82d2f293c553c69aaf943377367c6c4cc6",
+      "license": "Apache-2.0",
+      "program_id": "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK",
+      "existing_local_files": [
+        "vendor-reference/raydium/clmm/config.rs.txt",
+        "vendor-reference/raydium/clmm/pool.rs.txt",
+        "vendor-reference/raydium/clmm/swap_math.rs.txt",
+        "vendor-reference/raydium/clmm/tick_array.rs.txt",
+        "vendor-reference/raydium/clmm/tick_array_bit_map.rs.txt",
+        "vendor-reference/raydium/clmm/tick_math.rs.txt"
+      ],
+      "required_review_files": [
+        "programs/amm/src/states/tickarray_bitmap_extension.rs",
+        "programs/amm/src/states/pool_fee.rs",
+        "programs/amm/src/states/dynamic_fee_config.rs",
+        "programs/amm/src/instructions/swap.rs",
+        "programs/amm/src/instructions/swap_v2.rs"
+      ],
+      "repo_status": "decoder_and_tick_math_exist; extension_and_dynamic_fee_closure_incomplete",
+      "implementation_rule": "Only mirror transitive files actually required; update existing VENDOR_SOURCE_MANIFEST and verifier."
+    },
+    {
+      "id": "meteora_dlmm_sdk",
+      "role": "direct_state_and_exact_quote_math",
+      "repository": "https://github.com/MeteoraAg/dlmm-sdk",
+      "commit": "1532e540db41ac405dbf4c5bb2ddfceaa1f98ff1",
+      "package": "@meteora-ag/dlmm@1.9.15",
+      "license": "ISC (package metadata)",
+      "program_id": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+      "idl_version": "0.12.0",
+      "existing_local_files": [
+        "vendor-reference/meteora/binArray.ts.txt",
+        "vendor-reference/meteora/dlmm_index.ts.txt",
+        "vendor-reference/meteora/lbPair.ts.txt",
+        "vendor-reference/meteora/lb_clmm.idl.json",
+        "vendor-reference/meteora/package.json",
+        "vendor-reference/meteora/swap_quote_example.ts.txt",
+        "vendor-reference/meteora/types.ts.txt"
+      ],
+      "required_review_files": [
+        "ts-client/src/dlmm/helpers/bin.ts",
+        "ts-client/src/dlmm/helpers/fee.ts",
+        "ts-client/src/dlmm/helpers/math.ts",
+        "ts-client/src/dlmm/helpers/u64xu64_math.ts",
+        "ts-client/src/dlmm/helpers/weight.ts",
+        "ts-client/src/dlmm/helpers/token_2022.ts",
+        "ts-client/src/dlmm/constants/index.ts",
+        "ts-client/src/dlmm/helpers/binArray.ts",
+        "ts-client/src/dlmm/helpers/derive.ts",
+        "ts-client/src/dlmm/helpers/index.ts"
+      ],
+      "repo_status": "state_decoder_and_reachable_bin_walk_exist; exact_amount_quote_blocked_missing_sdk_source_pin",
+      "implementation_rule": "Compute exact transitive quote-source closure; preserve immutable historical pin and separately record refreshed current docs/release."
+    },
+    {
+      "id": "dex_screener",
+      "role": "discovery_only",
+      "docs": "https://docs.dexscreener.com/api/reference",
+      "endpoints": [
+        "GET /latest/dex/search",
+        "GET /latest/dex/pairs/{chainId}/{pairId}",
+        "GET /token-pairs/v1/{chainId}/{tokenAddress}",
+        "GET /tokens/v1/{chainId}/{tokenAddresses}"
+      ],
+      "access": "public rate-limited",
+      "repo_status": "bounded_discovery_owner_exists_via_PR561",
+      "warning": "indexed metadata, not exact liquidity"
+    },
+    {
+      "id": "raydium_api_v3",
+      "role": "pool_discovery_and_config_metadata_only",
+      "docs": "https://api-v3.raydium.io/docs/",
+      "base": "https://api-v3.raydium.io",
+      "endpoints": [
+        "GET /pools/info/ids",
+        "GET /pools/info/mint",
+        "GET /pools/info/list-v2",
+        "GET /pools/key/ids",
+        "GET /main/clmm-config",
+        "GET /main/clmm-dynamic-config"
+      ],
+      "repo_status": "bounded_discovery_owner_exists_via_PR561",
+      "warning": "API metadata not rooted exact state"
+    },
+    {
+      "id": "meteora_data_api",
+      "role": "pool_discovery_only",
+      "docs": "https://github.com/MeteoraAg/docs/blob/main/developer-guides/dlmm/api-reference/overview.mdx",
+      "base": "https://dlmm.datapi.meteora.ag",
+      "repo_status": "bounded_discovery_owner_exists_via_PR561",
+      "warning": "indexed pool data not bin quote or capacity"
+    },
+    {
+      "id": "jupiter_swap_v2",
+      "role": "aggregator_quote_comparator",
+      "docs": "https://developers.jup.ag/docs/api-reference/swap/order",
+      "endpoint": "GET /swap/v2/order",
+      "auth": "x-api-key; keyless low rate documented at 0.5 RPS in existing source manifest",
+      "repo_status": "offline adapter / P0-2 existing; no live capture claimed",
+      "warning": "quote route must be resolved to physical pool resources and deduplicated"
+    },
+    {
+      "id": "0x_solana",
+      "role": "aggregator_quote_comparator",
+      "docs": "https://docs.0x.org/api-reference/solana-swap-ap-is/swap/instructions",
+      "endpoint": "POST https://api.0x.org/solana/swap-instructions",
+      "auth": "0x-api-key + public taker",
+      "status": "Open Beta per existing source dossier; refresh on implementation",
+      "repo_status": "offline adapter / P0-2 existing; no live capture claimed",
+      "warning": "reconcile 0x-version header discrepancy; returned instructions inert, never sign/send"
+    },
+    {
+      "id": "solana_rpc",
+      "role": "direct_account_state",
+      "docs": "https://solana.com/docs/rpc/http/getmultipleaccounts",
+      "methods": [
+        "getMultipleAccounts",
+        "accountSubscribe"
+      ],
+      "limits": {
+        "getMultipleAccounts_max_addresses": 100
+      },
+      "repo_status": "governed transport/stream owners exist; rooted independent quorum not qualified",
+      "warning": "record per-response context slot; more than one request means more than one context; require independent operator provenance"
+    },
+    {
+      "id": "helius_stream",
+      "role": "optional_change_trigger_and_recovery",
+      "docs": "https://www.helius.dev/docs",
+      "repo_status": "existing src/providers/helius owner; optional for first bounded snapshot",
+      "warning": "stream is not a substitute for rooted RPC snapshot"
+    },
+    {
+      "id": "jupiter_lend",
+      "role": "flash_capital_not_market_quote",
+      "docs": "https://developers.jup.ag/docs/lend/flashloan",
+      "repo_code": "src/lending/jupiter_lend.py; R02 CAP-A; R03 unsigned builder",
+      "repo_status": "offline reserve reader + unsigned builder exist; no qualified positive capital edge",
+      "warning": "docs no-fee statement does not override live on-chain flashloan_fee, reserve, vault, debt-ceiling and effective capacity state"
+    },
+    {
+      "id": "signer_boundary",
+      "role": "separate_authority_not_api_source",
+      "repo_status": "must remain disabled",
+      "warning": "no private key, wallet creation, sign, send, borrow or live enablement in this PR"
+    }
+  ],
+  "evidence_rule": "Documented API != configured credential != successful live read != rooted state != exact quote != qualified route != lender eligibility != simulation != paper result."
+}

@@ -54,17 +54,28 @@ The supported path must become:
 
 A quote that beats another quote does not by itself tell the bot which lender to use. Lender choice is a separate per-asset/per-amount optimization step using current lender state and fees.
 
-## 4. Provider priorities
+## 4. Границы параллельных workstreams — обязательны
 
-Use SUI_ASSET_AND_PAIR_PLAN_RU.md and FLASH_CAPITAL_PROVIDER_MATRIX_V1.json. Main initial priorities:
+Эти три PR решают разные задачи. Не смешивать их и не создавать конкурирующих owners:
 
-- **Solana quotes/venues:** existing Jupiter V2, 0x and routing plane; direct exact-state venues already worked through CPMM/CLMM/DLMM owners; Prop-AMM routes via genuine official router/API/build surfaces. pmm-sim remains a local caller-sensitivity harness, never a mainnet identity switch.
-- **Sui state:** governed gRPC and/or GraphQL profiles; two independently operated, non-smoke profiles for checkpoint/object consensus.
-- **Sui quotes:** Aftermath, Cetus Aggregator V3, 7K/Bluefin7K, FlowX, OKX DEX, Rango and direct DeepBook. Implement one by one according to source/schema/license/auth/quota completeness. Never count an aggregator as an independent pool.
-- **Solana lenders:** Kamino and Jupiter Lend first; Project 0 only when a valid existing public account context is supplied. MarginFi remains quarantined until its own blockers are closed.
-- **Sui lenders:** NAVI and DeepBook first; Scallop and Bucket are additional candidates with protocol-specific limitations. Do not turn Cetus, Aftermath or FlowX into lenders: they are market/route sources in the reviewed evidence. Suilend remains research-only absent a proven public general-purpose flashloan surface.
+- **PR #664 — campaign/control plane:** владеет CAPTURE_ONLY manifest/runbook, source/strategy crosswalk, campaign start authorization, source profiles/quotas/retention, readiness report и Paper Gate PG01. В его NEXT_PR_DAG отдельно назначены N06 Jupiter Lend, N07 Project 0, N08 Kamino и N09 NAVI (позже), по одному lender-owner на PR. #667 не создаёт ещё одну кампанию и не меняет эти owners.
+- **PR #665 — Solana Prop-AMM/toolchain lane:** владеет upstream source mirrors, изоляцией Rust harnesses, pmm-sim local LiteSVM caller-profile matrix, direct Prop-AMM builder research и Jupiter V2/direct route differential. #667 потребляет результаты #665 как входные данные, но не повторяет benchmark и не редактирует его vendor/harness paths.
+- **PR #667 — Sui R13 quote/state integration:** владеет первым узким Sui quote adapter vertical slice, его deterministic replay/fixtures и quote-to-existing-builder handoff. Использует существующий Sui state/governance, quote_build_kernel, FlashCapitalGraph, R02/R03/R05/R06; не создаёт новые registry, transport, capital graph или runner.
 
-Do not interpret a seed token as a market pair or lender asset. The agent must dynamically discover supported pools and ask the lender readers for exact capacities. See the Sui pair plan.
+### Что входит в #667
+
+1. Начать с Aftermath quote adapter: normalizer уже существует, schema pin проверен, но transport/boot wiring отсутствуют. Подключение делается через существующий governed Sui state/source path; quote response без checkpoint не получает выдуманный checkpoint/freshness.
+2. Сопоставлять exact full Move CoinTypes и exact integer amounts; хранить provider/operator/correlation identity, route legs и underlying pool IDs; исключать общие пулы из ложного независимого liquidity count.
+3. Сначала доставить offline/replay vertical slice. Live read возможен только после независимого Sui provider quorum и разрешения через существующий campaign/QPR/DIN governance. Текущий hard-block LIVE_SUI_PROVIDERS_NOT_AUTHORIZED не снимается этим PR.
+4. Добавлять Cetus V3, Bluefin7K, FlowX, OKX, Rango и direct DeepBook по одному только после точного schema/terms/license/auth/quota/fee/build contract review. Не копировать источники с неизвестной лицензией.
+5. Подключать route к уже существующему NAVI/DeepBook R02/R03 evidence только как consumer. N09 NAVI reader/builder и любые новые DeepBook capacity/builder owners не переписывать; если evidence не квалифицировано — вернуть typed blocker, а не unsigned plan, притворяющийся execution-ready.
+
+### Что НЕ входит в #667
+
+- Solana market capture, Solana Jupiter/0x/Titan adapter changes, Prop-AMM venue builders, source vendoring и pmm-sim matrix — это #664/#665 и их текущие owners.
+- Разработка Solana lender readers/builders Jupiter Lend, Kamino, Project 0 — N06/N08/N07 в DAG #664; не дублировать их в #667.
+- Повторная реализация CAPTURE_ONLY manifest, campaign CLI, durable journal, source catalog, QPR campaign start, R06 paper service или общего RPC transport.
+- Любой live activation, wallet, account creation, borrow, sign, send или production promotion.
 
 ## 5. Capture/activation boundary
 

@@ -995,5 +995,143 @@
       "unknown_fields": "reject",
       "validation_mode": "json-schema"
     }
+,
+    {
+      "schema_id": "intelligence.openlineage-run-event.v1",
+      "owner_module": "src.intelligence.openlineage",
+      "boundary_class": "read-model-export",
+      "compatibility": "backward-readable",
+      "unknown_fields": "reject",
+      "canonical_encoding": "canonical-json-v1",
+      "max_bytes": 2097152,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "max_list_items": 2048,
+      "max_string_length": 8192,
+      "max_integer_abs": 9007199254740991,
+      "status": "active",
+      "validation_mode": "json-schema",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "Dataset": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "namespace",
+              "name"
+            ],
+            "properties": {
+              "namespace": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              },
+              "facets": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "eventType",
+          "eventTime",
+          "producer",
+          "schemaURL",
+          "run",
+          "job",
+          "inputs",
+          "outputs"
+        ],
+        "properties": {
+          "eventType": {
+            "type": "string",
+            "enum": [
+              "START",
+              "RUNNING",
+              "COMPLETE",
+              "ABORT",
+              "FAIL",
+              "OTHER"
+            ]
+          },
+          "eventTime": {
+            "type": "string",
+            "format": "date-time",
+            "minLength": 20,
+            "maxLength": 64
+          },
+          "producer": {
+            "type": "string",
+            "format": "uri"
+          },
+          "schemaURL": {
+            "const": "https://openlineage.io/spec/2-0-2/OpenLineage.json#/$defs/RunEvent"
+          },
+          "run": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "runId",
+              "facets"
+            ],
+            "properties": {
+              "runId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "facets": {
+                "type": "object"
+              }
+            }
+          },
+          "job": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "namespace",
+              "name",
+              "facets"
+            ],
+            "properties": {
+              "namespace": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              },
+              "facets": {
+                "type": "object"
+              }
+            }
+          },
+          "inputs": {
+            "type": "array",
+            "maxItems": 1024,
+            "items": {
+              "$ref": "#/$defs/Dataset"
+            }
+          },
+          "outputs": {
+            "type": "array",
+            "maxItems": 1024,
+            "items": {
+              "$ref": "#/$defs/Dataset"
+            }
+          }
+        }
+      }
+    }
   ]
 }

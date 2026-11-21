@@ -1,172 +1,129 @@
-# Coding Agent Start Trigger — OCA W0
-## Скопировать этот документ в coding agent как стартовое задание
+# CODING AGENT EXECUTION TRIGGER — FULL OCA + REPO KNOWLEDGE BOOTSTRAP
+## Это задание запускает не только аудит, а первую работающую версию агрегатора знаний
 
-Ты работаешь в репозитории BobIvans/studious-pancake. Твоя задача сейчас — только W0: read-only audit текущих владельцев, event correlation, code intelligence и реального состояния CLI/runtime. Не реализуй W1-W9.
+**Repository:** `BobIvans/studious-pancake`  
+**Design source:** PR #666, branch `codex/intelligence-operating-plane-design-2026-11-21`  
+**Master docs:** `CODEX_START_HERE_RU.md`, `OPERATIONS_CONTEXT_AGGREGATOR_RU.md`, `REPO_KNOWLEDGE_GRAPH_RU.md`, `CHATGPT_CODING_AGENT_CONTEXT_WORKFLOW_RU.md`, `TOOL_ACCESS_PROFILES_RU.md`, `WORK_PACKAGE_MATRIX.json`.  
+**Execution goal:** deliver a working, incremental, token-efficient, evidence-linked repository knowledge index and connect it to existing Web3 strategy/operations owners. **Do not stop after producing an audit report.**
 
-## 1. Подготовка
+---
 
-1. Клонируй или обнови BobIvans/studious-pancake.
-2. Прочитай этот handoff из ветки codex/intelligence-operating-plane-design-2026-11-21:
-   - docs/roadmap/intelligence-operating-plane-2026-11-21/CODEX_START_HERE_RU.md
-   - docs/roadmap/intelligence-operating-plane-2026-11-21/OPERATIONS_CONTEXT_AGGREGATOR_RU.md
-   - docs/roadmap/intelligence-operating-plane-2026-11-21/CHATGPT_CODING_AGENT_CONTEXT_WORKFLOW_RU.md
-   - docs/roadmap/intelligence-operating-plane-2026-11-21/TOOL_ACCESS_PROFILES_RU.md
-   - docs/roadmap/intelligence-operating-plane-2026-11-21/WORK_PACKAGE_MATRIX.json
-3. Сначала проверь актуальные origin/main SHA, open PRs, CI/checks, branches и ownership. Не доверяй design baseline как current main автоматически.
-4. Запиши exact base SHA, OS, Python version, worktree status и tool versions.
-5. Создай отдельную audit branch/worktree. Не работай в чужой active worktree.
+## 0. Start safely and pin the actual repository state
 
-## 2. Ограничения
+1. Fetch origin and inspect latest `main` SHA, PR #666, all open PRs/branches, CI/checks, `AGENTS.md`, worktree status and existing ownership.
+2. Read the design documents from PR #666 branch (do not assume they are already on main).
+3. Create a new implementation branch and isolated worktree from the latest current `origin/main`; keep PR #666 as the design source. Never write to main or another agent's worktree.
+4. Record base SHA, OS, Python/Node/Rust versions, installed tooling, exact commands and environment.
+5. If main has moved since the design baseline, update every report to the actual SHA. Never treat stale documentation/indexes as current.
 
-- Audit only. Не меняй production/runtime code.
-- Не добавляй dependency, database, index backend, queue, scheduler, signer, sender, live mode или provider enablement.
-- Не добавляй новые raw market/observability stores.
-- Не удаляй/перепаковывай event evidence.
-- Не запускай network RPC/transactions, signing, submission, borrowing, account creation или spending.
-- Не запускай массовую переиндексацию, пока не измерены её ресурсы и output location.
-- Не считай docs, fixtures, class names или тестовые mocks доказательством supported runtime.
-- Все неизвестные значения маркируй UNKNOWN/NOT_OBSERVED, не заменяй нулём.
-- Human approval требуется для любых будущих implementation PR merges.
+## 1. Run independent discovery tracks in parallel
 
-## 3. Обязательные зоны аудита
+Use subagents or separate read-only worktrees where available. Each track owns its own report file; do not let parallel workers edit the same source files.
 
-### A. Operational event stream
+### Track A — current canonical owners and actual runtime wiring (OCA-W0)
 
-Проверить путь от producer до persisted/exported/replayed row:
-- src/observability/events.py;
-- src/observability/store.py;
-- src/observability/authoritative_store_pr195.py;
-- src/observability/replay.py;
-- src/observability/export.py и archive modules;
-- src/observability/cross_plane_pr196.py;
-- src/operations/operator_readiness.py;
-- event producers/tests across src/ and tests/.
+Inspect Local Intelligence V2, EventEnvelope producer → store → export → replay, AGG-02, MarketObservation, MarketEpisode, strategy/source/provider registries, conflict scheduler, tests and CLI. Prove what is actually called and persisted; fields/classes/docs alone are not proof. Deliver the W0 owner, event-correlation, CLI/test, coverage and gap reports defined in the matrix.
 
-Для каждого поля EventEnvelope выяснить:
-- кто его заполняет;
-- является ли значение real или default/placeholder;
-- где persist/export/replay происходит;
-- какая доля event streams его реально содержит;
-- есть ли exact repo SHA, strategy ID/version, config hash, observation refs, chain identity, provider/venue, attempt and terminal evidence.
+### Track B — polyglot code-intelligence / MCP tool bake-off (OCA-W0A)
 
-Не предполагай, что наличие field в dataclass означает полную заполненность в runtime.
+On the same pinned clean SHA, benchmark in isolated temporary/dev tool environments:
+- current Studious `repo_source.py` / `context_pack.py`;
+- Tree-sitter-based candidate(s);
+- CodeGraphContext (CGC);
+- Graphify;
+- SCIP indexers for languages/builds that actually exist in this repository;
+- optional LSP/Serena and Aider RepoMap only if they improve a measurable gap.
 
-### B. Market data and episodes
+Use 30–50 golden questions, including caller/callee paths, strategy/source/provider links, test impact, tool/MCP discovery, dead-code false positives and 500/1k/2k-token packs. Measure correctness, coverage, freshness, build/update time, p50/p95 latency, peak RAM, disk and token counts. Record versions, source URLs, license/SPDX, transitive dependencies, security status and exact install/self-check results.
 
-Проверить:
-- src/agg02/storage.py and contracts.py;
-- src/market/observations.py and streams.py;
-- src/market_data_evolution/contracts.py;
-- src/strategy/market_graph_ingest.py;
-- src/intelligence/episode_builder.py;
-- evidence refs/pins, cursor/gap/watermark/reconnect/correction/retraction;
-- current production_qualification and provider_utility reports.
+Install candidates only in an isolated `uv tool`/pipx/temp environment. Never add them to bot runtime dependencies during evaluation. Graphify's official package is `graphifyy`; keep its optional model-backed docs/media semantic pass off. CGC's CLI/MCP includes management operations; do not expose its full tool catalog to the analyst. jCodeMunch is excluded unless commercial/revenue-supporting licensing is explicitly approved. Do not run remote Graphify Cloud or upload the repo.
 
-Составить таблицу какие IDs и evidence связывают raw market event → observation → candidate → decision → simulation → reconciliation → paper outcome.
+### Track C — full repository tool/app/source inventory
 
-### C. Strategies, providers and resource conflicts
+Inventory the entire Git tree, not just Python imports:
+- packages, lockfiles, SDKs, external APIs/RPCs, data providers, DEX/venue/lender adapters;
+- strategies and strategy ideas in code, docs, roadmaps, configs, tests and PR references;
+- CLI commands, scripts, GitHub Actions/workflows, MCP servers/tools, plugins, IDE/dev apps, Docker/infra;
+- schemas, data contracts, config keys, external source links, tests and consumers.
 
-Проверить:
-- src/strategy/registry.py, strategy_contract.py, strategies.py;
-- src/strategy/opportunity_identity.py;
-- src/strategy/conflict_scheduler.py;
-- src/strategy/shadow_workers.py and shadow_portfolio.py;
-- src/economics/flash_capital_graph/;
-- src/market/source_catalog.py, src/resources/market_source_catalog.json;
-- QPR/DIN/source governance and strategy inventory docs;
-- provider/venue/admission state and capability manifest.
+Create explicit status labels ACTIVE / WIRED / QUALIFIED / DEV_ONLY / OPTIONAL / EXPERIMENTAL / DUPLICATE_CANDIDATE / UNREFERENCED_CANDIDATE / DEPRECATED / BLOCKED / UNKNOWN. Link every item to exact paths/symbols/tests and record version/license/owner/permissions/usage.
 
-Разделить:
-- research catalogue item;
-- source discovered;
-- provider adapter implemented;
-- provider wired;
-- exact-state read proven;
-- quote/build/simulation/paper qualified;
-- blocked/unknown.
+Do not delete anything. Zero static references is not proof of dead code; inspect dynamic imports, registries, reflection, config, CLI, CI, runtime and external consumers. Produce a prioritized cleanup list with blast radius and tests. Actual deletion must be a separate reviewed PR.
 
-Для concurrency определить реальные ResourceSet owners и где есть duplicate strategy/route/pool risk. Не делать новый scheduler.
+### Track D — context/retrieval design and golden corpus
 
-### D. Local Intelligence V2
+Create 30–50 real questions from the repository and prepare deterministic expected evidence paths/symbols. Include questions a new strategy researcher must ask to avoid duplication. Define bounded graph query and token-pack measurements.
 
-Проверить весь src/intelligence module и:
-- docs/strategy/local-intelligence-v2/MASTER_CONTEXT_RU.md;
-- OPERATIONS.md;
-- FUNCTION_BACKLOG.json;
-- PR_ROADMAP_RU.md;
-- CLI_AND_REPORTS_RU.md;
-- CODEX_LOCAL_INTELLIGENCE_V2_START_HERE.md;
-- CODEX_STORAGE_PRESSURE_START_HERE.md.
+## 2. After parallel reports, BUILD the first working repo knowledge index (OCA-W0B)
 
-Запустить current documented CLI help/status/scan/export/benchmark/storage/report flows в безопасном local fixture/temporary output. Не выполнять destructive prune. Установить:
-- какие функции реально работают;
-- какие частично wired;
-- что имеет только docs/backlog;
-- exact parser language coverage;
-- сколько source symbols/edges and coverage gaps;
-- index refresh/pack sizes and time;
-- какие reports доступны без LLM.
+Do not stop at W0. Use the W0/W0A evidence to choose the **smallest winning combination** and implement an additive vertical slice:
 
-### E. Tool access and token benchmark
+1. Reuse `src/intelligence` snapshots, manifests, source references, context packs, reports and benchmarks. Do not create a parallel repository snapshot system or a second semantic-memory database.
+2. Create a rebuildable, repo-SHA-bound symbol/entity graph covering all source languages found plus deterministic inventories of docs, configs, tests, workflows, packages, scripts, CLI/MCP tools and external data sources.
+3. Link StrategyIdea/StrategyVersion → entrypoint symbol → callers/callees → route/planner/compiler/simulator → config → source/provider/venue/flash-capital → tests → event/episode/evidence where the relationship is proven.
+4. Preserve edge provenance: STATIC_EXTRACTED, COMPILER_RESOLVED, CANONICAL_REGISTRY, RUNTIME_OBSERVED, DOC_CLAIM, HUMAN_CONFIRMED or LLM_PROPOSED. Inferred, missing or ambiguous edges must never be upgraded to verified facts.
+5. Provide compact one-line catalogues for every strategy, source, provider, tool/app, MCP server/tool, CLI command and protocol. Include status, exact symbol/file links, tests, consumers, evidence refs and UNKNOWN gaps.
+6. Expose a small read-only query surface: search, symbol, callers, callees, path, impact, strategy explain/compare, source lineage, tool inventory and bounded context-pack build. Follow existing CLI conventions after verifying the current parser; do not invent duplicate registries.
+7. Make incremental refresh by changed file hashes / Git tree diff; support add/delete/rename, stale-SHA rejection, branch isolation, deterministic output and coverage accounting.
+8. Add tests for graph edges, source links, no dangling references, no secret values, rename/delete, stale index, branch isolation, unsupported parsers, token cap and deterministic rebuild.
+9. Put bulky indexes/caches outside tracked source or in ignored build output. Commit schemas, reproducible commands, compact manifests, tests and an example report—not a huge opaque database.
+10. If no external candidate beats the native implementation, implement the minimal missing Tree-sitter/SQLite/FTS/graph traversal layer in existing architecture. Do not force a third-party tool merely because it is popular.
 
-Не устанавливать платные или удалённые tools без необходимости. W0 должен:
-- выяснить текущую наличность Git/uv/Python/Graphify/other CLI tools;
-- определить есть ли existing MCP config and which client supports it;
-- выяснить какие data/query tools реально доступны coding agent;
-- подготовить proposed narrow profile, не подключая его без approval;
-- разработать минимум 30 golden questions для дальнейшего token/retrieval benchmark;
-- не использовать jCodeMunch для commercial workflow без paid-license decision;
-- не включать all Antseer tools or unbounded SQD queries.
+**Required first tangible artifact:** one command/entrypoint produces (a) a 300–500-token repo card, (b) a compact one-line catalogue of all discovered strategies/tools/sources/providers, (c) a searchable graph with exact symbol links and callers/callees, and (d) a bounded task context pack with freshness/coverage gaps.
 
-## 4. Deliverables
+## 3. Continue into OCA operation/strategy correlation — do not leave it as a standalone code graph
 
-Сохранить только audit artifacts в:
-docs/roadmap/intelligence-operating-plane-2026-11-21/audit/
+After W0, execute each dependency-ready package in `WORK_PACKAGE_MATRIX.json`; independent work may run in parallel only with disjoint write scopes. Continue through W1–W9 where evidence and dependencies permit:
 
-Обязательные файлы:
-1. AUDIT_CURRENT_OWNERS_RU.md
-2. INTEGRATION_MATRIX.json
-3. EVENT_CORRELATION_MATRIX.json
-4. CLI_AND_TEST_BASELINE.json
-5. SOURCE_AND_STRATEGY_COVERAGE.json
-6. PARALLEL_RESOURCE_OWNER_MAP.json
-7. TOOL_ACCESS_AND_RETRIEVAL_BASELINE_RU.md
-8. GAP_PRIORITY_RU.md
-9. WORK_RESULT.json
+- bind real EventEnvelope producers and events to strategy/config/repo SHA/code symbols using exact values and stable callsites;
+- correlate existing observations/cursors/gaps → candidate/decision → simulation → reconciliation → paper outcome using canonical stores;
+- implement OperationEpisode only as a read-only deterministic projection if current owners do not already provide it;
+- reuse existing conflict scheduler/resource reservation owners for pool/account/nonce/lender/capital/provider conflicts;
+- produce strategy/source/provider/tool coverage, duplicate and outcome reports;
+- integrate bounded SQD/Antseer only where required, with provenance/pagination/quotas;
+- decide storage expansion only after measurements. Do not add ClickHouse, NATS, vector DB or object storage by default.
 
-Каждый report фиксирует:
-- exact main base SHA and head SHA;
-- checked paths and source hashes;
-- commands run and platform;
-- pass/fail/skip counts;
-- tests skipped and why;
-- artifacts and SHA-256;
-- UNKNOWN, NOT_OBSERVED and BLOCKED separately;
-- duplicate owner risks and overlaps;
-- smallest additive change recommendations.
+If a missing field/callsite cannot be proven, record MISSING/UNKNOWN and create the smallest scoped follow-up. Do not fabricate event joins or perform a broad logging rewrite.
 
-## 5. Required answers
+## 4. Wire index freshness into every future change
 
-W0 не завершён, пока не ответит:
-1. Какие operational EventEnvelope поля реально заполнены в supported paper/shadow path?
-2. Есть ли полный event → strategy → source observation → code commit → function → test → episode correlation?
-3. Какие stages имеют stable reason codes, IDs and evidence refs?
-4. Какие producers имеют стабильные code callsites и какие нет?
-5. Какие current indexes, labels, registries and reports уже работают?
-6. Какие языки/artifact formats не покрыты?
-7. Что уже есть для parallel candidate/resource scheduling и какие conflicts остаются невидимыми?
-8. Какие tools реально подключены, какие требуют установки/лицензии/permissions?
-9. Какой bounded context pack можно сформировать прямо сейчас без новых dependencies?
-10. Какова минимальная sequence W1-W9, учитывающая ownership/dependencies and actual gaps?
+Implement the least invasive reliable path:
+- local command/hook or agent post-commit refresh for the active worktree;
+- CI on push/PR to verify head-SHA freshness, deterministic index update, schema, dangling edges and token-pack budgets;
+- Work Result Receipt includes base/head SHA, index generation, graph delta, affected strategies/sources/tools/tests, test counts and artifact hashes;
+- branch/worktree indexes are isolated; PR review includes index diff and impacted dependencies.
+Indexing and deterministic labels run without an LLM. Ambiguous semantic labels remain PROPOSED/UNKNOWN.
 
-## 6. Acceptance и остановка
+## 5. ChatGPT handoff for new strategy sessions
 
-- W0 должен быть reviewable и воспроизводимым.
-- No runtime code changes.
-- No duplicate database/registry/scheduler/authority.
-- No unsupported live or profitability claims.
-- Матрицы должны быть проверяемыми скриптом/fixture, где возможно.
-- Любой вывод о capability подкреплён actual source + test/runtime evidence.
-- После W0 остановиться и подготовить recommendations. Не переходить к W1 автоматически.
+Generate a current `CHATGPT_CONTEXT_PACK.md` (bounded, exact SHA, compact rows and evidence links) plus the reusable `CHATGPT_NEW_CHAT_STRATEGY_STARTER_RU.md`. A new chat must be able to ask the index for all existing strategy ideas and compare novelty before suggesting another implementation. Do not claim ChatGPT automatically has local disk access; document exact transfer path (pack artifact/upload, authorized GitHub access or approved read-only local MCP).
 
-Цель W0 — не просто описать репозиторий, а найти точные недостающие связи, чтобы следующий implementation PR добавлял только те блоки, которые действительно отсутствуют.
+## 6. Deliverables
+
+At minimum, produce the OCA-W0 reports plus:
+- polyglot/tool benchmark and golden question set;
+- strategy/source/provider/tool/app catalogues with provenance;
+- repo graph schema, index generator/importer, CLI/query surface and tests;
+- compact repo card and one-line strategy/source/tool maps;
+- first bounded context pack with exact SHA, token count and continuation;
+- incremental refresh/CI check or an explicit tested integration plan if CI permissions block wiring;
+- unused/duplicate/deprecation candidate list (no deletion);
+- Work Result Receipt and a follow-up dependency graph.
+
+Every report records exact base/head SHA, commands, versions, source blob hashes, pass/fail/skip counts, artifact hashes and UNKNOWN/NOT_OBSERVED/BLOCKED separately.
+
+## 7. Safety, permissions and merge
+
+- No transactions, RPC broadcast, signing, submission, borrowing, spending, deployment, account creation or live trading.
+- LIVE remains hard-denied. Do not change strategy admission, provider approval, risk, capital, nonce or signer authority.
+- No production credentials, keys, seeds or secret values in repo/index/packs.
+- No destructive pruning, event deletion or automatic cleanup.
+- Do not vendor third-party code without exact license/SPDX/NOTICE and security review.
+- Query surface for ChatGPT/analysts is read-only; coding writes stay in isolated worktrees.
+- Open a reviewable implementation PR against current main and link PR #666. Keep changes scoped and include tests. **Do not merge; human approval is mandatory.**
+
+## Definition of done
+
+The next ChatGPT/coding-agent session can retrieve a compact, up-to-date map of existing strategy ideas, exact functions and call chains, providers/data sources/tools, configs/tests, observed operations and unknowns—without re-reading the entire repository or reimplementing an existing idea. The index refreshes against new commits and reports its own coverage and staleness. It is a durable external knowledge system, not a claim of unlimited model memory.
+
+**Do the work now. Do not return only a plan. If a dependency or permission blocks part of the scope, still deliver the working safe subset and document the blocker precisely.**

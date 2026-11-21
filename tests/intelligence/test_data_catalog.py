@@ -62,10 +62,7 @@ def test_data_catalog_is_a_valid_deterministic_read_only_projection() -> None:
     source_count = len(load_market_source_catalog().sources)
     contract_count = len(ExternalContractRegistry.load_default().contracts)
     schema_count = len(get_schema_registry().records)
-    assert (
-        sum(item["entity_type"] == "market-source" for item in entities)
-        == source_count
-    )
+    assert sum(item["entity_type"] == "market-source" for item in entities) == source_count
     assert (
         sum(item["entity_type"] == "external-contract" for item in entities)
         == contract_count
@@ -135,7 +132,8 @@ def test_catalog_cli_summary_is_bounded_and_read_only(capsys) -> None:
 def test_catalog_search_and_lineage_are_bounded_and_evidence_linked() -> None:
     snapshot = build_data_catalog_snapshot()
     provider = next(
-        entity for entity in snapshot.entities
+        entity
+        for entity in snapshot.entities
         if entity.entity_type == "provider" and entity.name == "jupiter"
     )
 
@@ -157,8 +155,7 @@ def test_catalog_search_and_lineage_are_bounded_and_evidence_linked() -> None:
 def test_catalog_search_and_lineage_fail_closed_on_invalid_bounds() -> None:
     snapshot = build_data_catalog_snapshot()
     provider = next(
-        entity for entity in snapshot.entities
-        if entity.entity_type == "provider"
+        entity for entity in snapshot.entities if entity.entity_type == "provider"
     )
 
     with pytest.raises(ValueError, match="search limit"):
@@ -172,8 +169,7 @@ def test_catalog_search_and_lineage_fail_closed_on_invalid_bounds() -> None:
 def test_catalogue_entities_expose_deeply_immutable_properties() -> None:
     snapshot = build_data_catalog_snapshot()
     source = next(
-        entity for entity in snapshot.entities
-        if entity.entity_type == "market-source"
+        entity for entity in snapshot.entities if entity.entity_type == "market-source"
     )
 
     assert isinstance(source.properties["domains"], tuple)

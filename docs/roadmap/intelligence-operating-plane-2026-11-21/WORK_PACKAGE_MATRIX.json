@@ -196,7 +196,7 @@
       "id": "OCA-W1",
       "name": "Correlation completeness contract",
       "priority": "P0",
-      "status": "BLOCKED_ON_W0",
+      "status": "BLOCKED_ON_W0_AND_W0B",
       "depends_on": [
         "OCA-W0",
         "OCA-W0B"
@@ -249,7 +249,7 @@
       "id": "OCA-W3",
       "name": "Stable code callsite IDs",
       "priority": "P1",
-      "status": "BLOCKED_ON_W1",
+      "status": "BLOCKED_ON_W1_AND_W0B",
       "depends_on": [
         "OCA-W1",
         "OCA-W0B"
@@ -277,7 +277,7 @@
       "id": "OCA-W4",
       "name": "Bounded operation and strategy context pack",
       "priority": "P1",
-      "status": "BLOCKED_ON_W2",
+      "status": "BLOCKED_ON_W2_W3_W0B",
       "depends_on": [
         "OCA-W2",
         "OCA-W3",
@@ -308,7 +308,7 @@
       "id": "OCA-W5",
       "name": "Strategy resource conflict and parallel admission report",
       "priority": "P1",
-      "status": "BLOCKED_ON_W0",
+      "status": "BLOCKED_ON_W0_AND_W0B",
       "depends_on": [
         "OCA-W0",
         "OCA-W0B"
@@ -335,7 +335,7 @@
       "id": "OCA-W6",
       "name": "Bounded external evidence profiles",
       "priority": "P2",
-      "status": "BLOCKED_ON_W0",
+      "status": "BLOCKED_ON_W0_AND_W0B",
       "depends_on": [
         "OCA-W0",
         "OCA-W0B"
@@ -394,7 +394,7 @@
       "id": "OCA-W8",
       "name": "Operations cockpit and human review workflow",
       "priority": "P2",
-      "status": "BLOCKED_ON_W4",
+      "status": "BLOCKED_ON_W4_W5_W7",
       "depends_on": [
         "OCA-W4",
         "OCA-W5",

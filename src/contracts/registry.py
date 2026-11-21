@@ -291,9 +291,7 @@ class SchemaRegistry:
 
         previous = self.require(previous_schema_id)
         candidate = self.require(candidate_schema_id)
-        previous_family, previous_version = _schema_family_version(
-            previous_schema_id
-        )
+        previous_family, previous_version = _schema_family_version(previous_schema_id)
         candidate_family, candidate_version = _schema_family_version(
             candidate_schema_id
         )

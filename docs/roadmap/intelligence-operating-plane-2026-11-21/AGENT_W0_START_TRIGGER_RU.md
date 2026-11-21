@@ -235,3 +235,23 @@ Follow package dependencies and exclusive write scopes exactly. W12 and W0B can 
 
 No new provider is enabled; no new source is treated as streaming without continuous capture evidence; no strategy is qualified by adapter presence; no graph edge is upgraded from static/inferred to runtime-observed without event evidence; no data correction/reorg silently overwrites history; no index job may starve paper/shadow capture; no new MCP query path grants signing, submission, borrowing, spending, LIVE or production mutation authority.
 
+ 
+## 10. Strategic Web3 infrastructure assignments (domain-first)
+
+For the domain-critical infrastructure backlog, read `STRATEGIC_WEB3_INFRA_ASSIGNMENTS_RU.md` as the assignment-level specification and `WORK_PACKAGE_MATRIX.json` as the machine-readable dependency map.
+
+The sequence is WEB3-INFRA-S0..S9:
+- S0 current owner/open-PR reconciliation;
+- S1 versioned provider adapters + DataContracts;
+- S2 provider health, freshness, gaps, quality and disagreement;
+- S3 chain identity, canonicality/finality and reorg-safe corrections;
+- S4 per-StrategyVersion StrategyDataRequirement + CompatibilityEvaluator;
+- S5 evidence lineage from raw observation through paper/shadow outcome;
+- S6 cursor backfill, deterministic replay and recovery certification;
+- S7 read-only catalogue/query projection;
+- S8 schema, test, security, SBOM and resource guardrails;
+- S9 conditional infrastructure bake-off (OpenLineage/Apicurio/DataHub/NATS/Debezium/Temporal/Glean/LadybugDB/search/vector/sandbox/storage candidates only on measured need).
+
+**Dispatch policy:** WEB3_FIRST_BACKLOG; no automatic dispatch. Reconcile open #672–#676 before creating overlaps. Reuse canonical owners in market/source, external contracts, provider governance, AGG-02, MarketObservation, Observability and strategy qualification. The new catalogue/lineage/graph remains a read-only derived view. See the assignment document for task scope, deliverables, acceptance and explicit no-duplicate rules.
+
+This task sequence is deliberately focused on Web3 correctness and evidence quality, not a broad platform rewrite. It does not change the A–H order or authorize live financial operations.

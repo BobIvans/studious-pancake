@@ -1085,5 +1085,195 @@
       "https://github.com/sebdenes/code-graph-rca"
     ],
     "policy": "Candidates are isolated evaluation profiles; no automatic vendoring, runtime installation or production authority."
+  },
+  "strategic_web3_infrastructure_assignments": {
+    "document": "docs/roadmap/intelligence-operating-plane-2026-11-21/STRATEGIC_WEB3_INFRA_ASSIGNMENTS_RU.md",
+    "execution_mode": "WEB3_FIRST_BACKLOG",
+    "auto_dispatch": false,
+    "human_approval_required_for_implementation_merge": true,
+    "canonical_owner_policy": "REUSE_EXISTING_OWNERS; intelligence/catalogue/lineage are read-only projections",
+    "sequence": [
+      {
+        "id": "WEB3-INFRA-S0",
+        "maps_to": [
+          "OCA-W0"
+        ],
+        "priority": "P0",
+        "mode": "AUDIT_ONLY",
+        "depends_on": []
+      },
+      {
+        "id": "WEB3-INFRA-S1",
+        "maps_to": [
+          "OCA-W13"
+        ],
+        "priority": "P0",
+        "mode": "VERSIONED_PROVIDER_AND_DATA_CONTRACTS",
+        "depends_on": [
+          "WEB3-INFRA-S0"
+        ]
+      },
+      {
+        "id": "WEB3-INFRA-S2",
+        "maps_to": [
+          "OCA-W13",
+          "OCA-W10"
+        ],
+        "priority": "P0",
+        "mode": "PROVIDER_HEALTH_QUALITY_DISAGREEMENT",
+        "depends_on": [
+          "WEB3-INFRA-S1"
+        ]
+      },
+      {
+        "id": "WEB3-INFRA-S3",
+        "maps_to": [
+          "OCA-W13",
+          "OCA-W15"
+        ],
+        "priority": "P0",
+        "mode": "CHAIN_IDENTITY_FINALITY_REORG",
+        "depends_on": [
+          "WEB3-INFRA-S1"
+        ]
+      },
+      {
+        "id": "WEB3-INFRA-S4",
+        "maps_to": [
+          "OCA-W14"
+        ],
+        "priority": "P0",
+        "mode": "STRATEGY_DATA_REQUIREMENT_COMPATIBILITY",
+        "depends_on": [
+          "WEB3-INFRA-S1",
+          "WEB3-INFRA-S2",
+          "WEB3-INFRA-S3"
+        ]
+      },
+      {
+        "id": "WEB3-INFRA-S5",
+        "maps_to": [
+          "OCA-W1",
+          "OCA-W2",
+          "OCA-W3",
+          "OCA-W10"
+        ],
+        "priority": "P0",
+        "mode": "EVIDENCE_LINEAGE_TO_OUTCOME",
+        "depends_on": [
+          "WEB3-INFRA-S0",
+          "WEB3-INFRA-S1",
+          "WEB3-INFRA-S2",
+          "WEB3-INFRA-S3"
+        ]
+      },
+      {
+        "id": "WEB3-INFRA-S6",
+        "maps_to": [
+          "OCA-W10",
+          "OCA-W11"
+        ],
+        "priority": "P0",
+        "mode": "CURSOR_BACKFILL_REPLAY_RECOVERY",
+        "depends_on": [
+          "WEB3-INFRA-S1",
+          "WEB3-INFRA-S3",
+          "WEB3-INFRA-S5"
+        ]
+      },
+      {
+        "id": "WEB3-INFRA-S7",
+        "maps_to": [
+          "OCA-W11"
+        ],
+        "priority": "P1",
+        "mode": "READ_ONLY_CATALOGUE_QUERY",
+        "depends_on": [
+          "WEB3-INFRA-S1",
+          "WEB3-INFRA-S5",
+          "WEB3-INFRA-S6"
+        ]
+      },
+      {
+        "id": "WEB3-INFRA-S8",
+        "maps_to": [
+          "OCA-W12",
+          "OCA-W18"
+        ],
+        "priority": "P0_CROSS_CUTTING",
+        "mode": "SCHEMA_SECURITY_TEST_RESOURCE_GATES",
+        "depends_on": [
+          "WEB3-INFRA-S0"
+        ]
+      },
+      {
+        "id": "WEB3-INFRA-S9",
+        "maps_to": [
+          "OCA-W19"
+        ],
+        "priority": "P2_CONDITIONAL",
+        "mode": "MEASURED_INFRASTRUCTURE_BAKEOFF",
+        "depends_on": [
+          "WEB3-INFRA-S1",
+          "WEB3-INFRA-S2",
+          "WEB3-INFRA-S3",
+          "WEB3-INFRA-S4",
+          "WEB3-INFRA-S5",
+          "WEB3-INFRA-S6",
+          "WEB3-INFRA-S7",
+          "WEB3-INFRA-S8"
+        ]
+      }
+    ],
+    "no_duplicate_owners": [
+      "src/market/source_catalog.py",
+      "src/external_contracts",
+      "src/provider_governance",
+      "src/agg02",
+      "src/market/observations.py",
+      "src/market/streams.py",
+      "src/observability",
+      "existing strategy and qualification owners"
+    ],
+    "upstream_pr_reconciliation": [
+      {
+        "pr": 672,
+        "area": "schema compatibility gate",
+        "status_at_assignment_creation": "OPEN_NOT_MERGED",
+        "instruction": "review and extend in existing owner; do not duplicate"
+      },
+      {
+        "pr": 673,
+        "area": "read-only DataHub-style catalogue projection",
+        "status_at_assignment_creation": "OPEN_NOT_MERGED",
+        "instruction": "reuse projection; do not deploy a DataHub server by default"
+      },
+      {
+        "pr": 674,
+        "area": "Debezium CDC adoption decision",
+        "status_at_assignment_creation": "OPEN_NOT_MERGED",
+        "instruction": "decision gate only; CDC remains conditional"
+      },
+      {
+        "pr": 675,
+        "area": "NATS JetStream adoption decision",
+        "status_at_assignment_creation": "OPEN_NOT_MERGED",
+        "instruction": "decision gate only; transport remains conditional"
+      },
+      {
+        "pr": 676,
+        "area": "OpenLineage RunEvent projection",
+        "status_at_assignment_creation": "OPEN_DRAFT_NOT_MERGED",
+        "instruction": "reuse projection; still prove actual runtime producers"
+      }
+    ],
+    "execution_guardrails": [
+      "Do not auto-dispatch this backlog while WEB3_FIRST focus remains active",
+      "One assignment, one owner, one isolated worktree, one reviewable PR",
+      "Re-fetch main/open PRs/CI and AGENTS.md before every assignment",
+      "Provider/schema/catalogue/lineage presence never enables a provider or qualifies a strategy",
+      "No LIVE/signing/submission/borrowing/spending/deployment/production mutation authority",
+      "Conditional infrastructure requires measured bottleneck and rollback plan"
+    ]
   }
 }

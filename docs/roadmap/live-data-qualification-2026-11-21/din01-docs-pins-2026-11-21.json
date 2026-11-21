@@ -1,20 +1,20 @@
 {
  "dexscreener": {
-  "path": "C:\\Users\\ivans\\Downloads\\studious-pancake-main (IDE)\\studious-pancake\\docs\\roadmap\\live-data-qualification-2026-11-21\\docs-pins-snapshots-2026-11-21\\dexscreener-api-reference.html",
+  "path": "C:\\Users\\ivans\\Downloads\\studious-pancake-main (IDE)\\sp-wt-live-preflight-20261121\\docs\\roadmap\\live-data-qualification-2026-11-21\\docs-pins-snapshots-2026-11-21\\dexscreener-api-reference.html",
   "url": "https://docs.dexscreener.com/api/reference",
-  "sha256": "d9a5e208663088c18c212465741ca8cf5f37efdd9ae727005e76a914f1f34372",
-  "checked_at": "2026-11-21T08:48:33Z"
+  "sha256": "1775291d49cb00d83f6d508c3153846eb8367af05b9635fd499a68b55bfd7981",
+  "checked_at": "2026-11-21T08:55:37Z"
  },
  "raydium": {
-  "path": "C:\\Users\\ivans\\Downloads\\studious-pancake-main (IDE)\\studious-pancake\\docs\\roadmap\\live-data-qualification-2026-11-21\\docs-pins-snapshots-2026-11-21\\raydium-v3-overview.html",
+  "path": "C:\\Users\\ivans\\Downloads\\studious-pancake-main (IDE)\\sp-wt-live-preflight-20261121\\docs\\roadmap\\live-data-qualification-2026-11-21\\docs-pins-snapshots-2026-11-21\\raydium-v3-overview.html",
   "url": "https://docs.raydium.io/api-reference/api-v3/overview",
-  "sha256": "a1b87bc5d97fd678d8c8c369a8e13777d073779b94683c48b43f3602d61fff71",
-  "checked_at": "2026-11-21T08:48:33Z"
+  "sha256": "b23f7de23a65d07c4bd46b86c887a697ae2356934e9d814c89294f56549fe7bc",
+  "checked_at": "2026-11-21T08:55:37Z"
  },
  "meteora-dlmm": {
-  "path": "C:\\Users\\ivans\\Downloads\\studious-pancake-main (IDE)\\studious-pancake\\docs\\roadmap\\live-data-qualification-2026-11-21\\docs-pins-snapshots-2026-11-21\\meteora-dlmm-pools.html",
+  "path": "C:\\Users\\ivans\\Downloads\\studious-pancake-main (IDE)\\sp-wt-live-preflight-20261121\\docs\\roadmap\\live-data-qualification-2026-11-21\\docs-pins-snapshots-2026-11-21\\meteora-dlmm-pools.html",
   "url": "https://docs.meteora.ag/api-reference/dlmm/pools/pools",
-  "sha256": "19f4512cd718543a3863e0273180426ef6ee6d5259847658fc52769bb2e59989",
-  "checked_at": "2026-11-21T08:48:33Z"
+  "sha256": "5460c6aa2b76381d3128f56f935509161748eb11b3971672b34731c8d781feb1",
+  "checked_at": "2026-11-21T08:55:37Z"
  }
 }

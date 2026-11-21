@@ -128,3 +128,39 @@ def test_catalog_cli_summary_is_bounded_and_read_only(capsys) -> None:
     assert output["entities"] > 0
     assert output["relationships"] > 0
     assert output["snapshot_sha256"]
+
+
+def test_catalog_search_and_lineage_are_bounded_and_evidence_linked() -> None:
+    snapshot = build_data_catalog_snapshot()
+    provider = next(
+        entity for entity in snapshot.entities
+        if entity.entity_type == "provider" and entity.name == "jupiter"
+    )
+
+    results = snapshot.search("jupiter", entity_type="provider", limit=10)
+    assert [item.urn for item in results] == [provider.urn]
+
+    lineage = snapshot.trace_relationships(
+        provider.urn, direction="outbound", max_hops=2, limit=10
+    )
+    assert {item.relationship_type for item in lineage} == {
+        "HAS_API_CONTRACT",
+        "HAS_PINNED_ARTIFACT",
+    }
+    assert all(item.provenance for item in lineage)
+    assert all(item.evidence_refs for item in lineage)
+
+
+def test_catalog_search_and_lineage_fail_closed_on_invalid_bounds() -> None:
+    snapshot = build_data_catalog_snapshot()
+    provider = next(
+        entity for entity in snapshot.entities
+        if entity.entity_type == "provider"
+    )
+
+    with pytest.raises(ValueError, match="search limit"):
+        snapshot.search("provider", limit=0)
+    with pytest.raises(ValueError, match="lineage max_hops"):
+        snapshot.trace_relationships(provider.urn, max_hops=9)
+    with pytest.raises(ValueError, match="lineage result limit"):
+        snapshot.trace_relationships(provider.urn, max_hops=3, limit=1)

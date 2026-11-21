@@ -16,7 +16,7 @@ PHASE 0 — RECONCILE BEFORE WRITE
 PHASE 1 — MARKET STATE AND LIVE DATA READINESS
 1. Sui: extend existing GPR/QPR/DIN state sources. gRPC and GraphQL only. Never use the retired Sui Foundation mainnet JSON-RPC path, including as a timeout fallback.
 2. Use two truly independent, non-smoke provider profiles for checkpoint/object evidence (different provider, operator and correlation group). Verify same genesis, checkpoint sequence/digest, object IDs, versions/digests, payload hashes and bounded time. Reuse current provider governance; do NOT weaken its deterministic LIVE_SUI_PROVIDERS_NOT_AUTHORIZED gate or self-authorize credentials.
-3. Add bounded, restartable, read-only capture code and deterministic offline replay. Preserve raw response hashes, request fingerprints, observation/availability times, source generations and typed negative receipts. No credentials in logs or repository.
+3. Add bounded, restartable, read-only capture code and deterministic offline replay. Preserve raw response hashes, request fingerprints, observation/availability times, source generations and typed negative receipts. The user has requested real market-data collection: execute only read-only captures that are already permitted by CAMPAIGN_START_V1 + QPR/provider governance and configured public/provider profiles; never bypass a gate. If Sui's current hard-block or provider quorum fails, record typed BLOCKED and continue offline. No credentials in logs or repository.
 4. Solana: reuse current governed source capture, RPC quorum and exact-state owners, including PR #660 merged CLMM/DLMM work. Do not duplicate source inventory or pool state decoders.
 
 PHASE 2 — REAL QUOTE PROVIDERS
@@ -61,7 +61,7 @@ PHASE 6 — FULL SIMULATION, PAPER RECEIPT, TESTS
 HARD STOP
 - no wallet or private key generation/import;
 - no signing, sendTransaction, executeTransactionBlock, borrowing, real transaction simulation that changes chain state, spending, account/ATA/object creation, deployment, relay/provider activation or production promotion;
-- do not turn on live profiles or make live calls in this coding task;
+- read-only live data calls are allowed only where the existing campaign/provider gates already return PASS and provider credentials/terms are operator-configured; never alter a hard-block to manufacture PASS. No paid data-plan upgrade or new spend without separate approval;
 - do not bypass QPR/R02/R03/R05/R06, MPR-04/MPR-05, CAMPAIGN_START_V1 or human review;
 - keep capture/provider/live/sign/send/borrow flags false in repo defaults;
 - no impersonation/spoofed caller in mainnet; pmm-sim caller variants local-only.

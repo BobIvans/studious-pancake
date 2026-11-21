@@ -1,0 +1,536 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Studious Pancake OpenLineage custom facets",
+  "description": "Versioned, namespaced metadata facets emitted by the Studious OpenLineage projection.",
+  "$defs": {
+    "StudiousRuntimeContextFacet": {
+      "type": "object",
+      "properties": {
+        "_producer": {
+          "type": "string",
+          "format": "uri"
+        },
+        "_schemaURL": {
+          "type": "string",
+          "format": "uri"
+        },
+        "event_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "event_payload_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "event_type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "stage": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "observed",
+            "accepted",
+            "rejected",
+            "ambiguous",
+            "succeeded",
+            "failed"
+          ]
+        },
+        "environment": {
+          "type": "string",
+          "enum": [
+            "test",
+            "shadow",
+            "paper"
+          ]
+        },
+        "runtime_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "logical_opportunity_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "aggregate_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "plan_hash": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "attempt_generation": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "attempt_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        },
+        "sequence_no": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "trace_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "correlation_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        },
+        "provider_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        },
+        "venue_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        },
+        "reason_code": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        },
+        "config_checksum": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        },
+        "contract_fixture_version": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "evidence_ref_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "_producer",
+        "_schemaURL",
+        "event_id",
+        "event_payload_sha256",
+        "event_type",
+        "stage",
+        "outcome",
+        "environment",
+        "runtime_id",
+        "logical_opportunity_id",
+        "aggregate_id",
+        "plan_hash",
+        "attempt_generation",
+        "sequence_no",
+        "trace_id"
+      ],
+      "additionalProperties": false
+    },
+    "StudiousStrategyContextFacet": {
+      "type": "object",
+      "properties": {
+        "_producer": {
+          "type": "string",
+          "format": "uri"
+        },
+        "_schemaURL": {
+          "type": "string",
+          "format": "uri"
+        },
+        "strategy_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "strategy_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "strategy_family": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        },
+        "live_authorized": {
+          "const": false
+        }
+      },
+      "required": [
+        "_producer",
+        "_schemaURL",
+        "strategy_id",
+        "strategy_version",
+        "live_authorized"
+      ],
+      "additionalProperties": false
+    },
+    "StudiousBlockContextFacet": {
+      "type": "object",
+      "properties": {
+        "_producer": {
+          "type": "string",
+          "format": "uri"
+        },
+        "_schemaURL": {
+          "type": "string",
+          "format": "uri"
+        },
+        "chain_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "network": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        },
+        "block_number": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "block_hash": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        },
+        "transaction_hash": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        },
+        "transaction_index": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "log_index": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "contract_address": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        },
+        "deployment_version": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        },
+        "canonicality": {
+          "type": "string",
+          "enum": [
+            "UNKNOWN",
+            "OBSERVED",
+            "CANONICAL",
+            "REORGED"
+          ]
+        },
+        "finality": {
+          "type": "string",
+          "enum": [
+            "UNKNOWN",
+            "OPTIMISTIC",
+            "SAFE",
+            "FINALIZED"
+          ]
+        }
+      },
+      "required": [
+        "_producer",
+        "_schemaURL",
+        "chain_id",
+        "canonicality",
+        "finality"
+      ],
+      "additionalProperties": false
+    },
+    "StudiousDataQualityFacet": {
+      "type": "object",
+      "properties": {
+        "_producer": {
+          "type": "string",
+          "format": "uri"
+        },
+        "_schemaURL": {
+          "type": "string",
+          "format": "uri"
+        },
+        "provider_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        },
+        "adapter_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        },
+        "adapter_version": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        },
+        "source_mode": {
+          "type": "string",
+          "enum": [
+            "STREAMING",
+            "POLL_ONLY",
+            "ONE_SHOT",
+            "UNAVAILABLE"
+          ]
+        },
+        "schema_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        },
+        "schema_version": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        },
+        "cursor": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1024
+        },
+        "watermark": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1024
+        },
+        "event_time": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "ingest_time": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "freshness_ms": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "coverage_ratio_ppm": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "gap_refs": {
+          "type": "array",
+          "maxItems": 256,
+          "items": {
+            "type": "string",
+            "maxLength": 1024
+          }
+        },
+        "correction_kind": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "original",
+            "correction",
+            "retraction",
+            null
+          ]
+        },
+        "normalization_version": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        },
+        "raw_payload_ref": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1024
+        },
+        "raw_payload_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "_producer",
+        "_schemaURL",
+        "source_mode"
+      ],
+      "additionalProperties": false
+    },
+    "StudiousLineageEdgesFacet": {
+      "type": "object",
+      "properties": {
+        "_producer": {
+          "type": "string",
+          "format": "uri"
+        },
+        "_schemaURL": {
+          "type": "string",
+          "format": "uri"
+        },
+        "entries": {
+          "type": "array",
+          "maxItems": 2048,
+          "items": {
+            "type": "object",
+            "required": [
+              "source",
+              "target",
+              "provenance",
+              "evidence_refs"
+            ],
+            "properties": {
+              "source": {
+                "type": "object",
+                "required": [
+                  "namespace",
+                  "name"
+                ],
+                "properties": {
+                  "namespace": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "additionalProperties": false
+              },
+              "target": {
+                "type": "object",
+                "required": [
+                  "namespace",
+                  "name"
+                ],
+                "properties": {
+                  "namespace": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "additionalProperties": false
+              },
+              "provenance": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "evidence_refs": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 32,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "_producer",
+        "_schemaURL",
+        "entries"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

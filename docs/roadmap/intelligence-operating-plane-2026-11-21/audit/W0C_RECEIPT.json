@@ -1,0 +1,41 @@
+{
+  "schema": "studious-pancake.lane-receipt.v1",
+  "lane": "OCA-W0C",
+  "date": "2026-11-22",
+  "branch": "codex/oca-w0c-source-provider-inventory-2026-11-22",
+  "base_main_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+  "deliverables": [
+    "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/source-provider-inventory/source_catalogue.jsonl",
+    "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/source-provider-inventory/extract_source_catalogue.py",
+    "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/source-provider-inventory/strategy_provider_trace_matrix.json",
+    "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/source-provider-inventory/FLASHLOAN_DATA_PATH_DOSSIER.md",
+    "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/source-provider-inventory/CAPABILITY_GAP_REPORT.md",
+    "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/source-provider-inventory/W0C_SOURCE_PROVIDER_INVENTORY_2026-11-22.md"
+  ],
+  "checks": {
+    "market_catalog_rows": 53,
+    "flash_capital_candidates": 27,
+    "catalogue_rows_emitted": 80,
+    "rows_enabled": 0,
+    "extractor_deterministic_rerun_equal": true,
+    "trace_matrix_lanes": 5,
+    "gap_report_rows": 8,
+    "network_probes": 0,
+    "rpc_mutations": 0
+  },
+  "acceptance": {
+    "every_source_included_or_excluded_with_reason": true,
+    "no_network_probes": true,
+    "no_runtime_mutation": true,
+    "unknown_preserved": true
+  },
+  "safety": {
+    "live": "HARD_DENIED",
+    "sign_enabled": false,
+    "send_enabled": false,
+    "execution_authority": "NONE",
+    "merge_authority": "HUMAN_ONLY"
+  },
+  "blockers": [],
+  "related": {"design_pr": 666, "design_head": "6214202b9604766b5483be4607db9bc7f5fc61e3", "w0_pr": 680, "w0a_pr": 681}
+}

@@ -1,0 +1,67 @@
+{
+  "schema": "studious.oca-w0c.strategy-provider-trace-matrix.v1",
+  "date": "2026-11-22",
+  "base_main_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+  "note": "Family-level trace from strategy lanes to the data they need to the catalogued provider families. Static evidence only; every UNKNOWN is preserved, never zeroed. Catalog rows are not active connectors.",
+  "strategy_lanes": [
+    {
+      "lane": "MASTER-00 cycle / shadow arbitrage",
+      "implementation_refs": ["src/strategy/arbitrage_graph.py", "src/strategy/multihop_solver.py", "src/strategy/detectors.py"],
+      "data_requirements": ["exact pool/venue state", "per-size venue quotes", "fees", "token decimals"],
+      "required_provider_families": ["amm-tool", "router", "rpc"],
+      "catalog_coverage": ["raydium", "meteora-damm", "meteora-dlmm", "orca", "jupiter", "0x", "1inch", "odos", "openocean", "cow-protocol", "solana-public-rpc", "helius", "yellowstone-grpc"],
+      "adapter_coverage": ["src/providers/raydium_cpmm_native.py", "src/providers/raydium_clmm_native.py", "src/providers/meteora_dlmm_native.py", "src/solana_parallel_radar/probes.py"],
+      "trace_status": "PARTIAL",
+      "gap": "exact state/quotes are offline math + ONE_SHOT capture; no governed live quote stream is wired (P0-2-R gate)"
+    },
+    {
+      "lane": "SX-01..SX-14 typed strategy contracts",
+      "implementation_refs": ["src/strategy/strategy_contract.py", "src/research/pr357_contracts.py", "src/mechanism_discovery/pr356_contracts.py", "docs/strategy-expansion/2026-11-14/"],
+      "data_requirements": ["LLAMMA bands", "OEV auction history", "LP lifecycle events", "lending rate curves", "microstructure/LVR inputs", "conditional-claims orderbooks"],
+      "required_provider_families": ["lending-tool", "reference", "orderbook-tool", "cex-orderbook"],
+      "catalog_coverage": ["curve", "pendle", "kamino", "kamino-klend", "marginfi", "morpho", "morpho-blue", "aave", "binance-spot", "bybit", "kraken", "okx-cex", "coingecko", "defillama", "dune"],
+      "adapter_coverage": ["src/lending/jupiter_lend.py", "src/lending/kamino.py", "src/lending/kamino_real_conformance.py", "src/lending/agg03_financing_ports.py"],
+      "trace_status": "UNKNOWN",
+      "gap": "no StrategyDataRequirement schema or CompatibilityEvaluator exists (OCA-W14); per-strategy data needs are documented in SX dossiers but not machine-joined to provider capabilities"
+    },
+    {
+      "lane": "R10 detectors / cpmm cycle binding / LST residuals",
+      "implementation_refs": ["src/strategy/cpmm_cycle_binding.py", "src/strategy/exact_cpmm_capacity.py", "src/direct_venue/cpmm_math.py"],
+      "data_requirements": ["exact CPMM/CLMM state", "tick/bin data", "slot-rooted state"],
+      "required_provider_families": ["amm-tool", "rpc"],
+      "catalog_coverage": ["raydium", "solana-public-rpc", "helius", "yellowstone-grpc", "helius-laserstream"],
+      "adapter_coverage": ["src/providers/raydium_cpmm_native.py", "src/market/native_cpmm_capture.py"],
+      "trace_status": "PARTIAL",
+      "gap": "native_cpmm_capture.py is explicitly ONE_SHOT; historical live attempt returned transport error and zero native snapshots (PROJECT_KNOWLEDGE_BASE_MAP.md §10)"
+    },
+    {
+      "lane": "R02 flash-capital qualification (CAP-A/B/C/D)",
+      "implementation_refs": ["src/economics/flash_capital_graph/graph.py", "src/lending/jupiter_lend.py", "src/lending/kamino.py", "src/providers/marginfi/", "src/multichain/sui.py"],
+      "data_requirements": ["lender program state", "vault/obligation capacity", "flash-fee/precision", "chain identity/finality"],
+      "required_provider_families": ["lending-tool", "rpc"],
+      "catalog_coverage": ["jupiter", "kamino", "kamino-klend", "marginfi", "project0", "navi", "deepbook", "scallop", "suilend", "bucket", "cetus"],
+      "adapter_coverage": ["src/lending/jupiter_lend.py", "src/lending/kamino_real_conformance.py", "src/providers/marginfi/", "src/gpr_sui_shadow/"],
+      "trace_status": "PARTIAL",
+      "gap": "all 27 financing candidates disabled (PROVIDER_CATALOG status RND_ONLY_27_OPTIONS_ALL_DISABLED_NO_LIVE_CAPITAL); effective capacity UNKNOWN until governed live evidence with independent quorum"
+    },
+    {
+      "lane": "Paper/shadow runtime qualification",
+      "implementation_refs": ["src/paper_shadow/", "src/execution/exact_simulation.py", "src/planning/atomic_marginfi_jupiter.py"],
+      "data_requirements": ["same-state quotes", "unsigned build conformance", "decision/outcome events"],
+      "required_provider_families": ["router", "rpc"],
+      "catalog_coverage": ["jupiter", "0x"],
+      "adapter_coverage": ["src/solana_parallel_radar/probes.py", "src/observability/store.py"],
+      "trace_status": "MISSING",
+      "gap": "no production EventEnvelope producer callsite (OCA-W0 trace, PR #680); decision→outcome operation correlation is not observable until OCA-W10 wires producers"
+    }
+  ],
+  "source_modes": {
+    "STREAMING": [],
+    "POLL_ONLY": ["solana-public-rpc", "helius", "coingecko", "defillama", "dexscreener", "geckoterminal"],
+    "ONE_SHOT": ["src/market/native_cpmm_capture.py (documented one-shot capture without subscriptions)"],
+    "UNAVAILABLE": ["all 27 flash-capital candidates (disabled)", "governed live quote capture (authorization-gated)"],
+    "note": "Static classification from code/catalog evidence only; observed modes require runtime evidence that does not exist yet (no producers wired)."
+  },
+  "counts": {"market_catalog_rows": 53, "flash_capital_candidates": 27, "any_enabled": false},
+  "safety": {"live": "HARD_DENIED", "network_probes": 0}
+}

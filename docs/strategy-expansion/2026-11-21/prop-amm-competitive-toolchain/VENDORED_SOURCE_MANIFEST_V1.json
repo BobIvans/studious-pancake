@@ -1,0 +1,534 @@
+{
+  "schema": "prop_amm_source_mirror_manifest.v1",
+  "audited_at": "2026-11-21",
+  "policy": "Mirror source code only when upstream identity, immutable commit, license and dependency closure are verified. Provider services are not source repositories. Keep all research mirrors isolated from the installed Python runtime until an adapter is proven.",
+  "targets": {
+    "approved_root": "vendor/strategy-research/",
+    "harness_root": "tools/prop-amm-harnesses/",
+    "provenance_root": "docs/third_party/prop_amm_sources/"
+  },
+  "sources": [
+    {
+      "name": "sol-parser-sdk",
+      "repository": "https://github.com/0xfnzero/sol-parser-sdk",
+      "ref": "23e97f4d00f96840136ac9f11705df64934cf384",
+      "release": "v0.11.0",
+      "license": "MIT",
+      "license_evidence": "LICENSE file read from upstream",
+      "status": "MIRROR_CANDIDATE",
+      "target": "vendor/strategy-research/sol-parser-sdk",
+      "role": "DEX event/account parser only",
+      "build_profile": "isolated Rust workspace; Solana SDK 4.0.1 / Client 4.2.2, Yellowstone 13.5 dependency line",
+      "tests": [
+        "cargo test --locked",
+        "cargo build --release --locked"
+      ],
+      "must_not": [
+        "Do not import related sol-trade-sdk signing/submission modules",
+        "Do not infer Prop AMM protocol parser coverage unless source explicitly supports each program",
+        "Do not treat vendor microbenchmarks as end-to-end latency evidence"
+      ]
+    },
+    {
+      "name": "pmm-sim",
+      "repository": "https://github.com/LimeChain/pmm-sim",
+      "ref": "cc4ae891a2a765d92c89d4381f96dce4afd446bb",
+      "release": "v0.2.0 metadata observed",
+      "license": "MIT",
+      "license_evidence": "LICENSE file read from upstream",
+      "status": "MIRROR_CANDIDATE_TEST_ONLY_WITH_LOCAL_CALLER_PROFILE_MATRIX",
+      "target": "vendor/strategy-research/pmm-sim",
+      "role": "Offline direct/single/multi/benchmark simulation",
+      "build_profile": "isolated Rust 2024 workspace; LiteSVM 0.10 / Solana SDK 3.0 line",
+      "transitive_git_dependencies": [
+        {
+          "name": "LimeChain/magnus",
+          "locked_revision": "9ecd34b634031f5dfdf5747c33a329605ea6e7c4",
+          "cargo_lock_source": "git+https://git@github.com/limechain/magnus.git?branch=extend-router-ixs#9ecd34b634031f5dfdf5747c33a329605ea6e7c4",
+          "rule": "Patch mutable branch selector in vendored Cargo.toml to immutable rev; retain original Cargo.lock and track the patch."
+        }
+      ],
+      "tests": [
+        "cargo test --locked",
+        "cargo build --release --locked",
+        "Run only direct/single/multi/benchmark modes against immutable snapshots"
+      ],
+      "must_not": [
+        "Do not deploy spoof router binaries or impersonate Jupiter/DFlow/OKX/Titan in mainnet transactions",
+        "Do not treat local spoof profile as a valid aggregator integration or as proof of whitelisting entitlement",
+        "Do not compare different slots, pool states, token identities, amounts or program versions",
+        "Do not fetch live mainnet accounts implicitly in repeatability tests; use a recorded snapshot",
+        "Simulation result is not a live quote, fill or permission to borrow/send",
+        "Not linked into production Python runtime"
+      ],
+      "research_capabilities": {
+        "caller_profile_matrix": [
+          "direct",
+          "Magnus native CPI",
+          "Jupiter simulated CPI",
+          "DFlow simulated CPI",
+          "OKX Labs simulated CPI",
+          "Titan simulated CPI"
+        ],
+        "method": "Use same immutable LiteSVM accounts/programs snapshot, market, direction, token mints and raw input amount. Compare exact output, reverse round-trip, spread, CU and failures.",
+        "source_mechanism": "src/builder.rs changes the instruction program_id and src/env.rs loads the Magnus router spoof binary under that id inside local LiteSVM.",
+        "production_boundary": "Research only. Never deploy spoof binaries under aggregator ids, alter mainnet instruction program ids, or claim authentic aggregator execution. For execution, use the genuine aggregator official API/build path."
+      }
+    },
+    {
+      "name": "1000xsh/swaps",
+      "repository": "https://github.com/1000xsh/swaps",
+      "ref": "06a999e8528ced5382ca41123c7c90cbaa11aed6",
+      "release": "0.1.1 Cargo metadata observed",
+      "license": "MIT declared in Cargo.toml",
+      "license_evidence": "Cargo.toml declares MIT; root LICENSE, LICENSE-MIT and LICENSE-APACHE were not found in this review",
+      "status": "HOLD_PENDING_LICENSE_PACKAGE_VERIFICATION",
+      "target": "vendor/strategy-research/1000xsh-swaps",
+      "role": "Direct swap instruction builder, not a quote engine",
+      "build_profile": "isolated Rust 2024 workspace; solana-address 2.6 type line",
+      "tests": [
+        "Verify published crate archive checksum and bundled license metadata",
+        "cargo test --all-features --locked",
+        "cargo clippy --all-features --all-targets -- -D warnings"
+      ],
+      "must_not": [
+        "Do not copy until license evidence is resolved",
+        "Do not treat min_amount_out as a universal guard",
+        "HumidiFi ignores min_amount_out per upstream notes; require same-transaction post-balance assertion or block",
+        "Bonkswap has a price-limit caveat; preserve venue-specific semantics",
+        "Test Tessera direct path and SolFi slot/oracle dependency explicitly"
+      ]
+    },
+    {
+      "name": "ValidatorsDAO/solana-stream",
+      "repository": "https://github.com/ValidatorsDAO/solana-stream",
+      "ref": "3b22307033ec6d7b78242d3b4cc9f3168209dcfd",
+      "release": "workspace v5 metadata observed",
+      "license": "Apache-2.0",
+      "license_evidence": "LICENSE.txt file read from upstream",
+      "status": "MIRROR_CANDIDATE_READ_ONLY_STREAM_HARNESS",
+      "target": "vendor/strategy-research/validatorsdao-solana-stream",
+      "role": "Geyser gRPC / Shred gRPC / UDP shred client research",
+      "build_profile": "isolated workspace; current README notes Transaction v1 and Alpenglow wire format requirements",
+      "tests": [
+        "cargo test --locked for selected client crate",
+        "Test slot gap, duplicate, reorder, reorg, reconnect and bounded backpressure"
+      ],
+      "must_not": [
+        "UDP shreds can be missing/out-of-order/pre-finalization; treat as tentative signals",
+        "SDK use does not grant a provider feed subscription",
+        "No separate production market-data capture service"
+      ]
+    },
+    {
+      "name": "solana-arb-executor",
+      "repository": "https://github.com/alexbanda08/solana-arb-executor",
+      "ref": "07d8145ab9aec65d60aca1cc431b3a0851bf7c32",
+      "license": "MIT",
+      "license_evidence": "LICENSE file read from upstream",
+      "status": "MIRROR_AS_RESEARCH_SKILL_ONLY",
+      "target": "vendor/strategy-research/solana-arb-executor",
+      "role": "Codex/Claude code-generation skill templates and risk-gate reference",
+      "build_profile": "documentation/skill review; not a runtime crate",
+      "tests": [
+        "Review generated code templates manually; never launch live bot"
+      ],
+      "must_not": [
+        "Do not install as a live executor",
+        "Do not adopt signer/sender templates without PR130/MPR04 review"
+      ]
+    },
+    {
+      "name": "Anza Mollusk",
+      "repository": "https://github.com/anza-xyz/mollusk",
+      "ref": "81d1463aabad700c3bb953827215c5dfc81ca61a",
+      "license": "Apache-2.0",
+      "license_evidence": "LICENSE file read from upstream; Cargo.toml declares license-file",
+      "status": "DEV_TEST_HARNESS_CANDIDATE",
+      "target": "vendor/strategy-research/anza-mollusk",
+      "role": "Deterministic SVM instruction tests and CU measurement",
+      "build_profile": "separate dev/test workspace; current crate line v0.16.4 observed",
+      "tests": [
+        "cargo test --locked for selected harness"
+      ],
+      "must_not": [
+        "Not a production quote engine or market-data source"
+      ]
+    },
+    {
+      "name": "Anza Pinocchio",
+      "repository": "https://github.com/anza-xyz/pinocchio",
+      "ref": "b45dd2a98e3437a42140bafd98b49b78c9e76305",
+      "license": "Apache-2.0",
+      "license_evidence": "LICENSE file read from upstream",
+      "status": "ONCHAIN_PROGRAM_REFERENCE_ONLY",
+      "target": "vendor/strategy-research/anza-pinocchio",
+      "role": "Low-level on-chain program framework only if an existing on-chain program bottleneck is measured",
+      "build_profile": "separate program workspace; not part of off-chain Python executor",
+      "tests": [
+        "Only a separately scoped program PR with CU and binary-size benchmarks"
+      ],
+      "must_not": [
+        "Do not create a new on-chain router solely to use this library",
+        "Do not claim fixed percentage CU reduction"
+      ]
+    },
+    {
+      "name": "Jito ShredStream Proxy",
+      "repository": "https://github.com/jito-labs/shredstream-proxy",
+      "ref": "b96e369f3165600c02182e3d8e1d01b6aada9fdb",
+      "license": "Apache-2.0",
+      "license_evidence": "LICENSE file read from upstream",
+      "status": "HISTORICAL_REFERENCE_ONLY",
+      "target": "vendor/strategy-research/jito-shredstream-proxy",
+      "role": "Protocol history / compatibility reference for retired feed path",
+      "build_profile": "not built for production",
+      "tests": [],
+      "must_not": [
+        "Jito ShredStream sunset means this client does not create a working feed entitlement",
+        "Do not expose it as an active data provider"
+      ]
+    },
+    {
+      "name": "LiteSVM",
+      "repository": "https://github.com/LiteSVM/litesvm",
+      "ref": null,
+      "license": "Verify crate and exact upstream revision",
+      "license_evidence": "pmm-sim Cargo dependency litesvm=0.10.0; no independent source mirror pin made in this sweep",
+      "status": "USE_LOCKED_CRATE_TRANSITIVELY_FIRST",
+      "target": null,
+      "role": "pmm-sim in-process SVM harness",
+      "build_profile": "Use pmm-sim lockfile first; do not add a second version to main runtime",
+      "tests": [],
+      "must_not": [
+        "Avoid version drift across harnesses"
+      ]
+    },
+    {
+      "name": "Solana Arbitrage Framework (ototech7)",
+      "repository": "https://github.com/ototech7/Solana-Arbitrage-Framework",
+      "ref": null,
+      "license": "Not independently verified",
+      "license_evidence": "README says educational / not production",
+      "status": "REFERENCE_ONLY_LICENSE_HOLD",
+      "target": null,
+      "role": "Educational architecture reference",
+      "build_profile": "Do not build or run as a bot",
+      "tests": [],
+      "must_not": [
+        "Do not import old venue code as production-ready",
+        "Do not reuse its hard-coded success/slippage targets"
+      ]
+    },
+    {
+      "name": "Solana arb framework (sripathiabhiram29-droid)",
+      "repository": "https://github.com/sripathiabhiram29-droid/solana-arb-framework",
+      "ref": null,
+      "license": "Not verified",
+      "license_evidence": "README describes live loop, wallet/keypair environment variables and dashboard trading controls",
+      "status": "EXCLUDE_FROM_BUILD_AND_EXECUTION",
+      "target": null,
+      "role": "Security-review reference only",
+      "build_profile": "Do not build or run",
+      "tests": [],
+      "must_not": [
+        "No credentials",
+        "No live_loop",
+        "No wallet/keypair loading",
+        "No mainnet execution"
+      ]
+    },
+    {
+      "name": "KADES / CADES / Capture OS",
+      "repository": null,
+      "ref": null,
+      "license": "Unknown",
+      "license_evidence": "No canonical code repository or documented API contract identified",
+      "status": "NO_SOURCE_TO_MIRROR",
+      "target": null,
+      "role": "Unresolved external signal lead",
+      "build_profile": "No implementation until canonical source and terms are verified",
+      "tests": [],
+      "must_not": [
+        "Do not fabricate a client or duplicate the existing detector/capture owner"
+      ]
+    },
+    {
+      "name": "Hosted feed / relay vendors",
+      "repository": null,
+      "ref": null,
+      "license": "Commercial service terms, not source license",
+      "license_evidence": "LocalShred, DoubleZero, OrbitFlare, Helius, Triton, GetBlock, Astralane, Syncro, Sanctum, BoltTx and Nozomi are provider products; source code cannot be inferred from product name",
+      "status": "API_CONTRACT_ONLY_NOT_VENDOR_SOURCE",
+      "target": null,
+      "role": "Use existing provider governance with per-product capability profiles",
+      "build_profile": "No provider activation or credentials in repository",
+      "tests": [
+        "Mock contract tests only until operator grants access"
+      ],
+      "must_not": [
+        "Do not claim provider client is official without official docs",
+        "Do not store tokens/endpoints with secrets",
+        "No trial/subscription activation"
+      ]
+    },
+    {
+      "name": "Jupiter Swap API V2",
+      "repository": null,
+      "ref": null,
+      "license": "API terms",
+      "license_evidence": "Official API docs; hosted API is not an open-source source tree",
+      "status": "API_ADAPTER_ONLY",
+      "target": null,
+      "role": "V2 /order quotes and /build raw instructions",
+      "build_profile": "Mock transport contract tests and R13 normalization",
+      "tests": [
+        "Schema tests",
+        "Same amount/context differential tests"
+      ],
+      "must_not": [
+        "No live API calls without approved source credentials/quota",
+        "/build output remains unsigned and unsubmitted"
+      ]
+    },
+    {
+      "name": "sol-trade-sdk / sol-trade-router-sdk",
+      "repository": "https://github.com/0xfnzero/sol-trade-sdk",
+      "ref": null,
+      "license": "Requires separate license/review",
+      "license_evidence": "sol-parser-sdk README lists separate trading/signing/multi-channel submission SDKs",
+      "status": "DO_NOT_MIRROR_OR_INTEGRATE_IN_THIS_PACK",
+      "target": null,
+      "role": "Reference only; conflicts with isolated signer and submission owner",
+      "build_profile": "No build/test in bot",
+      "tests": [],
+      "must_not": [
+        "No private keys",
+        "No second signer",
+        "No parallel multi-channel sender",
+        "No bypass of MPR04/PR130"
+      ]
+    },
+    {
+      "name": "0xfnzero/solana-streamer",
+      "repository": "https://github.com/0xfnzero/solana-streamer",
+      "ref": "4dc233e17ac8b7c13cbe5b80f5dc64cf3251e769",
+      "release": "v6.0.0",
+      "license": "MIT",
+      "license_evidence": "Root LICENSE file read from upstream. Cargo.toml declares package solana-streamer-sdk 6.0.0 and sol-parser-sdk 0.11.0.",
+      "status": "MIRROR_CANDIDATE_READ_ONLY_STREAM_FACADE",
+      "target": "vendor/strategy-research/solana-streamer",
+      "role": "Facade over sol-parser-sdk with Yellowstone gRPC, ShredStream and RPC parsing helpers",
+      "build_profile": "Isolated Rust 2021 workspace. Solana SDK 4.0.1 / Client 4.2.2 and Yellowstone 13.5.0 / Proto 12.7.0.",
+      "tests": [
+        "cargo metadata --locked",
+        "cargo test --locked",
+        "gap/reorder/reorg/reconnect/replay/backpressure tests"
+      ],
+      "must_not": [
+        "Not a feed subscription or hosted provider entitlement",
+        "No signing/trade SDK modules",
+        "No second production capture daemon; bridge only through existing source owner"
+      ]
+    },
+    {
+      "name": "rpcpool/yellowstone-grpc",
+      "repository": "https://github.com/rpcpool/yellowstone-grpc",
+      "ref": "b9a4f56a43a1858c63bfe8c3904b98ef416ae1a9",
+      "license": "AGPL-3.0 repository; yellowstone-grpc-proto crate declares Apache-2.0",
+      "license_evidence": "Root LICENSE is AGPL-3.0; yellowstone-grpc-proto/Cargo.toml declares Apache-2.0; geyser plugin uses workspace license.",
+      "status": "REFERENCE_ONLY_AGPL_REVIEW; PROTO_CRATE_SEPARATE_LICENSE",
+      "target": null,
+      "role": "Canonical Geyser gRPC plugin/protocol reference, not a free hosted RPC service",
+      "build_profile": "Do not vendor full repository into bot without AGPL-3.0 legal review. If needed, evaluate published Apache-2.0 yellowstone-grpc-proto crate separately.",
+      "tests": [
+        "Protocol/schema compatibility test only after dependency/legal review"
+      ],
+      "must_not": [
+        "No assumption that open-source Yellowstone means free hosted endpoints",
+        "No full plugin mirror until AGPL implications reviewed",
+        "No dedicated production validator/plugin deployment under this strategy task"
+      ]
+    }
+  ],
+  "archive_rules": [
+    "Clone into temporary directory, checkout exact commit detached, then git archive into reviewed vendor path; do not leave nested .git.",
+    "Save original upstream LICENSE/NOTICE/COPYING and provenance.json next to each snapshot.",
+    "Compute SHA-256 of archive and license files; verify commit with git rev-parse HEAD.",
+    "Run cargo metadata --locked; retain Cargo.lock. Resolve branch-based git dependencies to immutable revisions. Do not allow floating main/master dependencies.",
+    "Run cargo-deny/cargo-audit or repository-approved equivalents before building; record transitive licenses and advisories.",
+    "Do not add vendored tools to pyproject runtime dependencies or supported composition root until an adapter PR passes tests and packaging gates.",
+    "If source lacks a complete license, stop mirroring and keep URL+metadata only.",
+    "An external source archive is not a runtime capability, source credential, API subscription or permission to contact provider infrastructure."
+  ],
+  "activation": {
+    "download_allowed_for_candidate_snapshots": true,
+    "build_allowed_in_isolated_workspaces": true,
+    "network_provider_calls": false,
+    "install_in_supported_runtime": false,
+    "sign_enabled": false,
+    "send_enabled": false,
+    "borrow_enabled": false,
+    "live_enabled": false
+  },
+  "api_profiles": [
+    {
+      "name": "LocalShred Lite",
+      "kind": "hosted_data_feed",
+      "url": "https://www.dedicatednodes.io/localshred/",
+      "status": "free_tier_candidate_no_sla",
+      "adapter_owner": "existing source registry/transport",
+      "activation": false
+    },
+    {
+      "name": "DoubleZero Edge",
+      "kind": "hosted_raw_shred_feed",
+      "url": "https://docs.malbeclabs.com/solana/edge/subscribe/",
+      "status": "paid_regional_feed",
+      "adapter_owner": "existing source registry/transport",
+      "activation": false
+    },
+    {
+      "name": "OrbitFlare ShredStream",
+      "kind": "hosted_raw_shred_feed",
+      "url": "https://orbitflare.com/products/shredstream",
+      "status": "paid_regional_feed_trial_unverified",
+      "adapter_owner": "existing source registry/transport",
+      "activation": false
+    },
+    {
+      "name": "Triton Yellowstone/Geyser and ShredStream",
+      "kind": "hosted_feed",
+      "url": "https://www.triton.one/pricing",
+      "status": "distinct_products_pricing_required",
+      "adapter_owner": "existing source registry/transport",
+      "activation": false
+    },
+    {
+      "name": "Helius LaserStream and Raw Shreds",
+      "kind": "hosted_feed",
+      "url": "https://www.helius.dev/pricing",
+      "status": "tiered_product_pricing_required",
+      "adapter_owner": "existing source registry/transport",
+      "activation": false
+    },
+    {
+      "name": "GetBlock Shred Streams",
+      "kind": "hosted_feed",
+      "url": "https://getblock.io/nodes/sol/",
+      "status": "paid_product_trial_details_conflict",
+      "adapter_owner": "existing source registry/transport",
+      "activation": false
+    },
+    {
+      "name": "ERPC Stream SDK",
+      "kind": "vendor_sdk",
+      "url": "https://erpc.global/en/news/2026/11/07/erpc-solana-stream-sdk-v4-20261107/",
+      "status": "benchmark_claim_requires_reproduction",
+      "adapter_owner": "existing source registry/transport",
+      "activation": false
+    },
+    {
+      "name": "Supanode",
+      "kind": "hosted_rpc_feed",
+      "url": null,
+      "status": "unverified_require_canonical_docs",
+      "adapter_owner": "none_until_verified",
+      "activation": false
+    },
+    {
+      "name": "Jupiter Swap API V2",
+      "kind": "hosted_quote_builder_api",
+      "url": "https://github.com/jup-ag/docs/blob/main/swap/index.mdx",
+      "status": "official_api_contract",
+      "adapter_owner": "existing R13 quote/build owner",
+      "activation": false
+    },
+    {
+      "name": "Astralane Iris",
+      "kind": "hosted_sender",
+      "url": "https://astralane.gitbook.io/docs/mandarin-docs/huan-ying-lai-dao-astralane/duan-dian-he-pei-zhi",
+      "status": "official docs list 10000 lamport Iris min tip; confirm terms/rebate",
+      "adapter_owner": "current submission owner only after separate approval",
+      "activation": false,
+      "tip_min_lamports": 10000
+    },
+    {
+      "name": "Helius Sender SWQoS-only",
+      "kind": "hosted_sender",
+      "url": "https://www.helius.dev/sender",
+      "status": "official 5000 lamport minimum; best effort single SWQoS path",
+      "adapter_owner": "current submission owner only after separate approval",
+      "activation": false,
+      "tip_min_lamports": 5000
+    },
+    {
+      "name": "Helius Sender Max",
+      "kind": "hosted_sender",
+      "url": "https://www.helius.dev/sender",
+      "status": "official 1000000 lamport minimum; internal multipath priority auction",
+      "adapter_owner": "current submission owner only after separate approval",
+      "activation": false,
+      "tip_min_lamports": 1000000
+    },
+    {
+      "name": "Syncro Sender public",
+      "kind": "hosted_sender",
+      "url": "https://docs.p2p.org/docs/syncro-sender-pricing-rate-limits",
+      "status": "official current 200000 lamport min; built-in multi-channel send",
+      "adapter_owner": "current submission owner only after separate approval",
+      "activation": false,
+      "tip_min_lamports": 200000
+    },
+    {
+      "name": "Syncro Sender private",
+      "kind": "hosted_sender",
+      "url": "https://docs.p2p.org/docs/syncro-sender-pricing-rate-limits",
+      "status": "official current 150000 lamport min; requires API key and built-in multi-channel send",
+      "adapter_owner": "current submission owner only after separate approval",
+      "activation": false,
+      "tip_min_lamports": 150000
+    },
+    {
+      "name": "bloXroute Trader API",
+      "kind": "hosted_sender",
+      "url": "https://docs.bloxroute.com/solana/trader-api/introduction/tip-and-tipping-addresses",
+      "status": "official 1000000 lamport required tip; built-in multi-path delivery",
+      "adapter_owner": "current submission owner only after separate approval",
+      "activation": false,
+      "tip_min_lamports": 1000000
+    },
+    {
+      "name": "0slot",
+      "kind": "hosted_sender",
+      "url": null,
+      "status": "official current tip/billing contract not verified in this pass",
+      "adapter_owner": "none_until_verified",
+      "activation": false
+    },
+    {
+      "name": "Sanctum Gateway",
+      "kind": "hosted_sender",
+      "url": null,
+      "status": "official current tip/billing contract not verified",
+      "adapter_owner": "none_until_verified",
+      "activation": false
+    },
+    {
+      "name": "BoltTx",
+      "kind": "hosted_sender",
+      "url": null,
+      "status": "official current tip/billing contract not verified",
+      "adapter_owner": "none_until_verified",
+      "activation": false
+    },
+    {
+      "name": "Nozomi",
+      "kind": "hosted_sender",
+      "url": null,
+      "status": "official current tip/billing contract not verified",
+      "adapter_owner": "none_until_verified",
+      "activation": false
+    }
+  ]
+}

@@ -1,0 +1,162 @@
+{
+  "schema": "relay_provider_tip_profiles.v1",
+  "verified_at": "2026-11-21",
+  "note": "Floors only, not bid targets. Verify current account plan before use.",
+  "profiles": [
+    {
+      "provider": "Jito",
+      "product": "Bundles / Block Engine",
+      "tip_min_lamports": 1000,
+      "tip_min_sol": "0.000001",
+      "tip_model": "in-transaction transfer to Jito tip account",
+      "scope": "bundle floor; PR130 JITO_SINGLE policy remains repository authority",
+      "native_multipath": "Jito Block Engine regional routing",
+      "cross_provider_billing": "not established",
+      "enabled": false,
+      "url": "https://docs.jito.wtf/lowlatencytxnsend/"
+    },
+    {
+      "provider": "Helius",
+      "product": "Sender SWQoS-only",
+      "tip_min_lamports": 5000,
+      "tip_min_sol": "0.000005",
+      "tip_model": "in-transaction transfer to Helius tip account",
+      "scope": "single SWQoS path, best-effort; no priority tip buffer below 0.001 SOL",
+      "native_multipath": "single fast path",
+      "cross_provider_billing": "Helius says no credits, paid only through on-chain tip; third-party provider charges unknown",
+      "enabled": false,
+      "url": "https://www.helius.dev/sender"
+    },
+    {
+      "provider": "Helius",
+      "product": "Sender Max",
+      "tip_min_lamports": 1000000,
+      "tip_min_sol": "0.001",
+      "tip_model": "in-transaction transfer to Helius tip account",
+      "scope": "priority auction and multi-high-speed path routing",
+      "native_multipath": "yes, within one Sender endpoint",
+      "cross_provider_billing": "Helius says no credits, paid through tip; other vendors' billing not covered",
+      "enabled": false,
+      "url": "https://www.helius.dev/sender"
+    },
+    {
+      "provider": "Astralane",
+      "product": "Iris sendTransaction",
+      "tip_min_lamports": 10000,
+      "tip_min_sol": "0.00001",
+      "tip_model": "in-transaction transfer to Astralane tip account",
+      "scope": "official translated endpoint config",
+      "native_multipath": "internal Iris network / SWQoS",
+      "cross_provider_billing": "provider says external sharing can reduce rebate tier",
+      "rebate": "conditional tip refunds if lower-price execution occurs; terms/config dependent",
+      "enabled": false,
+      "url": "https://astralane.gitbook.io/docs/mandarin-docs/huan-ying-lai-dao-astralane/duan-dian-he-pei-zhi"
+    },
+    {
+      "provider": "Astralane",
+      "product": "sendPaladin",
+      "tip_min_lamports": 100000,
+      "tip_min_sol": "0.0001",
+      "priority_fee_min_micro_lamports": 100000,
+      "tip_model": "in-transaction transfer to Astralane tip account",
+      "scope": "separate method; do not merge with Iris floor",
+      "native_multipath": "method-specific",
+      "cross_provider_billing": "rebate eligibility config dependent",
+      "enabled": false,
+      "url": "https://astralane.gitbook.io/docs/mandarin-docs/huan-ying-lai-dao-astralane/duan-dian-he-pei-zhi"
+    },
+    {
+      "provider": "P2P.org",
+      "product": "Syncro public",
+      "tip_min_lamports": 200000,
+      "tip_min_sol": "0.0002",
+      "tip_model": "in-transaction transfer to P2P tip account",
+      "scope": "current public endpoint; 1 TPS default/IP",
+      "native_multipath": "yes, single sendTransaction internally routes multiple channels",
+      "cross_provider_billing": "not established",
+      "enabled": false,
+      "url": "https://docs.p2p.org/docs/syncro-sender-pricing-rate-limits"
+    },
+    {
+      "provider": "P2P.org",
+      "product": "Syncro private",
+      "tip_min_lamports": 150000,
+      "tip_min_sol": "0.00015",
+      "tip_model": "in-transaction transfer to P2P tip account",
+      "scope": "API key required; 50 TPS default/client",
+      "native_multipath": "yes, single sendTransaction internally routes multiple channels",
+      "cross_provider_billing": "not established",
+      "enabled": false,
+      "url": "https://docs.p2p.org/docs/syncro-sender-pricing-rate-limits"
+    },
+    {
+      "provider": "bloXroute",
+      "product": "Trader API",
+      "tip_min_lamports": 1000000,
+      "tip_min_sol": "0.001",
+      "tip_model": "in-transaction transfer to official bloXroute tip wallet",
+      "scope": "required per transaction; service tier/feature-dependent extra service charges may apply",
+      "native_multipath": "yes, internal multi-path broadcast and retries until land/expiry",
+      "cross_provider_billing": "not established",
+      "enabled": false,
+      "url": "https://docs.bloxroute.com/solana/trader-api/introduction/tip-and-tipping-addresses"
+    },
+    {
+      "provider": "0slot",
+      "product": "Unverified",
+      "tip_min_lamports": null,
+      "tip_min_sol": null,
+      "tip_model": "UNKNOWN",
+      "scope": "require current official terms",
+      "native_multipath": "UNKNOWN",
+      "cross_provider_billing": "UNKNOWN",
+      "enabled": false,
+      "url": null
+    },
+    {
+      "provider": "Sanctum",
+      "product": "Gateway",
+      "tip_min_lamports": null,
+      "tip_min_sol": null,
+      "tip_model": "UNKNOWN",
+      "scope": "require current official terms",
+      "native_multipath": "UNKNOWN",
+      "cross_provider_billing": "UNKNOWN",
+      "enabled": false,
+      "url": null
+    },
+    {
+      "provider": "BoltTx",
+      "product": "Sender",
+      "tip_min_lamports": null,
+      "tip_min_sol": null,
+      "tip_model": "UNKNOWN",
+      "scope": "require current official terms",
+      "native_multipath": "UNKNOWN",
+      "cross_provider_billing": "UNKNOWN",
+      "enabled": false,
+      "url": null
+    },
+    {
+      "provider": "Nozomi",
+      "product": "Sender",
+      "tip_min_lamports": null,
+      "tip_min_sol": null,
+      "tip_model": "UNKNOWN",
+      "scope": "require current official terms",
+      "native_multipath": "UNKNOWN",
+      "cross_provider_billing": "UNKNOWN",
+      "enabled": false,
+      "url": null
+    }
+  ],
+  "policy": {
+    "one_signed_transaction_has_fixed_tip_destination": true,
+    "multiple_tip_instructions_pay_all_recipients_on_success": true,
+    "same_signed_bytes_to_multiple_relays_changes_no_onchain_tip_destination": true,
+    "different_tip_variants_are_distinct_executable_signatures": true,
+    "only_winning_relay_paid_is_not_assumed": true,
+    "current_submission_owner": "PR130 JITO_SINGLE only",
+    "all_enabled": false
+  }
+}

@@ -855,7 +855,9 @@ W0 теперь обязан:
 - W6 — bounded SQD/Antseer read-only evidence profiles;
 - W7 — golden retrieval/token-efficiency benchmark across selected indexes and packs;
 - W8 — operations cockpit, report bundles and reviewer workflow;
-- W9 — measured storage scale gate; ClickHouse/NATS/remote archive only if measured need.
+- W9 — measured storage scale gate; ClickHouse/NATS/remote archive only if measured need;
+- W10 — mandatory runtime capture: wire real supported test/paper/shadow producers to durable correlated events, source evidence, trace/callsite and terminal outcomes;
+- W11 — mandatory universal read-only query/export/replay across code graph, operational events, raw/normalized market data, episodes and work receipts.
 
 ## 13.4 Режим разработки, пока нет автономных AI agents
 
@@ -925,7 +927,7 @@ Serena main app имеет GPL-3.0-or-later; jCodeMunch остаётся license
 4. incremental refresh + CI, Work Result Receipt и strategy-session pack;
 5. tool/app cleanup inventory без автоматического удаления.
 
-**Нельзя остановиться после W0 и вернуть только отчёт/план.** Требуется первая работающая, тестируемая версия; если часть blocked, сделать safe subset и выдать точный blocker.
+**Нельзя остановиться после W0 и вернуть только отчёт/план.** Требуется первая работающая, тестируемая версия; если часть blocked, сделать safe subset и выдать точный blocker. **Нельзя объявлять цель достигнутой без W0B + W10 + W11:** карта кода без реальной записи paper/shadow работы и единого cross-store retrieval — только половина системы.
 
 ### 14.3 Новый стратегический чат
 

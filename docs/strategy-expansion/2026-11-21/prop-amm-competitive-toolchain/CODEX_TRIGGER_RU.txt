@@ -19,7 +19,7 @@ READ FIRST:
 Then refresh main, #657 SX-18, #660 CLMM/DLMM and #664 campaign pack. Rebase before code. Coordinate owners; SX-18 owns strategy runtime fanout. Do not create a second detector, graph, quote kernel, scheduler, market-data bus, journal, source catalog or sender.
 
 MISSION A — MIRROR AND TEST OPEN-SOURCE TOOLS
-1. Use VENDORED_SOURCE_MANIFEST_V1.json as the exact allow/hold/exclude list.
+1. Use VENDORED_SOURCE_MANIFEST_V1.json as the exact allow/hold/exclude list. Include 0xfnzero/solana-streamer v6.0.0 in isolated read-only harness evaluation; treat rpcpool/yellowstone-grpc root AGPL-3.0 separately from its Apache-2.0 proto crate and do not mirror the whole plugin without license review.
 2. Download eligible upstream sources by immutable commit into vendor/strategy-research/ without nested .git; include unmodified LICENSE/NOTICE and provenance.json checksums.
 3. Use separate harness workspaces and retain Cargo.lock. Do not merge incompatible Solana SDK versions.
 4. Pin pmm-sim's Magnus dependency to the exact commit in its upstream Cargo.lock; do not follow mutable branch.
@@ -30,7 +30,7 @@ MISSION A — MIRROR AND TEST OPEN-SOURCE TOOLS
 9. Run selected workspace tests/builds offline after dependencies are prefetched; record SHA256s, versions, build reports and benchmarks.
 
 MISSION B — ADD TO EXISTING BOT OWNERS
-1. Add parser/source adapters only at existing canonical source and MarketObservation boundary.
+1. Add parser/source adapters only at existing canonical source and MarketObservation boundary. Evaluate solana-streamer as a read-only facade, not a hosted source entitlement or second capture daemon.
 2. Implement pmm-sim as an offline differential harness, not production runtime.
 3. Integrate Jupiter Swap API V2 /order and /build through current R13 quote/build owner; /build remains unsigned.
 4. Integrate 1000xsh direct instructions only after license/program/account/min-out conformance, one venue/version at a time.

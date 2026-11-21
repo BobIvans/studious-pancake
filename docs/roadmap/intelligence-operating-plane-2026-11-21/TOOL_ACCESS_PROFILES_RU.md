@@ -77,12 +77,22 @@ Choose this route if it reuses existing code better or beats CGC/Graphify on mea
 - SCIP protocol/indexers: https://github.com/scip-code/scip. The ecosystem includes indexers for Python, TypeScript/JavaScript, Rust, Go, Java/Kotlin/Scala, C/C++ and others. Use only where actual project build/config supports compiler-grade references. Local SCIP indexes do not require deploying the Sourcegraph server.
 - Serena: https://github.com/oraios/serena. LSP-backed semantic tools across 40+ languages are useful for on-demand definitions/references/implementations. Serena's main application is GPL-3.0-or-later (SolidLSP component has its own MIT license); do not vendor/bundle without reviewing implications. Treat it as a separate optional developer tool, not the persistent knowledge graph.
 
-### 2.6 jCodeMunch — license gate
+### 2.6 Probe — fast local just-in-time retrieval candidate
+
+https://github.com/probelabs/probe  
+Probe combines ripgrep-style search with Tree-sitter AST parsing, extracts complete functions/classes, supports token-capped results and can run locally/offline. Its raw MCP mode exposes search/query/extract/symbols; use only these read/query tools. Do not launch the built-in Probe Agent with edit/delegate/bash privileges for repository discovery. It is a retrieval layer, not persistent memory or a strategy/operations catalogue. The upstream repository lists Apache-2.0; audit package dependencies and pin exact versions.
+
+### 2.7 ast-grep — structural pattern utility
+
+https://github.com/ast-grep/ast-grep  
+MIT-licensed Tree-sitter-based structural search/lint/codemod utility. Use for precise AST queries and scanner rules when needed; not a persistent knowledge graph and no need to install it if Tree-sitter queries already cover the requirement.
+
+### 2.8 jCodeMunch — license gate
 
 https://github.com/jgravelle/jcodemunch-mcp  
 Do not use in a revenue-supporting commercial workflow until current licensing is reviewed and the needed paid rights are explicitly approved. Vendor token-saving figures are not transferable guarantees; compare on the same golden questions.
 
-### 2.7 Decision rule
+### 2.9 Decision rule
 
 Run W0A on the exact same SHA and 30–50 golden questions. Compare:
 - file/language/artifact coverage and unsupported formats;

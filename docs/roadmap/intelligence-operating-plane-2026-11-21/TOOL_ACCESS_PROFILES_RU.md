@@ -177,3 +177,50 @@ Static zero-reference is not enough to delete: inspect dynamic imports, registri
 ## 7. Access truth
 
 A tool is not "available" because it is in this document. Record installed version, successful local self-check, connected client, granted capabilities and last health time for each actual agent environment. ChatGPT does not automatically receive the local index; provide the pinned context pack, authorized GitHub repository access or an explicitly configured local read-only MCP.
+
+
+---
+
+## 8. Расширенный SOTA shortlist и license-aware tool access
+
+Полный каталог функций, upstream-ссылок, требований к provenance и work packages W12–W19 находится в [UNIVERSAL_KNOWLEDGE_DATA_PLANE_EXPANSION_RU.md](UNIVERSAL_KNOWLEDGE_DATA_PLANE_EXPANSION_RU.md). Этот раздел фиксирует, какие инструменты агенту разрешено исследовать и что именно требуется сравнить.
+
+### Приоритетные профили W0A
+
+| Роль | Upstream | Проверка |
+|---|---|---|
+| Main graph candidate | [sdsrss/code-graph-mcp](https://github.com/sdsrss/code-graph-mcp) | Incremental refresh, Merkle/blob invalidation, query truncation, branch switching, MCP allowlist, exact call-edge precision |
+| Independent AST/symbol navigation | [defendend/Claude-ast-index-search](https://github.com/defendend/Claude-ast-index-search) | Definition/reference/caller/implementation precision; graph freshness after index updates and branch changes |
+| Resolver precision benchmark | [aimasteracc/tree-sitter-analyzer](https://github.com/aimasteracc/tree-sitter-analyzer) | Family-gated cross-language calls, ambiguous/unresolved reporting, false-positive rate |
+| Retrieval/risk candidate | [iliaal/codesage](https://github.com/iliaal/codesage) | Lexical+structural+semantic retrieval, change-risk/co-change signals, token budget, evidence citations |
+| Temporal graph benchmark | [n24q02m/crg](https://github.com/n24q02m/crg) | As-of SHA, valid_from/valid_to, diff, historical node/edge correctness |
+| Structural audit | [ast-grep](https://github.com/ast-grep/ast-grep) | Deterministic structural patterns, audit rules, safe AST transformations |
+| Output efficiency | [RTK](https://github.com/rtk-ai/rtk) | Actual target-tokenizer savings, preserved exit codes, no loss of critical test/compiler failures |
+| Compact pack experiment | [HEDL](https://github.com/dweve-ai/hedl) | Whether compact serialization preserves graph relations, missing fields, provenance and uncertainty |
+| Conditional graph storage | [Glean](https://github.com/facebookincubator/Glean), [LadybugDB](https://github.com/LadybugDB/ladybug) | Only measured high-scale fact-query or graph-storage gap; test restore, migration and operating burden |
+
+Compare with current native Local Intelligence V2 and the existing candidates: [DeusData/codebase-memory-mcp](https://github.com/DeusData/codebase-memory-mcp), [colbymchenry/codegraph](https://github.com/colbymchenry/codegraph), [CodeGraphContext](https://github.com/CodeGraphContext/CodeGraphContext), [Graphify](https://github.com/Graphify-Labs/graphify), [SylphxAI/repomap](https://github.com/SylphxAI/repomap), [Probe](https://github.com/probelabs/probe), [Scantool](https://github.com/mariusei/scantool), and selected [SCIP](https://github.com/sourcegraph/scip)/LSP indexers. Additional references are grouped in the expansion document: Salsa, Buck2, CocoIndex, Nx, Turborepo, Watchman, OpenLineage, DataHub, Apicurio, NATS, Debezium, Temporal, DuckDB, Parquet, ClickHouse, Iceberg, lakeFS, Lance, Dolt, cr-sqlite, jj, Firecracker, Wasmtime, Parca, pprof, pytest-testmon, pytest-cov, Hypothesis, mutmut, Buf, oasdiff, AsyncAPI, Joern, Infer, Knip, ts-prune, cargo-deny, Syft, ScanCode and gitleaks.
+
+### Candidate isolation profile
+
+- Start from a clean pinned main SHA and record candidate commit/tag, exact binary/package checksums, SPDX/license paths, transitive SBOM, release/activity/security state and tested platforms.
+- Install in a throwaway HOME/worktree/container. Do not run setup wizards against the developer's global config. Review every generated MCP, hooks, skills, AGENTS/CLAUDE/Codex/Cursor config and telemetry/network option before enabling.
+- Use only local/offline read-only mode where available. Do not upload this private/proprietary repository to hosted graph services.
+- Keep tool MCP schemas and commands out of the bot runtime profile until explicit policy approval. Analyst facade exposes only allowlisted read operations.
+- Benchmark all contenders against identical pinned source, language/build environment, golden corpus and model-tokenizer budget. Track precision/recall, edge confidence, unresolved rate, stale-index behavior, p50/p95, peak RAM, disk, cold start, incremental refresh and recovery.
+- Select one persistent graph backend at most; one JIT extractor only if it adds measured value; one optional semantic overlay at most. Choosing none is valid.
+
+### License handling corrections
+
+- Elastic License 2.0 is not a blanket non-commercial license. Record its commercial-use permissions and hosted/managed-service, license-key and notice restrictions separately.
+- GitNexus is marked PolyForm Noncommercial 1.0.0 in the referenced source review; do not use in commercial production without a separate grant.
+- github/codeql repository license does not grant the separately licensed CodeQL CLI binary rights. Closed-source automated use requires the applicable GitHub Advanced Security entitlement.
+- GitHub Stack Graphs was archived 2025-09-09; use its algorithm as a reference, not a critical maintained dependency.
+- libgit2 GPL-2.0 with Linking Exception is not a simple blanket ban on proprietary linking; modifications to libgit2 and distribution obligations still require review.
+- Sapling, universal-ctags and code-maat require GPL/path/component-aware review.
+- Tabby enterprise subpaths and Semgrep Pro rule/dataflow packs must be checked separately from their OSS core.
+- cr-sqlite's MIT license does not prove current maintenance or fit.
+- Running a program as a subprocess is not a universal GPL escape. Record the actual program, protocol/IPC, data exchange, patches, packaging and distribution model.
+- Never infer a component's license from the repository root alone. Every vendored/copied path, package, grammar, model, embedding, rule and dataset requires its own evidence.
+
+The machine-readable dependencies, exclusive write scopes and acceptance conditions for these capabilities are in WORK_PACKAGE_MATRIX.json (OCA-W12–W19). PR #666 remains a design/handoff PR; implementation worktrees must be created from the latest main after re-fetching it.

@@ -150,3 +150,19 @@ No result before the last state is “success”. ACK or bundle id is not settle
 - all shadow/paper outcomes durable and idempotent;
 - production installed composition only; no parallel runner;
 - send_enabled, sign_enabled, live_enabled, borrow_enabled remain false.
+
+
+## G. Prop AMM caller-profile differential test (pmm-sim)
+
+Use pmm-sim synthetic caller profiles only inside local LiteSVM. Compare DIRECT, MAGNUS_NATIVE, JUPITER_SIM, DFLOW_SIM, OKX_SIM and TITAN_SIM on one immutable slot/account/program snapshot, per market/version/direction/amount. Save caller delta bps, raw outputs, round-trip spread, CU, errors, program/account hashes and provenance.
+
+The simulator caller profile is a local Magnus router binary loaded under the selected aggregator ID. It is not the genuine Jupiter/DFlow/OKX/Titan executable and cannot be used in a production transaction.
+
+Acceptance:
+- all profiles use exact same raw amount, mints, token programs, market and snapshot digest;
+- direct/CPI instruction account ordering is verified;
+- every Prop AMM variant is benchmarked independently;
+- failures and zero/no-difference profiles are preserved;
+- at least multiple independent slots are tested before claiming persistent preference;
+- report best simulated caller and best real executable route separately;
+- any production route must use the official genuine aggregator route/build and pass R13/R05; no spoofed program ID.

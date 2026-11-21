@@ -100,8 +100,11 @@ Required work:
 - Keep canonical raw payloads in AGG-02/evidence owners, operation transitions in ObservabilityStore, observations in MarketObservation, episodes in MarketEpisode. Link by stable IDs/hashes; do not duplicate raw payloads into a new DB.
 - All decision/rejection/gap/correction/reconciliation/terminal events are non-sampleable. If durable capture fails, emit an explicit degraded/incomplete state and prevent episode qualification until recovery/replay. Sampling is permitted only for noisy non-decision debug/heartbeat logs with counters and policy version.
 - Use OpenTelemetry trace context/span IDs if useful for async/service causality; it supplements, not replaces, EventEnvelope and canonical stores.
+- Prove continuous bounded capture while the supported paper/shadow runtime is running. Distinguish STREAMING vs POLL_ONLY vs ONE_SHOT source capabilities, cadence, freshness and coverage; do not call one-shot capture real-time streaming.
+- Run a bounded long-running soak, restart/reconnect/backfill/checkpoint tests; report p50/p95/p99 ingest-to-store lag, queue depth, drop counts and provider freshness.
 - Define bounded queues/backpressure, idempotent append/outbox, replay, loss counters, event-to-store latency and p50/p95/p99 overhead. No silent loss or unbounded queues.
 - Build one read-only cross-store query facade and a portable export/replay bundle with manifest, JSONL event records, existing Parquet datasets where available, schema/tool versions, hashes and coverage/gap report.
+- Expose a narrow local MCP profile/server with composite bounded tools (repo overview, strategy inventory/explain/compare, source/provider lineage, symbol/call path, operation trace and context pack). No shell/edit/delete/admin/market-write tools. Provide exact client config, connection self-check and portable context-pack path.
 - Prove from a real supported offline/paper/shadow vertical (not only unit fixtures) that an operation can be reconstructed after process restart with code/strategy/source/function/outcome references.
 
 ## 4. Continue into OCA operation/strategy correlation — do not leave it as a standalone code graph
@@ -144,6 +147,8 @@ At minimum, produce the OCA-W0 reports plus:
 - first bounded context pack with exact SHA, token count and continuation;
 - working GitHub Actions CI wiring for push/PR/main merge plus scheduled nightly full consistency check (if repository policy/permissions block it, document the exact blocker and do not claim automatic refresh);
 - unused/duplicate/deprecation candidate list (no deletion);
+- allowlisted read-only local MCP profile/server and client connection/health-check instructions;
+- portable `CHATGPT_CONTEXT_PACK.md` plus reproducible full evidence bundle import/export/replay guide;
 - Work Result Receipt and a follow-up dependency graph.
 
 Every report records exact base/head SHA, commands, versions, source blob hashes, pass/fail/skip counts, artifact hashes and UNKNOWN/NOT_OBSERVED/BLOCKED separately.

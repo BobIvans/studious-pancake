@@ -294,11 +294,13 @@
       "id": "OCA-W4",
       "name": "Bounded operation and strategy context pack",
       "priority": "P1",
-      "status": "BLOCKED_ON_W2_W3_W0B",
+      "status": "BLOCKED_ON_W2_W3_W0B_W10_W11",
       "depends_on": [
         "OCA-W2",
         "OCA-W3",
-        "OCA-W0B"
+        "OCA-W0B",
+        "OCA-W10",
+        "OCA-W11"
       ],
       "mode": "READ_ONLY_QUERY_API",
       "exclusive_write_scope": [
@@ -411,11 +413,13 @@
       "id": "OCA-W8",
       "name": "Operations cockpit and human review workflow",
       "priority": "P2",
-      "status": "BLOCKED_ON_W4_W5_W7",
+      "status": "BLOCKED_ON_W4_W5_W7_W10_W11",
       "depends_on": [
         "OCA-W4",
         "OCA-W5",
-        "OCA-W7"
+        "OCA-W7",
+        "OCA-W10",
+        "OCA-W11"
       ],
       "mode": "REPORT_AND_READ_ONLY_UI",
       "exclusive_write_scope": [
@@ -442,7 +446,8 @@
       "status": "CONDITIONAL",
       "depends_on": [
         "OCA-W0",
-        "OCA-W2"
+        "OCA-W2",
+        "OCA-W10"
       ],
       "mode": "MEASURE_BEFORE_INFRASTRUCTURE",
       "exclusive_write_scope": [
@@ -460,6 +465,91 @@
         "ClickHouse/NATS/S3 are added only if measured bottleneck justifies them",
         "If not needed, record NOT_REQUIRED_YET with measurements"
       ]
+    },
+    {
+      "id": "OCA-W10",
+      "name": "Paper/shadow runtime event capture and strategy-to-function telemetry",
+      "priority": "P0",
+      "status": "BLOCKED_ON_W0_W1_W3",
+      "depends_on": [
+        "OCA-W0",
+        "OCA-W1",
+        "OCA-W3"
+      ],
+      "mode": "ADDITIVE_RUNTIME_INSTRUMENTATION",
+      "exclusive_write_scope": [
+        "src/observability/runtime_capture/",
+        "src/runtime_observability/",
+        "tests/test_runtime_capture_*.py",
+        "tests/fixtures/runtime_capture/"
+      ],
+      "inspect_producers_after_W0": true,
+      "canonical_owners_to_reuse": [
+        "src/observability/events.py",
+        "src/observability/store.py",
+        "src/observability/replay.py",
+        "src/agg02/storage.py",
+        "src/market/observations.py",
+        "src/market/streams.py",
+        "src/intelligence/episode_builder.py",
+        "src/runtime_discovery_coordinator.py",
+        "src/strategy"
+      ],
+      "deliverables": [
+        "versioned EventEnvelope correlation field/attribute gap contract",
+        "runtime capture adapter and small high-value producer instrumentation",
+        "strategy_id/version + repo/config generation + stable callsite/symbol + source observation refs where proven",
+        "trace_id/span_id context propagation for async operation boundaries where useful",
+        "stage timeline covering discovery, observations, strategy decisions, quote, flash-capital, route/sizing, planning/compiler, simulation, reconciliation and paper/shadow outcome",
+        "durable append/outbox/replay and observability-degraded/incomplete receipts",
+        "capture coverage and latency/drop/lag report"
+      ],
+      "acceptance": [
+        "W0 proves the existing production producer paths before changes are made",
+        "At least one real supported offline/paper/shadow runtime vertical emits events through the runtime code, not only unit-test fixtures",
+        "Critical decisions, rejections, source gaps/corrections, flash-capital evidence and terminal outcomes are not sampled",
+        "Every emitted event is linked to exact runtime, trace, opportunity/candidate, strategy/version, config, code SHA and logsite/symbol where available; missing values are explicit UNKNOWN",
+        "Raw payload is stored once in the canonical journal/archive and referenced by ID/hash; no duplicate raw market database",
+        "No silent event loss; outbox/queue/append failure becomes explicit degraded/incomplete episode and can be replayed/reconciled",
+        "OpenTelemetry is optional trace context only; EventEnvelope store remains canonical durable event ledger",
+        "Capture overhead and event-to-store p50/p95/p99 latency are measured under bounded load",
+        "No signer, submission, borrowing, spending, LIVE mode or new trading authority is introduced",
+        "Event schema changes preserve migration, compatibility and historical replay"
+      ]
+    },
+    {
+      "id": "OCA-W11",
+      "name": "Unified queryable data plane, portable evidence bundles and replay",
+      "priority": "P0",
+      "status": "BLOCKED_ON_W0B_W2_W10",
+      "depends_on": [
+        "OCA-W0B",
+        "OCA-W2",
+        "OCA-W10"
+      ],
+      "mode": "READ_ONLY_CROSS_OWNER_PROJECTION_AND_EXPORT",
+      "exclusive_write_scope": [
+        "src/intelligence/universal_data_plane/",
+        "tests/test_universal_data_plane_*.py",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/data-plane/"
+      ],
+      "deliverables": [
+        "unified read-only query facade across code graph, EventEnvelope, AGG-02, MarketObservation, MarketEpisode and Work Result Receipts",
+        "stable-ID resolution and cross-plane lineage manifest",
+        "portable versioned export bundle (manifest + JSONL events + Parquet datasets where existing owners support them + hashes/schema/replay receipts)",
+        "coverage, freshness, lag, gaps, corrections, unresolved joins and retention-pin report",
+        "rebuild/restore/replay validation"
+      ],
+      "acceptance": [
+        "One query/ID follows references to canonical owner data without copying the full raw payload into a second database",
+        "All decision-relevant data points are durably stored or their capture failure/gap is explicitly recorded",
+        "No claim to store every network packet or infinite history; raw high-volume data follows a declared policy and exact coverage is reported",
+        "Raw observations, structured operation events, strategy stage decisions, flash-capital inputs, simulations, reconciliation and outcomes remain queryable and traceable",
+        "Portable export bundle can be imported/replayed on a clean environment with matching hashes and schema/tool versions",
+        "Pinned evidence survives compaction/retention; no model-driven deletion",
+        "Read-only query response contains exact repo SHA/data generation and evidence refs",
+        "No second canonical raw event/market store or mandatory external database is added"
+      ]
     }
   ],
   "global_invariants": [
@@ -470,9 +560,12 @@
     "All context packs are bounded and evidence-backed",
     "LLM suggestions remain provisional until reviewed",
     "No destructive retention based on model scores",
-    "Implementation PRs require human approval"
+    "Implementation PRs require human approval",
+    "All decision-relevant runtime events and raw evidence refs are durably captured or explicit missing/gap receipts are produced; no silent loss",
+    "Only existing supported test/shadow/paper runtime modes are instrumented; no live execution authority",
+    "A single logical read-only query plane references multiple canonical physical stores; do not copy all raw data into a new database"
   ],
-  "first_action": "Run OCA-W0 and OCA-W0A in parallel. Then automatically execute OCA-W0B and every dependency-ready OCA-W1..W9 package using disjoint worktrees/write scopes. Do not stop after audit: deliver the first working repo knowledge graph, compact strategy/tool/source catalogues, bounded context packs and tested refresh path. Open reviewable PR(s); never merge.",
+  "first_action": "Run OCA-W0 and OCA-W0A in parallel. Then execute W0B and dependency-ready packages. Critically, do not declare success until OCA-W10 wires real supported paper/shadow runtime producers into durable event capture and OCA-W11 proves unified query/export/replay across canonical stores. A static repo graph alone is not the completed objective. Never merge or enable live execution.",
   "token_efficiency_policy": {
     "repo_card_tokens_target": [
       300,

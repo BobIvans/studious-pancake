@@ -57,7 +57,7 @@ First measure real CLI/test status and uncovered languages. Do not rewrite it or
 https://github.com/CodeGraphContext/CodeGraphContext  
 MIT main repository (verify transitive dependencies). Current documentation advertises Tree-sitter + optional SCIP, CLI/MCP/HTTP queries, callers/callees/call chains/imports/inheritance and 23 languages, with an embedded graph backend.
 
-Why test it first: close match for exact function/call relationships, a local index and query API. Its own docs describe the graph as Tree-sitter/SCIP-derived; Tree-sitter-only resolution is syntactic and may misresolve same-name/dynamic calls. Treat any advertised call accuracy as a vendor benchmark, not a Studious result. Check current docs/version and unsupported config languages before adoption.
+Why test it first: close match for exact function/call relationships, a local index and query API. Its current README also advertises `cgc watch` live file watching, which may provide a developer-worktree refresh loop. Treat that watcher as a convenience only: GitHub push/PR/main CI and nightly deterministic validation remain the authoritative freshness checks. Its own docs describe the graph as Tree-sitter/SCIP-derived; Tree-sitter-only resolution is syntactic and may misresolve same-name/dynamic calls. Treat any advertised call accuracy as a vendor benchmark, not a Studious result. Check current docs/version and unsupported config languages before adoption.
 
 Use CLI/indexer first. Do not enable every MCP/admin operation. It is one candidate for the single primary persistent code graph.
 

@@ -951,3 +951,21 @@ Mandatory techniques:
 Do not count signature-only compression as complete understanding. The model must retrieve actual function bodies, configs, tests and evidence when logic matters. Do not claim fixed 95–99% compression across all code. Exact output token counts require the target model tokenizer; otherwise label byte estimates.
 
 Preferred speed path: existing Local Intelligence orchestrator + Probe JIT extraction + one selected persistent graph + SCIP where useful + thin Studious-specific strategy/source/operation joins. Repo-specific domain and runtime mapping cannot be solved by downloading a generic code mapper alone.
+
+
+# 16. Runtime data capture is a separate mandatory deliverable
+
+[REALTIME_OPERATION_DATA_PLANE_RU.md](REALTIME_OPERATION_DATA_PLANE_RU.md) defines how the running bot's decision-relevant data becomes durable evidence:
+- strategy decisions/rejections, quote and flash-lender inputs, route/sizing/planning/compiler, simulation, reconciliation and terminal paper/shadow outcomes;
+- exact repo/config/strategy/source/observation/candidate/attempt/callsite/trace identities;
+- raw payload stored once by AGG-02/evidence owners; operation events in ObservabilityStore; observations and episodes in their existing owners;
+- no silent drops, gaps/backpressure and incomplete states; replayable portable exports;
+- one read-only query plane over multiple canonical physical stores.
+
+**Important source audit finding:** on the audited main, EventEnvelope and ObservabilityStore exist, but GitHub code search found `make_event()` definition and tests, not a verified production callsite. `make_event()` defaults to test-runtime/test and unknown provenance. `RuntimeDiscoveryCoordinator` returns a bounded report; `native_cpmm_capture.py` documents one-shot capture without subscriptions. Re-verify on the latest main in W0, and do not call this live event capture until an actual runtime vertical writes durable correlated events.
+
+The work package matrix now includes:
+- OCA-W10 — instrument the actual supported paper/shadow runtime path and prove durable strategy-to-function event capture;
+- OCA-W11 — unify read-only query/export/replay across code, observations, raw market events, operation events, episodes and agent work receipts.
+
+A repo code graph without OCA-W10/W11 is **not** the complete user objective.

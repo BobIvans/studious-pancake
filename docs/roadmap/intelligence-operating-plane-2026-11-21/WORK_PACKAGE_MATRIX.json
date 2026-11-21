@@ -511,11 +511,12 @@
         "trace_id/span_id context propagation for async operation boundaries where useful",
         "stage timeline covering discovery, observations, strategy decisions, quote, flash-capital, route/sizing, planning/compiler, simulation, reconciliation and paper/shadow outcome",
         "durable append/outbox/replay and observability-degraded/incomplete receipts",
-        "capture coverage and latency/drop/lag report"
+        "capture coverage and latency/drop/lag report",
+        "coverage matrix for every currently supported strategy/provider/venue/flash-capital route and lifecycle stage (WIRED / PARTIAL / NO_RUNTIME_PATH / BLOCKED / UNKNOWN)"
       ],
       "acceptance": [
         "W0 proves the existing production producer paths before changes are made",
-        "At least one real supported offline/paper/shadow runtime vertical emits events through the runtime code, not only unit-test fixtures",
+        "First prove one real supported offline/paper/shadow vertical end-to-end, then inventory and instrument all currently supported paper/shadow runtime paths; every strategy/provider/venue/flash-capital route and lifecycle stage has explicit WIRED/PARTIAL/NO_RUNTIME_PATH/BLOCKED/UNKNOWN status, with exact producer evidence",
         "Critical decisions, rejections, source gaps/corrections, flash-capital evidence and terminal outcomes are not sampled",
         "Every emitted event is linked to exact runtime, trace, opportunity/candidate, strategy/version, config, code SHA and logsite/symbol where available; missing values are explicit UNKNOWN",
         "Raw payload is stored once in the canonical journal/archive and referenced by ID/hash; no duplicate raw market database",
@@ -525,7 +526,8 @@
         "No signer, submission, borrowing, spending, LIVE mode or new trading authority is introduced",
         "Event schema changes preserve migration, compatibility and historical replay",
         "Every event producer path touched by the agent is explicitly listed in the work receipt with before/after source refs and owner/tests",
-        "Capture coverage is measured by stage and producer; absent runtime stages are shown as NOT_OBSERVED, not inferred from class/type presence"
+        "Capture coverage is measured by stage and producer; absent runtime stages are shown as NOT_OBSERVED, not inferred from class/type presence",
+        "Do not declare whole-bot telemetry complete when only the initial vertical is instrumented; uncovered supported paths remain explicit gaps and block a full-coverage claim"
       ],
       "scope_note": "W0 must enumerate the exact existing producer files. Any producer file outside the new adapter directories must be added as an explicit allowlisted touch path with owner/test impact; do not widen to whole src/strategy."
     },

@@ -101,6 +101,13 @@ READER_ACCOUNT_ELIGIBILITY_UNKNOWN = P0_WALLETLESS_STATUS
 # Typed constraint gaps. Each is a fact that is unknown offline because its
 # layout, semantics or authorization is not pinned in this repository. Unknown
 # is not zero: none of these may be defaulted.
+#
+# Cleared in the N07 rebind (dossier p0-flashloan-rebind-2026-11-21, each with
+# the vendored 0.1.12 IDL layout): BANK_ASSET_SHARE_VALUE_LAYOUT_UNPINNED,
+# BANK_LIABILITY_SHARE_VALUE_LAYOUT_UNPINNED, BANK_LIQUIDITY_SHARES_LAYOUT_
+# UNPINNED, BANK_LAST_UPDATE_SLOT_LAYOUT_UNPINNED, BANK_EMISSIONS_LAYOUT_
+# UNPINNED, BANK_BORROW_LIMIT_SEMANTICS_UNPINNED. The constants remain for
+# provenance; they must never re-enter the observation gap list.
 GAP_BANK_PDA_SEED_UNPINNED = "BANK_PDA_SEED_UNPINNED"
 GAP_ACCOUNT_PDA_SEED_UNPINNED = "MARGINFI_ACCOUNT_PDA_SEED_UNPINNED"
 GAP_ASSET_SHARE_VALUE_UNPINNED = "BANK_ASSET_SHARE_VALUE_LAYOUT_UNPINNED"
@@ -112,6 +119,34 @@ GAP_BORROW_LIMIT_SEMANTICS_UNPINNED = "BANK_BORROW_LIMIT_SEMANTICS_UNPINNED"
 GAP_ORACLE_PRICE_UNPROVEN = "ORACLE_PRICE_UNPROVEN"
 GAP_GROUP_PAUSE_UNPROVEN = "GROUP_PAUSE_STATE_UNPROVEN"
 GAP_BANK_SOURCE_PROVENANCE_UNPROVEN = "BANK_ADDRESS_PROVENANCE_UNPROVEN"
+# New typed gap added by the N07 rebind: the layout of bank.last_update is
+# pinned, but the staleness policy (how old a bank last_update may be while
+# still admitting a capacity bound) is not provable offline.
+GAP_LAST_UPDATE_STALENESS_POLICY_UNPINNED = "BANK_LAST_UPDATE_STALENESS_POLICY_UNPINNED"
+# Share-value semantics: the WrappedI80F48 layouts are pinned, but the exact
+# on-chain share<->amount rounding for liability valuation is proven only to
+# rational-arithmetic precision (conservative ceiling used for bounds).
+GAP_SHARE_VALUATION_ROUNDING_UNAUDITED = "BANK_SHARE_VALUATION_ROUNDING_UNAUDITED"
+
+# N07: bank operational-state semantics pinned from the 0.1.12 IDL
+# (BankOperationalState unit enum). Only Operational admits fresh borrows;
+# every other state fail-closes into R02CAPD_BANK_NOT_OPERATIONAL.
+BANK_OPERATIONAL_STATE_OPERATIONAL = 1
+P0_OPERATIONAL_STATE_NAMES = {
+    0: "Paused",
+    1: "Operational",
+    2: "ReduceOnly",
+    3: "KilledByBankruptcy",
+    4: "Uninitialized",
+    5: "ReduceOnlyWithBorrowingPower",
+    6: "CircuitBroken",
+}
+
+# N07: exact share valuation scale. WrappedI80F48 carries 48 fractional bits,
+# so the rational quantity of (shares x share_value) is
+# shares_raw * value_raw / 2^96; the conservative integer ceiling is used for
+# any liability term inside a capacity LOWER bound.
+I80F48_PRODUCT_FRACTIONAL_BITS = I80F48_FRACTIONAL_BITS * 2
 
 BLOCKER_MISSING_EFFECTIVE_FLASH_CAP = "MISSING_EFFECTIVE_FLASH_CAP"
 BLOCKER_LIVE_ROOTED_RPC_NOT_AUTHORIZED = "LIVE_ROOTED_RPC_NOT_AUTHORIZED"
@@ -600,8 +635,10 @@ class MarginfiBankCapacityObservation:
     ``raw_vault_amount_base_units`` (SPL vault balance), ``raw_borrow_limit``
     (pinned u64 borrow cap) and ``origination_fee_raw_i80f48`` (pinned i80F48
     fee state). ``effective_capacity_base_units`` stays ``None`` while the
-    derivation is UNPROVEN: unknown is not zero. Bank share-value / liquidity
-    share / last-update / emissions raw fields stay ``None`` (layout unpinned).
+    derivation is UNPROVEN: unknown is not zero. N07 rebind: share-value /
+    share / last-update / deposit-limit / emissions raw fields now decode from
+    the 0.1.12 IDL-pinned layout (negatives fail closed); the share-valuation
+    rounding and last-update staleness policy stay typed gaps.
     """
 
     bank: str
@@ -641,6 +678,12 @@ class MarginfiBankCapacityObservation:
     sign_enabled: bool = False
     send_enabled: bool = False
     account_creation_attempted: bool = False
+    # N07 rebind additions (0.1.12 IDL-pinned fields, additive with defaults):
+    last_update_i64: int | None = None
+    deposit_limit: int | None = None
+    emissions_rate: int | None = None
+    emissions_mint: str | None = None
+    bank_body_len: int | None = None
 
     def __post_init__(self) -> None:
         for name in (
@@ -681,10 +724,11 @@ class MarginfiBankCapacityObservation:
             "raw_liquidity_shares_i80f48",
             "raw_liability_shares_i80f48",
         ):
-            if getattr(self, name) is not None:
-                raise ValueError(
-                    f"{name} is unpinned offline and must stay unknown (None)"
-                )
+            value = getattr(self, name)
+            # N07 rebind: layouts are pinned, so these may now carry decoded
+            # raw i80F48 values; unknown stays None and negatives fail closed.
+            if value is not None and (type(value) is not int or value < 0):
+                raise ValueError(f"{name} must be a non-negative integer or None")
         if BLOCKER_MISSING_EFFECTIVE_FLASH_CAP not in self.blockers:
             raise ValueError("unproven capacity must carry MISSING_EFFECTIVE_FLASH_CAP")
         if not self.constraint_gaps:
@@ -757,18 +801,14 @@ def observe_bank_capacity(
     decoded_bank = decode_bank_capture(pins, bank_capture)
     decoded_vault = decode_liquidity_vault_capture(pins, vault_capture, decoded_bank)
 
-    operational = decoded_bank.operational_state == 1
+    operational = decoded_bank.operational_state == BANK_OPERATIONAL_STATE_OPERATIONAL
     gaps = [
         GAP_BANK_PDA_SEED_UNPINNED,
         GAP_ACCOUNT_PDA_SEED_UNPINNED,
-        GAP_ASSET_SHARE_VALUE_UNPINNED,
-        GAP_LIABILITY_SHARE_VALUE_UNPINNED,
-        GAP_LIQUIDITY_SHARES_UNPINNED,
-        GAP_LAST_UPDATE_UNPINNED,
-        GAP_EMISSIONS_UNPINNED,
-        GAP_BORROW_LIMIT_SEMANTICS_UNPINNED,
         GAP_ORACLE_PRICE_UNPROVEN,
         GAP_BANK_SOURCE_PROVENANCE_UNPROVEN,
+        GAP_LAST_UPDATE_STALENESS_POLICY_UNPINNED,
+        GAP_SHARE_VALUATION_ROUNDING_UNAUDITED,
     ]
     blockers = [
         BLOCKER_MISSING_EFFECTIVE_FLASH_CAP,
@@ -820,15 +860,20 @@ def observe_bank_capacity(
         raw_borrow_limit=decoded_bank.borrow_limit,
         origination_fee_raw_i80f48=decoded_bank.origination_fee_raw_i80f48,
         fee_rounding=FEE_ROUNDING_RULE,
-        raw_asset_share_value_i80f48=None,
-        raw_liability_share_value_i80f48=None,
-        raw_liquidity_shares_i80f48=None,
-        raw_liability_shares_i80f48=None,
+        raw_asset_share_value_i80f48=decoded_bank.asset_share_value_raw_i80f48,
+        raw_liability_share_value_i80f48=decoded_bank.liability_share_value_raw_i80f48,
+        raw_liquidity_shares_i80f48=decoded_bank.total_asset_shares_raw_i80f48,
+        raw_liability_shares_i80f48=decoded_bank.total_liability_shares_raw_i80f48,
         capacity_derivation=READER_CAPACITY_DERIVATION_UNPROVEN,
         effective_capacity_base_units=None,
         constraint_gaps=tuple(sorted(gaps)),
         blockers=tuple(sorted(set(blockers))),
         walletless_mode=READER_WALLETLESS_MODE,
+        last_update_i64=decoded_bank.last_update_i64,
+        deposit_limit=decoded_bank.deposit_limit,
+        emissions_rate=decoded_bank.emissions_rate,
+        emissions_mint=decoded_bank.emissions_mint,
+        bank_body_len=decoded_bank.body_len,
     )
 
 
@@ -1174,7 +1219,98 @@ def bank_capital_edge_gate(
     )
 
 
+@dataclass(frozen=True, slots=True)
+class P0OfflineCapacityBound:
+    """Typed offline borrow-capacity bound for one P0 (MarginFi) bank.
+
+    ``bound_base_units`` is the conservative program-proven maximum borrow for
+    the bank inside a flash-loan bracket:
+    ``min(liquidity_vault_amount, borrow_limit - total_liabilities)`` where
+    ``total_liabilities = ceil(total_liability_shares x liability_share_value
+    / 2^96)`` uses exact i80F48 rational arithmetic with the conservative
+    integer ceiling (the exact on-chain share-valuation rounding stays a typed
+    gap, so a lower bound uses the ceiling on liabilities). A negative room
+    floors to 0: that is a real exhausted zero, not unknown, and is flagged in
+    ``capacity_exhausted``. ``repay_obligation_base_units`` adds the pinned
+    origination fee (``ceil(amount * fee_raw / 2^48)``). Bound-level offline
+    evidence only: the observation's ``effective_capacity_base_units`` stays
+    ``None`` and the edge gate is unchanged.
+    """
+
+    bound_base_units: int
+    repay_obligation_base_units: int
+    origination_fee_base_units: int
+    total_liabilities_base_units: int
+    capacity_exhausted: bool
+    fee_rule: str
+    blockers: tuple[str, ...]
+
+
+def derive_p0_offline_borrow_capacity_bound(
+    observation: MarginfiBankCapacityObservation,
+) -> P0OfflineCapacityBound:
+    """Derive the conservative offline borrow bound or fail closed.
+
+    Fail-closed inputs (unknown is not zero; nothing is defaulted):
+    bank must be Operational (0.1.12 BankOperationalState pinned), group pause
+    must be proven not-paused when a group capture is present (an unknown
+    group pause lands in the bound blockers instead of being assumed away),
+    and all share/limit inputs must have been decoded. Missing share inputs
+    raise: a bound computed from absent liabilities would be fabricated.
+    """
+
+    blockers: list[str] = []
+    if not observation.operational:
+        raise MarginfiBankDiscoveryError(
+            MarginfiBankDiscoveryRejectionCode.CAPTURE_STATE_INVALID,
+            "bank operational state is not Operational; borrow would fail "
+            f"on-chain (state={P0_OPERATIONAL_STATE_NAMES.get(observation.operational_state, 'UNKNOWN')})",
+        )
+    if GAP_GROUP_PAUSE_UNPROVEN in observation.constraint_gaps:
+        blockers.append("R02CAPD_GROUP_PAUSE_UNKNOWN")
+    if GAP_SHARE_VALUATION_ROUNDING_UNAUDITED in observation.constraint_gaps:
+        blockers.append(GAP_SHARE_VALUATION_ROUNDING_UNAUDITED)
+    if GAP_ORACLE_PRICE_UNPROVEN in observation.constraint_gaps:
+        blockers.append(GAP_ORACLE_PRICE_UNPROVEN)
+    share_value = observation.raw_liability_share_value_i80f48
+    total_shares = observation.raw_liability_shares_i80f48
+    if share_value is None or total_shares is None:
+        raise MarginfiBankDiscoveryError(
+            MarginfiBankDiscoveryRejectionCode.SHARE_MATH_INVALID,
+            "liability share inputs are missing; refusing to fabricate a bound",
+        )
+    denominator = 1 << I80F48_PRODUCT_FRACTIONAL_BITS
+    total_liabilities = -(
+        -(total_shares * share_value) // denominator
+    )  # exact rational ceiling for non-negative products
+    room = observation.raw_borrow_limit - total_liabilities
+    if room < 0:
+        return P0OfflineCapacityBound(
+            bound_base_units=0,
+            repay_obligation_base_units=0,
+            origination_fee_base_units=0,
+            total_liabilities_base_units=total_liabilities,
+            capacity_exhausted=True,
+            fee_rule=FEE_ROUNDING_RULE,
+            blockers=tuple(sorted(set(blockers))),
+        )
+    bound = min(observation.raw_vault_amount_base_units, room)
+    fee = ceil_i80f48_product(bound, observation.origination_fee_raw_i80f48)
+    return P0OfflineCapacityBound(
+        bound_base_units=bound,
+        repay_obligation_base_units=bound + fee,
+        origination_fee_base_units=fee,
+        total_liabilities_base_units=total_liabilities,
+        capacity_exhausted=False,
+        fee_rule=FEE_ROUNDING_RULE,
+        blockers=tuple(sorted(set(blockers))),
+    )
+
+
 __all__ = [
+    "P0OfflineCapacityBound",
+    "P0_OPERATIONAL_STATE_NAMES",
+    "derive_p0_offline_borrow_capacity_bound",
     "BANK_TOKEN_2022_FLAG",
     "BLOCKER_FINANCING_PORT_NOT_PRESCRIBED",
     "BLOCKER_GRAPH_ALLOWANCE_PENDING",

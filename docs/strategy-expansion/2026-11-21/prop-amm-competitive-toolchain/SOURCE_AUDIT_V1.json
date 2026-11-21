@@ -1,0 +1,324 @@
+{
+  "schema": "prop_amm_toolchain_source_audit.v1",
+  "verified_at": "2026-11-21",
+  "source_file": "Pasted text(1).txt",
+  "repository_target": "BobIvans/studious-pancake",
+  "status": "RESEARCHED_NOT_ACTIVATED",
+  "entries": [
+    {
+      "name": "Jito ShredStream",
+      "layer": "sight",
+      "url": "https://docs.jito.wtf/lowlatencytxnfeed/",
+      "status": "OFFICIALLY_SUNSET_2026_09_05",
+      "finding": "Jito docs announce the ShredStream shutdown from 2026-09-05. This is separate from Jito Block Engine transaction delivery.",
+      "use": "Do not build a new dependency on the retired feed. Preserve Jito Block Engine as a separate delivery component under PR130.",
+      "blocker": "No feed availability after sunset; replacement source must be separately qualified."
+    },
+    {
+      "name": "LocalShred Lite / DedicatedNodes",
+      "layer": "sight",
+      "url": "https://www.dedicatednodes.io/localshred/",
+      "status": "PRODUCT_ADVERTISED_FREE_LITE",
+      "finding": "DedicatedNodes advertises a free Lite tier as a baseline similar to former Jito ShredStream. Paid/hosted LocalShred product claims must not be applied to Lite.",
+      "use": "First candidate for bounded read-only A/B under an authorized source profile.",
+      "blocker": "Need current access terms, endpoint contract, regional path, packet completeness/loss/replay and independent latency benchmark. No 100-500ms lead claim accepted."
+    },
+    {
+      "name": "DoubleZero Edge",
+      "layer": "sight",
+      "url": "https://docs.malbeclabs.com/solana/edge/subscribe/",
+      "status": "OFFICIAL_PRODUCT_AND_PRICING",
+      "finding": "Raw UDP multicast feed; current metro seat pricing is monthly and varies by region, approximately $450-$1,500/month. Older $30-$100 per epoch claim is not current evidence. No free-trial entitlement is assumed.",
+      "use": "Optional paid feed comparator only after operator approval and written quote.",
+      "blocker": "Requires region/network/GRE/decapsulation engineering; feed does not provide retransmission; packet loss and completeness need measurement."
+    },
+    {
+      "name": "OrbitFlare ShredStream",
+      "layer": "sight",
+      "url": "https://orbitflare.com/products/shredstream",
+      "status": "OFFICIAL_PRODUCT_AND_PRICING",
+      "finding": "Provider lists raw UDP shredstream with regional $500/$1,000 monthly tiers. No universal 60-minute trial was verified; NFT pass offer is restricted by provider conditions.",
+      "use": "Optional paid regional comparator.",
+      "blocker": "Need written trial/SLA/terms, IP allowlist, public IP, bandwidth and own deshredding. Vendor latency/first-arrival metrics are claims to reproduce."
+    },
+    {
+      "name": "Triton Yellowstone / Shredstream",
+      "layer": "sight",
+      "url": "https://www.triton.one/pricing",
+      "status": "PRODUCTS_DISTINGUISHED_PAID_SHREDS",
+      "finding": "Yellowstone/Geyser gRPC and raw shred streaming are distinct products; raw shreds are priced separately (page lists from $450/month or $0.18 per 15-minute period).",
+      "use": "Use existing Yellowstone interface if approved; raw shreds only after separate paid-feed approval.",
+      "blocker": "No general free raw-shred tier established."
+    },
+    {
+      "name": "Helius LaserStream / Shreds",
+      "layer": "sight",
+      "url": "https://www.helius.dev/pricing",
+      "status": "OFFICIAL_TIERED_PRODUCTS",
+      "finding": "Free RPC plan does not mean free raw shreds. Shreds are separately priced; LaserStream and preprocessed transaction feeds have product/plan-specific schemas and limitations.",
+      "use": "Current authorized LaserStream or RPC observation may be compared; raw shreds require separate plan.",
+      "blocker": "Verify plan tier, data schema, credit model, replay, completeness and costs. Do not call preprocessed stream equivalent to raw shreds."
+    },
+    {
+      "name": "GetBlock Solana Shred Streams",
+      "layer": "sight",
+      "url": "https://getblock.io/nodes/sol/",
+      "status": "OFFICIAL_PRODUCT_TRIAL_CONFLICT",
+      "finding": "Current page advertises raw shred streams as a paid product; GetBlock pages give conflicting trial details.",
+      "use": "Candidate only after direct written confirmation.",
+      "blocker": "Do not encode a free 2-hour/24-hour trial or price assumptions without current provider quote."
+    },
+    {
+      "name": "ValidatorsDAO solana-stream",
+      "layer": "sight",
+      "url": "https://github.com/ValidatorsDAO/solana-stream",
+      "status": "PUBLIC_SDK_CONFIRMED",
+      "finding": "Public SDK/workspace supports Shreds and Geyser/gRPC clients. UDP path may be incomplete, out-of-order or pre-finalization; experimental filtering/continuity must be tested. Workspace current versions differ from pasted v4 reference.",
+      "use": "Possible self-hosted decoder/client in a pinned isolated test harness.",
+      "blocker": "Pin immutable commit and test wire compatibility, fork/replay/completeness; SDK use does not grant paid feed access."
+    },
+    {
+      "name": "ERPC Solana Stream SDK",
+      "layer": "sight",
+      "url": "https://erpc.global/en/news/2026/11/07/erpc-solana-stream-sdk-v4-20261107/",
+      "status": "VENDOR_BENCHMARK_CLAIM",
+      "finding": "Release notice reports internal Rust processing benchmark gains for v4; this is not end-to-end network lead. ValidatorsDAO workspace has advanced beyond v4.",
+      "use": "Benchmark/release reference only; compare current SDK version to repo baseline.",
+      "blocker": "Need exact crate/repo commit, hardware, methodology, packet completeness and end-to-end p50/p99 tests."
+    },
+    {
+      "name": "Supanode",
+      "layer": "sight",
+      "url": null,
+      "status": "UNVERIFIED_NO_CANONICAL_SOURCE",
+      "finding": "The pasted file claims RPC/WebSocket/gRPC/ShredStream and a trial, but no canonical product contract was verified in this sweep.",
+      "use": "Keep as a research lead only.",
+      "blocker": "Require official docs, company/product identity, trial terms, pricing, schemas, security and SLA."
+    },
+    {
+      "name": "Self-hosted ShredStream / validator proximity",
+      "layer": "sight",
+      "url": "https://docs.jito.wtf/lowlatencytxnfeed/",
+      "status": "REFERENCE_ONLY",
+      "finding": "A self-operated validator/peering architecture is a separate infrastructure and operational project, not a free source.",
+      "use": "Long-term infrastructure research only.",
+      "blocker": "No deployment or validator operation in this pack."
+    },
+    {
+      "name": "solana-arb-executor",
+      "layer": "detection_execution_reference",
+      "url": "https://github.com/alexbanda08/solana-arb-executor",
+      "status": "PUBLIC_MIT_CODEGEN_SKILL",
+      "finding": "README describes a Claude Code/Codex skill scaffold for a Rust execution hot path; it is not a running executor crate/service. MIT is stated in its repository.",
+      "use": "Review safety/risk-gate/template concepts selectively; do not add as runtime dependency.",
+      "blocker": "Codegen output requires independent review and compatibility; no execution authority."
+    },
+    {
+      "name": "solana-arb-framework (ototech7)",
+      "layer": "detection_reference",
+      "url": "https://github.com/ototech7/Solana-Arbitrage-Framework",
+      "status": "EDUCATIONAL_NOT_PRODUCTION",
+      "finding": "README describes educational Rust/Anchor arbitrage across legacy venues; not production and not verified Prop AMM coverage.",
+      "use": "Historical educational reference only.",
+      "blocker": "No production integration."
+    },
+    {
+      "name": "solana-arb-framework (sripathiabhiram29-droid)",
+      "layer": "detection_reference",
+      "url": "https://github.com/sripathiabhiram29-droid/solana-arb-framework",
+      "status": "UNTRUSTED_LIVE_LOOP_REFERENCE",
+      "finding": "README describes Python live loop, wallet/keypair credentials, mainnet settings and dashboard toggles. No assurance/production evidence established.",
+      "use": "Do not import or execute.",
+      "blocker": "Credential/live-loop risk; license and security posture not validated."
+    },
+    {
+      "name": "Capture OS / Capture Engine",
+      "layer": "detection",
+      "url": null,
+      "status": "UNRESOLVED_NAME",
+      "finding": "No canonical source repository or API was identified by this name.",
+      "use": "Use the repository's existing source capture / governance owners; do not create a parallel Capture OS.",
+      "blocker": "Need exact canonical URL and license/API before reconsideration."
+    },
+    {
+      "name": "KADES",
+      "layer": "detection_hint",
+      "url": "https://cade-b2aeb7.webflow.io/",
+      "status": "EARLY_ACCESS_VENDOR_CLAIM",
+      "finding": "Landing page describes Kinetic Anomaly Detection Engine System and early access; no public repo/API schema or independent benchmark validated.",
+      "use": "Optional external anomaly hint only after API/schema/terms and precision-recall evidence.",
+      "blocker": "No dependency, authority, signal truth or trade trigger allowed."
+    },
+    {
+      "name": "CADES",
+      "layer": "detection_hint",
+      "url": null,
+      "status": "UNVERIFIED_OR_NAME_COLLISION",
+      "finding": "No canonical crypto/Solana project matching the pasted description was verified.",
+      "use": "Do not add until exact URL and product identity supplied.",
+      "blocker": "Source not identified."
+    },
+    {
+      "name": "sol-parser-sdk (0xfnzero)",
+      "layer": "parser",
+      "url": "https://github.com/0xfnzero/sol-parser-sdk",
+      "status": "PUBLIC_MIT_CRATE",
+      "finding": "Cargo metadata shows v0.11.0, Rust 2021, rust-version 1.91, MIT, pinned Solana SDK/Yellowstone versions; parser coverage must be checked per program. Local microbenchmark figures are not end-to-end guarantees.",
+      "use": "Optional isolated parser adapter after version compatibility and differential tests.",
+      "blocker": "Solana SDK/Yellowstone version compatibility and Prop AMM parser coverage; no assumed 10-20us service guarantee."
+    },
+    {
+      "name": "LimeChain pmm-sim",
+      "layer": "simulation",
+      "url": "https://github.com/LimeChain/pmm-sim",
+      "status": "PUBLIC_MIT_SIMULATOR",
+      "finding": "v0.2.0, Rust Edition 2024, LiteSVM 0.10 and Solana SDK 3.0 dependencies; README documents single/multi/direct/benchmark and named Prop AMM versions. Cargo.toml references mutable Magnus branch.",
+      "use": "Isolated pinned offline simulation/differential harness.",
+      "blocker": "Pin commit and transitive git deps; SDK isolation. Simulation cannot prove live solver quote, execution or fill."
+    },
+    {
+      "name": "LiteSVM",
+      "layer": "simulation",
+      "url": "https://solana.com/docs/tools/litesvm",
+      "status": "OFFICIAL_TEST_HARNESS",
+      "finding": "In-process SVM environment for program testing.",
+      "use": "Deterministic local instruction/program tests.",
+      "blocker": "Not a market data feed or production route/transaction sender."
+    },
+    {
+      "name": "Mollusk SVM",
+      "layer": "simulation",
+      "url": "https://solana.com/docs/programs/testing/mollusk",
+      "status": "OFFICIAL_TEST_HARNESS",
+      "finding": "Focused SVM program/instruction testing and CU measurement.",
+      "use": "Instruction fixtures, error and compute tests.",
+      "blocker": "Not a live quote engine or production executor."
+    },
+    {
+      "name": "Pinocchio",
+      "layer": "onchain_program_framework",
+      "url": "https://github.com/anza-xyz/pinocchio",
+      "status": "OFFICIAL_ANCESTRY_LIBRARY",
+      "finding": "Anza zero-dependency/no_std/zero-copy Rust library for writing Solana programs; optimized for CU and binary size. Not an off-chain router and no fixed 84% saving is established.",
+      "use": "Only for separately justified on-chain program implementation after profile shows a CU/size bottleneck.",
+      "blocker": "Separate security/program review; not needed for off-chain flashloan bot by default."
+    },
+    {
+      "name": "Jupiter Swap API V2 /order",
+      "layer": "router_quote",
+      "url": "https://github.com/jup-ag/docs/blob/main/swap/index.mdx",
+      "status": "OFFICIAL_CURRENT_API_DOCS",
+      "finding": "Current V2 order endpoint is the routing/quote/order surface; legacy Quote API shorthand should not be treated as current integration contract.",
+      "use": "Amount-specific route comparator via existing R13 quote normalization.",
+      "blocker": "Pin version, API key/rate terms, route lineage, context and schema."
+    },
+    {
+      "name": "Jupiter Swap API V2 /build",
+      "layer": "router_builder",
+      "url": "https://github.com/jup-ag/docs/blob/main/swap/index.mdx",
+      "status": "OFFICIAL_RAW_INSTRUCTION_BUILD",
+      "finding": "Returns raw instruction components for caller-owned transaction composition; caller is responsible for transaction assembly, validation, simulation, signing and submission.",
+      "use": "Build custom unsigned instruction plan only.",
+      "blocker": "Validate every instruction, ALT, token program, min-out, CU, account size and same-tx repay; no submit."
+    },
+    {
+      "name": "1000xsh/swaps",
+      "layer": "router_builder",
+      "url": "https://github.com/1000xsh/swaps",
+      "status": "PUBLIC_MIT_DIRECT_INSTRUCTION_BUILDER",
+      "finding": "v0.1.1 Rust 2024 library fetches account plans, decodes snapshots and builds allocation-free swap instruction views. It does not quote or infer slippage. Upstream notes say HumidiFi ignores min_amount_out; Tessera direct top-level path has caveats; SolFi is slot/oracle-sensitive.",
+      "use": "Potential per-venue direct builder, after immutable pin and exact account/program conformance.",
+      "blocker": "No quote engine. Venue-specific minout/guard and SDK/API compatibility must be proven."
+    },
+    {
+      "name": "Astralane Iris",
+      "layer": "delivery",
+      "url": "https://www.astralane.io/",
+      "status": "VENDOR_CLAIMS_AND_PUBLIC_BETA_CLIENT",
+      "finding": "Provider advertises optimized regional routing and dynamic tip ceiling/clearing/rebate mechanics; public iris-rs repo is beta and AGPL-3.0. Do not infer current minimum tip or actual clearing costs from old pasted values.",
+      "use": "Separate later sender-qualification candidate.",
+      "blocker": "Need exact vendor endpoint docs, plan, pricing, rebate/billing rules, test data, legal/license review."
+    },
+    {
+      "name": "Helius Sender SWQoS-only",
+      "layer": "delivery",
+      "url": "https://www.helius.dev/sender",
+      "status": "OFFICIAL_TIERED_SENDER",
+      "finding": "SWQoS-only min tip listed as 0.000005 SOL, best-effort and outside priority tip buffer; Sender Max begins at 0.001 SOL with separate pathway/performance.",
+      "use": "Separate future provider candidate with capability tier modeled explicitly.",
+      "blocker": "No automatic equivalence between min tip and competitive inclusion; price/latency/failure experiments required."
+    },
+    {
+      "name": "Syncro Sender / P2P.org",
+      "layer": "delivery",
+      "url": "https://www.p2p.org/products/syncro",
+      "status": "OFFICIAL_PRODUCT_CONFLICTING_PRICE_PAGES",
+      "finding": "Current product page lists public/secured per-landed transaction rates and new-client trial; older help page lists different rates. Require written current contract.",
+      "use": "Candidate only for separate provider contract comparison.",
+      "blocker": "Resolve current rate card, regions, eligibility, tip/refund terms and duplicate billing."
+    },
+    {
+      "name": "Sanctum Gateway",
+      "layer": "delivery",
+      "url": null,
+      "status": "UNVERIFIED_NO_CURRENT_OFFICIAL_TERMS",
+      "finding": "The pasted file gives a per-transaction price, but current API/billing semantics were not verified.",
+      "use": "Do not implement now.",
+      "blocker": "Need canonical docs, endpoint schema and current fee contract."
+    },
+    {
+      "name": "BoltTx",
+      "layer": "delivery",
+      "url": null,
+      "status": "UNVERIFIED_NO_CURRENT_OFFICIAL_TERMS",
+      "finding": "Pasted tier/points and landed-fee claims were not verified against a current authoritative source.",
+      "use": "Do not implement now.",
+      "blocker": "Need provider-owned current pricing and API docs."
+    },
+    {
+      "name": "Nozomi",
+      "layer": "delivery",
+      "url": null,
+      "status": "UNVERIFIED_NO_CURRENT_OFFICIAL_TERMS",
+      "finding": "Pasted claim about pay-on-success and minimum tip not independently verified in this source sweep.",
+      "use": "Do not implement now.",
+      "blocker": "Need provider-owned current pricing, endpoint docs and billing proof."
+    },
+    {
+      "name": "Jito Block Engine transaction send/bundles",
+      "layer": "delivery",
+      "url": "https://docs.jito.wtf/lowlatencytxnsend/",
+      "status": "OFFICIAL_DELIVERY_DOCS",
+      "finding": "Jito documents sendTransaction and bundles separately; bundles support up to five signed transactions atomically. Current repo PR130 policy narrows first-production use to a single strategy transaction.",
+      "use": "Preserve current PR130 JITO_SINGLE policy.",
+      "blocker": "No live sender activation; ACK/bundle ID not settlement; bundle semantics cannot silently override repo policy."
+    }
+  ],
+  "policy": {
+    "activation": {
+      "feed_enabled": false,
+      "anomaly_vendor_enabled": false,
+      "parser_live_enabled": false,
+      "route_builder_live_enabled": false,
+      "relay_enabled": false,
+      "sign_enabled": false,
+      "send_enabled": false,
+      "borrow_enabled": false,
+      "live_enabled": false
+    },
+    "rejected_patterns": [
+      "stealth_or_camouflage_order_flow",
+      "timing_or_size_randomization_to_evade_venue_detection",
+      "spoofed_cpi_caller_or_aggregator_identity",
+      "unbounded_tip_escalation",
+      "unproven_pay_only_winning_relay_assumption"
+    ],
+    "allowed_order_splitting": [
+      "measured_price_impact",
+      "actual_capacity_constraints",
+      "transaction_compute_account_or_packet_limits",
+      "legitimate_resource_conflict_avoidance_with_existing_reservations"
+    ],
+    "evidence_rule": "Unknown is not zero; vendor claims are not benchmark evidence; fixture/replay is not live."
+  }
+}

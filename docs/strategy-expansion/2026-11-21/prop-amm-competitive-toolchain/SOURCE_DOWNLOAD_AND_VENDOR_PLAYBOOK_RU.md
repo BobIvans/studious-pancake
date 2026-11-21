@@ -66,7 +66,8 @@ tar -xf "$TMP/$NAME.tar" -C "$DEST"
 
 ## Что загружать и что нет
 
-- Mirror candidates: sol-parser-sdk, pmm-sim, ValidatorsDAO/solana-stream, solana-arb-executor (skill/reference), Mollusk (dev), Pinocchio (только program reference), Jito proxy (historical reference).
+- Mirror candidates: sol-parser-sdk, 0xfnzero/solana-streamer v6.0.0, pmm-sim, ValidatorsDAO/solana-stream, solana-arb-executor (skill/reference), Mollusk (dev), Pinocchio (только program reference), Jito proxy (historical reference).
+- Yellowstone: root rpcpool/yellowstone-grpc is AGPL-3.0; do not mirror whole repository before license review. The yellowstone-grpc-proto subcrate declares Apache-2.0 and can be considered separately as a published crate. Yellowstone is a plugin/protocol, not a free hosted data plan.
 - Hold: 1000xsh/swaps — подтвердить license archive; только после этого source mirror + venue conformance.
 - API-only: Jupiter V2, all feed and relay vendors.
 - Не загружать/не запускать: unverified Python live-loop framework; no-license educational framework until terms verified; sol-trade-sdk / sol-trade-router-sdk because they add a separate signing/submission surface; KADES/CADES/Capture OS without canonical repository/API; any paid provider binary or hidden client not explicitly published by vendor.

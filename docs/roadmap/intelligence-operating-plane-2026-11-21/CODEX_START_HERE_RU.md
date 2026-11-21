@@ -930,3 +930,24 @@ Serena main app имеет GPL-3.0-or-later; jCodeMunch остаётся license
 ### 14.3 Новый стратегический чат
 
 Использовать [CHATGPT_NEW_CHAT_STRATEGY_STARTER_RU.md](CHATGPT_NEW_CHAT_STRATEGY_STARTER_RU.md). Перед новой Web3/flashloan гипотезой ChatGPT обязан запросить latest SHA-bound pack, сравнить существующие идеи/символы/источники/tests/outcomes и выдать DUPLICATE / EXTENSION / NOVEL с точными ссылками. Новая сессия не получает локальный индекс автоматически: pack нужно загрузить, открыть через GitHub или read-only MCP.
+
+
+# 15. Full token efficiency — apply methods, not every application
+
+Detailed execution contract: [TOKEN_EFFICIENCY_PLAYBOOK_RU.md](TOKEN_EFFICIENCY_PLAYBOOK_RU.md).
+
+Mandatory techniques:
+- Tree-sitter/native AST signatures and imports for zero-LLM local structure extraction;
+- actual compiler/language-server references via SCIP/LSP where supported;
+- one persistent graph (CGC OR Graphify OR proven native implementation), not multiple parallel stores;
+- query-time relevance/PageRank ranking and strict budget packing;
+- lazy 1–3-hop graph traversal rather than injecting full maps;
+- scope-aware exact function extraction via Probe or grep-ast;
+- Git blob/tree hashes + incremental affected-node refresh;
+- stable tool definitions/prompt prefix where the provider exposes prompt caching; no ChatGPT cache guarantee;
+- deterministic BM25/lexical + graph search first; embeddings only after measured semantic-recall gap;
+- optional Joern CPG for CFG/DFG/taint only when deep data-flow/security questions justify it.
+
+Do not count signature-only compression as complete understanding. The model must retrieve actual function bodies, configs, tests and evidence when logic matters. Do not claim fixed 95–99% compression across all code. Exact output token counts require the target model tokenizer; otherwise label byte estimates.
+
+Preferred speed path: existing Local Intelligence orchestrator + Probe JIT extraction + one selected persistent graph + SCIP where useful + thin Studious-specific strategy/source/operation joins. Repo-specific domain and runtime mapping cannot be solved by downloading a generic code mapper alone.

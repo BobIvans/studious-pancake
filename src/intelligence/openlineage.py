@@ -401,9 +401,11 @@ def validate_openlineage_run_event(payload: object) -> None:
     event_time = payload.get("eventTime")
     _validate_rfc3339(event_time, field_name="eventTime")
     try:
-        uuid.UUID(str(run.get("runId")))
+        parsed_run_id = uuid.UUID(str(run.get("runId")))
+        if parsed_run_id.variant != uuid.RFC_4122 or parsed_run_id.version is None:
+            raise ValueError("runId must be an RFC 4122 UUID")
     except (ValueError, AttributeError) as exc:
-        raise OpenLineageProjectionError("runId must be a UUID") from exc
+        raise OpenLineageProjectionError("runId must be an RFC 4122 UUID") from exc
     producer = payload.get("producer")
     if (
         not isinstance(producer, str)
@@ -482,7 +484,10 @@ def project_event(
     ):
         raise OpenLineageProjectionError("job namespace and name are required")
     producer_uri = _producer_uri(repo_sha)
-    event_type = OpenLineageEventType(event_type)
+    try:
+        event_type = OpenLineageEventType(event_type)
+    except ValueError as exc:
+        raise OpenLineageProjectionError("unsupported OpenLineage event type") from exc
 
     input_refs = tuple(inputs)
     output_refs = tuple(outputs)

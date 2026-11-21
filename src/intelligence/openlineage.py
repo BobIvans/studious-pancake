@@ -399,6 +399,8 @@ def validate_openlineage_run_event(payload: object) -> None:
     if not isinstance(run, Mapping) or not isinstance(job, Mapping):
         raise OpenLineageProjectionError("RunEvent requires run and job objects")
     event_time = payload.get("eventTime")
+    if not isinstance(event_time, str):
+        raise OpenLineageProjectionError("eventTime must be RFC3339 text")
     _validate_rfc3339(event_time, field_name="eventTime")
     try:
         parsed_run_id = uuid.UUID(str(run.get("runId")))
@@ -424,12 +426,8 @@ def validate_openlineage_run_event(payload: object) -> None:
     validate_facets(
         run.get("facets"),
         supported={
-            "studious_runtime_context": FACET_DEFINITIONS[
-                "studious_runtime_context"
-            ],
-            "studious_strategy_context": FACET_DEFINITIONS[
-                "studious_strategy_context"
-            ],
+            "studious_runtime_context": FACET_DEFINITIONS["studious_runtime_context"],
+            "studious_strategy_context": FACET_DEFINITIONS["studious_strategy_context"],
             "studious_block_context": FACET_DEFINITIONS["studious_block_context"],
             "studious_lineage_edges": FACET_DEFINITIONS["studious_lineage_edges"],
         },
@@ -450,9 +448,7 @@ def validate_openlineage_run_event(payload: object) -> None:
             validate_facets(
                 dataset.get("facets"),
                 supported={
-                    "studious_data_quality": FACET_DEFINITIONS[
-                        "studious_data_quality"
-                    ]
+                    "studious_data_quality": FACET_DEFINITIONS["studious_data_quality"]
                 },
             )
 
@@ -547,9 +543,7 @@ def project_event(
             envelope.reason_code.value if envelope.reason_code is not None else None
         ),
         "config_checksum": (
-            envelope.config_checksum
-            if envelope.config_checksum != "unknown"
-            else None
+            envelope.config_checksum if envelope.config_checksum != "unknown" else None
         ),
         "contract_fixture_version": envelope.contract_fixture_version,
         "evidence_ref_sha256": evidence_ref_sha256,

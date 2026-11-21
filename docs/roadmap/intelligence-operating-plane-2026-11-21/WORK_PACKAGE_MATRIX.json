@@ -169,7 +169,8 @@
         "src/intelligence/repo_graph/",
         "tests/test_repo_graph_*.py",
         "tools/repo-intel/",
-        "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/repo-graph/"
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/repo-graph/",
+        ".github/workflows/repo-intelligence-index.yml"
       ],
       "must_reuse": [
         "src/intelligence/repo_snapshot.py",
@@ -189,7 +190,10 @@
         "300-500 token repo card and bounded task context pack",
         "incremental index refresh and stale-SHA detection",
         "branch/worktree isolation and coverage report",
-        "deterministic tests and first CHATGPT_CONTEXT_PACK.md"
+        "deterministic tests and first CHATGPT_CONTEXT_PACK.md",
+        "CI workflow for incremental index validation on push/PR and main updates, plus scheduled full consistency rebuild",
+        "compact PR index-delta / coverage / token-budget report and downloadable SHA-bound artifact",
+        "tool/parser/schema-version invalidation and deterministic rebuild command"
       ],
       "acceptance": [
         "A clean command builds a graph tied to exact Git tree SHA and tool versions",
@@ -206,7 +210,12 @@
         "Query-time relevance ranking (PageRank or equivalent) selects graph slices under a hard target-token budget",
         "Exact function bodies and AST-scoped contexts remain fetchable on demand; signature compression is never treated as full code understanding",
         "Cache keys include exact repo SHA/blob hash, parser/tool version, graph schema, data generation, query hash and budget",
-        "Prompt outputs report actual target-token counts or clearly marked byte estimates"
+        "Prompt outputs report actual target-token counts or clearly marked byte estimates",
+        "PR and push CI validates changed-file graph update, stale SHA, dangling edges, secret exclusion and pack budgets",
+        "merge to main refreshes the canonical main index; nightly full rebuild matches incremental graph checksums for the same SHA",
+        "CI artifacts carry exact repo SHA, data/index generation, parser/tool versions, checksums and coverage report",
+        "tool/parser/schema/schema-version changes invalidate affected cache keys and trigger a rebuild",
+        "large generated graphs/raw data are artifacts or external durable bundles, never committed as huge binary files"
       ]
     },
     {
@@ -514,8 +523,11 @@
         "OpenTelemetry is optional trace context only; EventEnvelope store remains canonical durable event ledger",
         "Capture overhead and event-to-store p50/p95/p99 latency are measured under bounded load",
         "No signer, submission, borrowing, spending, LIVE mode or new trading authority is introduced",
-        "Event schema changes preserve migration, compatibility and historical replay"
-      ]
+        "Event schema changes preserve migration, compatibility and historical replay",
+        "Every event producer path touched by the agent is explicitly listed in the work receipt with before/after source refs and owner/tests",
+        "Capture coverage is measured by stage and producer; absent runtime stages are shown as NOT_OBSERVED, not inferred from class/type presence"
+      ],
+      "scope_note": "W0 must enumerate the exact existing producer files. Any producer file outside the new adapter directories must be added as an explicit allowlisted touch path with owner/test impact; do not widen to whole src/strategy."
     },
     {
       "id": "OCA-W11",

@@ -12,7 +12,8 @@
     "PR118 sizing and ConflictScheduler",
     "PR130 Jito policy",
     "MPR04 signer boundary",
-    "MPR05 installed shadow qualification"
+    "MPR05 installed shadow qualification",
+    "PR #657 SX-18 parallel strategy runtime fanout (reuse; no duplicate orchestrator)"
   ],
   "status": "DOCS_AND_TASK_CONTRACT_ONLY",
   "execution_authority": "NONE",
@@ -32,9 +33,22 @@
     "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/ADAPTER_CONTRACTS_AND_TESTS_RU.md",
     "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/RELAY_AND_ORDERFLOW_POLICY_RU.md",
     "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/IMPLEMENTATION_DAG_AND_ACCEPTANCE_RU.md",
+    "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/SOURCE_DOWNLOAD_AND_VENDOR_PLAYBOOK_RU.md",
+    "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/PARALLEL_OPPORTUNITY_AND_ATOMIC_EXECUTION_RU.md",
+    "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/VENDORED_SOURCE_MANIFEST_V1.json",
     "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/CODEX_TRIGGER_RU.txt"
   ],
   "audit_file": "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/SOURCE_AUDIT_V1.json",
   "acceptance_file": "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/IMPLEMENTATION_DAG_AND_ACCEPTANCE_RU.md",
-  "safety_file": "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/RELAY_AND_ORDERFLOW_POLICY_RU.md"
+  "safety_file": "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/RELAY_AND_ORDERFLOW_POLICY_RU.md",
+  "source_mirror_manifest": "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/VENDORED_SOURCE_MANIFEST_V1.json",
+  "parallel_execution_policy": "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/PARALLEL_OPPORTUNITY_AND_ATOMIC_EXECUTION_RU.md",
+  "download_playbook": "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/SOURCE_DOWNLOAD_AND_VENDOR_PLAYBOOK_RU.md",
+  "execution_model": {
+    "discovery": "bounded concurrent evaluators on one immutable source generation via existing SX-18",
+    "selection": "existing SX-12 portfolio optimizer plus ConflictScheduler account read/write resource locks",
+    "execution": "distinct self-contained atomic flashloan transactions only; default concurrency 1",
+    "signing": "MPR04 isolated signer; exact message hash and second-person approval; disabled",
+    "sending": "PR130 JITO_SINGLE policy; no multi-relay fanout; disabled"
+  }
 }

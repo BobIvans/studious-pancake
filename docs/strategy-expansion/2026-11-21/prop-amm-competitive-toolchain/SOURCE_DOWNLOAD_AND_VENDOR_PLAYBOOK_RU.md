@@ -74,3 +74,10 @@ tar -xf "$TMP/$NAME.tar" -C "$DEST"
 ## Результат загрузки
 
 Agent должен создать vendor/strategy-research/INDEX.md, каждый provenance.json, THIRD_PARTY_NOTICES.md, deterministic harnesses, checksums, build/test reports and source-level blockers. Presence of source code does not imply runtime capability.
+
+
+## Дополнение: pmm-sim caller profiles
+
+Для pmm-sim не отключать local simulated caller-profile research. Разрешены DIRECT, Magnus-native CPI и upstream local --spoof profiles Jupiter/DFlow/OKX/Titan в LiteSVM. Использовать один локальный snapshot и jit-accounts=false / jit-programs=false для воспроизводимости. Код upstream загружает специальный Magnus router binary под выбранным aggregator program ID внутри локальной VM; это не настоящий aggregator executable. Никакой spoof profile не должен попасть в mainnet transaction builder или sender. Подробная матрица — PMM_SIM_CALLER_PROFILE_RESEARCH_RU.md.
+
+Важно: upstream benchmark для spread/round-trip использует permissive min_return=1 / expect_amount_out=1. Этот тест не подтверждает slippage protection, minimum output или flashloan repayment. Исполняемый путь обязан пройти собственные exact quote/build/R05 simulation/repayment guards.

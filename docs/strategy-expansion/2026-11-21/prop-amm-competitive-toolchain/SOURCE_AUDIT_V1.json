@@ -227,9 +227,10 @@
       "layer": "router_builder",
       "url": "https://github.com/1000xsh/swaps",
       "status": "PUBLIC_MIT_DIRECT_INSTRUCTION_BUILDER",
-      "finding": "v0.1.1 Rust 2024 library fetches account plans, decodes snapshots and builds allocation-free swap instruction views. It does not quote or infer slippage. Upstream notes say HumidiFi ignores min_amount_out; Tessera direct top-level path has caveats; SolFi is slot/oracle-sensitive.",
+      "finding": "v0.1.1 Rust 2024 library fetches account plans, decodes snapshots and builds allocation-free swap instruction views. It does not quote or infer slippage. Upstream notes say HumidiFi ignores min_amount_out; Tessera direct top-level path has caveats; SolFi is slot/oracle-sensitive. Cargo.toml declares MIT, but no root LICENSE, LICENSE-MIT or LICENSE-APACHE file was found in this review. Require published crate archive/license package verification before mirroring or linking.",
       "use": "Potential per-venue direct builder, after immutable pin and exact account/program conformance.",
-      "blocker": "No quote engine. Venue-specific minout/guard and SDK/API compatibility must be proven."
+      "blocker": "No quote engine. Venue-specific minout/guard and SDK/API compatibility must be proven. Resolve license metadata and package archive checksum first.",
+      "license_status": "HOLD_LICENSE_PACKAGE_CHECK"
     },
     {
       "name": "Astralane Iris",
@@ -320,6 +321,24 @@
       "finding": "No canonical upstream repository or existing adapter implementation was identified; treat this as a design label, not a package or ready-made SDK.",
       "use": "Only a future capability interface owned by the repository's existing submission subsystem, after design review.",
       "blocker": "Must not create a parallel sender service or enable multi-relay fan-out."
+    },
+    {
+      "name": "sol-trade-sdk / sol-trade-router-sdk",
+      "layer": "signing_and_submission_reference",
+      "url": "https://github.com/0xfnzero/sol-trade-sdk",
+      "status": "EXCLUDED_SECOND_SIGNER_AND_MULTI_CHANNEL_SENDER",
+      "finding": "The sol-parser-sdk README lists separately versioned sol-trade-sdk and sol-trade-router-sdk products for transaction building, signing, multi-channel submission and on-chain routing. These are not the parser crate itself and overlap the repository's isolated signer/submission owners.",
+      "use": "Reference only; do not vendor or integrate into the flashloan bot in this pack.",
+      "blocker": "Would create a second signing/multi-channel sending surface; MPR04 and PR130 remain authoritative."
+    },
+    {
+      "name": "PR #657 SX-18 strategy runtime fanout",
+      "layer": "internal_existing_owner",
+      "url": "https://github.com/BobIvans/studious-pancake/pull/657",
+      "status": "EXISTING_OWNER_REUSE",
+      "finding": "Open repository workstream owns multi-strategy runtime fanout/composition. This pack must reuse its StrategyRegistry/OpportunityConsumer and bounded cancellation/deadline/backpressure concepts, not duplicate a second orchestrator.",
+      "use": "Parallel opportunity evaluation through SX-18; compatible portfolio selection via existing SX-12 / ConflictScheduler.",
+      "blocker": "Check latest PR status, rebase and coordinate file ownership before implementation."
     }
   ],
   "policy": {

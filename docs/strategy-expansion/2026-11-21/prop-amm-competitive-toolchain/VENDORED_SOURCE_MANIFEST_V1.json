@@ -36,7 +36,7 @@
       "release": "v0.2.0 metadata observed",
       "license": "MIT",
       "license_evidence": "LICENSE file read from upstream",
-      "status": "MIRROR_CANDIDATE_TEST_ONLY",
+      "status": "MIRROR_CANDIDATE_TEST_ONLY_WITH_LOCAL_CALLER_PROFILE_MATRIX",
       "target": "vendor/strategy-research/pmm-sim",
       "role": "Offline direct/single/multi/benchmark simulation",
       "build_profile": "isolated Rust 2024 workspace; LiteSVM 0.10 / Solana SDK 3.0 line",
@@ -54,11 +54,26 @@
         "Run only direct/single/multi/benchmark modes against immutable snapshots"
       ],
       "must_not": [
-        "Spoofed aggregator CPI caller modes disabled and excluded from all tests",
-        "Do not fetch live mainnet accounts as a side effect",
-        "Simulation result is not a live quote or fill",
+        "Do not deploy spoof router binaries or impersonate Jupiter/DFlow/OKX/Titan in mainnet transactions",
+        "Do not treat local spoof profile as a valid aggregator integration or as proof of whitelisting entitlement",
+        "Do not compare different slots, pool states, token identities, amounts or program versions",
+        "Do not fetch live mainnet accounts implicitly in repeatability tests; use a recorded snapshot",
+        "Simulation result is not a live quote, fill or permission to borrow/send",
         "Not linked into production Python runtime"
-      ]
+      ],
+      "research_capabilities": {
+        "caller_profile_matrix": [
+          "direct",
+          "Magnus native CPI",
+          "Jupiter simulated CPI",
+          "DFlow simulated CPI",
+          "OKX Labs simulated CPI",
+          "Titan simulated CPI"
+        ],
+        "method": "Use same immutable LiteSVM accounts/programs snapshot, market, direction, token mints and raw input amount. Compare exact output, reverse round-trip, spread, CU and failures.",
+        "source_mechanism": "src/builder.rs changes the instruction program_id and src/env.rs loads the Magnus router spoof binary under that id inside local LiteSVM.",
+        "production_boundary": "Research only. Never deploy spoof binaries under aggregator ids, alter mainnet instruction program ids, or claim authentic aggregator execution. For execution, use the genuine aggregator official API/build path."
+      }
     },
     {
       "name": "1000xsh/swaps",
@@ -314,5 +329,165 @@
     "send_enabled": false,
     "borrow_enabled": false,
     "live_enabled": false
-  }
+  },
+  "api_profiles": [
+    {
+      "name": "LocalShred Lite",
+      "kind": "hosted_data_feed",
+      "url": "https://www.dedicatednodes.io/localshred/",
+      "status": "free_tier_candidate_no_sla",
+      "adapter_owner": "existing source registry/transport",
+      "activation": false
+    },
+    {
+      "name": "DoubleZero Edge",
+      "kind": "hosted_raw_shred_feed",
+      "url": "https://docs.malbeclabs.com/solana/edge/subscribe/",
+      "status": "paid_regional_feed",
+      "adapter_owner": "existing source registry/transport",
+      "activation": false
+    },
+    {
+      "name": "OrbitFlare ShredStream",
+      "kind": "hosted_raw_shred_feed",
+      "url": "https://orbitflare.com/products/shredstream",
+      "status": "paid_regional_feed_trial_unverified",
+      "adapter_owner": "existing source registry/transport",
+      "activation": false
+    },
+    {
+      "name": "Triton Yellowstone/Geyser and ShredStream",
+      "kind": "hosted_feed",
+      "url": "https://www.triton.one/pricing",
+      "status": "distinct_products_pricing_required",
+      "adapter_owner": "existing source registry/transport",
+      "activation": false
+    },
+    {
+      "name": "Helius LaserStream and Raw Shreds",
+      "kind": "hosted_feed",
+      "url": "https://www.helius.dev/pricing",
+      "status": "tiered_product_pricing_required",
+      "adapter_owner": "existing source registry/transport",
+      "activation": false
+    },
+    {
+      "name": "GetBlock Shred Streams",
+      "kind": "hosted_feed",
+      "url": "https://getblock.io/nodes/sol/",
+      "status": "paid_product_trial_details_conflict",
+      "adapter_owner": "existing source registry/transport",
+      "activation": false
+    },
+    {
+      "name": "ERPC Stream SDK",
+      "kind": "vendor_sdk",
+      "url": "https://erpc.global/en/news/2026/11/07/erpc-solana-stream-sdk-v4-20261107/",
+      "status": "benchmark_claim_requires_reproduction",
+      "adapter_owner": "existing source registry/transport",
+      "activation": false
+    },
+    {
+      "name": "Supanode",
+      "kind": "hosted_rpc_feed",
+      "url": null,
+      "status": "unverified_require_canonical_docs",
+      "adapter_owner": "none_until_verified",
+      "activation": false
+    },
+    {
+      "name": "Jupiter Swap API V2",
+      "kind": "hosted_quote_builder_api",
+      "url": "https://github.com/jup-ag/docs/blob/main/swap/index.mdx",
+      "status": "official_api_contract",
+      "adapter_owner": "existing R13 quote/build owner",
+      "activation": false
+    },
+    {
+      "name": "Astralane Iris",
+      "kind": "hosted_sender",
+      "url": "https://astralane.gitbook.io/docs/mandarin-docs/huan-ying-lai-dao-astralane/duan-dian-he-pei-zhi",
+      "status": "official docs list 10000 lamport Iris min tip; confirm terms/rebate",
+      "adapter_owner": "current submission owner only after separate approval",
+      "activation": false,
+      "tip_min_lamports": 10000
+    },
+    {
+      "name": "Helius Sender SWQoS-only",
+      "kind": "hosted_sender",
+      "url": "https://www.helius.dev/sender",
+      "status": "official 5000 lamport minimum; best effort single SWQoS path",
+      "adapter_owner": "current submission owner only after separate approval",
+      "activation": false,
+      "tip_min_lamports": 5000
+    },
+    {
+      "name": "Helius Sender Max",
+      "kind": "hosted_sender",
+      "url": "https://www.helius.dev/sender",
+      "status": "official 1000000 lamport minimum; internal multipath priority auction",
+      "adapter_owner": "current submission owner only after separate approval",
+      "activation": false,
+      "tip_min_lamports": 1000000
+    },
+    {
+      "name": "Syncro Sender public",
+      "kind": "hosted_sender",
+      "url": "https://docs.p2p.org/docs/syncro-sender-pricing-rate-limits",
+      "status": "official current 200000 lamport min; built-in multi-channel send",
+      "adapter_owner": "current submission owner only after separate approval",
+      "activation": false,
+      "tip_min_lamports": 200000
+    },
+    {
+      "name": "Syncro Sender private",
+      "kind": "hosted_sender",
+      "url": "https://docs.p2p.org/docs/syncro-sender-pricing-rate-limits",
+      "status": "official current 150000 lamport min; requires API key and built-in multi-channel send",
+      "adapter_owner": "current submission owner only after separate approval",
+      "activation": false,
+      "tip_min_lamports": 150000
+    },
+    {
+      "name": "bloXroute Trader API",
+      "kind": "hosted_sender",
+      "url": "https://docs.bloxroute.com/solana/trader-api/introduction/tip-and-tipping-addresses",
+      "status": "official 1000000 lamport required tip; built-in multi-path delivery",
+      "adapter_owner": "current submission owner only after separate approval",
+      "activation": false,
+      "tip_min_lamports": 1000000
+    },
+    {
+      "name": "0slot",
+      "kind": "hosted_sender",
+      "url": null,
+      "status": "official current tip/billing contract not verified in this pass",
+      "adapter_owner": "none_until_verified",
+      "activation": false
+    },
+    {
+      "name": "Sanctum Gateway",
+      "kind": "hosted_sender",
+      "url": null,
+      "status": "official current tip/billing contract not verified",
+      "adapter_owner": "none_until_verified",
+      "activation": false
+    },
+    {
+      "name": "BoltTx",
+      "kind": "hosted_sender",
+      "url": null,
+      "status": "official current tip/billing contract not verified",
+      "adapter_owner": "none_until_verified",
+      "activation": false
+    },
+    {
+      "name": "Nozomi",
+      "kind": "hosted_sender",
+      "url": null,
+      "status": "official current tip/billing contract not verified",
+      "adapter_owner": "none_until_verified",
+      "activation": false
+    }
+  ]
 }

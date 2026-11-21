@@ -308,6 +308,47 @@
         "No parallel multi-channel sender",
         "No bypass of MPR04/PR130"
       ]
+    },
+    {
+      "name": "0xfnzero/solana-streamer",
+      "repository": "https://github.com/0xfnzero/solana-streamer",
+      "ref": "4dc233e17ac8b7c13cbe5b80f5dc64cf3251e769",
+      "release": "v6.0.0",
+      "license": "MIT",
+      "license_evidence": "Root LICENSE file read from upstream. Cargo.toml declares package solana-streamer-sdk 6.0.0 and sol-parser-sdk 0.11.0.",
+      "status": "MIRROR_CANDIDATE_READ_ONLY_STREAM_FACADE",
+      "target": "vendor/strategy-research/solana-streamer",
+      "role": "Facade over sol-parser-sdk with Yellowstone gRPC, ShredStream and RPC parsing helpers",
+      "build_profile": "Isolated Rust 2021 workspace. Solana SDK 4.0.1 / Client 4.2.2 and Yellowstone 13.5.0 / Proto 12.7.0.",
+      "tests": [
+        "cargo metadata --locked",
+        "cargo test --locked",
+        "gap/reorder/reorg/reconnect/replay/backpressure tests"
+      ],
+      "must_not": [
+        "Not a feed subscription or hosted provider entitlement",
+        "No signing/trade SDK modules",
+        "No second production capture daemon; bridge only through existing source owner"
+      ]
+    },
+    {
+      "name": "rpcpool/yellowstone-grpc",
+      "repository": "https://github.com/rpcpool/yellowstone-grpc",
+      "ref": "b9a4f56a43a1858c63bfe8c3904b98ef416ae1a9",
+      "license": "AGPL-3.0 repository; yellowstone-grpc-proto crate declares Apache-2.0",
+      "license_evidence": "Root LICENSE is AGPL-3.0; yellowstone-grpc-proto/Cargo.toml declares Apache-2.0; geyser plugin uses workspace license.",
+      "status": "REFERENCE_ONLY_AGPL_REVIEW; PROTO_CRATE_SEPARATE_LICENSE",
+      "target": null,
+      "role": "Canonical Geyser gRPC plugin/protocol reference, not a free hosted RPC service",
+      "build_profile": "Do not vendor full repository into bot without AGPL-3.0 legal review. If needed, evaluate published Apache-2.0 yellowstone-grpc-proto crate separately.",
+      "tests": [
+        "Protocol/schema compatibility test only after dependency/legal review"
+      ],
+      "must_not": [
+        "No assumption that open-source Yellowstone means free hosted endpoints",
+        "No full plugin mirror until AGPL implications reviewed",
+        "No dedicated production validator/plugin deployment under this strategy task"
+      ]
     }
   ],
   "archive_rules": [

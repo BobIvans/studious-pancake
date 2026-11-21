@@ -3,7 +3,7 @@
 
 **Repository:** `BobIvans/studious-pancake`  
 **Design source:** PR #666, branch `codex/intelligence-operating-plane-design-2026-11-21`  
-**Master docs:** `CODEX_START_HERE_RU.md`, `OPERATIONS_CONTEXT_AGGREGATOR_RU.md`, `REPO_KNOWLEDGE_GRAPH_RU.md`, `CHATGPT_CODING_AGENT_CONTEXT_WORKFLOW_RU.md`, `TOOL_ACCESS_PROFILES_RU.md`, `TOKEN_EFFICIENCY_PLAYBOOK_RU.md`, `WORK_PACKAGE_MATRIX.json`.  
+**Master docs:** `CODEX_START_HERE_RU.md`, `OPERATIONS_CONTEXT_AGGREGATOR_RU.md`, `REPO_KNOWLEDGE_GRAPH_RU.md`, `CHATGPT_CODING_AGENT_CONTEXT_WORKFLOW_RU.md`, `TOOL_ACCESS_PROFILES_RU.md`, `TOKEN_EFFICIENCY_PLAYBOOK_RU.md`, `REALTIME_OPERATION_DATA_PLANE_RU.md`, `WORK_PACKAGE_MATRIX.json`.  
 **Execution goal:** deliver a working, incremental, token-efficient, evidence-linked repository knowledge index and connect it to existing Web3 strategy/operations owners. **Do not stop after producing an audit report.**
 
 ---
@@ -78,11 +78,29 @@ Do not stop at W0. Use the W0/W0A evidence to choose the **smallest winning comb
 
 Required first tangible artifact:** one command/entrypoint produces (a) a 300–500-token repo card, (b) a compact one-line catalogue of all discovered strategies/tools/sources/providers, (c) a searchable graph with exact symbol links and callers/callees, and (d) a bounded task context pack with freshness/coverage gaps.
 
-## 3. Continue into OCA operation/strategy correlation — do not leave it as a standalone code graph
+## 3. Wire real runtime data capture — do not confuse a code map with a running bot work log
 
-After W0, execute each dependency-ready package in `WORK_PACKAGE_MATRIX.json`; independent work may run in parallel only with disjoint write scopes. Continue through W1–W9 where evidence and dependencies permit:
+Read `REALTIME_OPERATION_DATA_PLANE_RU.md` and execute OCA-W10 and OCA-W11. This is a mandatory part of done, not optional documentation.
+
+Current baseline warning from source inspection: EventEnvelope/ObservabilityStore exist, but make_event() search only found its definition plus tests; current make_event() defaults to test-runtime/test and unknown producer/config provenance. RuntimeDiscoveryCoordinator returns a bounded report; native_cpmm_capture.py documents a one-shot capture with no subscriptions. Do not claim end-to-end live runtime event coverage until W0 proves real producers. Verify these findings on latest main before relying on them.
+
+Required work:
+- Instrument actual supported test/paper/shadow decision paths after W0 identifies them; do not just add an unused EventEmitter class or synthetic fixture producer.
+- Capture discovery/observation, strategy accept/reject, provider quote, flash lender/capital evidence, route/sizing/planning/compiler, sender-free simulation, reconciliation and terminal paper/shadow result with timestamps/reason codes/IDs.
+- Join strategy_id/version, repo SHA, config hash/generation, stable callsite/symbol ID, trace/span, candidate/opportunity/attempt, provider/source, observation ID/cursor/generation, flash-capital source and outcome where applicable; unknown remains explicit.
+- Keep canonical raw payloads in AGG-02/evidence owners, operation transitions in ObservabilityStore, observations in MarketObservation, episodes in MarketEpisode. Link by stable IDs/hashes; do not duplicate raw payloads into a new DB.
+- All decision/rejection/gap/correction/reconciliation/terminal events are non-sampleable. If durable capture fails, emit an explicit degraded/incomplete state and prevent episode qualification until recovery/replay. Sampling is permitted only for noisy non-decision debug/heartbeat logs with counters and policy version.
+- Use OpenTelemetry trace context/span IDs if useful for async/service causality; it supplements, not replaces, EventEnvelope and canonical stores.
+- Define bounded queues/backpressure, idempotent append/outbox, replay, loss counters, event-to-store latency and p50/p95/p99 overhead. No silent loss or unbounded queues.
+- Build one read-only cross-store query facade and a portable export/replay bundle with manifest, JSONL event records, existing Parquet datasets where available, schema/tool versions, hashes and coverage/gap report.
+- Prove from a real supported offline/paper/shadow vertical (not only unit fixtures) that an operation can be reconstructed after process restart with code/strategy/source/function/outcome references.
+
+## 4. Continue into OCA operation/strategy correlation — do not leave it as a standalone code graph
+
+After W0/W0A, execute each dependency-ready package in `WORK_PACKAGE_MATRIX.json`; independent work may run in parallel only with disjoint write scopes. Continue through W1–W11 where evidence and dependencies permit:
 
 - bind real EventEnvelope producers and events to strategy/config/repo SHA/code symbols using exact values and stable callsites;
+- complete OCA-W10 runtime instrumentation and OCA-W11 universal read-only query/export/replay before claiming operational knowledge coverage;
 - correlate existing observations/cursors/gaps → candidate/decision → simulation → reconciliation → paper outcome using canonical stores;
 - implement OperationEpisode only as a read-only deterministic projection if current owners do not already provide it;
 - reuse existing conflict scheduler/resource reservation owners for pool/account/nonce/lender/capital/provider conflicts;
@@ -92,7 +110,7 @@ After W0, execute each dependency-ready package in `WORK_PACKAGE_MATRIX.json`; i
 
 If a missing field/callsite cannot be proven, record MISSING/UNKNOWN and create the smallest scoped follow-up. Do not fabricate event joins or perform a broad logging rewrite.
 
-## 4. Wire index freshness into every future change
+## 5. Wire index freshness into every future change
 
 Implement the least invasive reliable path:
 - local command/hook or agent post-commit refresh for the active worktree;
@@ -101,11 +119,11 @@ Implement the least invasive reliable path:
 - branch/worktree indexes are isolated; PR review includes index diff and impacted dependencies.
 Indexing and deterministic labels run without an LLM. Ambiguous semantic labels remain PROPOSED/UNKNOWN.
 
-## 5. ChatGPT handoff for new strategy sessions
+## 6. ChatGPT handoff for new strategy sessions
 
 Generate a current `CHATGPT_CONTEXT_PACK.md` (bounded, exact SHA, compact rows and evidence links) plus the reusable `CHATGPT_NEW_CHAT_STRATEGY_STARTER_RU.md`. A new chat must be able to ask the index for all existing strategy ideas and compare novelty before suggesting another implementation. Do not claim ChatGPT automatically has local disk access; document exact transfer path (pack artifact/upload, authorized GitHub access or approved read-only local MCP).
 
-## 6. Deliverables
+## 7. Deliverables
 
 At minimum, produce the OCA-W0 reports plus:
 - polyglot/tool benchmark and golden question set;
@@ -119,7 +137,7 @@ At minimum, produce the OCA-W0 reports plus:
 
 Every report records exact base/head SHA, commands, versions, source blob hashes, pass/fail/skip counts, artifact hashes and UNKNOWN/NOT_OBSERVED/BLOCKED separately.
 
-## 7. Safety, permissions and merge
+## 8. Safety, permissions and merge
 
 - No transactions, RPC broadcast, signing, submission, borrowing, spending, deployment, account creation or live trading.
 - LIVE remains hard-denied. Do not change strategy admission, provider approval, risk, capital, nonce or signer authority.

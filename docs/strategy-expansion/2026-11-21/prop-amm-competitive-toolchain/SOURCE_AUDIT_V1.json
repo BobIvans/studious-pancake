@@ -292,6 +292,33 @@
       "finding": "Jito documents sendTransaction and bundles separately; bundles support up to five signed transactions atomically. Current repo PR130 policy narrows first-production use to a single strategy transaction.",
       "use": "Preserve current PR130 JITO_SINGLE policy.",
       "blocker": "No live sender activation; ACK/bundle ID not settlement; bundle semantics cannot silently override repo policy."
+    },
+    {
+      "name": "Jito ShredStream proxy client",
+      "layer": "sight_client",
+      "url": "https://github.com/jito-labs/shredstream-proxy",
+      "status": "HISTORICAL_CLIENT_REFERENCE",
+      "finding": "The proxy client repository is distinct from the feed service. Jito's feed service was sunset 2026-09-05; an accessible client repo does not imply an active feed or a current compatible endpoint.",
+      "use": "Source-reading / protocol history only; do not add as an active feed dependency.",
+      "blocker": "Feed sunset; verify current upstream state, license and compatibility before any fork/maintenance."
+    },
+    {
+      "name": "Jupiter Quote API (legacy wording)",
+      "layer": "router_quote",
+      "url": "https://github.com/jup-ag/docs/blob/main/swap/index.mdx",
+      "status": "VERSIONED_REPLACEMENT_REQUIRED",
+      "finding": "The pasted text uses generic Quote API language. New integration must pin the current Swap API V2 /order contract; do not mix legacy endpoint semantics with V2 /build.",
+      "use": "Compatibility mapping only for any existing legacy Jupiter quote owner.",
+      "blocker": "Confirm current project adapter and avoid a parallel quote client."
+    },
+    {
+      "name": "UnifiedRelayerAdapter",
+      "layer": "proposed_abstraction",
+      "url": null,
+      "status": "USER_PROPOSED_NOT_VERIFIED_AS_EXISTING_PROJECT",
+      "finding": "No canonical upstream repository or existing adapter implementation was identified; treat this as a design label, not a package or ready-made SDK.",
+      "use": "Only a future capability interface owned by the repository's existing submission subsystem, after design review.",
+      "blocker": "Must not create a parallel sender service or enable multi-relay fan-out."
     }
   ],
   "policy": {

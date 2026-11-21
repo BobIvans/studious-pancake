@@ -1,36 +1,19 @@
-> **Приоритет исполнения, уточнение владельца — 21.11.2026**
+> **Новое решение владельца — 22.11.2026 (имеет приоритет над более ранними ограничениями ниже).**
 >
-> Пользователь временно переключает основное внимание на Web3 (стратегии, рынки, источники, маршруты, qualification и paper/shadow evidence). Этот документ и PR #666 остаются архитектурным handoff/backlog. Не запускать весь OCA/W0–W19 как параллельную кампанию и не отнимать ресурсы у текущего Web3 workstream. Сначала проверять активные Web3 PR и актуальный main; инфраструктуру не считать целью текущего спринта.
+> Пользователь поручил реализовать staged Repo Intelligence + Web3 Data Plane, включая LLM-FREE DETERMINISTIC INDEXING CONTRACT. Web3/flashloan remains the target domain, но инфраструктурная работа больше не ограничивается только экспериментальным A-helper: coding agent должен пройти W0/W0A/W0C, затем построить W0B, после чего закрывать зависимые C/E/F/B/H и S1–S6 по этапам. Это не разрешение запускать W0–W19 одновременно.
 >
-> **Допустимый ограниченный помощник:** A — минимальный token-efficient repo graph/retrieval, только когда конкретная Web3 задача действительно выигрывает от точной навигации и сокращения контекста. A строится поверх существующего `src/intelligence` (SHA snapshots, AST extraction, import graph, SQLite index, context packs), не создаёт второй snapshot/DB owner и не блокирует Web3 PR. Перед внедрением — benchmark на Web3 golden tasks: токены до/после, recall нужных функций/тестов, ложные/неразрешённые связи, latency. Без доказанного выигрыша оставить текущий механизм.
+> **Execution waves:** (0) параллельные read-only audits W0, W0A, W0C и path-level H0/W12 без пересечения write scopes; (1) обязательная реализация W0B с нулевой LLM-зависимостью и CI/nightly refresh; (2) typed temporal graph + provider contracts/quality/chain identity/strategy requirements; (3) runtime lineage/replay на фактических test/paper/shadow paths; (4) retrieval/context/MCP + verification; (5) масштабирование и внешние сервисы только при измеренном bottleneck. Все старые формулировки «только A», «B–H отложены» и «не начинать W0B после аудита» уступают этой новой инструкции.
 >
-> ## Буквенные назначения coding agent — упорядоченный backlog
+> **No-duplicate / current-state rule:** на момент обновления main = 0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54; PR #672–#676 открыты и имеют отдельных владельцев. #672 schema compatibility, #673 read-only metadata catalogue, #674 Debezium adoption gate, #675 NATS adoption gate и #676 OpenLineage projection нужно повторно проверить по latest head/CI и встроить/расширить, а не создавать дубликаты.
 >
-> | Буква | Назначение | Результат/граница |
-> |---|---|---|
-> | **A** | Code graph, symbol resolution и поиск | Надстроить стабильные symbol/callsite IDs, AST enclosing scopes, точные import/call edges и статусы RESOLVED/AMBIGUOUS/UNRESOLVED над существующим индексом; SCIP/LSP подключать выборочно. Repo map с PageRank-подобным task ranking и hard token budget. Начать только как измеряемый Web3-context helper. |
-> | **B** | Incremental computation | Signature/body hashes, content-addressed derived artifacts, dependency invalidation, early cutoff, cancellation и full-vs-incremental reconciliation. Отложено; использовать существующие Git/blob hashes, не дублировать их. |
-> | **C** | Temporal state, branching и безопасные изменения | SHA/time-bound facts, history/diff, worktree isolation, leases, patch/merge receipts; CRDT/Dolt/jj — только benchmark по необходимости. Отложено. |
-> | **D** | Sandboxes и execution isolation | Ограниченные CPU/RAM/disk/network/time, отсутствие секретов и финансовых полномочий, отдельные analyst и coder capabilities. Отложено; Web3 safety boundaries остаются обязательными независимо от этого backlog. |
-> | **E** | Retrieval и context quality | Task-conditioned ranking: exact symbol → lexical → graph → tests/change history → доказанные runtime signals → semantic fallback; progressive disclosure и измеренный token budget. Полная версия после A и только если есть retrieval bottleneck. |
-> | **F** | Verification и test economics | Symbol/callsite → test coverage, diff-to-affected-tests, always-run invariant/safety suites, flaky registry, shrinking и целевое mutation testing. Отложено; не сокращать обязательные Web3 regression/safety suites. |
-> | **G** | Large-repo plumbing и координация агентов | Sparse checkout/partial clone, bounded scheduling, blob-hash cache, isolated worktrees, durable tasks/receipts и merge train по реальной нагрузке. Отложено до измеренного scale/parallelism bottleneck. |
-> | **H** | Token economics, security и governance | Реальный tokenizer/cost telemetry, output trimming с контролем потерь, prompt-injection isolation, secret redaction, tool capability registry, SBOM/license gates и audit log. Базовые security gates не отключать; расширение — отложено. |
->
-> **Порядок:** A → B → C → D → E → F → G → H. В текущем Web3-first режиме разрешён только узкий A по конкретному запросу/доказанной пользе; B–H остаются назначенным backlog, не активной серией PR.
->
-> **Уже описанные дополнительные контракты не теряются:** OCA-W12 — license/SBOM governance; W13 — provider adapters/capabilities/DataContract; W14 — StrategyDataRequirement/compatibility; W15 — typed temporal ontology/lineage; W16 — incremental engine; W17 — agent access/sandbox/work receipts; W18 — verification/test economics; W19 — условный infrastructure bake-off. Они остаются в матрице, но не исполняются сейчас автоматически. Open PR #672–#676 по schema/catalogue/lineage/CDC/transport не дублировать и не считать merged без проверки фактического статуса/CI.
->
-> **Definition of success для текущего режима:** Web3 workstream продолжает получать приоритет. Любой repo-intelligence helper должен уменьшать стоимость поиска/контекста на реальных Web3 задачах, сохранять точность и давать evidence refs; он не должен превращаться в отдельную большую инфраструктурную кампанию.
->
-> ---
+> Полный нормативный контракт: LLM_FREE_DETERMINISTIC_INDEXING_CONTRACT_RU.md. Он обязателен для OCA-W0B и любого scheduled/CI refresh.
 >
 # CODING AGENT EXECUTION TRIGGER — FULL OCA + REPO KNOWLEDGE BOOTSTRAP
 ## Это задание запускает не только аудит, а первую работающую версию агрегатора знаний
 
 **Repository:** `BobIvans/studious-pancake`  
 **Design source:** PR #666, branch `codex/intelligence-operating-plane-design-2026-11-21`  
-**Master docs:** `CODEX_START_HERE_RU.md`, `OPERATIONS_CONTEXT_AGGREGATOR_RU.md`, `REPO_KNOWLEDGE_GRAPH_RU.md`, `CHATGPT_CODING_AGENT_CONTEXT_WORKFLOW_RU.md`, `TOOL_ACCESS_PROFILES_RU.md`, `TOKEN_EFFICIENCY_PLAYBOOK_RU.md`, `REALTIME_OPERATION_DATA_PLANE_RU.md`, `UNIVERSAL_KNOWLEDGE_DATA_PLANE_EXPANSION_RU.md`, `FUNCTION_AND_INFRASTRUCTURE_COVERAGE_RU.md`, `WORK_PACKAGE_MATRIX.json`.  
+**Master docs:** `LLM_FREE_DETERMINISTIC_INDEXING_CONTRACT_RU.md`, `CODEX_START_HERE_RU.md`, `OPERATIONS_CONTEXT_AGGREGATOR_RU.md`, `REPO_KNOWLEDGE_GRAPH_RU.md`, `CHATGPT_CODING_AGENT_CONTEXT_WORKFLOW_RU.md`, `TOOL_ACCESS_PROFILES_RU.md`, `TOKEN_EFFICIENCY_PLAYBOOK_RU.md`, `REALTIME_OPERATION_DATA_PLANE_RU.md`, `UNIVERSAL_KNOWLEDGE_DATA_PLANE_EXPANSION_RU.md`, `FUNCTION_AND_INFRASTRUCTURE_COVERAGE_RU.md`, `WORK_PACKAGE_MATRIX.json`.  
 **Execution goal:** deliver a working, incremental, token-efficient, evidence-linked repository knowledge index and connect it to existing Web3 strategy/operations owners. **Do not stop after producing an audit report.**
 
 ---
@@ -87,13 +70,33 @@ Create explicit status labels ACTIVE / WIRED / QUALIFIED / DEV_ONLY / OPTIONAL /
 
 Do not delete anything. Zero static references is not proof of dead code; inspect dynamic imports, registries, reflection, config, CLI, CI, runtime and external consumers. Produce a prioritized cleanup list with blast radius and tests. Actual deletion must be a separate reviewed PR.
 
+### Track E — deterministic provider/source and flash-loan path inventory (OCA-W0C)
+
+This is a parallel read-only inventory, separate from the generic code/tool graph reports. Inspect the complete in-repo Web3 source universe and trace how each source could or demonstrably does feed the flashloan bot.
+
+Inventory:
+- RPC providers, indexers, APIs, WebSocket subscriptions, pollers, one-shot captures, archive/history sources, DEX/AMM/aggregator quote APIs, pool-state readers, oracles, token metadata, bridge/chain feeds, flash lenders/capital sources and SDK/IDL sources;
+- every adapter, endpoint/method, pagination/cursor, rate/quota policy, schema/normalizer, source catalogue entry, provider governance gate, data contract, cache and consumer;
+- source → adapter → raw payload/cursor → normalized observation/stream → strategy requirements → candidates/decisions → quote/sizing/planner/compiler/simulation → reconciliation → paper/shadow outcome, recording each link as PROVEN / STATIC_ONLY / DOC_CLAIM / MISSING / UNKNOWN;
+- exact chain/deployment identity, block/slot/hash, tx/signature/log or chain-native index, decimals/units/timestamp semantics, freshness, lag, coverage, gaps, corrections/reorg and replay;
+- source permission/entitlement, disabled/enabled state, actual mode STREAMING/POLL_ONLY/ONE_SHOT/UNAVAILABLE and measured evidence. Do not perform network probes or enable providers during inventory.
+
+Deliver:
+- SOURCE_PROVIDER_CATALOGUE.jsonl;
+- STRATEGY_PROVIDER_TRACE_MATRIX.json;
+- SOURCE_CAPABILITY_GAP_REPORT_RU.md;
+- FLASHLOAN_DATA_PATHS.md with exact files/symbols/callers/configs/tests and explicit unproven stages;
+- evidence manifest with main SHA, source blob hashes, contract/normalizer versions and inaccessible-history gaps.
+
+Acceptance: every source found in registries, code, docs, configs, tests and open PRs is accounted for; duplicate aliases resolve to canonical EntityIdentity or remain candidates; declared capabilities are distinct from observed capabilities; no static path is represented as runtime usage; unknown freshness/quality/replay/capacity is not invented; no credentials or private endpoint values are exported. Use existing src/market/source_catalog.py, src/external_contracts, src/provider_governance, AGG-02 and MarketObservation owners; do not create duplicate provider registries in this audit.
+
 ### Track D — context/retrieval design and golden corpus
 
 Create 30–50 real questions from the repository and prepare deterministic expected evidence paths/symbols. Include questions a new strategy researcher must ask to avoid duplication. Define bounded graph query and token-pack measurements.
 
-## 2. After parallel reports, BUILD the first working repo knowledge index (OCA-W0B)
+## 2. After parallel reports, BUILD the first working repo knowledge index (OCA-W0B; LLM-FREE gate mandatory)
 
-Do not stop at W0. Use the W0/W0A evidence to choose the **smallest winning combination** and implement an additive vertical slice:
+Do not stop at W0. Use W0/W0A/W0C/W12 evidence to choose the **smallest winning combination** and implement an additive vertical slice. Before coding, read and satisfy LLM_FREE_DETERMINISTIC_INDEXING_CONTRACT_RU.md; the first build and refresh path must not invoke a model:
 
 1. Reuse `src/intelligence` snapshots, manifests, source references, context packs, reports and benchmarks. Do not create a parallel repository snapshot system or a second semantic-memory database.
 2. Create a rebuildable, repo-SHA-bound symbol/entity graph covering all source languages found plus deterministic inventories of docs, configs, tests, workflows, packages, scripts, CLI/MCP tools and external data sources.

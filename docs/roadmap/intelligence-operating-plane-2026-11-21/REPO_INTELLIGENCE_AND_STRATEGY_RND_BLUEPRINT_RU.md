@@ -116,7 +116,15 @@ Provide a small stable read-only query surface. Recommended operations:
 3. strategy_explain — strategy card with exact implementation/test/evidence links;
 4. symbol_context — exact symbol, full source body, callers/callees, dependencies and tests;
 5. trace_operation — operation lineage, data provenance, gaps, replay and outcome;
-6. build_context_pack — bounded export with selected depth, token budget and continuation cursor.
+6. strategy_compare — compare mechanisms, economics, versions, data requirements, tests, outcomes and negative evidence.
+7. provider_search / provider_explain — source catalogues, adapters, contracts, capabilities, limits, health and observed source modes.
+8. provider_trace — strategy → provider → adapter → endpoint/method → raw payload/cursor → normalized observation → consumers/tests.
+9. flash_capital_trace — lender/capital capability → capacity/fee evidence → route/planner → simulation and blockers.
+10. route_trace / operation_trace — static paths separately from runtime-observed lineage through paper/shadow results.
+11. change_impact / test_impact — diff → symbols/config/contracts → affected strategies/providers/tests.
+12. as_of — historical code, config, provider, strategy and evidence at repo SHA/operation time.
+13. tool_inventory — MCP/CLI/apps/dependencies, versions, permissions, license and actual consumers.
+14. build_context_pack — bounded export with selected depth, token budget, exact included/omitted refs and deterministic continuation cursor.
 
 Return provenance and omissions explicitly. Keep analyst access read-only and separate from coding/admin tools.
 
@@ -287,3 +295,42 @@ Do not wait for the entire platform. First implementation milestone should retur
 7. deterministic rebuild/update command and stale-SHA failure behavior.
 
 This is the minimum useful repository intelligence product. Extend language/runtime/domain coverage incrementally after it proves utility to Web3 development.
+
+
+## 11. Mandatory LLM-free deterministic build gate
+
+The normative contract is LLM_FREE_DETERMINISTIC_INDEXING_CONTRACT_RU.md. It is not optional and supersedes any interpretation that LLM labels are required for graph completeness. The entire first index, file/symbol extraction, static edges, explicit-registry joins, source catalogues, incremental refresh, CI validation and nightly reconciliation must work without model calls or model network access.
+
+Only canonical registry facts, versioned explicit metadata, deterministic parser/resolver rules and human-confirmed records can become authoritative semantic labels. Heuristics produce candidates; unknown stays unknown. Build determinism is pinned to repo tree SHA plus parser/grammar/resolver/normalizer/schema/ontology versions. Every tracked file receives an explicit coverage status.
+
+OCA-W0B must prove two clean identical builds, clean-vs-incremental checksum parity, add/modify/delete/rename behavior, stale-SHA and branch rejection, parser-version invalidation, no dangling edges, secret exclusion, and strict static-vs-runtime provenance. CI runs on push/PR/merge and a scheduled full rebuild detects drift.
+
+## 12. Strategy/provider extraction product for flash-loan research
+
+The first useful repo product must not stop at a code map. It must expose a complete evidence-linked query path across strategy implementation and actual data supply:
+- list every StrategyIdea/Family/Version, including partial, rejected, blocked, fixture-only, paper and shadow evidence;
+- list every provider/source/adapter/API/RPC/DEX/oracle/indexer/flash-lender SDK and its exact methods, contracts, consumers and tests;
+- trace strategy → required capability → provider/adapter → raw data/cursor → normalizer/observation → candidate/decision → flash-capital proof → quote/fees/sizing → route/planner/compiler → simulation → reconciliation → paper/shadow outcome;
+- return PROVEN / STATIC_ONLY / DOC_CLAIM / MISSING / UNKNOWN rather than implying an end-to-end trace where producers are not wired;
+- retrieve exact full source bodies, configs, fixtures, contract/IDL/schema evidence and tests by stable symbol/evidence IDs on demand;
+- include PR/issue/review/commit history where GitHub permissions allow, while explicitly recording inaccessible ranges.
+
+The analyst interface should offer strategy_search, strategy_explain, strategy_compare, provider_search, provider_explain, provider_trace, flash_capital_trace, symbol_context, route_trace, operation_trace, change_impact, test_impact, as_of, tool_inventory and build_context_pack. This is the required interface contract; implementation may map it to existing CLI conventions rather than creating a new service for every method.
+
+## 13. SOTA capability selection: implement functions, not a pile of apps
+
+The repository must own the capabilities listed in the LLM-free contract: polyglot AST/symbol inventory, scoped extraction, typed graph/provenance, exact lexical + graph retrieval, incremental invalidation, temporal/as-of evidence, provider/data contracts, quality/reorg/replay semantics, test impact, token-aware packs, secure read-only access and CI reconciliation.
+
+Candidates are function-specific:
+- Tree-sitter + selected SCIP/LSP indexers for syntax and cross-file precision;
+- ast-grep and grep-ast/TreeContext for structural rules and exact enclosing scopes;
+- Aider/PageRank for task-conditioned repo map ranking;
+- SQLite FTS5/BM25/trigram first; Tantivy/Zoekt only if measured scale requires it;
+- one graph backend at most (native first; code-graph-mcp/CodeGraph/CGC/Graphify bake-off; Glean/LadybugDB only for scale/query gaps);
+- Git blob/tree hashes + dependency DAG + early cutoff first; Salsa/Buck2 DICE/CocoIndex patterns only if needed;
+- OpenLineage facets over EventEnvelope/AGG-02/MarketObservation; DataHub/Apicurio/NATS/Debezium/Temporal only at their documented adoption gates;
+- pytest coverage contexts, test impact, Hypothesis/mutation/failure shrinking for verification;
+- cargo-deny/Syft/ScanCode/gitleaks for supply chain; process/worktree sandbox first, Wasmtime/Firecracker only for stronger isolation;
+- Parquet/DuckDB first, with ClickHouse/Iceberg/lakeFS/Lance behind measured storage gates.
+
+No external candidate is installed because it is listed. Pin commit/version/license, inspect permissions/network/telemetry/installer side effects, run same-SHA golden benchmarks and keep rollback. Zero adoption is valid.

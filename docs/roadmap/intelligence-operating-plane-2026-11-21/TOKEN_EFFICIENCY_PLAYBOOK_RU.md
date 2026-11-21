@@ -324,3 +324,29 @@ Adopt one primary persistent graph only if its measured value beats current nati
 9. Only then consider Joern/Glean/embeddings/remote data stores if measured use cases require them.
 
 **Success condition:** coding agent and ChatGPT can answer “what already exists, which exact function implements it, who calls it, what source/config/provider it uses, which tests and runtime evidence support it, and what's missing?” with a small pack, exact links and explicit unknowns. No indexing tool alone can guarantee that; the Web3 domain mapping and event correlation are the Studious-specific integration work.
+
+
+## 11. LLM-free index build and evidence-first retrieval
+
+The indexer must run without an LLM/model API, model credentials, remote embeddings or model network access. Deterministic extraction, static graph construction, canonical-registry joins, incremental refresh, label staleness and CI/nightly reconciliation are ordinary repository functions, not model tasks.
+
+Use the following staged context protocol:
+1. T0: 300–500 token SHA-bound repo card, with coverage, freshness, known exclusions and continuation.
+2. T1: complete one-line catalogues of StrategyIdea/Family/Version, Provider/Adapter/Endpoint/Contract, Chain/Venue/Protocol/Pool, FlashCapitalSource, tests and tools.
+3. T2: task-specific graph subgraph (initially 1–2k tokens) with IDs and lazy 1–3 hop expansion.
+4. T3: exact full target functions, direct callers/callees, configs, provider methods/contracts, fixtures and tests.
+5. T4: historical PR/issues/reviews/commit reasoning, failure evidence, replay and detailed qualification dossier.
+
+For flashloan research rank retrieval by task and evidence, not raw symbol popularity. The preferred expansion order is:
+- strategy family/version and exact entrypoint;
+- all implementations/variants and prior negative/rejected ideas;
+- callers/callees and sizing/fees/slippage/route/planner/compiler/simulator functions;
+- StrategyDataRequirement and provider/source capability dependencies;
+- adapter methods → raw payload IDs/cursors → normalizers → observations/gaps/corrections;
+- flash-lender/capital-source capacity/fee evidence and route compatibility;
+- tests, qualification receipts, replay and paper/shadow outcomes;
+- PR/issue/commit changes affecting these exact IDs.
+
+A retrieval response must include repo SHA, graph generation, evidence IDs, full/partial status, token count (or labelled estimate), omitted IDs, unresolved links and a deterministic next-page cursor. Never return a summary when the analyst explicitly requested exact source; fetch source by ID. Do not ask the model to reconstruct omitted code from signatures.
+
+For maximum token efficiency, persist one compact repo card and stable catalogues, then expand only the task graph neighborhood. Use actual tokenizer measurements, stable IDs, deduplicated evidence refs, query result caching keyed by SHA+query+schema+budget and compact structured output. Compression applies to unrelated neighbors and CLI noise only—not target code, decimal/unit semantics, contract fields, risk limits, event IDs, evidence refs or negative results.

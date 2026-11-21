@@ -205,7 +205,8 @@ def test_openlineage_projection_keeps_strategy_and_live_authority_separate() -> 
     assert strategy["live_authorized"] is False
 
 
-def test_openlineage_run_id_is_stable_per_attempt_and_distinct_between_attempts() -> None:
+def test_openlineage_run_id_is_stable_per_attempt_and_distinct_between_attempts(
+) -> None:
     first = _projection(_event(generation=2))
     same_attempt = _projection(_event(generation=2))
     next_attempt = _projection(_event(generation=3))

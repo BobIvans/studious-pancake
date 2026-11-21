@@ -1,0 +1,291 @@
+{
+  "schema_version": "studious-pancake.real-data-multilender-provider-matrix.v1",
+  "audit_date": "2026-11-21",
+  "source_of_truth": "Existing R02/R03 provider owners and source dossiers; matrix is routing guidance, not capability activation.",
+  "safety": {
+    "capture_enabled": false,
+    "live_provider_enabled": false,
+    "sign_enabled": false,
+    "send_enabled": false,
+    "borrow_enabled": false,
+    "production_promotion": false,
+    "unknown_is_zero": false,
+    "policy": "Read-only evidence and unsigned builds only. Existing R02/QPR/R05/R06 and MPR gates remain mandatory."
+  },
+  "market_data": {
+    "solana": {
+      "state_sources": [
+        "governed RPC account capture",
+        "Yellowstone gRPC / licensed stream providers",
+        "source-specific pool state owners"
+      ],
+      "quote_sources": [
+        {
+          "id": "jupiter_v2",
+          "status": "existing quote/build adapters with separate governed and routing planes",
+          "role": "aggregator quote and composable instructions",
+          "notes": "Use exact current API version; retain underlying AMM identity; never infer independent liquidity from sub-routers."
+        },
+        {
+          "id": "0x_solana",
+          "status": "existing governed read path, public taker and API key required",
+          "role": "quote/instruction evidence",
+          "notes": "Do not synthesize context slot."
+        },
+        {
+          "id": "titan",
+          "status": "adapter exists but live gate / source-specific activation unresolved",
+          "role": "aggregator comparison"
+        },
+        {
+          "id": "openocean",
+          "status": "documented but incomplete auth/schema/entitlement pins",
+          "role": "optional comparator"
+        },
+        {
+          "id": "okx_dex",
+          "status": "documented; use separate exact provider schema only",
+          "role": "optional comparator"
+        },
+        {
+          "id": "rango",
+          "status": "documented; Sui/Solana transaction semantics are chain-specific",
+          "role": "optional comparator"
+        }
+      ],
+      "simulator_tools": [
+        {
+          "id": "pmm_sim",
+          "status": "offline source pinned; benchmark not yet run",
+          "role": "caller-profile sensitivity / direct-route local simulation",
+          "notes": "Never use synthetic aggregator program ID in production."
+        },
+        {
+          "id": "litesvm_mollusk",
+          "status": "dev/test harness candidates",
+          "role": "deterministic local SVM tests"
+        },
+        {
+          "id": "solana_streamer_yellowstone",
+          "status": "source/API profile only; terms/entitlement/operator must be verified",
+          "role": "read-only stream/capture"
+        },
+        {
+          "id": "1000xsh_swaps",
+          "status": "HOLD_LICENSE_REVIEW",
+          "role": "possible direct Prop-AMM instruction SDK",
+          "notes": "Do not vendor or use as executable builder until package archive and license are verified."
+        }
+      ]
+    },
+    "sui": {
+      "state_sources": [
+        {
+          "id": "sui_grpc",
+          "status": "schema/transport owner exists; live two-provider binding remains hard blocked",
+          "role": "checkpoint/object state and subscriptions",
+          "notes": "Allowed transport; do not use retired Sui Foundation mainnet JSON-RPC."
+        },
+        {
+          "id": "sui_graphql",
+          "status": "bounded source owners exist; live binding remains hard blocked",
+          "role": "object/checkpoint reads and structured queries"
+        },
+        {
+          "id": "blockvision_grpc",
+          "status": "documented endpoint/entitlement candidate; not enabled",
+          "role": "potential independent state source",
+          "notes": "Provider/operator/correlation identity and plan quota must be reviewed."
+        },
+        {
+          "id": "hosted_grpc_graphql",
+          "status": "candidate vendors include QuickNode, Ankr, BlockPI and ZAN; exact endpoints/terms not configured",
+          "role": "independent profile candidates",
+          "notes": "Two endpoints are not independent unless provider, operator and correlation group genuinely differ."
+        }
+      ],
+      "quote_sources": [
+        {
+          "id": "aftermath",
+          "status": "OFFLINE_ADAPTER_ONLY",
+          "role": "SOR quote; add-trade is separate PTB build surface",
+          "notes": "Current normalizer has no transport, no boot wiring and no slot/checkpoint in quote schema."
+        },
+        {
+          "id": "cetus_aggregator_v3",
+          "status": "DOC_ONLY",
+          "role": "multi-venue quote + composable PTB",
+          "notes": "SDK license absent in reviewed package; API schema/terms required before implementation."
+        },
+        {
+          "id": "bluefin7k",
+          "status": "DOC_ONLY",
+          "role": "quote + composable PTB",
+          "notes": "MIT SDK pin exists; verify current API/version/fee and commission partner."
+        },
+        {
+          "id": "flowx",
+          "status": "DOC_ONLY_LICENSE_HOLD",
+          "role": "meta-aggregator quote + composable PTB",
+          "notes": "SDK license missing; meta route correlates underlying exchanges; display-only amountOut warning with commission."
+        },
+        {
+          "id": "okx_sui",
+          "status": "INCOMPLETE_CONTRACT",
+          "role": "optional quote source / 7K child route",
+          "notes": "Sui-specific schema, key semantics and quota not fully pinned."
+        },
+        {
+          "id": "rango_sui",
+          "status": "INCOMPLETE_CONTRACT",
+          "role": "optional cross-chain reference",
+          "notes": "Sui transaction/PTB subshape and numeric quotas need proof."
+        },
+        {
+          "id": "deepbook_direct",
+          "status": "STATE_EXISTS_QUOTE_ADAPTER_MISSING",
+          "role": "direct orderbook depth/price",
+          "notes": "Direct state is not yet an R13 quote adapter."
+        }
+      ]
+    }
+  },
+  "flash_lenders": {
+    "solana": [
+      {
+        "id": "kamino",
+        "priority": "P0",
+        "status": "OFFLINE_READER_AND_UNSIGNED_BUILDER_UNQUALIFIED",
+        "must_prove": [
+          "reserve state",
+          "flash fee/rounding",
+          "available liquidity/caps",
+          "same-message borrow index",
+          "R05 exact message simulation"
+        ]
+      },
+      {
+        "id": "jupiter_lend",
+        "priority": "P0",
+        "status": "OFFLINE_READER_AND_UNSIGNED_BUILDER_UNQUALIFIED",
+        "must_prove": [
+          "reserve/account state",
+          "admin/program/config",
+          "live capacity and fee",
+          "exact borrow/payback metas",
+          "R05 exact message simulation"
+        ]
+      },
+      {
+        "id": "project0_marginfi",
+        "priority": "P1",
+        "status": "CONDITIONAL_EXISTING_PUBLIC_ACCOUNT_CONTEXT",
+        "must_prove": [
+          "bank state",
+          "fee/capacity",
+          "existing account context",
+          "direct instruction ABI",
+          "no account creation"
+        ]
+      },
+      {
+        "id": "marginfi_legacy",
+        "priority": "HOLD",
+        "status": "QUARANTINED_FIXTURE_ONLY",
+        "must_prove": [
+          "reviewed current deployment/IDL",
+          "rooted bank vectors",
+          "Token-2022",
+          "flash semantics",
+          "code-owner review"
+        ]
+      }
+    ],
+    "sui": [
+      {
+        "id": "navi",
+        "priority": "P0",
+        "status": "OFFLINE_STATE_READER_AND_UNSIGNED_PTB_BUILDER_UNQUALIFIED",
+        "must_prove": [
+          "current deployed package/config version",
+          "checkpoint-consistent shared pool/storage/config objects",
+          "exact CoinType and decimals",
+          "effective flash cap/fee/rounding",
+          "same-PTB receipt repayment",
+          "R05 PTB simulation"
+        ]
+      },
+      {
+        "id": "deepbook_v3",
+        "priority": "P0",
+        "status": "PINNED_FLASH_SEMANTICS_STATE_AND_UNSIGNED_MODEL_UNQUALIFIED",
+        "must_prove": [
+          "current pool registry and shared object",
+          "same pool resource identity for depth and lender cap",
+          "effective available capacity",
+          "current fee semantics",
+          "hot-potato repayment",
+          "R05 PTB simulation"
+        ]
+      },
+      {
+        "id": "scallop",
+        "priority": "P1",
+        "status": "DOCS_AND_READ_ONLY_QUERY_CANDIDATE",
+        "must_prove": [
+          "ScallopQuery only",
+          "current asset pool/capacity",
+          "current fee",
+          "package and object state",
+          "unsigned builder and same-PTB repayment"
+        ]
+      },
+      {
+        "id": "bucket_usdb",
+        "priority": "P2",
+        "status": "USDB_ONLY_DOC_CANDIDATE",
+        "must_prove": [
+          "USDB exact CoinType and flash module",
+          "current fee/capacity",
+          "mint/repay semantics",
+          "atomic PTB simulation"
+        ]
+      },
+      {
+        "id": "suilend",
+        "priority": "RESEARCH_HOLD",
+        "status": "NO_GENERAL_PUBLIC_FLASHLOAN_ABI_PROVEN",
+        "must_prove": [
+          "public general-purpose ABI",
+          "fee/capacity source",
+          "deployed package",
+          "builder and repay proof"
+        ]
+      }
+    ],
+    "excluded_as_lenders": [
+      {
+        "id": "cetus",
+        "reason": "Reviewed Move source did not pin a public general-purpose flash lender; use as market venue only."
+      },
+      {
+        "id": "aftermath",
+        "reason": "Reviewed protocol docs did not expose flash-loan API; use as router/venue only."
+      },
+      {
+        "id": "flowx",
+        "reason": "Reviewed docs expose quote/route builder only; do not classify as lender."
+      }
+    ]
+  },
+  "shared_constraints": [
+    "Reuse FlashCapitalGraph; do not add a second capital graph.",
+    "A source API asset list is discovery, not current capacity.",
+    "Capacity must be exact per lender, asset, amount, state generation and freshness.",
+    "Compare lender fees and costs; do not select solely by nominal zero-fee claims.",
+    "One lender per atomic plan unless a protocol explicitly proves atomic multi-lender support.",
+    "A DeepBook pool's flash liquidity and orderbook depth are one correlated resource.",
+    "Cross-chain atomicity is not assumed.",
+    "All builder outputs remain unsigned and inert until R05/R06/MPR gates pass."
+  ]
+}

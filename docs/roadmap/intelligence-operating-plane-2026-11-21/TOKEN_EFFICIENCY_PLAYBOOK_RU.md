@@ -135,6 +135,29 @@ These are important candidates from the latest research wave. None is accepted u
 
 **Selection update:** primary graph bake-off must now include at least CBM, colbymchenry/codegraph, Graphify, CGC and one compact Rust graph (repomap or code-graph-mcp) on exactly the same SHA/question set. Probe or Scantool may complement the chosen primary graph as JIT extraction because they address a different layer. Do not run all graph MCP servers concurrently in an agent's normal tool list.
 
+### K2. Long-tail watchlist from the original research — verify only if a measured gap remains
+
+The original uploads named additional projects that are not all part of the primary bake-off. Keep them in a `TOOL_CANDIDATE_WATCHLIST` with status `NOT_VERIFIED` until exact upstream, current maintenance, installability, license, security and benchmark behavior are checked. Do not infer quality from a pasted feature description.
+
+| Candidate from research | Intended capability | Triage rule |
+|---|---|---|
+| `cuongdinhngo/code-atlas`, `0xbyt4/codebase-graph-mcp`, `knewstimek/codegraph-light`, `codebase-graph-mcp` forks | Local symbol/call graph daemons | Inspect only if CBM / CodeGraph / sdsrss / CGC lack required language or daemon behavior |
+| `Entroly`, `toprakahmetaydogmus/TZeroAlgorithm`, `achatainga/mcp-code-context`, `mariusei/scantool` | Multi-tier AST FULL/SKELETON/REFERENCE compression and surgical scope retrieval | Scantool and mcp-code-context are already represented; TZero/Entroly require fresh upstream verification before consideration |
+| `paulmann/RAGRAF`, `qcri/llmxcpg`, `vitali87/code-graph-rag`, Joern | Graph + CPG + source-to-sink/data-flow slices | Joern/code-graph-rag are optional deep-analysis routes; LLM-driven query stages must be separated from deterministic indexing |
+| `TrySentra/sentra`, `stakwork/stakgraph`, `Git2KG`, `cross-repo-graph MCP` | PR/ADR/session decision lineage, temporal ownership and multi-repo federation | Promote only when strategy knowledge demonstrably spans separate repositories or GitHub discussions are missed |
+| `codingest`, `synaptiq`, `graphize`, `SocratiCode`, `codecontext`, `ctxgraph`, `ctxloom`, `codeprysm`, `Mimirs` | Revision-aware polyglot graph, hybrid retrieval, vector/document semantics | Compare only for a specific missing feature such as parser support, temporal revisions, hybrid recall or data-flow |
+| `infiniloom`, `agentic-codebase`, `repomap`, `entire-graph` | Portable graph artifacts, blob hashing, PageRank and change-impact maps | Existing candidate set already includes some of these; avoid duplicate trials |
+| `microsoft/graphrag`, `FalkorDB/GraphRAG-SDK`, `neo4j/neo4j-graphrag-python` | Community summaries and graph/vector query layers | Defer for docs/research corpus only if lexical+structural retrieval has a measured semantic recall gap |
+
+Additional original techniques to retain:
+- Git history/PR-aware temporal edges: introduced-by, modified-by, supersedes, co-change and ownership; never infer semantic approval from co-edit alone.
+- Multi-repo namespaces: repo identity + ref/SHA in every node ID; link package/schema/route/SDK dependencies only when the cross-repo consumer is evidenced.
+- Runtime traces / dynamic-dispatch enrichments: observed edges are time-windowed and separately typed; preserve sample rate and coverage.
+- CPG/DFG slicing: use only for a concrete path question (e.g., RPC input → decoder → quote math → transaction message), not as the default whole-repo graph.
+- Shared agent daemon: one writer/fencing lock and branch-scoped graph snapshots; never allow two clients to mix dirty worktrees into one unlabeled current index.
+
+**W0A timebox:** run the primary same-SHA tool bake-off first. The long-tail list is a discovery register, not a requirement to install or benchmark every project. A candidate is promoted only when the measured result identifies a precise uncovered requirement.
+
 ### L. Multi-resolution AST context is mandatory
 
 Adopt explicit retrieval tiers rather than one generic "compact" mode:

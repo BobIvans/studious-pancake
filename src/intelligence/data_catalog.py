@@ -131,8 +131,7 @@ def _external_contract_catalog_digest(
         "relationships": [
             item.to_payload()
             for item in relationships
-            if item.relationship_type
-            in {"HAS_API_CONTRACT", "HAS_PINNED_ARTIFACT"}
+            if item.relationship_type in {"HAS_API_CONTRACT", "HAS_PINNED_ARTIFACT"}
         ],
     }
     return domain_sha256(
@@ -604,14 +603,14 @@ def build_data_catalog_snapshot(
     market_sources_by_id = {item.source_id: item for item in source_catalog.sources}
     contract_providers = sorted({item.provider for item in contract_registry.contracts})
     for provider in contract_providers:
-        source = market_sources_by_id.get(provider)
-        if source is None:
+        matched_source = market_sources_by_id.get(provider)
+        if matched_source is None:
             continue
         relationships.append(
             CatalogRelationship(
                 source_urn=_urn("provider", provider),
                 relationship_type="EXACT_ID_MATCHES_MARKET_SOURCE",
-                target_urn=_urn("market-source", source.source_id),
+                target_urn=_urn("market-source", matched_source.source_id),
                 provenance="exact-canonical-id-equality",
                 evidence_refs=(
                     "src/resources/external_contracts.json:provider",

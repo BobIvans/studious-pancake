@@ -26,7 +26,7 @@ import hashlib
 import json
 import math
 from collections.abc import Collection
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping, Protocol, Sequence
 
 from src.economics.capital import CapitalEngineError
 from src.economics.durable_reservations import (
@@ -124,6 +124,23 @@ class VenueKind(StrEnum):
     METEORA_DLMM = "meteora-dlmm"
     ORDERBOOK = "orderbook"
     UNKNOWN = "unknown"
+
+
+class VenueExactLeg(Protocol):
+    """Structural contract for one exact-evaluation leg state: any qualified
+    venue state that declares its identity, assets and venue family."""
+
+    @property
+    def venue(self) -> VenueIdentity: ...
+
+    @property
+    def asset_a(self) -> SolanaAssetIdentity: ...
+
+    @property
+    def asset_b(self) -> SolanaAssetIdentity: ...
+
+    @property
+    def venue_kind(self) -> VenueKind: ...
 
 
 class RouteSupport(StrEnum):
@@ -282,7 +299,7 @@ class TwoLegExactEvaluation:
         )
 
 
-def mixed_route_semantic_route_id(legs: Sequence[object]) -> str:
+def mixed_route_semantic_route_id(legs: Sequence[VenueExactLeg]) -> str:
     """Ordered mixed-venue semantic route id over any exact-leg states."""
     return _hash(
         {
@@ -291,9 +308,7 @@ def mixed_route_semantic_route_id(legs: Sequence[object]) -> str:
                 {
                     "program_id": leg.venue.program_id,
                     "market_id": leg.venue.market_id,
-                    "venue_kind": getattr(
-                        leg, "venue_kind", VenueKind.RAYDIUM_CPMM
-                    ).value,
+                    "venue_kind": leg.venue_kind.value,
                 }
                 for leg in legs
             ],
@@ -324,13 +339,13 @@ def two_leg_semantic_route_id(
 
 
 def _resolve_venue_evaluator(
-    pool: object,
+    pool: VenueExactLeg,
     *,
     adapter: QualifiedRaydiumCpmmAdapter | None,
     adapters: Mapping[VenueKind, object] | None,
 ):
     """Resolve the exact evaluator for one leg by its declared venue kind."""
-    kind = getattr(pool, "venue_kind", VenueKind.RAYDIUM_CPMM)
+    kind = pool.venue_kind
     if not isinstance(kind, VenueKind):
         raise CpmmBindingError(
             CpmmBindingRejection.UNSUPPORTED_VENUE_KIND,
@@ -392,7 +407,7 @@ def evaluate_exact_two_leg_route(
                 CpmmBindingRejection.STALE_OR_FUTURE_STATE,
                 f"stale or future state for venue {pool.venue.market_id}",
             )
-    leg_evaluators: list[object] = []
+    leg_evaluators: list[Any] = []
     for pool in (first, second):
         leg_evaluators.append(
             _resolve_venue_evaluator(pool, adapter=adapter, adapters=adapters)

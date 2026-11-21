@@ -75,7 +75,9 @@ class DatasetRef:
         if len(self.namespace) > 1024 or len(self.name) > 1024:
             raise OpenLineageProjectionError("dataset identity exceeds limits")
 
-    def to_payload(self, facets: Mapping[str, object] | None = None) -> dict[str, object]:
+    def to_payload(
+        self, facets: Mapping[str, object] | None = None
+    ) -> dict[str, object]:
         result: dict[str, object] = {
             "namespace": self.namespace,
             "name": self.name,
@@ -332,7 +334,9 @@ def _read_facet_schema() -> dict[str, object]:
     try:
         value = json.loads(resource.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        raise OpenLineageProjectionError("custom facet schema cannot be loaded") from exc
+        raise OpenLineageProjectionError(
+            "custom facet schema cannot be loaded"
+        ) from exc
     if not isinstance(value, dict) or not isinstance(value.get("$defs"), dict):
         raise OpenLineageProjectionError("custom facet schema is malformed")
     Draft202012Validator.check_schema(value)
@@ -361,10 +365,28 @@ def validate_openlineage_run_event(payload: object) -> None:
             return
         if not isinstance(values, Mapping):
             raise OpenLineageProjectionError("facets must be an object")
+        for facet_name in values:
+            if isinstance(facet_name, str) and facet_name.startswith("studious_"):
+                if facet_name not in supported:
+                    raise OpenLineageProjectionError(
+                        f"unsupported Studious facet: {facet_name}"
+                    )
         for facet_name, definition_name in supported.items():
             value = values.get(facet_name)
             if value is None:
                 continue
+            if not isinstance(value, Mapping):
+                raise OpenLineageProjectionError(
+                    f"facet {facet_name} must be an object"
+                )
+            if value.get("_schemaURL") != _facet_schema_url(facet_name):
+                raise OpenLineageProjectionError(
+                    f"facet {facet_name} schema URL is not pinned"
+                )
+            if value.get("_producer") != producer:
+                raise OpenLineageProjectionError(
+                    f"facet {facet_name} producer does not match RunEvent"
+                )
             wrapper = {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "$defs": definitions,
@@ -395,6 +417,7 @@ def validate_openlineage_run_event(payload: object) -> None:
                 "studious_strategy_context"
             ],
             "studious_block_context": FACET_DEFINITIONS["studious_block_context"],
+            "studious_lineage_edges": FACET_DEFINITIONS["studious_lineage_edges"],
         },
     )
     validate_facets(
@@ -452,7 +475,9 @@ def project_event(
     input_refs = tuple(inputs)
     output_refs = tuple(outputs)
     if len(input_refs) > 1024 or len(output_refs) > 1024:
-        raise OpenLineageProjectionError("dataset count exceeds OpenLineage export limit")
+        raise OpenLineageProjectionError(
+            "dataset count exceeds OpenLineage export limit"
+        )
     if len(set(input_refs)) != len(input_refs):
         raise OpenLineageProjectionError("duplicate input dataset")
     if len(set(output_refs)) != len(output_refs):
@@ -548,18 +573,23 @@ def project_event(
             )
         return reference.to_payload(dataset_facets or None)
 
-    job_facets: dict[str, object] = {}
     if edges:
         entries = [
             {
-                "source": {"namespace": edge.source.namespace, "name": edge.source.name},
-                "target": {"namespace": edge.target.namespace, "name": edge.target.name},
+                "source": {
+                    "namespace": edge.source.namespace,
+                    "name": edge.source.name,
+                },
+                "target": {
+                    "namespace": edge.target.namespace,
+                    "name": edge.target.name,
+                },
                 "provenance": edge.provenance,
                 "evidence_refs": list(edge.evidence_refs),
             }
             for edge in edges
         ]
-        job_facets["studious_lineage_edges"] = _facet(
+        run_facets["studious_lineage_edges"] = _facet(
             name="studious_lineage_edges",
             producer_uri=producer_uri,
             properties={"entries": entries},
@@ -577,7 +607,7 @@ def project_event(
         "job": {
             "namespace": job_namespace,
             "name": job_name,
-            "facets": job_facets,
+            "facets": {},
         },
         "inputs": [dataset_payload(item) for item in input_refs],
         "outputs": [dataset_payload(item) for item in output_refs],

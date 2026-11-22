@@ -46,6 +46,20 @@ _JOURNAL_WAL_FRAME_HEADER_BYTES = 24
 _JOURNAL_WAL_MARGIN_FRAMES = 8
 
 
+# Conservative pre-write creation/growth reserves for the campaign stores
+# (owner security-closure round 3, item 2).  These are charged by the CLI
+# BEFORE any persistent campaign artifact is created, so the approved
+# storage_bytes_max covers the whole campaign footprint from the first byte:
+#   - ledger: schema SQL + meta rows + reserve/finalize records + WAL/SHM
+#   - evidence journal: schema SQL + indexes + WAL/SHM
+#   - authority store: schema SQL + WAL/SHM
+# They are intentionally over-reserved (fail-closed direction); the
+# post-write reconciliations catch any under-reservation and block.
+LEDGER_CREATION_RESERVE_BYTES = 131_072
+JOURNAL_CREATION_RESERVE_BYTES = 262_144
+AUTHORITY_CREATION_RESERVE_BYTES = 262_144
+
+
 def journal_growth_bound(row_len: int, page_size: int) -> int:
     """Conservative worst-case DB+WAL byte growth of one append transaction."""
 
@@ -56,6 +70,12 @@ def journal_growth_bound(row_len: int, page_size: int) -> int:
     return (
         row_len + page_size + wal_frames * (page_size + _JOURNAL_WAL_FRAME_HEADER_BYTES)
     )
+
+
+# Ledger reserve/finalize transactions are small rows; reserve their
+# worst-case page/WAL growth against the default SQLite page size (the
+# ledger store does not override it).
+LEDGER_TRANSACTION_RESERVE_BYTES = 2 * journal_growth_bound(2048, 4096)
 
 
 def artifact_footprint_bytes(paths) -> int:

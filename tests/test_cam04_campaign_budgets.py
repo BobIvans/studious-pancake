@@ -769,3 +769,416 @@ def test_extra_artifacts_count_into_footprint(tmp_path):
     delta = store.campaign_storage_bytes() - plain.campaign_storage_bytes()
     assert delta >= 2_048 + 512 + 1_024
     journal.close()
+
+
+def test_preflight_blocks_before_any_persistent_artifact(tmp_path, monkeypatch):
+    """Closure round 3: a budget that cannot hold the whole pre-reserved
+    campaign footprint blocks BEFORE manifest.json / approval ledger are
+    created.  Only the terminal blocked receipt may be persisted."""
+    import asyncio
+    import json
+    from datetime import datetime, timezone
+
+    calls = []
+
+    def _forbidden_transport(*args, **kwargs):
+        calls.append((args, kwargs))
+        raise AssertionError("transport must not be constructed for a blocked start")
+
+    monkeypatch.setattr(cli, "campaign_transport", _forbidden_transport)
+    source_config = tmp_path / "source-config.json"
+    checked = datetime.now(timezone.utc).isoformat()
+    source_config.write_text(
+        json.dumps(
+            {
+                "schema_version": "prequal.source-intake-config.v1",
+                "sources": [
+                    {
+                        "dossier": {
+                            "source_id": "dexscreener",
+                            "label": "d",
+                            "profile": {
+                                "profile_id": "discovery-dexscreener",
+                                "provider": "dexscreener",
+                                "operator": "dexscreener",
+                                "correlation_group": "dexscreener",
+                                "endpoint": "https://api.dexscreener.invalid/token-pairs/v1/solana/x",
+                                "official_docs": "https://docs.dexscreener.invalid/api/reference",
+                                "role": "discovery",
+                                "request_limit": 1,
+                                "window_seconds": 60,
+                                "campaign_attempt_cap": 10,
+                            },
+                            "checked_at": checked,
+                            "docs_sha256": "a" * 64,
+                            "request_schema_version": "DiscoveryRequest.v1",
+                            "response_schema_version": "DiscoveredMarket.v1",
+                            "schema_fingerprint": "b" * 64,
+                            "terms_url": "https://docs.dexscreener.invalid/terms",
+                            "classification": "DISCOVERY_ONLY",
+                        },
+                        "adapter": {
+                            "kind": "catalog",
+                            "request": {
+                                "source_id": "dexscreener",
+                                "token_mint": "So11111111111111111111111111111111111111112",
+                            },
+                        },
+                    }
+                ],
+            }
+        )
+    )
+    plan = tmp_path / "campaign-plan.json"
+    plan.write_text(json.dumps(_tiny_budget_plan()))
+    output = tmp_path / "campaign-output"
+    result = asyncio.run(cli.capture(source_config, output, None, 1, plan, None))
+    assert calls == []
+    assert result["physical_network_attempts"] == 0
+    assert result["campaign_start_gate"]["blockers"] == [
+        "CAMPAIGN_STORAGE_BUDGET_EXHAUSTED"
+    ]
+    assert not (output / "campaign-manifest.json").exists()
+    assert not (output / "campaign-approval-ledger.sqlite").exists()
+    assert not (output / "campaign-approval-ledger.sqlite-wal").exists()
+    assert not (output / "campaign-approval-ledger.sqlite-shm").exists()
+    assert (output / "campaign-start-blocked.json").exists()  # terminal receipt
+
+
+def test_preflight_exact_limit_proceeds_and_one_byte_under_writes_nothing(
+    tmp_path, monkeypatch
+):
+    """The preflight reservation is exact: a budget equal to the whole
+    pre-reserved campaign footprint proceeds (manifest + ledger created,
+    start gate still blocks on the unapproved plan); one byte under leaves
+    zero persistent artifacts."""
+    import asyncio
+    import json
+    from datetime import datetime, timezone
+    from pathlib import Path as _Path
+
+    from src.qualification_campaign.evidence import (
+        AUTHORITY_CREATION_RESERVE_BYTES,
+        JOURNAL_CREATION_RESERVE_BYTES,
+        LEDGER_CREATION_RESERVE_BYTES,
+        LEDGER_TRANSACTION_RESERVE_BYTES,
+        artifact_footprint_bytes,
+        journal_growth_bound,
+    )
+
+    monkeypatch.setattr(
+        cli,
+        "campaign_transport",
+        lambda *a, **k: (_ for _ in ()).throw(
+            AssertionError("transport must never be constructed in this test")
+        ),
+    )
+    source_config = tmp_path / "source-config.json"
+    checked = datetime.now(timezone.utc).isoformat()
+    source_config.write_text(
+        json.dumps(
+            {
+                "schema_version": "prequal.source-intake-config.v1",
+                "sources": [
+                    {
+                        "dossier": {
+                            "source_id": "dexscreener",
+                            "label": "d",
+                            "profile": {
+                                "profile_id": "discovery-dexscreener",
+                                "provider": "dexscreener",
+                                "operator": "dexscreener",
+                                "correlation_group": "dexscreener",
+                                "endpoint": "https://api.dexscreener.invalid/token-pairs/v1/solana/x",
+                                "official_docs": "https://docs.dexscreener.invalid/api/reference",
+                                "role": "discovery",
+                                "request_limit": 1,
+                                "window_seconds": 60,
+                                "campaign_attempt_cap": 10,
+                            },
+                            "checked_at": checked,
+                            "docs_sha256": "a" * 64,
+                            "request_schema_version": "DiscoveryRequest.v1",
+                            "response_schema_version": "DiscoveredMarket.v1",
+                            "schema_fingerprint": "b" * 64,
+                            "terms_url": "https://docs.dexscreener.invalid/terms",
+                            "classification": "DISCOVERY_ONLY",
+                        },
+                        "adapter": {
+                            "kind": "catalog",
+                            "request": {
+                                "source_id": "dexscreener",
+                                "token_mint": "So11111111111111111111111111111111111111112",
+                            },
+                        },
+                    }
+                ],
+            }
+        )
+    )
+
+    def make_plan(budget: int, name: str) -> _Path:
+        plan = tmp_path / name
+        raw = json.loads((tmp_path / "base-plan.json").read_text())
+        raw["budgets"]["storage_bytes_max"] = budget
+        plan.write_text(json.dumps(raw))
+        return plan
+
+    base = tmp_path / "base-plan.json"
+    checked2 = checked
+    base.write_text(
+        json.dumps(
+            {
+                "schema_version": "prequal.campaign-plan.v2",
+                "gate_set": "CAMPAIGN_START_V1",
+                "mode": "CAPTURE_ONLY",
+                "discovery_only": True,
+                "campaign_label": "20261121-market-capture-001",
+                "environment": "research",
+                "approved_manifest_digest": "0" * 64,
+                "repository_sha": "1" * 40,
+                "main_sha": "2" * 40,
+                "runtime_authority_sha256": "0" * 64,
+                "policy_bundle_sha256": "0" * 64,
+                "trust_registry_generation": "test-gen-1",
+                "configuration_digests": {"capture": "0" * 64},
+                "source_generations": {"dexscreener": "0" * 64},
+                "profiles_digests": {"rpc-primary": "0" * 64},
+                "budgets": {
+                    "rpc_physical_attempts_max": 200,
+                    "storage_bytes_max": 2**30,
+                    "per_source_quotas": {
+                        "dexscreener": {
+                            "requests": 12,
+                            "window_seconds": 60,
+                            "attempts": 100,
+                        }
+                    },
+                    "external_data_spend_usd_max": 0,
+                },
+                "retention": {"journal_retention_days": 30},
+                "capture_window_seconds": 86400,
+                "source_semantics": {"dexscreener": "PUBLIC_DISCOVERY"},
+                "source_method_allowlists": {"rpc-primary": ["getSlot"]},
+                "offline_evidence": {
+                    "journal_durability": {"test_id": "t", "receipt_sha256": "c" * 64},
+                    "replay_zero_network": {"test_id": "t", "receipt_sha256": "d" * 64},
+                },
+                "approval_payload": {"placeholder": True},
+                "envelope": {"placeholder": True},
+            }
+        )
+    )
+
+    # Measurement run: with a huge budget the manifest is persisted; its
+    # exact serialized size feeds the exact-limit budget below.
+    out1 = tmp_path / "out-measure"
+    asyncio.run(
+        cli.capture(source_config, out1, None, 1, make_plan(2**30, "p1.json"), None)
+    )
+    manifest_bytes = (out1 / "campaign-manifest.json").stat().st_size
+    reservation = (
+        manifest_bytes
+        + LEDGER_CREATION_RESERVE_BYTES
+        + LEDGER_TRANSACTION_RESERVE_BYTES
+        + JOURNAL_CREATION_RESERVE_BYTES
+        + AUTHORITY_CREATION_RESERVE_BYTES
+        + journal_growth_bound(manifest_bytes * 2 + 512, 4096)
+    )
+
+    # Exactly the pre-reserved footprint: preflight passes; manifest and
+    # ledger are created (the start gate then blocks on the unapproved plan).
+    out2 = tmp_path / "out-exact"
+    asyncio.run(
+        cli.capture(
+            source_config, out2, None, 1, make_plan(reservation, "p2.json"), None
+        )
+    )
+    assert (out2 / "campaign-manifest.json").exists()
+    assert (out2 / "campaign-approval-ledger.sqlite").exists()
+
+    # One byte under: nothing persistent is created.
+    out3 = tmp_path / "out-under"
+    result = asyncio.run(
+        cli.capture(
+            source_config,
+            out3,
+            None,
+            1,
+            make_plan(reservation - 1, "p3.json"),
+            None,
+        )
+    )
+    assert result["campaign_start_gate"]["blockers"] == [
+        "CAMPAIGN_STORAGE_BUDGET_EXHAUSTED"
+    ]
+    assert not (out3 / "campaign-manifest.json").exists()
+    assert not (out3 / "campaign-approval-ledger.sqlite").exists()
+
+
+def test_authority_sidecars_reduce_journal_capacity(tmp_path):
+    """authority.sqlite and its sidecars share the single storage budget."""
+    authority = tmp_path / "authority.sqlite"
+    authority.write_bytes(b"A" * 96_000)
+    (tmp_path / "authority.sqlite-wal").write_bytes(b"W" * 16_000)
+    journal = RecoverableStreamJournal(tmp_path / "events.sqlite")
+    store = CampaignEvidenceStore(
+        journal,
+        manifest_for((profile("rpc-a"),)),
+        campaign_budgets=CampaignBudgets(
+            rpc_physical_attempts_max=10,
+            storage_bytes_max=2**30,
+            external_data_spend_usd_max=0,
+        ),
+        extra_artifacts=(
+            tmp_path / "campaign-manifest.json",
+            authority,
+            tmp_path / "authority.sqlite-wal",
+            tmp_path / "authority.sqlite-shm",
+        ),
+    )
+    plain = CampaignEvidenceStore(
+        RecoverableStreamJournal(tmp_path / "events-plain.sqlite"),
+        manifest_for((profile("rpc-a"),)),
+    )
+    delta = store.campaign_storage_bytes() - plain.campaign_storage_bytes()
+    assert delta >= 96_000 + 16_000
+    journal.close()
+
+
+def test_authority_capacity_exhaustion_blocks_before_write(tmp_path):
+    authority = tmp_path / "authority.sqlite"
+    authority.write_bytes(b"A" * 100_000)
+    journal = RecoverableStreamJournal(tmp_path / "events.sqlite")
+    store = CampaignEvidenceStore(
+        journal,
+        manifest_for((profile("rpc-a"),)),
+        campaign_budgets=CampaignBudgets(
+            rpc_physical_attempts_max=10,
+            storage_bytes_max=2**30,
+            external_data_spend_usd_max=0,
+        ),
+        extra_artifacts=(authority,),
+    )
+    used = store.campaign_storage_bytes()
+    from src.qualification_campaign.evidence import journal_growth_bound as _jgb
+
+    tight = CampaignEvidenceStore(
+        journal,
+        store.manifest,
+        campaign_budgets=CampaignBudgets(
+            rpc_physical_attempts_max=10,
+            storage_bytes_max=used
+            + _jgb(
+                len(
+                    __import__("json")
+                    .dumps(
+                        {
+                            **{"kind": "observation", "data": "x" * 4096},
+                            "campaign_manifest_hash": store.manifest.campaign_id,
+                        },
+                        sort_keys=True,
+                    )
+                    .encode()
+                )
+                + 4096
+                + 9 * 4120,
+                store.page_size,
+            )
+            - 1,
+            external_data_spend_usd_max=0,
+        ),
+        extra_artifacts=(authority,),
+    )
+    before = len(store.replay())
+    with pytest.raises(ValueError, match="CAMPAIGN_STORAGE_BUDGET_EXHAUSTED"):
+        tight.append(
+            "probe", {"kind": "observation", "data": "x" * 4096}, observed_at_ns=1
+        )
+    assert len(store.replay()) == before
+    journal.close()
+
+
+def test_wal_checkpoint_preserves_ceiling(tmp_path):
+    """SQLite WAL checkpoint moves frames back into the DB: the DB+WAL sum
+    is conserved, the ceiling still holds, and enforcement continues."""
+    from src.qualification_campaign.identity import canonical_bytes
+
+    store = _store(tmp_path, "events.sqlite", 2**30)
+    payload = {"kind": "observation", "data": "q" * 4096}
+    cid = store.manifest.campaign_id
+    row = _row_len(store, payload)
+    tight = CampaignEvidenceStore(
+        store.journal,
+        store.manifest,
+        campaign_budgets=CampaignBudgets(
+            rpc_physical_attempts_max=10,
+            storage_bytes_max=store.campaign_storage_bytes()
+            + 4 * (row + journal_growth_bound(row, store.page_size)),
+            external_data_spend_usd_max=0,
+        ),
+    )
+    accepted = 0
+    for i in range(3):
+        tight.append("probe", payload, observed_at_ns=i + 1)
+        accepted += 1
+        assert (
+            tight.campaign_storage_bytes() <= tight.campaign_budgets.storage_bytes_max
+        )
+    # Force a checkpoint: WAL content moves into the DB file.
+    checkpoint = store.journal.db.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+    assert checkpoint is not None
+    after = tight.campaign_storage_bytes()
+    assert after <= tight.campaign_budgets.storage_bytes_max
+    # Enforcement continues after the checkpoint.
+    tight.append("probe", payload, observed_at_ns=9)
+    assert tight.campaign_storage_bytes() <= tight.campaign_budgets.storage_bytes_max
+    assert accepted == 3
+
+
+def test_quote_heavy_payloads_are_reserved_at_serialized_size(tmp_path):
+    """Nested-JSON escaping: a quote/backslash-heavy payload serializes to
+    ~2x its canonical size inside the journal row; the reservation must use
+    the serialized length (owner closure item 1)."""
+    from src.qualification_campaign.identity import canonical_bytes, digest
+
+    store = _store(tmp_path, "events.sqlite", 2**30)
+    store.append("probe", {"kind": "observation", "data": "x" * 64}, observed_at_ns=1)
+    heavy = {
+        "kind": "observation",
+        "data": '{"a": "' + '"' * 350_000 + "\\\\" * 100_000 + '"}',
+    }
+    naive_encoded = len(
+        canonical_bytes({**heavy, "campaign_manifest_hash": store.manifest.campaign_id})
+    )
+    # Cap sized for the NAIVE canonical length + old flat margin: the exact
+    # serialized-row reservation must reject it.
+    naive_cap = CampaignEvidenceStore(
+        store.journal,
+        store.manifest,
+        campaign_budgets=CampaignBudgets(
+            rpc_physical_attempts_max=10,
+            storage_bytes_max=store.campaign_storage_bytes() + naive_encoded + 16_384,
+            external_data_spend_usd_max=0,
+        ),
+    )
+    with pytest.raises(ValueError, match="CAMPAIGN_STORAGE_BUDGET_EXHAUSTED"):
+        naive_cap.append("probe", heavy, observed_at_ns=2)
+    # With a cap sized for the exact serialized row, the same payload fits.
+    exact_cap = CampaignEvidenceStore(
+        store.journal,
+        store.manifest,
+        campaign_budgets=CampaignBudgets(
+            rpc_physical_attempts_max=10,
+            storage_bytes_max=store.campaign_storage_bytes()
+            + journal_growth_bound(_row_len(store, heavy), store.page_size),
+            external_data_spend_usd_max=0,
+        ),
+    )
+    exact_cap.append("probe", heavy, observed_at_ns=3)
+    assert (
+        exact_cap.campaign_storage_bytes()
+        <= exact_cap.campaign_budgets.storage_bytes_max
+    )
+    store.journal.close()
+    exact_cap.journal.close()

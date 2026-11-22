@@ -237,54 +237,81 @@ async def capture(
         manifest.to_dict()
     ):
         raise ValueError("CAMPAIGN_GENERATION_MISMATCH")
-    if not manifest_path.exists():
-        with manifest_path.open("xb") as handle:
-            handle.write(canonical_bytes(manifest.to_dict()))
-            handle.flush()
-            os.fsync(handle.fileno())
     # CAMPAIGN_START_V1: executable fail-closed gate BEFORE any transport,
     # DNS or physical request exists.  A rejected start returns a typed
     # blocked receipt with instrumented zero physical network attempts.
-    # The strict storage ceiling is enforced around the approval ledger as
-    # well: the manifest artifact must fit the budget before the ledger is
-    # created, and the ledger's own growth (reserve + finalize) must still
-    # fit it before any evidence store or transport exists.
-    budgets = CampaignBudgets.from_plan_budgets(
-        load_campaign_plan(campaign_plan).budgets
-    )
+    #
+    # STRICT STORAGE PREFLIGHT (owner closure round 3): the approved budget
+    # is loaded and the WHOLE campaign pre-reserved BEFORE any persistent
+    # artifact is created.  A blocked preflight leaves no campaign-manifest.json
+    # and no approval ledger behind — only the explicitly excluded terminal
+    # failure receipt (campaign-start-blocked.json) may be persisted.
     ledger_path = output / "campaign-approval-ledger.sqlite"
+    authority_path = output / "authority.sqlite"
+    manifest_json_bytes = len(canonical_bytes(manifest.to_dict()))
+    page = (
+        4096  # SQLite default; the ledger/journal/authority stores do not override it
+    )
     try:
-        if artifact_footprint_bytes([manifest_path]) > budgets.storage_bytes_max:
-            # Strict ceiling before the approval ledger is even created; the
-            # typed blocker flows into the same fail-closed blocked receipt.
-            raise ValueError("CAMPAIGN_STORAGE_BUDGET_EXHAUSTED")
         plan = load_campaign_plan(campaign_plan)
-        registry = load_trust_registry(trust_registry)
-        ledger = SQLiteApprovalReplayLedger(ledger_path)
-        decision = evaluate_campaign_start_gate(
-            manifest=manifest,
-            plan=plan,
-            dossiers=[d for d, _ in sources],
-            adapters=[a for _, a in sources],
-            profiles=list(profiles),
-            registry=registry,
-            ledger=ledger,
-            now_ns=time.time_ns(),
+        budgets = CampaignBudgets.from_plan_budgets(plan.budgets)
+        preflight_reservation = (
+            manifest_json_bytes
+            + LEDGER_CREATION_RESERVE_BYTES
+            + LEDGER_TRANSACTION_RESERVE_BYTES
+            + JOURNAL_CREATION_RESERVE_BYTES
+            + AUTHORITY_CREATION_RESERVE_BYTES
+            # first evidence event embeds the manifest JSON as a nested string:
+            # conservative x2 escaping allowance before the page/WAL bound
+            + journal_growth_bound(manifest_json_bytes * 2 + 512, page)
         )
-        if decision.authorized:
+        if preflight_reservation > budgets.storage_bytes_max:
+            # The exact budget cannot even hold the manifest plus the
+            # reserved creation/growth of the ledger, evidence journal and
+            # authority store: block BEFORE writing any persistent artifact.
+            # The signed operator envelope has not been consumed at this
+            # point (the ledger does not exist yet).
+            decision = GateDecision(
+                phase=GatePhase.BLOCKED,
+                verdicts=(),
+                blockers=("CAMPAIGN_STORAGE_BUDGET_EXHAUSTED",),
+                approval_receipt=None,
+                manifest_digest=manifest.campaign_id,
+                campaign_label=plan.campaign_label,
+            )
+        else:
+            if manifest_path.exists() is False:
+                with manifest_path.open("xb") as handle:
+                    handle.write(canonical_bytes(manifest.to_dict()))
+                    handle.flush()
+                    os.fsync(handle.fileno())
+            registry = load_trust_registry(trust_registry)
+            ledger = SQLiteApprovalReplayLedger(ledger_path)
+            decision = evaluate_campaign_start_gate(
+                manifest=manifest,
+                plan=plan,
+                dossiers=[d for d, _ in sources],
+                adapters=[a for _, a in sources],
+                profiles=list(profiles),
+                registry=registry,
+                ledger=ledger,
+                now_ns=time.time_ns(),
+            )
             ledger_sidecars = (
+                manifest_path,
                 ledger_path,
                 Path(str(ledger_path) + "-wal"),
                 Path(str(ledger_path) + "-shm"),
             )
-            if (
-                artifact_footprint_bytes([manifest_path, *ledger_sidecars])
-                > budgets.storage_bytes_max
+            if decision.authorized and (
+                artifact_footprint_bytes(ledger_sidecars) > budgets.storage_bytes_max
             ):
+                # Reconciliation backstop: the reserved ledger growth was
+                # exceeded anyway (fail-closed over-strict direction).
                 decision = GateDecision(
                     phase=GatePhase.BLOCKED,
                     verdicts=(),
-                    blockers=("CAMPAIGN_STORAGE_BUDGET_EXHAUSTED",),
+                    blockers=("CAMPAIGN_STORAGE_BUDGET_EXCEEDED",),
                     approval_receipt=None,
                     manifest_digest=manifest.campaign_id,
                     campaign_label=plan.campaign_label,
@@ -311,9 +338,14 @@ async def capture(
         evidence = CampaignEvidenceStore(
             journal,
             manifest,
-            campaign_budgets=CampaignBudgets.from_plan_budgets(plan.budgets),
+            campaign_budgets=budgets,
             ledger_path=ledger_path,
-            extra_artifacts=(manifest_path,),
+            extra_artifacts=(
+                manifest_path,
+                authority_path,
+                Path(str(authority_path) + "-wal"),
+                Path(str(authority_path) + "-shm"),
+            ),
         )
         evidence.append(
             "campaign-start-gate",

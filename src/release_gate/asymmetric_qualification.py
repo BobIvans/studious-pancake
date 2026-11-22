@@ -620,9 +620,7 @@ def read_json_object_under_root(
         descriptor = os.open(root, directory_flags)
         try:
             for component in relative.parts[:-1]:
-                next_descriptor = os.open(
-                    component, directory_flags, dir_fd=descriptor
-                )
+                next_descriptor = os.open(component, directory_flags, dir_fd=descriptor)
                 os.close(descriptor)
                 descriptor = next_descriptor
             file_descriptor = os.open(

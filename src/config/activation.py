@@ -80,9 +80,7 @@ class EffectiveConfigDiff(FrozenActivationModel):
 
 
 class ConfigGenerationRecord(FrozenActivationModel):
-    schema_version: Literal["pr190.config-generation.v1"] = (
-        "pr190.config-generation.v1"
-    )
+    schema_version: Literal["pr190.config-generation.v1"] = "pr190.config-generation.v1"
     generation: StrictInt = Field(ge=1)
     previous_generation: StrictInt | None = Field(default=None, ge=1)
     policy_hash: StrictStr = Field(pattern=r"^[0-9a-f]{64}$")
@@ -234,13 +232,16 @@ class ConfigActivationStore:
             return record
 
     def _atomic_write(self, record: ConfigGenerationRecord) -> None:
-        payload = json.dumps(
-            to_json_value(record),
-            sort_keys=True,
-            separators=(",", ":"),
-            ensure_ascii=False,
-            allow_nan=False,
-        ) + "\n"
+        payload = (
+            json.dumps(
+                to_json_value(record),
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+                allow_nan=False,
+            )
+            + "\n"
+        )
         fd, tmp_name = tempfile.mkstemp(prefix=".generation-", dir=self.root)
         tmp_path = Path(tmp_name)
         try:
@@ -269,18 +270,15 @@ class ConfigActivationStore:
 def _impact_for_path(path: str) -> str:
     lowered = path.lower()
     if any(
-        token in lowered
-        for token in ("secret", "signer", "auth", "wallet", "endpoint")
+        token in lowered for token in ("secret", "signer", "auth", "wallet", "endpoint")
     ):
         return "identity"
     if any(
-        token in lowered
-        for token in ("loss", "lamport", "principal", "fee", "reserve")
+        token in lowered for token in ("loss", "lamport", "principal", "fee", "reserve")
     ):
         return "financial"
     if any(
-        token in lowered
-        for token in ("allowlist", "provider", "live_enabled", "mode")
+        token in lowered for token in ("allowlist", "provider", "live_enabled", "mode")
     ):
         return "security"
     return "operational"
@@ -348,8 +346,7 @@ def effective_config_diff(
         changes=tuple(changes),
         restart_required=bool(changes),
         revalidation_required=any(
-            change.impact in {"security", "financial", "identity"}
-            for change in changes
+            change.impact in {"security", "financial", "identity"} for change in changes
         ),
     )
 

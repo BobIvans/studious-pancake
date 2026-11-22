@@ -55,6 +55,25 @@ SOURCE = "raydium-native-cpmm"
 ANONYMOUS_REF = "anonymous-public-read"
 ANONYMOUS_GENERATION = "anonymous-v1"
 RPC_METHODS = READ_RPC_METHODS
+# SECURITY CLOSURE (Codex finding 5): a signed plan may narrow the reviewed
+# read set per RPC profile; None means the reviewed set applies unchanged.
+_signed_method_allowlists: dict[str, frozenset] = {}
+
+
+def install_signed_method_allowlists(allowlists: dict[str, list[str]]) -> None:
+    """Bind the signed per-profile allowlists for every subsequent _rpc call.
+
+    SECURITY CLOSURE (Codex finding 5): called by cli.capture() with the
+    values from the signed plan before any collector is constructed; an
+    empty/missing entry for a profile yields an empty set (deny all beyond
+    the reviewed set is still enforced separately).
+    """
+
+    global _signed_method_allowlists
+    _signed_method_allowlists = {
+        profile_id: frozenset(methods or ())
+        for profile_id, methods in (allowlists or {}).items()
+    }
 
 
 def configured_rpc_url(environ: Mapping[str, str] | None = None) -> str:
@@ -224,6 +243,12 @@ class GovernedNativeCpmmCollector:
     async def _rpc(self, method: str, params: list[Any]) -> dict[str, Any]:
         if method not in READ_RPC_METHODS:
             raise NativeCaptureError("RPC method outside native read scope")
+        # SECURITY CLOSURE (Codex finding 5): the SIGNED per-profile allowlist
+        # is enforced at this transport boundary (pre-transport, fail-closed),
+        # not just the profile-wide reviewed set.
+        signed = _signed_method_allowlists.get(self.profile.profile_id)
+        if signed is not None and method not in signed:
+            raise NativeCaptureError("RPC method outside signed plan allowlist")
         body = {
             "jsonrpc": "2.0",
             "id": self._sequence + 1,

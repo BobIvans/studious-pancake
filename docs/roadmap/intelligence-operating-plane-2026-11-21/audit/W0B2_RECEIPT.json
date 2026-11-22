@@ -1,0 +1,47 @@
+{
+  "schema": "studious-pancake.lane-receipt.v1",
+  "lane": "OCA-W0B2",
+  "date": "2026-11-22",
+  "branch": "codex/oca-w0b2-polyglot-graph-2026-11-22",
+  "stacked_on": "codex/oca-w11-readonly-mcp-2026-11-22 (PR #686, unmerged; chain-A tip 2c8cd383)",
+  "design_head": "f7c09b81436e9a16c89a680ce314937fc6a52fa4",
+  "base_main_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+  "deliverables": [
+    "src/intelligence/repo_graph/extractors.py",
+    "src/intelligence/repo_graph/parsers.py",
+    "src/intelligence/repo_graph/schema.py (extended)",
+    "src/intelligence/repo_graph/graph_build.py (polyglot integration)",
+    "tests/intelligence/test_repo_graph_polyglot.py",
+    "pyproject.toml ([repo-graph-parsers] extra)",
+    ".github/workflows/repo-intelligence-polyglot.yml",
+    "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/W0B2_*.md/.json"
+  ],
+  "checks": {
+    "polyglot_tests": {"passed": 7, "failed": 0},
+    "chain_A_contract_tests": {"passed": 12, "failed": 0},
+    "intelligence_batch": {"passed": 61, "failed_preexisting_on_main": 3},
+    "artifact_classes": 14,
+    "no_silent_other_bucket": true,
+    "values_never_extracted_from_configs": true,
+    "grammar_absent_explicit_partial": true,
+    "vendor_rust_metadata_only": true,
+    "requirements_lock_untouched": true,
+    "scip_lsp_decision": "NOT_ADOPTED_NO_REPRODUCIBLE_INDEXER",
+    "quality_gates": {"black": "PASS", "flake8": "PASS", "mypy": "PASS", "quality_gate_script": "PASS"}
+  },
+  "four_levels": {
+    "INVENTORY_COMPLETE": "claimed (receipt rows_without_status=0)",
+    "STRUCTURAL_GRAPH_COMPLETE": "per-language claims only; python/bash/yaml/markdown/json/toml/ini STRUCTURE_INDEXED; rust vendor METADATA_ONLY; grammar-absent PARTIAL explicit",
+    "DOMAIN_GRAPH_COMPLETE": "NOT CLAIMED",
+    "RUNTIME_LINEAGE_COMPLETE": "NOT CLAIMED"
+  },
+  "safety": {
+    "live": "HARD_DENIED",
+    "sign_enabled": false,
+    "send_enabled": false,
+    "execution_authority": "NONE",
+    "merge_authority": "HUMAN_ONLY"
+  },
+  "blockers": ["PRE_EXISTING_WINDOWS_ASYNCIO (unchanged on main)"],
+  "related": {"design_pr": 666, "chain_a": ["684", "685", "686"], "chain_b": ["689", "690"], "reconciled": ["680", "681", "682", "684", "685", "686", "687", "688", "689", "690"]}
+}

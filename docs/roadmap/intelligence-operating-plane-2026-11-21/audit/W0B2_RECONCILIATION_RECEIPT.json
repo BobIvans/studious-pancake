@@ -1,0 +1,34 @@
+{
+  "schema": "studious.oca-w0b2.reconciliation.v1",
+  "date": "2026-11-22",
+  "design_source": {"pr": 666, "head": "92b33f77aee12649ac4d7c48f6a47913adbb3cdc", "base": "ea204222df86a0697cc6bce0e9ec60f7db31ffd8"},
+  "main_sha_verified": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+  "prs_680_690": [
+    {"number": 680, "state": "OPEN", "mergeable": "MERGEABLE", "head": "608ac24d795ad3965e4e50367450b98ba139cc2f", "base": "0a0c8ad9", "lane": "OCA-W0"},
+    {"number": 681, "state": "OPEN", "mergeable": "MERGEABLE", "head": "1a4a50e6dd528244be1423838bc25aaba6a77ea1", "base": "0a0c8ad9", "lane": "OCA-W0A"},
+    {"number": 682, "state": "OPEN", "mergeable": "MERGEABLE", "head": "b3e048fd8c6b66018bf7b19772295a53cd1a7bdb", "base": "0a0c8ad9", "lane": "OCA-W0C"},
+    {"number": 684, "state": "OPEN", "mergeable": "MERGEABLE", "head": "8c80fd9726aa949cbe7e11b0d288967d5cb84850", "base": "0a0c8ad9", "lane": "OCA-W0B"},
+    {"number": 685, "state": "OPEN", "mergeable": "MERGEABLE", "head": "08da09ffa263b29979e5697d0c62482c306951cc", "base": "0a0c8ad9", "lane": "OCA-W4"},
+    {"number": 686, "state": "OPEN", "mergeable": "MERGEABLE", "head": "2c8cd3836fe433d0ecee78e9c4b61e02633daa9c", "base": "0a0c8ad9", "lane": "OCA-W11"},
+    {"number": 687, "state": "OPEN", "mergeable": "MERGEABLE", "head": "b1c0c39d0a76477f281156978540e0fb63dc0af1", "base": "0a0c8ad9", "lane": "OCA-W1"},
+    {"number": 688, "state": "OPEN", "mergeable": "MERGEABLE", "head": "4b8f0f5c737ce423e7c58b0d677dad06972ae406", "base": "0a0c8ad9", "lane": "OCA-W3"},
+    {"number": 689, "state": "OPEN", "mergeable": "MERGEABLE", "head": "021f3a1c3a578e6ec785c147e7415769e913df29", "base": "0a0c8ad9", "lane": "OCA-W13"},
+    {"number": 690, "state": "OPEN", "mergeable": "MERGEABLE", "head": "5f4bf354d9ee91e2d0e7426b385293ca46d7eff6", "base": "0a0c8ad9", "lane": "OCA-W14"}
+  ],
+  "ancestry_verified_with_merge_base": {
+    "chain_A": {"order": ["684 OCA-W0B", "685 OCA-W4", "686 OCA-W11"], "proof": "merge-base --is-ancestor 8c80fd97 08da09ff AND 08da09ff 2c8cd383 -> true"},
+    "chain_B": {"order": ["689 OCA-W13", "690 OCA-W14"], "proof": "merge-base --is-ancestor 021f3a1c 5f4bf354 -> true"},
+    "independent_from_main": ["680", "681", "682", "687", "688", "689"],
+    "correction_needed": "none - earlier stacked-PR claims were verified accurate against actual commit ancestry; remote heads equal local tips (no external pushes)"
+  },
+  "ci": {"sampled": ["684 (sender-free-runtime-evidence pass, verify pass x3)", "687 (wheel/console smoke pass, campaign pass, release-authority pass)"], "note": "nightly-reconciliation job correctly skips on non-schedule events"},
+  "overlapping_files": {
+    "config/format_targets.txt": "EOF-appended by lanes 681/688/689 and chain A commits - trivial merge conflicts expected at merge time; resolve by concatenating all additions",
+    "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/": "distinct files per lane - no conflicts",
+    "tests/intelligence/": "distinct files per lane - no conflicts",
+    "benchmarks/intelligence/": "only #681 touches it so far",
+    "src/intelligence/repo_graph/service.py": "W0B creates, W4 modifies - already linear inside chain A"
+  },
+  "canonical_ownership": "no canonical owner (AGG-02, MarketObservation, ObservabilityStore, MarketEpisode, ExternalContractRegistry, FlashCapitalGraph, StrategyRegistry, ConflictAwareScheduler) is modified by any of #680-#690; repo_graph/universal_data_plane are derived read-only views",
+  "conclusion": "dependency chain confirmed correct; W0B2 stacks on chain A tip 2c8cd383 (contains W0B+W4+W11)"
+}

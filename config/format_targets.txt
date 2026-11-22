@@ -453,3 +453,6 @@ src/intelligence/universal_data_plane/__init__.py
 src/intelligence/universal_data_plane/facade.py
 src/intelligence/universal_data_plane/mcp_server.py
 tests/intelligence/test_universal_data_plane.py
+src/intelligence/repo_graph/extractors.py
+src/intelligence/repo_graph/parsers.py
+tests/intelligence/test_repo_graph_polyglot.py

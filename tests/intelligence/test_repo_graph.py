@@ -174,10 +174,11 @@ def test_coverage_statuses_no_silent_omissions(
     by_path = {row["path"]: row for row in manifest["inventory"]}
     assert by_path[".env"]["coverage"] == "EXCLUDED_WITH_REASON"
     assert by_path["blob.bin"]["coverage"] == "UNSUPPORTED"
-    assert by_path["config/app.json"]["coverage"] == "INDEXED"
-    assert by_path["README.md"]["coverage"] == "INDEXED"
+    assert by_path["config/app.json"]["coverage"] == "STRUCTURE_INDEXED"
+    assert by_path["README.md"]["coverage"] == "STRUCTURE_INDEXED"
+    assert by_path["README.md"]["parser"] == "regex-markdown"
     core = by_path["src/pkg/core.py"]
-    assert core["coverage"] == "INDEXED"
+    assert core["coverage"] == "STRUCTURE_INDEXED"
     assert core["symbol_count"] >= 3
     # Every tracked file has exactly one coverage row (contract 1.3).
     assert set(by_path) == {row["path"] for row in manifest["inventory"]}

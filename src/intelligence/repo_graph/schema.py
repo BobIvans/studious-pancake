@@ -90,3 +90,55 @@ def graph_generation(repo_sha: str, canonical_checksum: str) -> str:
     """Deterministic generation identity for a built graph artifact."""
     payload = f"{SCHEMA_ID}|{GRAPH_SCHEMA_VERSION}|{repo_sha}|{canonical_checksum}"
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:32]
+
+
+# ---------------------------------------------------------------------------
+# OCA-W0B2: artifact classes and expanded coverage statuses (full-tree layer).
+# ---------------------------------------------------------------------------
+
+# 14 required artifact classes (FULL_REPOSITORY_GRAPH_AND_MCP_EXPANSION_RU.md §2.1).
+ARTIFACT_CLASS_PYTHON_SOURCE = "python_source"
+ARTIFACT_CLASS_TEST_CODE = "test_code"
+ARTIFACT_CLASS_SCRIPT = "script"
+ARTIFACT_CLASS_CONFIG = "config"
+ARTIFACT_CLASS_SCHEMA = "schema"
+ARTIFACT_CLASS_DOC = "doc"
+ARTIFACT_CLASS_WORKFLOW = "workflow"
+ARTIFACT_CLASS_BUILD_DEFINITION = "build_definition"
+ARTIFACT_CLASS_DEPENDENCY_LOCK = "dependency_lock"
+ARTIFACT_CLASS_VENDOR_REFERENCE = "vendor_reference"
+ARTIFACT_CLASS_GENERATED_ASSET = "generated_asset"
+ARTIFACT_CLASS_DATA_FIXTURE = "data_fixture"
+ARTIFACT_CLASS_SECRET_EXCLUDED = "secret_excluded"
+ARTIFACT_CLASS_OTHER_TRACKED = "other_tracked"
+ARTIFACT_CLASSES = frozenset(
+    {
+        ARTIFACT_CLASS_PYTHON_SOURCE,
+        ARTIFACT_CLASS_TEST_CODE,
+        ARTIFACT_CLASS_SCRIPT,
+        ARTIFACT_CLASS_CONFIG,
+        ARTIFACT_CLASS_SCHEMA,
+        ARTIFACT_CLASS_DOC,
+        ARTIFACT_CLASS_WORKFLOW,
+        ARTIFACT_CLASS_BUILD_DEFINITION,
+        ARTIFACT_CLASS_DEPENDENCY_LOCK,
+        ARTIFACT_CLASS_VENDOR_REFERENCE,
+        ARTIFACT_CLASS_GENERATED_ASSET,
+        ARTIFACT_CLASS_DATA_FIXTURE,
+        ARTIFACT_CLASS_SECRET_EXCLUDED,
+        ARTIFACT_CLASS_OTHER_TRACKED,
+    }
+)
+
+# Expanded coverage statuses: STRUCTURE_INDEXED means a structural parser
+# produced typed nodes; TEXT_INDEXED means text-layer extraction only;
+# METADATA_ONLY means identity recorded without content parsing.
+COVERAGE_STRUCTURE_INDEXED = "STRUCTURE_INDEXED"
+COVERAGE_TEXT_INDEXED = "TEXT_INDEXED"
+COVERAGE_METADATA_ONLY = "METADATA_ONLY"
+
+
+def stable_node_id(language: str, path: str, qualified_name: str) -> str:
+    """Cross-language stable symbol ID (W0B2); ``py`` kept for Python."""
+    prefix = "py" if language == "python" else language
+    return f"{prefix}::{path}::{qualified_name}"

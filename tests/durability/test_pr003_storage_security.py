@@ -103,4 +103,8 @@ def test_restore_validates_staged_copy_without_destroying_destination(
         backup, destination, expected_sha256=manifest.sha256
     )
     restored.close()
-    assert destination.stat().st_mode & 0o777 == 0o600
+    if os.name == "posix":
+        assert destination.stat().st_mode & 0o777 == 0o600
+    else:
+        # Windows cannot represent POSIX owner-only bits (chmod no-op).
+        assert destination.is_file()

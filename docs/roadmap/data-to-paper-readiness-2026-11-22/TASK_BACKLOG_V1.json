@@ -20,7 +20,7 @@
       "GATE-01",
       "GATE-02",
       "DATA-01",
-      "ASSET-01",
+      "ASSET-01_SAFE_DISCOVERY_IDENTITY",
       "DISC-01",
       "WIN-01",
       "operator_authorization"
@@ -29,7 +29,12 @@
       "CAPTURE_ONLY_REPLAY_PASS",
       "VENUE-01",
       "StrategyDataRequirement",
-      "identity/rooted state/quote completeness"
+      "ASSET-01_HARD_BOUND_FOR_EVERY_ADMITTED_MINT_AND_POOL",
+      "RPC-01_WHEN_ROOTED_STATE_IS_REQUIRED",
+      "exact_state_closure_and_context/hash_coherence",
+      "one_independent_direct_quote_for_each_admitted_direction_and_raw_input_amount",
+      "R13-K_physical_pool/resource_dedup_and_PR118_amount_grid",
+      "freshness_and_complete_all_in_route_economics"
     ],
     "paper_requires": [
       "EXACT_MARKET_PASS",
@@ -49,10 +54,32 @@
       "GATE-01",
       "GATE-02",
       "DATA-01",
-      "ASSET-01",
-      "DISC-01"
+      "ASSET-01_SAFE_DISCOVERY_IDENTITY"
     ],
-    "notes": "Discovery-only CAPTURE_ONLY may run without a rooted RPC quorum if its manifest excludes rooted-state reads; any single-source observation must be labeled exploratory/BLOCKED_SINGLE_SOURCE. RPC-01 is mandatory before any rooted-state verdict or rooted multi-source capture."
+    "notes": "Discovery-only CAPTURE_ONLY may run without a rooted RPC quorum if its manifest excludes rooted-state reads; any single-source observation must be labeled exploratory/BLOCKED_SINGLE_SOURCE. RPC-01 is mandatory before any rooted-state verdict or rooted multi-source capture.",
+    "campaign_start_phase_semantics": [
+      {
+        "state": "PREFLIGHT_PASS",
+        "meaning": "All offline/pre-network CS checks pass; exact manifest/profile/config/code/source/policy/budget digests and a valid operator envelope are bound; CS-06 real-observation evidence remains pending where applicable. No transport is opened by this state."
+      },
+      {
+        "state": "CAPTURE_AUTHORIZED",
+        "meaning": "Only bounded read-only calls explicitly listed in the signed manifest are permitted. This is authorization to capture, not CS-01..CS-10 campaign qualification PASS, exact-market PASS, paper PASS or live authority."
+      },
+      {
+        "state": "CS06_PENDING_CAPTURE",
+        "meaning": "Await durable evidence from at least one actual non-synthetic permitted source. Fixtures, docs checks and simulated responses do not satisfy this evidence. Rooted-state quorum is a separate conditional requirement enforced by RPC-01."
+      },
+      {
+        "state": "CAMPAIGN_QUALIFICATION_PASS",
+        "meaning": "Only after actual non-synthetic capture evidence and all applicable CS gates pass. Any rooted-state claim additionally requires RPC-01 PASS; discovery-only evidence never upgrades itself to rooted."
+      }
+    ],
+    "identity_stage_semantics": [
+      "ASSET-01_SAFE_DISCOVERY_IDENTITY is a pre-capture capability gate: safely parse, preserve and label mint/program/decimals/Token-2022/pool identity fields and typed unknowns; it does not require every discovered candidate to be HARD_BOUND before discovery-only capture.",
+      "HARD_BOUND requires current evidence for mint owner/token program/decimals/extensions and canonical pool identity; it is mandatory for exact quote and route admission.",
+      "Unknown or unsupported Token-2022 semantics remain preserved as UNKNOWN/BLOCKED and are never quote- or route-admitted."
+    ]
   },
   "tasks": [
     {
@@ -69,19 +96,23 @@
         "docs/roadmap/campaign-start-preflight-2026-11-21/"
       ],
       "depends_on": [],
-      "summary": "Implement executable CAMPAIGN_START_V1 CS-01..CS-10 before any transport or read; bind approval to exact manifest/profile/config/code/budget digests using canonical authorization owner.",
+      "summary": "Implement executable CAMPAIGN_START_V1 CS-01..CS-10 before any transport or read; bind approval to exact manifest/profile/config/code/budget digests and enforce staged preflight → capture authorization → evidence qualification.",
       "actions": [
-        "Finish the current #679 scope; reconcile against #671 templates.",
+        "Finish the current #679 scope; reconcile against #671 templates without editing or importing the #671 branch.",
         "Fail closed for absent/invalid operator proof, stale generations, unbound hashes, policy/source mismatch, budget overflow and non-sender-free RPC methods.",
-        "Add negative tests proving no transport/network open before gate PASS."
+        "Separate offline/pre-network preflight from the narrowly authorized CAPTURE_ONLY boundary and post-capture CS-06 evidence; do not create a circular requirement for real observations before the first permitted read.",
+        "Add negative tests proving zero transport construction/open and zero requests before valid authorization; test positive paths only with fake/in-process transport."
       ],
       "acceptance": [
-        "Executable CLI/API gate called before transport construction/open.",
-        "Verified authorization and immutable digest binding; no invented boolean approval.",
-        "CS-01..CS-10 exact PASS receipt with blockers and zero network in negative tests."
+        "Executable CLI/API gate runs before transport construction/open.",
+        "PREFLIGHT_PASS requires all pre-network checks plus valid Ed25519 operator authorization and immutable digest binding; CS-06 real-observation evidence remains pending until capture.",
+        "CAPTURE_AUTHORIZED permits only bounded read-only calls in the exact approved manifest and is not campaign qualification PASS, exact-market PASS or paper/live authority.",
+        "CS-06 cannot pass on fixtures, docs or synthetic responses: require durable actual non-synthetic observation; rooted-state quorum is separately required only when rooted state is in scope under RPC-01.",
+        "Exact staged receipt records PREFLIGHT_PASS, CAPTURE_AUTHORIZED, CS06_PENDING_CAPTURE and final campaign qualification/blockers; negative tests prove zero network before authorization."
       ],
       "must_not": [
-        "Do not start CAPTURE_ONLY.",
+        "Do not start CAPTURE_ONLY automatically; separate explicit operator authorization of the exact immutable manifest/profiles/budget is required.",
+        "Do not treat CAPTURE_AUTHORIZED as campaign qualification PASS or as authorization for paper/live.",
         "Do not enable paid sources or signer/sender/borrow/live."
       ]
     },
@@ -137,12 +168,16 @@
         "Trace SourceIntakePlane.collect, adapters, CampaignEvidenceStore and AGG-02 to determine exact ownership; don't create another journal.",
         "Preserve raw body or immutable content reference, request fingerprint, response hash, source ID/generation, endpoint, UTC, cursor/gap, attempt count, status, latency and typed rejects.",
         "Make retries/idempotence/save failures observable; ensure quotas account for physical attempts and process restart.",
-        "Add zero-network deterministic replay and corruption/partial-write tests."
+        "Add zero-network deterministic replay and corruption/partial-write tests.",
+        "Serialize cursor allocation, event append, attempt reservation and durable evidence commit at the canonical owner boundary; reproduce append/cursor races with deterministic multi-process tests before claiming the race is fixed.",
+        "Exercise restart, duplicate/retry, partial write, DB/WAL recovery and storage/attempt-limit exhaustion; physical retry attempts must remain visible and budgeted."
       ],
       "acceptance": [
-        "Every accepted/rejected attempt has durable trace and raw evidence reference/hash.",
-        "Replay recomputes from retained bytes with zero outbound network and deterministic digest.",
-        "No silently discarded save errors, unbounded retries or in-memory-only global limits."
+        "Every accepted/rejected physical attempt has durable trace, raw evidence reference/hash, source generation, cursor/gap and typed terminal/error result.",
+        "Cursor allocation and append are concurrency-safe across processes; crash/restart and duplicate retry tests show no lost, reused or silently skipped evidence cursors.",
+        "All physical attempts/retries and storage reservations remain durable and correctly accounted across restart; no unbounded retry or in-memory-only global limit.",
+        "Replay recomputes from retained raw bytes/references with zero outbound network and deterministic digest.",
+        "Save/serialization/commit errors are surfaced as typed blockers; no silently discarded save errors and no second raw store."
       ],
       "must_not": [
         "No outbound live source request before campaign authorization.",
@@ -170,11 +205,13 @@
         "Verify source/operator/correlation-group independence rather than endpoint or API-key count.",
         "Bind same genesis, finalized/rooted commitment, per-response context slots, minContextSlot, bounded observed skew and account-state hashes.",
         "Keep each batch context separate; reject mixed/stale state and single-source rooted claims.",
-        "Reconcile actual safe RPC methods with runtime and connections-registry allowlists."
+        "Reconcile actual safe RPC methods with runtime and connections-registry allowlists.",
+        "Make this gate mandatory only when the approved manifest contains rooted-state reads or the requested verdict claims rooted state; discovery-only capture may omit RPC-01 when rooted reads are excluded."
       ],
       "acceptance": [
         "Positive test with independent sources and coherent rooted state; negative tests for same operator, same correlation group, genesis/slot/hash disagreement, stale source and public smoke endpoint.",
-        "BLOCKED_SINGLE_SOURCE is explicit; no shared/public RPC can satisfy rooted quorum by default."
+        "BLOCKED_SINGLE_SOURCE is explicit; no shared/public RPC can satisfy rooted quorum by default.",
+        "A discovery-only manifest with rooted reads excluded is not blocked solely by absent RPC quorum; any single-source observation is explicitly exploratory/BLOCKED_SINGLE_SOURCE and cannot support a rooted-state verdict."
       ],
       "must_not": [
         "Do not open RPC requests until operator-authorized manifest and profiles are approved.",
@@ -194,18 +231,21 @@
         "src/market/observations.py"
       ],
       "depends_on": [
-        "RPC-01"
+        "GATE-02"
       ],
-      "summary": "Make canonical mint identity safe for campaign admission and exact quote eligibility.",
+      "summary": "Provide safe discovery-time mint/program/decimals/Token-2022/pool identity handling, and enforce HARD_BOUND evidence before exact quote or route admission.",
       "actions": [
-        "Require live owner/program/decimals evidence before HARD_BOUND; registry/reference decimals are hints only.",
-        "Parse Token-2022 extensions and fail closed on unknown extension/transfer hook/unsupported fee semantics.",
-        "Bind chain genesis, mint, token program, decimals, extensions, pool token ordering and canonical alias relationships.",
-        "Test ticker collision, wrong mint/program/decimals, missing live proof and unsupported extension."
+        "At pre-capture, safely parse and preserve canonical mint and pool identity fields, provenance and confidence/status for discovery candidates; do not infer identity from ticker or symbol.",
+        "Keep discovery identity separate from HARD_BOUND: discovery-only candidates with missing live owner/program/decimals/extensions may be retained as UNKNOWN/BLOCKED, but must not enter exact quotes or routes.",
+        "Require current owner/program/decimals evidence before HARD_BOUND; registry/reference decimals are hints only.",
+        "Parse Token-2022 TLV/extensions and fail closed on unknown extension, transfer hook or unsupported fee semantics before quote admission.",
+        "Bind chain genesis, mint, token program, decimals, extensions, pool program/deployment, pool address, token ordering and vaults; test ticker collisions and inconsistent identities."
       ],
       "acceptance": [
-        "Every HARD_BOUND asset has evidence refs, current source generation, exact decimals/program/extensions.",
-        "Unknown or inconsistent identity returns typed blocker; no ticker inference."
+        "Pre-capture resolver safely parses/preserves identity evidence and typed unknowns without upgrading unresolved candidates or requiring every discovery candidate to be HARD_BOUND.",
+        "Every HARD_BOUND asset/pool used by an exact quote has current evidence refs, source generation, exact decimals/program/extensions and canonical pool/token/vault identity.",
+        "Unknown or inconsistent identity, unsupported Token-2022 extension/transfer-hook/fee semantics and missing live proof return a typed blocker; no ticker inference or quote/route admission.",
+        "Positive/negative tests cover ticker collision, wrong mint/program/decimals, stale/missing owner evidence, token-program mismatch, pool token-order/vault mismatch and unsupported extensions."
       ],
       "must_not": [
         "Do not alter broad research-universe preservation.",
@@ -392,22 +432,29 @@
         "ASSET-01",
         "DISC-01"
       ],
-      "summary": "Turn already offline-tested venue quote engines into current-state exact market evidence without replacing existing owners.",
+      "summary": "Turn existing CPMM/CLMM/DLMM quote engines into exact, state-complete, amount-specific market evidence with physical-pool deduplication, freshness and complete route economics; reuse canonical R13-K/PR118 owners.",
       "actions": [
-        "Reconcile #660 report and #660 merge head with latest main; pin current official program/SDK state and deployed program IDs.",
-        "Complete full direct-account state closure per venue; prove batch context/slot consistency and account hashes.",
-        "Differential-check amount-specific quote output against official pinned SDK/program fixtures and, only under separate authorization, rooted live snapshots.",
-        "For every input amount, record complete fees, consumed input, tick/bin traversal, token extensions, timestamp/epoch, state hash/generation and expiry.",
-        "Preserve typed fail-closed handling for missing arrays, dynamic fee, partial fill, transfer hook, unknown extension and stale state."
+        "Reconcile #659/#660 current owners against latest main; pin official program/SDK versions, deployed program IDs and decoder/quote revisions.",
+        "Complete venue-specific direct-account closure: CPMM reserves/vaults and relevant fee state; Raydium CLMM pool/config/observation/bitmap/all reachable directional tick arrays and dynamic-fee dependencies; Meteora DLMM pool/bitmap/all reachable directional BinArrays plus clock/epoch/dynamic-fee dependencies; include mint, vault and Token-2022 extension state.",
+        "Prove coherent per-response context slots, genesis, state hashes and freshness for every dependency; do not combine unrelated batch slots or infer a shared snapshot.",
+        "For every admitted route direction and every raw input amount in PR118's grid, obtain an independent direct quote from the canonical venue owner; no interpolation, scaling, extrapolation or reuse of a quote from another amount/state.",
+        "Consume R13-K physical pool/resource identity and dedup outputs; aliases and aggregator/comparator routes must not count as independent pools or independent liquidity. Do not create another deduplicator.",
+        "Reconcile every quote's consumed input/output, all fee components/denominations, token transfer fees, ticks/bins/arrays traversed, timestamp/epoch, state hash/generation, source slots, freshness bound and expiry.",
+        "Reconcile all-in economics per route and amount, including swap/token fees, flash fee when applicable, priority fee, permitted modeled tip, compute cost, rent/account setup where applicable, provider charges, failure/revert cost and residual balances; unknown cost or stale/mixed state blocks admission."
       ],
       "acceptance": [
-        "Independent positive/negative fixtures and deterministic offline replay.",
-        "Live evidence clearly separated from fixture/replay and linked to actual rooted account hashes when authorized.",
-        "No quote admitted if any dependent account or freshness condition is missing."
+        "Independent positive/negative fixtures and deterministic offline replay exist for each supported CPMM/CLMM/DLMM state/quote path.",
+        "Each admitted venue has complete dependency-account closure for the exact pool and direction; missing tick arrays/BinArrays, bitmap, observations, dynamic-fee, clock/epoch, vault, mint or Token-2022 state is a typed rejection.",
+        "Each admitted direction × raw input amount has its own exact direct quote and evidence; no interpolation/scaling/extrapolation. Quote output reconciles consumed amounts, fee components and traversal details.",
+        "Physical-pool/resource dedup is proven through R13-K canonical identity; aliased addresses/routes and aggregator comparisons cannot inflate independent pool count or liquidity.",
+        "Every admitted quote/route binds coherent genesis, per-response slots, account/state hashes, source generation, observation time, freshness threshold and expiry; stale, mixed-slot or mismatched state is rejected.",
+        "All-in net economics are complete per route and amount; any UNKNOWN fee/cost/residual or unmodeled transfer behavior blocks positive-net admission.",
+        "Fixtures/replay are clearly separated from live read-only evidence; live differential proof is linked to actual authorized rooted account hashes when applicable."
       ],
       "must_not": [
-        "Do not make live reads by default.",
-        "Do not duplicate #659/#660 quote/route owners."
+        "Do not make live reads by default or convert fixture/replay into live evidence.",
+        "Do not duplicate #659/#660 quote engines, R13-K physical deduplicator or PR118 amount-grid owner.",
+        "Do not claim independent liquidity from aggregator/comparator routes or extrapolated amount quotes."
       ]
     },
     {

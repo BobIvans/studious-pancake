@@ -15,6 +15,19 @@ from src.config.runtime import (
 from src.config.secret_resolver import SecretResolutionError
 
 
+def _symlink_privilege_available(tmp_path: Path) -> bool:
+    """Probe whether creating symlinks works (Windows needs a privilege)."""
+    probe_target = tmp_path / "symlink-probe-target"
+    probe_target.write_bytes(b"")
+    probe = tmp_path / "symlink-probe-link"
+    try:
+        probe.symlink_to(probe_target)
+        probe.unlink()
+        return True
+    except OSError:
+        return False
+
+
 def _write(path: Path, text: str, *, mode: int | None = None) -> Path:
     # Byte-exact LF payload: text-mode writes would emit CRLF on Windows,
     # changing the secret bytes this resolver contract pins down.
@@ -76,13 +89,14 @@ def test_file_secret_reference_rejects_symlink_multiline_and_loose_permissions(
         assert reference is not None
         reference.resolve(environ={})
 
-    target = _write(tmp_path / "target.secret", "secret\n", mode=0o600)
-    symlink = tmp_path / "linked.secret"
-    symlink.symlink_to(target)
-    with pytest.raises(SecretResolutionError, match="symlink"):
-        reference = SecretReference.parse(f"file:{symlink}")
-        assert reference is not None
-        reference.resolve(environ={})
+    if os.name == "posix" or _symlink_privilege_available(tmp_path):
+        target = _write(tmp_path / "target.secret", "secret\n", mode=0o600)
+        symlink = tmp_path / "linked.secret"
+        symlink.symlink_to(target)
+        with pytest.raises(SecretResolutionError, match="symlink"):
+            reference = SecretReference.parse(f"file:{symlink}")
+            assert reference is not None
+            reference.resolve(environ={})
 
 
 def test_keychain_reference_fails_explicitly_until_supported_adapter_exists() -> None:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import tempfile
 
 import pytest
 
@@ -28,6 +29,24 @@ def test_database_permissions_pragmas_and_fingerprint(tmp_path: Path) -> None:
         assert state.is_dir() and (state / "authority.sqlite3").is_file()
 
 
+def _symlink_privilege_available(tmp_path: Path) -> bool:
+    """Probe whether creating symlinks works (Windows needs a privilege)."""
+    probe_target = tmp_path / "symlink-probe-target"
+    probe_target.write_bytes(b"")
+    probe = tmp_path / "symlink-probe-link"
+    try:
+        probe.symlink_to(probe_target)
+        probe.unlink()
+        return True
+    except OSError:
+        return False
+
+
+@pytest.mark.skipif(
+    os.name != "posix"
+    and not _symlink_privilege_available(Path(tempfile.gettempdir())),
+    reason="symlink creation requires a privilege this environment lacks",
+)
 def test_symlink_database_path_is_rejected(tmp_path: Path) -> None:
     target = tmp_path / "target.sqlite3"
     target.touch(mode=0o600)
@@ -37,6 +56,11 @@ def test_symlink_database_path_is_rejected(tmp_path: Path) -> None:
         DurableLifecycleStore(alias)
 
 
+@pytest.mark.skipif(
+    os.name != "posix"
+    and not _symlink_privilege_available(Path(tempfile.gettempdir())),
+    reason="symlink creation requires a privilege this environment lacks",
+)
 def test_symlink_parent_component_is_rejected(tmp_path: Path) -> None:
     target = tmp_path / "real-state"
     target.mkdir(mode=0o700)

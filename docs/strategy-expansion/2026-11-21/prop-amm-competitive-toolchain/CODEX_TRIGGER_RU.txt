@@ -1,0 +1,78 @@
+CODEX TASK — Prop AMM competitive toolchain, source mirror and parallel flashloan strategies
+
+Branch: codex/prop-amm-competitive-toolchain-2026-11-21
+Target PR: #665 (keep Draft)
+
+READ FIRST:
+- CODEX_START_HERE_RU.md
+- SOURCE_AUDIT_V1.json
+- VENDORED_SOURCE_MANIFEST_V1.json
+- SOURCE_DOWNLOAD_AND_VENDOR_PLAYBOOK_RU.md
+- PMM_SIM_CALLER_PROFILE_RESEARCH_RU.md
+- RELAY_PROVIDER_TIP_PROFILES_V1.json
+- PARALLEL_OPPORTUNITY_AND_ATOMIC_EXECUTION_RU.md
+- ADAPTER_CONTRACTS_AND_TESTS_RU.md
+- IMPLEMENTATION_DAG_AND_ACCEPTANCE_RU.md
+- RELAY_AND_ORDERFLOW_POLICY_RU.md
+- PROP_AMM_TOOLCHAIN_AND_STRATEGY_RU.md
+
+Then refresh main, #657 SX-18, #660 CLMM/DLMM and #664 campaign pack. Rebase before code. Coordinate owners; SX-18 owns strategy runtime fanout. Do not create a second detector, graph, quote kernel, scheduler, market-data bus, journal, source catalog or sender.
+
+MISSION A — MIRROR AND TEST OPEN-SOURCE TOOLS
+1. Use VENDORED_SOURCE_MANIFEST_V1.json as the exact allow/hold/exclude list. Include 0xfnzero/solana-streamer v6.0.0 in isolated read-only harness evaluation; treat rpcpool/yellowstone-grpc root AGPL-3.0 separately from its Apache-2.0 proto crate and do not mirror the whole plugin without license review.
+2. Download eligible upstream sources by immutable commit into vendor/strategy-research/ without nested .git; include unmodified LICENSE/NOTICE and provenance.json checksums.
+3. Use separate harness workspaces and retain Cargo.lock. Do not merge incompatible Solana SDK versions.
+4. Pin pmm-sim's Magnus dependency to the exact commit in its upstream Cargo.lock; do not follow mutable branch.
+5. Keep sol-parser-sdk parser-only. Do not import sol-trade-sdk or sol-trade-router-sdk signing/multi-relay paths.
+6. Run pmm-sim synthetic caller-profile matrix in local LiteSVM ONLY: DIRECT, Magnus-native CPI, simulated Jupiter, DFlow, OKX Labs and Titan. Keep those simulated identities out of every mainnet transaction. Use PMM_SIM_CALLER_PROFILE_RESEARCH_RU.md to execute the same-snapshot matrix and identify caller-dependent AMM pricing.
+7. Keep 1000xsh/swaps on HOLD until published crate archive/license evidence is verified.
+8. Do not download or execute hosted provider code, unverified KADES/CADES/Capture OS, unlicensed frameworks, or upstream mainnet/live bot loops.
+9. Run selected workspace tests/builds offline after dependencies are prefetched; record SHA256s, versions, build reports and benchmarks.
+
+MISSION B — ADD TO EXISTING BOT OWNERS
+1. Add parser/source adapters only at existing canonical source and MarketObservation boundary. Evaluate solana-streamer as a read-only facade, not a hosted source entitlement or second capture daemon.
+2. Implement pmm-sim as an offline differential harness, not production runtime.
+3. Integrate Jupiter Swap API V2 /order and /build through current R13 quote/build owner; /build remains unsigned.
+4. Integrate 1000xsh direct instructions only after license/program/account/min-out conformance, one venue/version at a time.
+5. Preserve exact mint/token-program/base units/state generation, route lineage, fees, compute/account/packet limits and same-transaction repayment.
+6. Route lender evidence through R02; unsigned plan through R03; simulation/economics through R05; paper campaign through R06/QPR; installed soak through MPR05.
+
+MISSION C — PARALLEL STRATEGY OPPORTUNITIES
+1. Reuse SX-18 StrategyRegistry fanout, SX-12 portfolio optimizer and ConflictScheduler.
+2. Evaluate strategy candidates concurrently against one immutable source/state generation; no duplicate detector.
+3. Deduplicate route candidates using underlying pool/account lineage, not merely strategy names.
+4. Produce amount-specific all-in net estimates and parallel simulation, deterministic deadlines/cancellation and typed rejections.
+5. Pick a compatible portfolio only after actual account read/write lock analysis, fee-payer/token-account/lender-capacity checks.
+6. Each accepted flashloan opportunity must be independently profitable and complete within one transaction: borrow -> swaps -> output guard -> repay.
+7. Parallel execution means concurrent distinct self-contained transactions with disjoint writable resources. If the same fee payer, lender vault, token account, pool, tick/bin array or oracle is writable in multiple txs, serialize or reject/requote.
+8. Default execution concurrency remains 1. Discovery/simulation may be bounded-concurrent.
+9. Do not send all Top-K candidates; only the conflict-free selected portfolio may be considered for later authorization.
+
+MISSION D — SIGNING / SENDING BOUNDARY
+1. Never load/export private keys into the bot, Codex, vendor tree or environment.
+2. Build immutable unsigned transaction candidates and sign-intent records only.
+3. Future signing must pass through MPR-04 isolated signer and bind exact message hash, source/config generations, wallet, notional, fee/repay economics, reservation, expiry, simulation evidence and second-human approval.
+4. Preserve PR130 JITO_SINGLE first-production policy. Do not replace with parallel relay fan-out or multi-tx bundles.
+5. One fixed tip destination per signed transaction. Do not add all relay tip transfers. Use provider-native multipath as one endpoint; no cross-provider fan-out or claim that only winner relay charges.
+6. ACK is not settlement; finalized signature + balance and flashloan repayment reconciliation is mandatory.
+7. All activation flags remain false in this task.
+
+NON-NEGOTIABLE:
+- no stealth/camouflage, production caller impersonation, mainnet spoofed CPI, evasion of Prop AMM venue risk filters, sandwich, front-running or victim targeting. Local pmm-sim synthetic caller profiles are allowed for offline research only.
+- splitting only for genuine measured price impact/capacity/compute/account limits; repayment must remain atomic.
+- no provider credentials, API probing, trial activation, paid subscriptions, network campaigns, wallet/ATA creation, borrow, sign, send or live mode.
+- no omitted source licenses and no unpinned branch dependencies.
+- do not claim profitability, competitive latency or live qualification from local fixtures.
+
+DELIVERABLES:
+- vendored snapshots only for approved sources, each with provenance and license checksums;
+- isolated Cargo harnesses, locked dependency graphs and reproducible test reports;
+- parser/source gap/reorg/replay tests;
+- pmm-sim direct/single/multi/benchmark corpus plus local simulated caller-profile differential matrix; no spoofed identity in production;
+- Jupiter V2 and direct-builder conformance matrix per venue/version;
+- bounded parallel strategy-evaluation receipt and conflict-free portfolio selection evidence;
+- unsigned per-opportunity atomic flashloan plans and fake-signer MPR04 conformance tests;
+- updated source audit and machine-readable source mirror manifest;
+- tests/quality gates/verify_repo.py output, exact commit SHAs, files and unresolved blockers.
+
+Keep PR #665 Draft. Report per-AMM caller-profile output deltas and identify best simulated profile separately from best real executable route. Report what was downloaded, what could not legally/technically be downloaded, what built, what tests passed, exact relay cost semantics and which live/provider/signing/sending gates remain closed.

@@ -1,0 +1,60 @@
+{
+  "schema": "studious-pancake.prop-amm-source-provenance.v1",
+  "mirrored_at_utc": "2026-11-21T00:00:00Z",
+  "source": {
+    "repository": "https://github.com/LimeChain/pmm-sim",
+    "upstream_commit": "cc4ae891a2a765d92c89d4381f96dce4afd446bb",
+    "declared_release_label_in_pack": "v0.2.0",
+    "release_label_clarification": "Upstream Cargo.toml declares package version 0.2.0 at this commit; git tags 0.2.0 (b93f3244c2662447315188653bf01e5cf787e279) and 0.3.0 (134b891c94aae9a718a2467cb637bedbec5d0f97) do NOT point at the pinned commit. The pin is the immutable commit SHA.",
+    "license": "MIT",
+    "license_blob_sha_github": "22b052cab7a2f7ae61e516d61ec4b4f744c7284e",
+    "license_local_sha256": "fef97497a1b3dfe26ced17115f33a56326183035c3cd14deae06947b96905334",
+    "upstream_verified_at_utc": "2026-11-21",
+    "upstream_master_head_at_verification": "cc4ae891a2a765d92c89d4381f96dce4afd446bb",
+    "upstream_pushed_at": "2026-03-04T12:41:53Z"
+  },
+  "archive_method": "git archive (no nested .git); assets/ excluded from mirror",
+  "integrity": "SHA256SUMS in this directory covers all 170 mirrored files",
+  "mutable_dependency_pins": [
+    {
+      "crate": "magnus-router-client + magnus-shared",
+      "upstream_repository": "https://github.com/LimeChain/magnus",
+      "declared_branch_in_cargo_toml": "extend-router-ixs",
+      "cargo_lock_pinned_rev": "9ecd34b634031f5dfdf5747c33a329605ea6e7c4",
+      "branch_head_verified_at_utc": "2026-11-21 (branch still exactly at pinned rev)",
+      "magnus_license": "MIT",
+      "isolation_rule": "original Cargo.lock retained; branch selector patched to immutable rev only inside the harness workspace (tools/prop-amm-harnesses/), never in the mirror"
+    }
+  ],
+  "upstream_shipped_binaries": {
+    "role": "Prebuilt SBF program binaries shipped in the upstream repo (cfg/programs/). These are HARNESS-PROVIDED artifacts, not captured deployed mainnet bytes, unless byte-equal to a captured deployed program.",
+    "classification_default": "SYNTHETIC_SIMULATION",
+    "spoof_binaries": [
+      "cfg/programs/magnus-router-spoof-jupiter.so",
+      "cfg/programs/magnus-router-spoof-dflow.so",
+      "cfg/programs/magnus-router-spoof-okxlabs.so",
+      "cfg/programs/magnus-router-spoof-titan.so"
+    ],
+    "note": "magnus-router-spoof-*.so have no mainnet existence under any program ID. Using them is permitted ONLY inside the local LiteSVM harness."
+  },
+  "upstream_shipped_accounts": {
+    "role": "cfg/accounts/*.json are static upstream-captured account snapshots (README Figure-1 slot 401101387, 2026-03-04). They are upstream evidence, not our live capture.",
+    "snapshot_status": "UPSTREAM_MIRROR_CAPTURE_ONLY"
+  },
+  "activation_flags": {
+    "capture": false,
+    "paid_feed": false,
+    "provider_activation": false,
+    "simulation_live_network": false,
+    "sign": false,
+    "send": false,
+    "borrow": false,
+    "live": false
+  },
+  "safety": {
+    "sign_enabled": false,
+    "send_enabled": false,
+    "credentials_used": "NONE",
+    "live_provider_calls": "NONE"
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "schema": "studious-pancake.pmm-sim-caller-profile-matrix.v1",
+  "generated_at_utc": "2026-11-21",
+  "pack_reference": "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/PMM_SIM_CALLER_PROFILE_RESEARCH_RU.md",
+  "scope": "First benchmark run: HumidiFi swap v1/v2/v3 only (user decision 2026-11-21). Other pack venues (SolFi V2, Obric V2, ZeroFi, Tessera V, GoonFi, BisonFi) are listed below as NOT_RUN and remain one-venue-per-PR follow-ups.",
+  "upstream_pin": {
+    "pmm_sim_commit": "cc4ae891a2a765d92c89d4381f96dce4afd446bb",
+    "pmm_sim_license": "MIT",
+    "magnus_rev": "9ecd34b634031f5dfdf5747c33a329605ea6e7c4",
+    "litesvm_crate": "0.10.0 (lockfile)",
+    "solana_sdk_line": "3.0"
+  },
+  "caller_profiles": [
+    {"id": "DIRECT", "upstream_mode": "direct", "spoof": null, "classification": "GENUINE_EXECUTABLE_ROUTE_CANDIDATE", "note": "Direct non-CPI call to the HumidiFi program; genuine iff program bytes in the snapshot are captured deployed bytes (or byte-equal to them)."},
+    {"id": "MAGNUS_NATIVE", "upstream_mode": "cpi", "spoof": null, "classification": "SYNTHETIC_SIMULATION_BY_DEFAULT", "note": "CPI via ordinary Magnus router loaded from harness-shipped cfg/programs/magnus-router.so. Becomes GENUINE_EXECUTABLE_ROUTE_CANDIDATE only if the deployed router binary is captured and used."},
+    {"id": "JUPITER_SIM", "upstream_mode": "cpi", "spoof": "jupiter", "classification": "SYNTHETIC_SIMULATION", "note": "magnus-router-spoof-jupiter.so loaded under Jupiter program id inside local LiteSVM. No mainnet meaning."},
+    {"id": "DFLOW_SIM", "upstream_mode": "cpi", "spoof": "dflow", "classification": "SYNTHETIC_SIMULATION"},
+    {"id": "OKX_SIM", "upstream_mode": "cpi", "spoof": "okxlabs", "classification": "SYNTHETIC_SIMULATION"},
+    {"id": "TITAN_SIM", "upstream_mode": "cpi", "spoof": "titan", "classification": "SYNTHETIC_SIMULATION"}
+  ],
+  "venue_variants": [
+    {"pmm": "humidifi", "instruction": "swap-v1", "markets": ["FksffEqnBRixYGR791Qw2MgdU7zNCpHVFYBL4Fa4qVuH", "DB3sUCP2H4icbeKmK6yb6nUxU5ogbcRHtGuq7W2RoRwW", "6n9VhCwQ7EwK6NqFDjnHPzEk6wZdRBTfh43RFgHQWHuQ", "AvGeFw71N5sNfV97mZ1uNrHg4yfufRicCJUrS9j2ehTX", "5dhYayH9qvzNyCPoh2hKN8TJqumoGsWdyZ9UfPLXBfD9"]},
+    {"pmm": "humidifi-swap-v2", "instruction": "swap-v2", "markets": ["FksffEqnBRixYGR791Qw2MgdU7zNCpHVFYBL4Fa4qVuH", "DB3sUCP2H4icbeKmK6yb6nUxU5ogbcRHtGuq7W2RoRwW", "6n9VhCwQ7EwK6NqFDjnHPzEk6wZdRBTfh43RFgHQWHuQ", "AvGeFw71N5sNfV97mZ1uNrHg4yfufRicCJUrS9j2ehTX", "5dhYayH9qvzNyCPoh2hKN8TJqumoGsWdyZ9UfPLXBfD9"]},
+    {"pmm": "humidifi-swap-v3", "instruction": "swap-v3", "markets": ["FksffEqnBRixYGR791Qw2MgdU7zNCpHVFYBL4Fa4qVuH", "DB3sUCP2H4icbeKmK6yb6nUxU5ogbcRHtGuq7W2RoRwW", "6n9VhCwQ7EwK6NqFDjnHPzEk6wZdRBTfh43RFgHQWHuQ", "AvGeFw71N5sNfV97mZ1uNrHg4yfufRicCJUrS9j2ehTX", "5dhYayH9qvzNyCPoh2hKN8TJqumoGsWdyZ9UfPLXBfD9"]}
+  ],
+  "directions": [
+    {"src_token": "wsol", "dst_token": "usdc", "range_human_units": true},
+    {"src_token": "usdc", "dst_token": "wsol", "range_human_units": true}
+  ],
+  "amount_grid_human_units": [1, 5, 10, 25, 50, 100, 250, 500, 1000, 2000, 4000, 8000, 16000, 32000, 64000],
+  "amount_grid_note": "Single ladder per direction covering small-to-depth-area sizes. Raw integer amounts are passed to the harness exactly as ladder value * 10^decimals (wsol 9, usdc 6). No cross-amount comparisons are claimed outside this grid; PR118-style sizing refinement is a later PR.",
+  "snapshots": [
+    {"id": "upstream_static_slot_401101387", "source": "vendor/strategy-research/pmm-sim-cc4ae891/cfg/accounts + cfg/programs", "slot": 401101387, "snapshot_status": "UPSTREAM_MIRROR_CAPTURE_ONLY", "role": "Reproducibility cross-check against upstream-shipped datasets/ parquet rows at the same slot"},
+    {"id": "TBD_capture_slot_2026_11_21", "source": "research/pmm-sim-caller-profile/snapshot/<slot> (one-time user-authorized read-only RPC capture)", "slot": null, "snapshot_status": "RAW_ACCOUNT_CAPTURE_ONLY", "role": "Current-state replication (Protocol D multi-snapshot)"}
+  ],
+  "not_run_venues": ["solfi-v2", "obric-v2", "zerofi", "tessera", "goonfi", "bisonfi"],
+  "record_fields_per_row": ["snapshot_id", "slot", "account_snapshot_digest", "program_digest", "program_binary_source", "amm_name", "instruction_version", "program_id", "market_id", "caller_profile", "upstream_mode", "spoof", "direction_src", "direction_dst", "amount_in_raw", "amount_out_raw", "src_decimals", "dst_decimals", "reverse_roundtrip_out_raw", "spread_bps", "cu_consumed", "simulator_return", "simulator_error", "simulator_logs", "caller_delta_bps_vs_direct", "caller_delta_bps_vs_magnus_native", "classification", "row_label", "pmm_sim_commit", "magnus_rev", "cargo_lock_digest", "run_metadata"],
+  "row_labels": ["BEST_SIMULATED_CALLER_PROFILE", "BEST_REAL_EXECUTABLE_ROUTE", "NO_DIFFERENCE", "BLOCKED"],
+  "gating": {
+    "network_during_runs": "FORBIDDEN (jit-accounts=false, jit-programs=false; fail-closed zero-outbound assertion)",
+    "cross_slot_comparison": "FORBIDDEN",
+    "min_return": "upstream benchmark uses permissive expect/min-return of 1 — NOT a production slippage or flashloan repayment guard",
+    "production_claim": "FORBIDDEN from this evidence alone; HumidiFi direct-route promotion BLOCKED without same-tx post-balance guard"
+  }
+}

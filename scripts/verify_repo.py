@@ -178,6 +178,12 @@ PR206_DURABLE_STATE_COMMAND: Final[list[str]] = [
     "--json",
 ]
 
+PMM_SIM_CALLER_PROFILE_COMMAND: Final[list[str]] = [
+    sys.executable,
+    "scripts/verify_pmm_sim_caller_profile.py",
+    "--json",
+]
+
 PR353_FINAL_STRATEGY_CLOSURE_COMMAND: Final[list[str]] = [
     sys.executable,
     "scripts/verify_pr353_strategy_closure.py",
@@ -335,6 +341,7 @@ def main() -> int:
     run(MARKET_DATA_EVOLUTION_COMMAND)
     run(PR200_PRODUCTION_CUTOVER_COMMAND)
     run(PR206_DURABLE_STATE_COMMAND)
+    run(PMM_SIM_CALLER_PROFILE_COMMAND)
     run(PR353_FINAL_STRATEGY_CLOSURE_COMMAND)
 
     for command in COMMANDS[1:]:

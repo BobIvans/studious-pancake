@@ -1,0 +1,43 @@
+{
+  "by_variant": {
+    "humidifi": {
+      "FORWARD_SWAP_FAILED": 395,
+      "OK_COMPLETE_ROUND_TRIP": 465,
+      "REVERSE_SWAP_FAILED": 40
+    },
+    "humidifi-swap-v2": {
+      "FORWARD_SWAP_FAILED": 269,
+      "OK_COMPLETE_ROUND_TRIP": 573,
+      "REVERSE_SWAP_FAILED": 58
+    },
+    "humidifi-swap-v3": {
+      "FORWARD_SWAP_FAILED": 269,
+      "OK_COMPLETE_ROUND_TRIP": 573,
+      "REVERSE_SWAP_FAILED": 58
+    }
+  },
+  "classification_note": "spoof profiles and harness-shipped-router rows are SYNTHETIC_SIMULATION with no mainnet meaning; DIRECT rows are GENUINE_EXECUTABLE_ROUTE_CANDIDATE for the pinned snapshot only",
+  "conflicting_terminal_records": 0,
+  "offline_status": [
+    "ZERO_CONFIGURED_RPC_ATTEMPTS"
+  ],
+  "production_boundary": "research only; min_return=1 upstream default is not a production slippage guard; HumidiFi ignores min_amount_out (same-tx post-balance guard required)",
+  "results_csv_sha256": "fab97d705ca702db8d27ed4bae6fe90f65277616838c917b6edadb94a863da7f",
+  "row_label_counts": {
+    "": 1089,
+    "BEST_REAL_EXECUTABLE_ROUTE": 315,
+    "NO_DIFFERENCE": 1296
+  },
+  "scenario_count_expected": 2700,
+  "scenario_count_terminal": 2700,
+  "schema": "studious-pancake.pmm-sim-scenario-manifest.v1",
+  "single_snapshot_limitation": "all rows are slot 401101387 (upstream static snapshot); captured slot 472269598 is BLOCKED_SIMULATOR_INCOMPATIBLE; no persistent caller-preference claim is made from a single snapshot",
+  "slot": 401101387,
+  "snapshot_id": "upstream_401101387",
+  "status_counts": {
+    "FORWARD_SWAP_FAILED": 933,
+    "OK_COMPLETE_ROUND_TRIP": 1611,
+    "REVERSE_SWAP_FAILED": 156
+  },
+  "unique_scenario_ids": 2700
+}

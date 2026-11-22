@@ -1,0 +1,358 @@
+diff --git a/src/lib.rs b/src/lib.rs
+index efbd784..e56d32d 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -318,6 +318,10 @@ pub enum Cmd {
+         #[arg(long, env = "RANGE", default_value = "1.0,100.0,1.0", value_parser = CliArgs::parse_range, help = "Comma-separated step parameters: start, end, step")]
+         range: [f64; 3],
+ 
++        // [SP-665-HARNESS PATCH] discrete amount list; overrides --range when set.
++        #[arg(long, env = "AMOUNTS", value_delimiter = ',', help = "Comma-separated discrete amounts (human units); overrides --range when set")]
++        amounts: Option<Vec<f64>>,
++
+         #[arg(
+             long,
+             env = "CALL_TYPE",
+@@ -433,6 +437,12 @@ pub struct BenchmarkRecord {
+     dst_token: String,
+     amount_in: f64,
+     amount_out: f64,
++    // [SP-665-HARNESS PATCH] structured per-amount execution status:
++    // forward_status/reverse_status ∈ {ok, failed, skipped}; error_code carries the
++    // simulator error ("" when ok). artifact status is written as a sidecar file by save().
++    forward_status: String,
++    reverse_status: String,
++    error_code: String,
+     spread: f64,
+     spread_bps: f64,
+     compute_units: u64,
+@@ -443,6 +453,8 @@ pub struct Benchmark {
+     records: Vec<BenchmarkRecord>,
+     save_path: String,
+     range: [u64; 3],
++    // [SP-665-HARNESS PATCH] discrete amount list; overrides range when non-empty
++    amounts: Vec<u64>,
+     time: String,
+ }
+ 
+@@ -473,19 +485,36 @@ impl Benchmark {
+         self
+     }
+ 
++    /// [SP-665-HARNESS PATCH] discrete amount list from human-readable values.
++    /// When non-empty, range_iter yields exactly these raw amounts.
++    pub fn amounts_from_human(mut self, amounts: Vec<f64>, dec: u8) -> Self {
++        self.amounts = amounts.into_iter().map(|a| Misc::to_raw(a, dec)).collect();
++        self
++    }
++
+     /// Returns the total number of iterations for this range configuration.
+     pub fn range_count(&self) -> u64 {
++        if !self.amounts.is_empty() {
++            return self.amounts.len() as u64;
++        }
+         (self.range[1] - self.range[0]) / self.range[2] + 1
+     }
+ 
+     /// Returns an iterator over all values from start to end (inclusive).
+     pub fn range_iter(&self) -> impl Iterator<Item = u64> {
++        if !self.amounts.is_empty() {
++            let amounts = self.amounts.clone();
++            return Box::new(amounts.into_iter()) as Box<dyn Iterator<Item = u64>>;
++        }
+         let [start, end, step] = self.range;
+-        (start..=end).step_by(step as usize)
++        Box::new((start..=end).step_by(step as usize)) as Box<dyn Iterator<Item = u64>>
+     }
+ 
+     /// Returns the end value of the range.
+     pub fn range_end(&self) -> u64 {
++        if !self.amounts.is_empty() {
++            return *self.amounts.iter().max().unwrap_or(&self.range[1]);
++        }
+         self.range[1]
+     }
+ 
+@@ -503,6 +532,9 @@ impl Benchmark {
+             Column::new("dst_token".into(), self.records.iter().map(|r| r.dst_token.as_str()).collect::<Vec<_>>()),
+             Column::new("amount_in".into(), self.records.iter().map(|r| r.amount_in).collect::<Vec<_>>()),
+             Column::new("amount_out".into(), self.records.iter().map(|r| r.amount_out).collect::<Vec<_>>()),
++            Column::new("forward_status".into(), self.records.iter().map(|r| r.forward_status.as_str()).collect::<Vec<_>>()),
++            Column::new("reverse_status".into(), self.records.iter().map(|r| r.reverse_status.as_str()).collect::<Vec<_>>()),
++            Column::new("error_code".into(), self.records.iter().map(|r| r.error_code.as_str()).collect::<Vec<_>>()),
+             Column::new("spread".into(), self.records.iter().map(|r| r.spread).collect::<Vec<_>>()),
+             Column::new("spread_bps".into(), self.records.iter().map(|r| r.spread_bps).collect::<Vec<_>>()),
+             Column::new("compute_units".into(), self.records.iter().map(|r| r.compute_units).collect::<Vec<_>>()),
+@@ -511,6 +543,13 @@ impl Benchmark {
+         let mut file = File::create(&self.save_path)?;
+         ParquetWriter::new(&mut file).finish(&mut df.clone())?;
+ 
++        // [SP-665-HARNESS PATCH] explicit artifact-status sidecar: every failed write is
++        // observable. Missing sidecar = artifact_status UNKNOWN (must be classified).
++        std::fs::write(
++            format!("{}.artifact_status", self.save_path),
++            format!("OK rows={}", self.records.len()),
++        )?;
++
+         Ok(())
+     }
+ }
+@@ -580,7 +619,7 @@ impl App {
+     }
+ 
+     pub fn benchmark(&self) -> eyre::Result<()> {
+-        let Cmd::Benchmark { common, datasets_path, pmms, range, spoof, call_type, jitodontfront, jitodontfront_acc } = &self.args.cmd
++        let Cmd::Benchmark { common, datasets_path, pmms, range, amounts, spoof, call_type, jitodontfront, jitodontfront_acc } = &self.args.cmd
+         else {
+             unreachable!()
+         };
+@@ -591,7 +630,12 @@ impl App {
+         let (src_token, dst_token) = (self.cfg.get_token(&common.src_token)?, self.cfg.get_token(&common.dst_token)?);
+         let mints = vec![(src_token.addr, src_token.dec), (dst_token.addr, dst_token.dec)];
+ 
+-        let benchmark = Benchmark::new().range_from_human(*range, src_token.dec);
++        // [SP-665-HARNESS PATCH] discrete amount list overrides the arithmetic range
++        let benchmark = if amounts.as_ref().is_some_and(|a| !a.is_empty()) {
++            Benchmark::new().amounts_from_human(amounts.clone().unwrap(), src_token.dec)
++        } else {
++            Benchmark::new().range_from_human(*range, src_token.dec)
++        };
+         let multi = MultiProgress::new();
+ 
+         // Resolve each target to (Dex, market Pubkey)
+@@ -645,6 +689,31 @@ impl App {
+                         let routes: Vec<Vec<magnus_router_client::types::Route>> =
+                             vec![vec![Route { dexes: vec![pmm], weights: vec![100] }.into()]];
+ 
++                        // [SP-665-HARNESS PATCH] durable per-amount event journal (JSONL):
++                        // one structured line per attempted amount + a final artifact-status
++                        // line. Flushed after every write; fsync'd via sync_all.
++                        let via = match call_type {
++                            CallType::Cpi => spoof.map(|a| a.to_string()).unwrap_or_else(|| "magnus".to_string()),
++                            CallType::Direct => "direct".to_string(),
++                        };
++                        let events_path = std::path::Path::new(datasets_path).join(format!(
++                            "events_{}_{}_{}_{}_{}.jsonl",
++                            env.slot.unwrap_or_default(),
++                            via,
++                            pmm,
++                            market_str,
++                            benchmark.time()
++                        ));
++                        let write_event = |event: serde_json::Value| -> eyre::Result<()> {
++                            use std::io::Write as _;
++                            let mut f = std::fs::OpenOptions::new().create(true).append(true).open(&events_path)?;
++                            f.write_all(event.to_string().as_bytes())?;
++                            f.write_all(b"\n")?;
++                            f.flush()?;
++                            f.sync_all()?;
++                            Ok(())
++                        };
++
+                         benchmark.range_iter().try_for_each(|amount_in| -> eyre::Result<()> {
+                             env.reset_wallet(&src_token.addr, amount_in)?;
+                             env.set_accounts(&pmm_accs)?;
+@@ -672,7 +741,7 @@ impl App {
+                                     if *jitodontfront {
+                                         construct.append_acc(jitodontfront_pubkey);
+                                     }
+-                                    construct.instruction(*spoof, data, Misc::gen_order_id())
++                                    construct.instruction(*spoof, data, Misc::gen_order_id_for(amount_in))
+                                 }
+                                 CallType::Direct => {
+                                     app.build_direct_ix(&env, target, market, src_token, dst_token, src_ata, dst_ata, amount_in)
+@@ -689,9 +758,40 @@ impl App {
+                             let res = match env.send_transaction(tx) {
+                                 Ok(res) => res,
+                                 Err(e) => {
+-                                    (warn_cnt == 0).then(|| pb.println(format!("[WARN] {}: {:?}", pmm, e)));
++                                    // [SP-665-HARNESS PATCH] visible on stderr + durable event + record
++                                    eprintln!("[WARN] {}: forward swap failed: {:?}", pmm, e);
+                                     warn_cnt += 1;
+                                     pb.inc(1);
++                                    let err_code = format!("{:?}", e);
++                                    let event = serde_json::json!({
++                                        "slot": env.slot.unwrap_or_default(),
++                                        "via": via.clone(),
++                                        "pmm": pmm.to_string(),
++                                        "market": market_str.clone(),
++                                        "amount_in_raw": amount_in,
++                                        "amount_out_raw": 0u64,
++                                        "forward_status": "failed",
++                                        "reverse_status": "skipped",
++                                        "error_code": err_code,
++                                        "compute_units": 0u64,
++                                        "artifact_status": "parquet_pending",
++                                    });
++                                    write_event(event)?;
++                                    records.push(BenchmarkRecord {
++                                        slot: env.slot.unwrap_or_default(),
++                                        pmm: pmm.to_string(),
++                                        market: market_str.clone(),
++                                        src_token: src_token.symbol.clone(),
++                                        dst_token: dst_token.symbol.clone(),
++                                        amount_in: Misc::to_human(amount_in, src_token.dec),
++                                        amount_out: 0.0,
++                                        forward_status: "failed".into(),
++                                        reverse_status: "skipped".into(),
++                                        error_code: err_code,
++                                        spread: f64::NAN,
++                                        spread_bps: f64::NAN,
++                                        compute_units: 0,
++                                    });
+                                     return Ok(());
+                                 }
+                             };
+@@ -727,7 +827,7 @@ impl App {
+                                     if *jitodontfront {
+                                         construct.append_acc(jitodontfront_pubkey);
+                                     }
+-                                    construct.instruction(*spoof, data, Misc::gen_order_id())
++                                    construct.instruction(*spoof, data, Misc::gen_order_id_for(amount_out))
+                                 }
+                                 CallType::Direct => {
+                                     app.build_direct_ix(&env, target, market, dst_token, src_token, dst_ata, src_ata, amount_out)
+@@ -741,7 +841,7 @@ impl App {
+                                 env.latest_blockhash(),
+                             );
+ 
+-                            let (spread, spread_bps) = match env.send_transaction(rev_tx) {
++                            let (spread, spread_bps, rev_status, rev_err, amount_back_raw) = match env.send_transaction(rev_tx) {
+                                 Ok(rev_res) => {
+                                     let amount_back = match call_type {
+                                         CallType::Cpi => env.get_amount_out(&rev_res),
+@@ -751,15 +851,34 @@ impl App {
+                                     let amount_back_h = Misc::to_human(amount_back, src_token.dec);
+                                     let spread = amount_in_h - amount_back_h;
+                                     let spread_bps = if amount_in_h > 0.0 { spread / amount_in_h * 10_000.0 } else { 0.0 };
+-                                    (spread, spread_bps)
++                                    (spread, spread_bps, "ok".to_string(), String::new(), amount_back)
+                                 }
+                                 Err(e) => {
+-                                    (warn_cnt == 0).then(|| pb.println(format!("[WARN] {}: reverse swap failed: {:?}", pmm, e)));
++                                    // [SP-665-HARNESS PATCH] visible on stderr
++                                    eprintln!("[WARN] {}: reverse swap failed: {:?}", pmm, e);
+                                     warn_cnt += 1;
+-                                    (f64::NAN, f64::NAN)
++                                    (f64::NAN, f64::NAN, "failed".to_string(), format!("{:?}", e), 0u64)
+                                 }
+                             };
+ 
++                            // [SP-665-HARNESS PATCH] durable per-amount event (success/rev-fail path)
++                            {
++                                let event = serde_json::json!({
++                                    "slot": env.slot.unwrap_or_default(),
++                                    "via": via.clone(),
++                                    "pmm": pmm.to_string(),
++                                    "market": market_str.clone(),
++                                    "amount_in_raw": amount_in,
++                                    "amount_out_raw": amount_out,
++                                    "forward_status": "ok",
++                                    "reverse_status": rev_status,
++                                    "error_code": rev_err,
++                                    "compute_units": res.compute_units_consumed,
++                                    "artifact_status": "parquet_pending",
++                                });
++                                write_event(event)?;
++                            }
++
+                             records.push(BenchmarkRecord {
+                                 slot: env.slot.unwrap_or_default(),
+                                 pmm: pmm.to_string(),
+@@ -768,6 +887,9 @@ impl App {
+                                 dst_token: dst_token.symbol.clone(),
+                                 amount_in: Misc::to_human(amount_in, src_token.dec),
+                                 amount_out: Misc::to_human(amount_out, dst_token.dec),
++                                forward_status: "ok".into(),
++                                reverse_status: rev_status.into(),
++                                error_code: rev_err,
+                                 spread,
+                                 spread_bps,
+                                 compute_units: res.compute_units_consumed,
+@@ -779,12 +901,9 @@ impl App {
+                             Ok(())
+                         })?;
+ 
+-                        (warn_cnt != 0).then(|| pb.println(format!("[WARN] {}: {} total failures", pmm, warn_cnt)));
++                        // [SP-665-HARNESS PATCH] visible on stderr
++                        (warn_cnt != 0).then(|| eprintln!("[WARN] {}: {} total failures", pmm, warn_cnt));
+ 
+-                        let via = match call_type {
+-                            CallType::Cpi => spoof.map(|a| a.to_string()).unwrap_or_else(|| "magnus".to_string()),
+-                            CallType::Direct => "direct".to_string(),
+-                        };
+                         let filename = format!(
+                             "{}/{}_{}_{}_{}_{}",
+                             datasets_path,
+@@ -794,9 +913,35 @@ impl App {
+                             market_str,
+                             benchmark.time()
+                         );
+-                        benchmark.records(records.clone()).save_path(&filename).save().is_ok().then(|| {
+-                            pb.println(format!("[{}] saved {} records to {}", pmm, records.len(), filename));
+-                        });
++                        let save_result = benchmark.records(records.clone()).save_path(&filename).save();
++                        let artifact_status = match &save_result {
++                            Ok(_) => {
++                                pb.println(format!("[{}] saved {} records to {}", pmm, records.len(), filename));
++                                format!("parquet_ok rows={}", records.len())
++                            }
++                            Err(e) => {
++                                // [SP-665-HARNESS PATCH] every failed write is observable
++                                eprintln!("[SAVE_ERROR] {}: {:?}", filename, e);
++                                "parquet_error".to_string()
++                            }
++                        };
++                        // [SP-665-HARNESS PATCH] final durable artifact-status event (fsync'd)
++                        {
++                            let event = serde_json::json!({
++                                "slot": env.slot.unwrap_or_default(),
++                                "via": via.clone(),
++                                "pmm": pmm.to_string(),
++                                "market": market_str.clone(),
++                                "amount_in_raw": 0u64,
++                                "amount_out_raw": 0u64,
++                                "forward_status": "artifact",
++                                "reverse_status": "artifact",
++                                "error_code": "",
++                                "compute_units": 0u64,
++                                "artifact_status": artifact_status,
++                            });
++                            write_event(event)?;
++                        }
+ 
+                         Ok(())
+                     })
+diff --git a/src/misc.rs b/src/misc.rs
+index b315c5f..3bd0feb 100644
+--- a/src/misc.rs
++++ b/src/misc.rs
+@@ -300,8 +300,28 @@ impl Misc {
+     }
+ 
+     pub fn gen_order_id() -> u64 {
++        // [SP-665-HARNESS PATCH] deterministic order id under PMM_SIM_ORDER_ID env var
++        // (set by the harness per batch for reproducible CU comparisons); falls back to
++        // the upstream wall-clock behavior otherwise.
++        if let Ok(v) = std::env::var("PMM_SIM_ORDER_ID") {
++            if let Ok(n) = v.parse::<u64>() {
++                return n;
++            }
++        }
+         SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()
+     }
++
++    /// [SP-665-HARNESS PATCH] amount-scoped deterministic order id: identical across
++    /// isolated and batched execution modes for the same amount, enabling strict
++    /// CU equality comparisons. Falls back to gen_order_id() without the env var.
++    pub fn gen_order_id_for(amount_in: u64) -> u64 {
++        if let Ok(v) = std::env::var("PMM_SIM_ORDER_ID") {
++            if let Ok(n) = v.parse::<u64>() {
++                return n.wrapping_add(amount_in);
++            }
++        }
++        Self::gen_order_id()
++    }
+ }
+ 
+ #[cfg(test)]

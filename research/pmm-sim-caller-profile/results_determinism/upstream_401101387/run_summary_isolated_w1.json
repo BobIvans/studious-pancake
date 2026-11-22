@@ -1,0 +1,13 @@
+{
+  "batches": 1,
+  "mode": "isolated",
+  "offline_status": "ZERO_CONFIGURED_RPC_ATTEMPTS",
+  "skipped_scenarios": 0,
+  "snapshot_id": "upstream_401101387",
+  "terminal_status_counts": {
+    "OK_COMPLETE_ROUND_TRIP": 1
+  },
+  "throughput_scenarios_per_s": 2.88,
+  "wall_clock_s": 0.3,
+  "workers": 1
+}

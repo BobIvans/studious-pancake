@@ -1,0 +1,14 @@
+{
+ "slot": 472269598,
+ "pubkey": "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB",
+ "account": {
+  "data": [
+   "AQAAAJqmjmC3XUgeV/3BTNcDsJeT3fWVS1LxIRu9+UDUwYbiBR4R2wIeAwAGAQEAAABpABO3JyzZq1lqrNeYIqP0v/TOjpRY5+Ltw3RArhK21A==",
+   "base64"
+  ],
+  "executable": false,
+  "lamports": 6603830259,
+  "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+  "rentEpoch": 18446744073709551615
+ }
+}

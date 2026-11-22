@@ -10,3 +10,10 @@ docs/roadmap/r02-capacity-recovery-2026-10-08/offline/vendor/** -text
 # no EOL conversion, ever. autocrlf smudge otherwise breaks integrity checks on
 # Windows checkouts ("sha256 drift" false positives in runtime registry tests).
 src/resources/contracts/** -text
+
+# PMM-sim vendor mirror + evidence bytes are SHA-256-pinned provenance
+# (SHA256SUMS, scenario_manifest results_csv_sha256): no EOL conversion, ever.
+# core.autocrlf=true smudged the committed blobs to LF while the pins cover the
+# produced bytes, breaking byte-pins on clean checkouts (PR #665 CI, PMM-01).
+vendor/strategy-research/** -text
+research/pmm-sim-caller-profile/** -text

@@ -1,0 +1,43 @@
+{
+  "accounts_source": "vendor/strategy-research/pmm-sim-cc4ae891/cfg/accounts (upstream-shipped)",
+  "activation_flags": {
+    "borrow": false,
+    "capture": false,
+    "live": false,
+    "paid_feed": false,
+    "provider_activation": false,
+    "send": false,
+    "sign": false,
+    "simulation_live_network": false
+  },
+  "alias_policy": "humidifi-swap-v2.so / humidifi-swap-v3.so are byte-identical ALIASES of humidifi.so (same deployed program id 9H6tua7jkLhdm3w8BvgpTn5LZNU7g4ZynDmCiNN3q6Rp); lifecycle candidate->verified only after Gate A executes all three version-specific instruction layouts",
+  "alias_sha256_equality_proof": true,
+  "alias_status": "verified",
+  "alias_verification_evidence": {
+    "elf_sha256": "a17c87d46873732b1618944b0a95162c0f12030ea88e6f3bedcaec1afbb39a6f",
+    "gate": "Gate A 2026-11-22 (validation_subset_v1.json, 48 scenarios)",
+    "note": "all three version-specific instruction layouts executed successfully through the alias binaries; redistribution-license status remains a separate dossier gap",
+    "v2_layout_ok_rows": 3,
+    "v3_layout_ok_rows": 6
+  },
+  "aliases": {
+    "humidifi-swap-v2.so": {
+      "alias_of": "humidifi.so",
+      "equals_primary": true,
+      "sha256": "a17c87d46873732b1618944b0a95162c0f12030ea88e6f3bedcaec1afbb39a6f",
+      "status": "verified"
+    },
+    "humidifi-swap-v3.so": {
+      "alias_of": "humidifi.so",
+      "equals_primary": true,
+      "sha256": "a17c87d46873732b1618944b0a95162c0f12030ea88e6f3bedcaec1afbb39a6f",
+      "status": "verified"
+    }
+  },
+  "humidifi_program_elf_sha256": "a17c87d46873732b1618944b0a95162c0f12030ea88e6f3bedcaec1afbb39a6f",
+  "programs_source": "vendor/strategy-research/pmm-sim-cc4ae891/cfg/programs (upstream-shipped, harness-only in LiteSVM)",
+  "schema": "studious-pancake.pmm-sim-runnable-snapshot.v2",
+  "snapshot_status": "UPSTREAM_MIRROR_CAPTURE_ONLY",
+  "source_kind": "mirror",
+  "source_snapshot_slot": 401101387
+}

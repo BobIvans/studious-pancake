@@ -135,7 +135,12 @@ def _write_owner_only_bytes(path: Path, value: bytes) -> None:
 
 def _install_stop_handlers(stop_event: asyncio.Event) -> None:
     loop = asyncio.get_running_loop()
-    for sig in (signal.SIGINT, signal.SIGTERM):
+    signals = [signal.SIGINT, signal.SIGTERM]
+    if sys.platform == "win32":
+        # Windows has no SIGTERM delivery; CTRL_BREAK_EVENT is the only
+        # externally sendable graceful-stop signal (needs a process group).
+        signals.append(signal.SIGBREAK)
+    for sig in signals:
         try:
             loop.add_signal_handler(sig, stop_event.set)
         except NotImplementedError:  # pragma: no cover - Windows fallback
@@ -453,6 +458,13 @@ def check_process_health(
         return False, f"runtime pid is not alive: {pid}"
     except PermissionError:
         pass
+    except OSError as exc:
+        # Windows: a dead (or unrecoverable) pid surfaces as a plain OSError
+        # (WinError 87 "invalid parameter") instead of ProcessLookupError;
+        # treat any other win32 os.kill failure as not-alive, fail-closed.
+        if sys.platform == "win32":
+            return False, f"runtime pid is not alive: {pid} ({exc})"
+        raise
     age_seconds = ((now_ns or time.time_ns()) - heartbeat_ns) / 1_000_000_000
     if age_seconds < -1.0:
         return False, "heartbeat is unexpectedly in the future"

@@ -313,3 +313,20 @@ Required generic read-only entrypoints:
 W0B delivers the minimal native query service/CLI implementation together with graph/index creation. W4 completes adaptive routing, ranking, multi-resolution and token-budget quality. W11 exposes the same backend via read-only MCP. Do not create three independent implementations.
 
 Any task type must work: bug, feature, refactor, architecture, tests, performance, security, licensing, provider integration, strategy R&D or PR review. Every result must confirm index freshness, pin SHA, list evidence/omissions and allow exact expansion by IDs. If MCP is absent/stale, use authorized GitHub/source fallback and disclose it. Never claim to have used an unconnected MCP.
+
+
+---
+
+## 13. 2026-11-22 addendum — complete-repository graph coverage + expanded MCP tools
+
+Read **FULL_REPOSITORY_GRAPH_AND_MCP_EXPANSION_RU.md** as a mandatory scope extension. This addendum corrects an important ambiguity: W0B currently accounts for all tracked paths, but structural AST coverage is currently Python-focused; a file inventory is not the same as a complete polyglot symbol/data graph.
+
+**New assignments:**
+- **OCA-W0B2:** complete Git-tree inventory + polyglot structural graph; Tree-sitter adapters for detected first-party languages; SCIP/LSP only where real indexers/builds work; deterministic docs/config/schema/test/workflow extractors; stable symbol/callsite IDs; explicit per-language coverage and no silent omissions.
+- **OCA-W4B:** model-tokenizer-aware, loss-aware context retrieval; task-conditioned PageRank; AST scope extraction; signature/body separation; per-ref token accounting; exact continuation and critical-omission tests.
+- **OCA-W11B:** expand the same read-only MCP backend with repo_overview, task_context, expand_context, graph_query, symbol_search, trace_path, domain_catalog, impact_query and history_query. Resolve repo_ref to exact SHA, pin every result and keep all tools read-only.
+- Continue the already assigned OCA-W13/W14/W15/W16/W2/W3/W10/W7/W12/W18 work; do not duplicate those owners.
+
+**Execution order:** first reconcile #680–#690 (actual PR bases, cumulative diffs, heads and CI), then W0B2 → W4B → W11B as bounded implementation PRs. Keep PR stacks truthful: each dependent PR should target its actual parent branch or be rebased to main after the parent is merged. Do not create multiple PRs all targeting main while each silently contains its parent's whole diff. Do not merge automatically.
+
+**Definition of done:** inventory coverage, structural code coverage, domain graph coverage and runtime lineage coverage are reported separately. Never call the graph “complete” merely because every path has an inventory row. Full requirements and acceptance are in FULL_REPOSITORY_GRAPH_AND_MCP_EXPANSION_RU.md.

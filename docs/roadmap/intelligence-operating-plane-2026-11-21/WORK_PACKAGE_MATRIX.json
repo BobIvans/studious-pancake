@@ -20,7 +20,8 @@
       "do_not_stop_after_audit": true,
       "isolated_dev_tool_installs_only": true,
       "do_not_vendor_without_license_review": true,
-      "never_auto_delete_or_merge": true
+      "never_auto_delete_or_merge": true,
+      "no_automatic_merge": true
     }
   },
   "canonical_owners_to_reuse": [
@@ -1022,6 +1023,119 @@
         "Temporal is adopted only when current workflow receipts/retries cannot satisfy measured durability needs",
         "Infrastructure cost, operational burden, security surface and rollback are measured before adoption"
       ]
+    },
+    {
+      "id": "OCA-W0B2",
+      "name": "Complete repository coverage and polyglot structural knowledge graph",
+      "priority": "P0",
+      "status": "READY_AFTER_W0B_W0A_W0C",
+      "depends_on": [
+        "OCA-W0B",
+        "OCA-W0A",
+        "OCA-W0C"
+      ],
+      "mode": "POLYGLOT_GRAPH_AND_ASSET_EXTRACTORS",
+      "exclusive_write_scope": [
+        "src/intelligence/repo_graph/",
+        "tests/intelligence/",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/"
+      ],
+      "deliverables": [
+        "per-language/per-artifact coverage matrix for every tracked Git-tree path",
+        "Tree-sitter parser adapters for detected first-party code languages",
+        "selective SCIP/LSP imports for languages with reproducible indexers/builds",
+        "structured docs/config/schema/test/workflow/build/dependency extractors",
+        "stable cross-language symbol/callsite identities and evidence-bearing typed edges",
+        "W0B2 language coverage receipt and expanded multi-language golden corpus"
+      ],
+      "acceptance": [
+        "100% tracked Git-tree paths have exactly one inventory/coverage record or explicit submodule/LFS boundary",
+        "100% first-party code files are classified by language and parser capability",
+        "Every first-party source language is STRUCTURE_INDEXED or explicitly PARTIAL/UNSUPPORTED with reason, owner and remediation; no silent 'other' bucket",
+        "Docs/configs/schemas/tests/workflows/build files are text/structure searchable with exact refs and proven relations",
+        "Stable IDs survive tested rename and source-line shifts",
+        "Same-SHA deterministic build and clean-vs-incremental parity remain true",
+        "Golden corpus covers every detected first-party language and important artifact classes",
+        "Static, documentary, proposed and runtime-observed relations remain distinct"
+      ],
+      "guardrails": [
+        "No LLM/model API/remote embeddings in bootstrap or deterministic indexing",
+        "Tree-sitter/SCIP/LSP capability selected from actual repository language inventory, not package popularity",
+        "No new graph DB unless existing query/storage limitations are measured",
+        "No dynamic call edges inferred from same-name matches",
+        "No secret values or private keys in graph/index/context packs"
+      ]
+    },
+    {
+      "id": "OCA-W4B",
+      "name": "Tokenizer-accurate and loss-aware task context retrieval",
+      "priority": "P1",
+      "status": "READY_AFTER_W0B2_AND_W4",
+      "depends_on": [
+        "OCA-W0B2",
+        "OCA-W4",
+        "OCA-W7"
+      ],
+      "mode": "MEASURED_CONTEXT_PACK_RETRIEVAL",
+      "exclusive_write_scope": [
+        "src/intelligence/repo_graph/",
+        "tests/intelligence/",
+        "benchmarks/intelligence/"
+      ],
+      "deliverables": [
+        "model/client tokenizer adapters with explicitly labelled fallback estimator",
+        "query-conditioned PageRank-style ranking and AST enclosing-scope extraction",
+        "signature/body content hashes and per-reference token-cost accounting",
+        "loss-aware FULL/SKELETON/REFERENCE/OVERVIEW pack builder",
+        "critical omission, citation correctness and token reduction benchmark receipts"
+      ],
+      "acceptance": [
+        "Actual tokenizer is used when configured; byte estimate is clearly labelled otherwise",
+        "Target functions and decision-critical financial logic are FULL or explicitly queued for expansion",
+        "No target function is truncated mid-body",
+        "Golden Web3 and general coding/security/test tasks meet critical omission rate zero",
+        "Token reduction is reported with recall, precision, citation correctness and latency",
+        "Same SHA/query/dimensions/tokenizer/budget yields deterministic packs"
+      ],
+      "guardrails": [
+        "No lossy compression of source code, IDs, decimals, units, fees, slippage, risk constraints or evidence",
+        "No claim of ChatGPT UI prompt caching without a supported API metric",
+        "No vector database unless lexical/graph recall has a measured gap"
+      ]
+    },
+    {
+      "id": "OCA-W11B",
+      "name": "Expanded universal typed graph-query MCP and client handoff",
+      "priority": "P1",
+      "status": "READY_AFTER_W0B2_W4_W11",
+      "depends_on": [
+        "OCA-W0B2",
+        "OCA-W4",
+        "OCA-W11",
+        "OCA-W15"
+      ],
+      "mode": "READ_ONLY_COMPOSITE_QUERY_API",
+      "exclusive_write_scope": [
+        "src/intelligence/universal_data_plane/",
+        "src/intelligence/repo_graph/",
+        "tests/intelligence/",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/"
+      ],
+      "deliverables": [
+        "repo_overview, task_context, expand_context, graph_query, symbol_search, trace_path, domain_catalog, impact_query and history_query MCP tools",
+        "repo_ref resolution and explicit SHA pinning for every query",
+        "bounded filters, pagination, deterministic continuation and common evidence envelope",
+        "local stdio MCP setup, health-check, tools/list and client connection smoke test",
+        "explicit unavailable states until W15/W2/W10 domain/runtime joins are wired"
+      ],
+      "acceptance": [
+        "All MCP tools call the same query backend as CLI/export",
+        "Every response includes SHA, tree SHA, graph generation, freshness, coverage, provenance, omissions and cursor",
+        "Queries work for source code, docs, configs, schemas, tests, strategies, providers and history to the extent the relevant layer is available",
+        "Runtime queries never fabricate producer evidence before OCA-W10",
+        "Tools remain bounded/read-only with no shell/edit/delete/admin/signing/sending/borrowing/spending/deployment/LIVE capability",
+        "Fresh environment can connect a supported client using documented stdio config and pass a tools/list + real query smoke test"
+      ]
     }
   ],
   "global_invariants": [
@@ -1739,6 +1853,13 @@
       "W0B: native deterministic retrieval service + task_context/expand_context CLI and T0-T2 starter packs",
       "W4: adaptive task routing, tokenizer budget, deduplication, exact source expansion, recall/omission benchmarks",
       "W11: expose the same backend via read-only MCP and portable export"
+    ],
+    "full_repository_completion": [
+      "Reconcile PRs #680–#690 and verify their actual dependency/base relationships",
+      "OCA-W0B2: whole-tree path accounting + polyglot structural and asset graph",
+      "OCA-W4B: actual tokenizer, task-conditioned ranking, AST scope extraction and loss-aware token benchmark",
+      "OCA-W11B: expanded typed read-only query API + documented actual client connection",
+      "Complete existing W15/W16/W2/W10/W7/W12 dependency lanes without duplicate canonical owners"
     ]
   },
   "universal_task_context_api": {
@@ -1807,6 +1928,85 @@
       "optional_semantic_retrieval": "only after measured exact/lexical/graph recall gap"
     },
     "stale_index_policy": "report STALE/UNAVAILABLE and use disclosed authorized GitHub/source fallback; never claim MCP/index usage when not connected",
-    "read_only": true
+    "read_only": true,
+    "expanded_mcp_tools": [
+      "repo_overview",
+      "task_context",
+      "expand_context",
+      "graph_query",
+      "symbol_search",
+      "trace_path",
+      "domain_catalog",
+      "impact_query",
+      "history_query"
+    ],
+    "repo_ref_resolution_required": true,
+    "actual_client_connection_required": true,
+    "model_tokenizer_or_labelled_fallback": true
+  },
+  "full_repository_graph_and_mcp_expansion": {
+    "document": "docs/roadmap/intelligence-operating-plane-2026-11-21/FULL_REPOSITORY_GRAPH_AND_MCP_EXPANSION_RU.md",
+    "scope": "Complete inventory + polyglot code graph + asset graph + evidence-backed Web3 domain graph + expanded read-only query surface",
+    "current_implementation_boundary": {
+      "w0b": "All tracked paths inventoried; Python stdlib AST structural graph; non-Python structural coverage remains incomplete",
+      "w4": "Adaptive routing/directory refs; current tokenizer is byte estimate until W4B",
+      "w11": "Three local stdio tools; no automatic ChatGPT client connection",
+      "incremental": "Blob/parser cache exists; full graph-delta invalidation/early cutoff remains OCA-W16",
+      "runtime": "Runtime producer joins unavailable until OCA-W10; temporal cross-store joins need OCA-W2/W15"
+    },
+    "required_tool_surface": [
+      "repo_overview",
+      "task_context",
+      "expand_context",
+      "graph_query",
+      "symbol_search",
+      "trace_path",
+      "domain_catalog",
+      "impact_query",
+      "history_query"
+    ],
+    "completion_claims": {
+      "inventory_complete": "100% tracked tree paths have coverage records",
+      "structural_graph_complete": "all first-party source languages structurally indexed or explicit approved gaps",
+      "domain_graph_complete": "only strategy/provider/domain dimensions represented with evidence",
+      "runtime_lineage_complete": "only supported paths with real producers, recovery and replay tests"
+    },
+    "adopted_functions_not_products": [
+      "Tree-sitter parser adapters",
+      "selective SCIP/LSP",
+      "Aider-style query-conditioned PageRank",
+      "grep-ast/TreeContext-style AST scope extraction",
+      "ast-grep structural rules where useful",
+      "SQLite FTS/BM25 baseline; Zoekt/Tantivy only at measured scale",
+      "Git blob/tree content-addressed cache, signature/body split, early cutoff",
+      "coverage-context and dependency-driven test impact",
+      "OpenLineage-compatible facets over existing canonical owners"
+    ],
+    "conditional_candidates": [
+      "Glean",
+      "LadybugDB",
+      "Salsa",
+      "Buck2 DICE",
+      "CocoIndex",
+      "Joern/CPG",
+      "DataHub",
+      "Apicurio",
+      "NATS JetStream",
+      "Debezium",
+      "Temporal",
+      "RTK"
+    ],
+    "execution_order": [
+      "OCA-W0B2",
+      "OCA-W4B",
+      "OCA-W11B",
+      "OCA-W15",
+      "OCA-W16",
+      "OCA-W2",
+      "OCA-W10",
+      "OCA-W7",
+      "OCA-W12"
+    ],
+    "merge_policy": "Human approval only; dependent PRs must be correctly stacked or rebased after parent merge"
   }
 }

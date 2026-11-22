@@ -382,3 +382,21 @@ The universal query tools are `task_context` and `expand_context` (normative API
 - Prefix caching is optional and only valid when the connected model API actually exposes it; it is not assumed in the ChatGPT UI.
 
 **Universal objective:** ChatGPT should receive the minimum sufficient context for the current task, then retrieve more exact source/evidence only when required. It should never need to re-read the whole repository for every request.
+
+
+---
+
+## 16. 2026-11-22 — completion gates after the first W0B/W4/W11 delivery
+
+The first implementation establishes a useful Python-focused baseline. It does not remove the need for the full-repository completion pass:
+
+- 100% tracked-path inventory with reason-coded exclusions;
+- polyglot source indexing using Tree-sitter and selective SCIP/LSP;
+- docs/config/schema/test/workflow/build/CLI/MCP structural extractors;
+- query-conditioned PageRank + exact AST scope extraction;
+- true model-tokenizer measurement when configured, not bytes/4 presented as tokens;
+- signature/body hash separation and incremental dependency invalidation/early cutoff;
+- typed Web3 strategy/provider/data graph and separately evidenced runtime lineage;
+- one expanded read-only MCP query backend with typed graph/domain/history/impact operations.
+
+Do not assume 42/42 on the first golden set proves all languages and asset classes. Add golden questions for every detected source language, strategy/provider path, config/schema/test/workflow class and runtime evidence boundary. Report recall, citation correctness, critical omissions, token reduction and latency separately. Preserve full target implementation and financial semantics.

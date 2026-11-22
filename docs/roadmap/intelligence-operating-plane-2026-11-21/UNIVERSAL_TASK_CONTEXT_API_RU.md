@@ -161,3 +161,24 @@ Repository text, README, issues, logs, RPC payloads, provider responses and exte
 - Freshness and fallback are explicit; no false claims about MCP connectivity or index completeness.
 - Benchmark on golden tasks records recall/precision, citation correctness, tokens saved, omitted-critical-dependency rate, latency and UNKNOWN accuracy separately.
 - Query surface remains read-only and bounded.
+
+
+---
+
+## 9. Expanded typed graph-query tools (OCA-W11B)
+
+The initial two composite tools remain the default user workflow. The MCP/query plane must additionally expose bounded read-only operations over the same backend:
+
+- repo_overview: SHA/ref resolution and file/language/artifact/domain coverage;
+- graph_query: typed node/edge filters and bounded traversal;
+- symbol_search: exact/prefix/fuzzy symbols with language and path filters;
+- trace_path: evidence-backed paths across code, strategy, provider, data and operation nodes;
+- domain_catalog: parameterized strategy/provider/chain/protocol/DEX/venue/pool/token/flash-lender/schema catalogue;
+- impact_query: changed symbols/configs/providers/schemas to affected tests, strategies and downstream consumers;
+- history_query: commits/PRs/issues/reviews/ADRs with independent permissions and cursors.
+
+These are composite operations, not separate databases. All return exact SHA, generation, freshness, coverage, provenance, confidence, verification state, omissions and pagination cursors. Domain/runtime dimensions report UNAVAILABLE until OCA-W15/W2/W10 provide the corresponding evidence.
+
+Every tool accepts repo_ref or an explicit repo_sha. Resolve refs once; never mix data from different SHAs. Missing/stale graph results must be explicit and must not trigger hidden writes. Keep the server allowlisted/read-only and do not mutate user-global client configuration.
+
+A client setup/health-check guide and tools/list smoke test are required. Local stdio server installed ≠ connected to an active ChatGPT client.

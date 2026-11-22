@@ -49,6 +49,10 @@ seaborn==0.13.2
 setuptools==84.1.0
 solana==0.40.1
 solders==0.28.0
+tree-sitter==0.25.2
+tree-sitter-bash==0.25.1
+tree-sitter-markdown==0.5.4
+tree-sitter-yaml==0.7.2
 types-PyYAML==6.0.12.20260518
 uv==0.13.4
 uvicorn[standard]==0.38.0

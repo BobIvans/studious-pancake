@@ -1,0 +1,41 @@
+{
+ "catalog": {
+  "doc_only": 16,
+  "implemented": 60,
+  "source_union": [
+   "repo_graph first-party symbols",
+   "canonical registries (via merged chain B)",
+   "configs (graph config_key nodes)",
+   "tests (TESTED_BY edges)",
+   "docs (doc_heading nodes under docs/strategy-expansion/)",
+   "git history (history_query, permission-gated)"
+  ],
+  "total_cards": 76,
+  "unclassified": 0
+ },
+ "counts": {
+  "edges": 72504,
+  "files_tracked": 3498,
+  "modules_parsed": 1900,
+  "nodes": 54731
+ },
+ "date": "2026-11-22",
+ "four_levels": {
+  "DOMAIN_GRAPH_COMPLETE": "claimed for discovered dimensions only (per-dimension counts above)",
+  "INVENTORY_COMPLETE": "unchanged (W0B2)",
+  "RUNTIME_LINEAGE_COMPLETE": "partial: atomic vertical WIRED via W10+W20; full-bot claim forbidden",
+  "STRUCTURAL_GRAPH_COMPLETE": "unchanged per-language"
+ },
+ "golden_probes": "covered in tests/intelligence/test_web3_strategy_tools.py (6 tests) + test_repo_graph_polyglot.py",
+ "graph_generation": "ab63ee64c1cfcfdc065036e169ede298",
+ "repo_sha": "b8ae0b67b2972974125155bea9324ca3153ce333",
+ "sample_compare": {
+  "cards": [
+   "strategy-doc:docs/strategy-expansion/2026-11-14/02_ALL_NEW_CURRENCY_PAIRS_V6_SOURCE_2026-10-08.md",
+   "strategy-doc:docs/strategy-expansion/2026-11-14/ARCHIVE_DETECTOR_TAXONOMY_COVERAGE_GATE_RU.md"
+  ],
+  "novelty_label": "DISTINCT_CANDIDATE",
+  "novelty_rule": "evidence-backed classification only; never a canonical verified fact"
+ },
+ "schema": "studious.w4c.catalog-receipt.v1"
+}

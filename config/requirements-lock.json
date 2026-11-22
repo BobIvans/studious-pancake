@@ -12,7 +12,7 @@
         "service",
         "dev"
       ],
-      "sha256": "079bd45a99de8c146f64e78ff309c0e7d1b9fc96e85b0e28d3388f211b4c1672"
+      "sha256": "8234def64c31a7935f89b1152b25be4fe8dedfc3f52663397cea18472f86f86b"
     },
     "requirements.txt": {
       "extras": [],
@@ -26,7 +26,7 @@
   "python": "3.13",
   "resolved_locks": {
     "requirements-dev.lock": {
-      "sha256": "b7249504334304da166483bbec3b4c20255814b1f7d1e06ca21880e0c2c29023"
+      "sha256": "600d95b60606d6f6bddb8e0b263b2b355bc515ea91ffbcc58b5363fd87a2371e"
     },
     "requirements.lock": {
       "sha256": "6e77c8b1d8fd8e2a8e0018d4b0595c5ead9ad926f17579f974c633d57603339d"

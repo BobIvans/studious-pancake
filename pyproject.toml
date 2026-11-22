@@ -60,6 +60,11 @@ service = [
   "uvicorn[standard]==0.38.0",
 ]
 dev = [
+  "tree-sitter==0.25.2",
+  "tree-sitter-bash==0.25.1",
+  "tree-sitter-markdown==0.5.4",
+  "tree-sitter-yaml==0.7.2",
+
   "bandit==1.9.2",
   "black==26.10.1",
   "build==1.5.0",

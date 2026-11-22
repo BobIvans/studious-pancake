@@ -1,0 +1,9 @@
+{
+ "backend": "repo_graph.QueryBackend + W4 directory-aware ref resolution",
+ "budget_tokens": 2000,
+ "directory_ref_rule": "a directory required ref counts as retrieved when any contained tracked file is in included/omitted refs",
+ "hits": 42,
+ "misses": [],
+ "questions": 42,
+ "recall": 1.0
+}

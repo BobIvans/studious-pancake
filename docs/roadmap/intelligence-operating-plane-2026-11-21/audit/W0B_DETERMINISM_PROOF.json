@@ -1,0 +1,25 @@
+{
+ "builds": [
+  {
+   "elapsed_seconds": 323.6,
+   "state_root": "artifacts/intelligence"
+  },
+  {
+   "elapsed_seconds": 283.4,
+   "state_root": "artifacts/intelligence-clean-check"
+  }
+ ],
+ "canonical_checksum": "e7da461d644da73e (full sha recorded in artifact manifests)",
+ "checksum_equal": true,
+ "counts": {
+  "edges": 71812,
+  "files_tracked": 3421,
+  "modules_parsed": 1851,
+  "nodes": 26772
+ },
+ "date": "2026-11-22",
+ "generation_equal": true,
+ "lane": "OCA-W0B",
+ "method": "two clean build_graph() runs at identical inputs (same HEAD commit, same parser/schema versions), canonical JSONL bytes + checksum compared; wall-clock fields excluded from canonical records by construction",
+ "repo_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54"
+}

@@ -1,0 +1,76 @@
+{
+ "base_main_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+ "blockers": [
+  "PRE_EXISTING_WINDOWS_ASYNCIO (unchanged)",
+  "provider-side telemetry producers pending (W13/W10 follow-up)"
+ ],
+ "branch": "codex/oca-w20-performance-diagnostics-2026-11-22",
+ "checks": {
+  "causality_requires_controlled_replay_record": true,
+  "economics_unknown_without_reconciliation": true,
+  "fault_injection_localizes_stage": true,
+  "finding_tiers": [
+   "OBSERVED_ANOMALY",
+   "ASSOCIATED_STAGE",
+   "ROOT_CAUSE_HYPOTHESIS",
+   "CAUSALITY_SUPPORTED_BY_CONTROLLED_TEST",
+   "CAUSALITY_PROVEN",
+   "LOW_SAMPLE",
+   "INSUFFICIENT_EVIDENCE",
+   "UNKNOWN"
+  ],
+  "format_targets_registered": 3,
+  "low_sample_never_ranks": true,
+  "metrics_with_denominators": "invocations/completions/errors/retries per stage; latency quantiles with sample size",
+  "missing_telemetry_unknown_not_zero": true,
+  "quality_gates": {
+   "black": "PASS",
+   "flake8": "PASS",
+   "mypy": "PASS",
+   "quality_gate_script": "PASS"
+  },
+  "replay_after_restart_reproduces": true,
+  "seven_sections": [
+   "pipeline_health",
+   "function_callsite_health",
+   "provider_data_health",
+   "strategy_outcome",
+   "anomaly_candidates",
+   "dependency_trace",
+   "unknowns_and_next_evidence"
+  ],
+  "static_calls_never_runtime_invocations": true,
+  "technical_health_separate_from_financial_outcomes": true,
+  "w20_tests": {
+   "failed": 0,
+   "passed": 5
+  }
+ },
+ "date": "2026-11-22",
+ "deliverables": [
+  "src/intelligence/performance_diagnostics/__init__.py",
+  "src/intelligence/performance_diagnostics/diagnostics.py",
+  "tests/intelligence/test_performance_diagnostics.py"
+ ],
+ "four_levels": {
+  "DOMAIN_GRAPH_COMPLETE": "partial (W4C pending)",
+  "INVENTORY_COMPLETE": "unchanged",
+  "RUNTIME_LINEAGE_COMPLETE": "partial (atomic vertical WIRED with diagnostics proven; full-bot claim forbidden per coverage matrix)",
+  "STRUCTURAL_GRAPH_COMPLETE": "unchanged per-language"
+ },
+ "lane": "OCA-W20",
+ "related": {
+  "design_pr": 666,
+  "w10_pr": 706,
+  "w18_pr": 709
+ },
+ "safety": {
+  "execution_authority": "NONE",
+  "live": "HARD_DENIED",
+  "merge_authority": "HUMAN_ONLY",
+  "send_enabled": false,
+  "sign_enabled": false
+ },
+ "schema": "studious-pancake.lane-receipt.v1",
+ "stacked_merge": "real merge commit f9d34423 joining W18 stack (via W15/#689/#690/#704) with W10 (#706)"
+}

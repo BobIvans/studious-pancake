@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -10,6 +11,22 @@ import pytest
 from src.qualification_campaign import cli
 
 pytestmark = pytest.mark.unit
+
+
+def _origin_main_available() -> bool:
+    """CampaignManifest.create binds origin/main; shallow PR checkouts that
+    do not carry the ref cannot exercise the full CLI path (unit-level gate
+    tests cover the same negative matrix without a clone)."""
+
+    try:
+        subprocess.run(
+            ["git", "rev-parse", "--verify", "--quiet", "origin/main^{commit}"],
+            check=True,
+            capture_output=True,
+        )
+    except (subprocess.CalledProcessError, OSError):
+        return False
+    return True
 
 
 def _fresh_source_config(tmp_path: Path) -> Path:
@@ -97,6 +114,10 @@ def _unapproved_plan(tmp_path: Path) -> Path:
     return path
 
 
+@pytest.mark.skipif(
+    not _origin_main_available(),
+    reason="requires a full clone with the origin/main ref",
+)
 def test_capture_blocked_before_transport_constructed(tmp_path, monkeypatch):
     calls = []
 

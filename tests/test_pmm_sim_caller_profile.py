@@ -155,15 +155,44 @@ def test_journal_terminal_semantics_synthetic(tmp_path: Path):
     assert expected == ["s|1"]
 
 
-def test_offline_enforcement_recorded():
+def test_offline_enforcement_recorded(monkeypatch):
     """Every committed journal terminal carries ZERO_CONFIGURED_RPC_ATTEMPTS; the
     black-hole listener semantics (OFFLINE_VIOLATION on any connection) are encoded
-    in the runner and surfaced through offline_status."""
+    in the runner and surfaced through offline_status.
+
+    The listener's enforcement semantics are exercised against a stubbed
+    loopback socket: the offline suite forbids real socket creation
+    (pytest-socket), and a real bind would be a network-side effect."""
     mod = _load("batch_runner")
+
+    class _StubSocket:
+        def __init__(self, *_args, **_kwargs):
+            self.closed = False
+
+        def bind(self, *_args, **_kwargs):
+            return None
+
+        def listen(self, *_args, **_kwargs):
+            return None
+
+        def getsockname(self):
+            return ("127.0.0.1", 0)
+
+        def settimeout(self, *_args, **_kwargs):
+            return None
+
+        def accept(self):
+            raise mod.socket.timeout()
+
+        def close(self):
+            self.closed = True
+
+    monkeypatch.setattr(mod.socket, "socket", _StubSocket)
     listener = mod.BlackHoleListener()
     assert listener.attempts == 0
     assert listener.status == "ZERO_CONFIGURED_RPC_ATTEMPTS"
     listener.close()
+    assert listener.sock.closed
     with open(
         RESEARCH / "caller_profile_results.csv", encoding="utf-8", newline=""
     ) as f:

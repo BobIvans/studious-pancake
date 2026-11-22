@@ -635,7 +635,7 @@ def evaluate_campaign_start_gate(
                             request_hash=request_hash,
                             now_ns=now_ns,
                         )
-                        receipt_payload = {
+                        receipt_payload: dict[str, object] = {
                             "decision_phase": GatePhase.CAPTURE_AUTHORIZED.value,
                             "campaign_manifest": manifest.campaign_id,
                             "campaign_label": plan.campaign_label,
@@ -660,7 +660,7 @@ def evaluate_campaign_start_gate(
                         }
                     except ApprovalReplayError as exc:
                         blockers.append(
-                            "APPROVAL_ENVELOPE_REPLAY_PROTECTION:" + exc.failure.value
+                            "APPROVAL_ENVELOPE_REPLAY_PROTECTION:" + exc.failure
                         )
 
     preflight_blockers = [

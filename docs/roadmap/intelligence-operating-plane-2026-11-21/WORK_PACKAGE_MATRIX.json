@@ -1,0 +1,2357 @@
+{
+  "schema": "studious.intelligence-operating-plane.work-packages.v2",
+  "repository": "BobIvans/studious-pancake",
+  "design_baseline_sha": "ea204222df86a0697cc6bce0e9ec60f7db31ffd8",
+  "entrypoint": "docs/roadmap/intelligence-operating-plane-2026-11-21/CODEX_START_HERE_RU.md",
+  "operating_model": {
+    "current_stage": "CHATGPT_PLUS_CODING_AGENTS",
+    "autonomous_agent_swarm_required": false,
+    "human_approval_required_for_implementation_merge": true,
+    "live_execution_authority_added": false,
+    "indexing_requires_llm": false,
+    "chatgpt_data_delivery": [
+      "EXPLICIT_CONTEXT_PACK_UPLOAD",
+      "AUTHORIZED_GITHUB_CONNECTOR",
+      "EXPLICIT_LOCAL_READ_ONLY_MCP"
+    ],
+    "execution_policy": {
+      "run_dependency_ready_packages_automatically": true,
+      "parallelize_only_disjoint_write_scopes": true,
+      "do_not_stop_after_audit": true,
+      "isolated_dev_tool_installs_only": true,
+      "do_not_vendor_without_license_review": true,
+      "never_auto_delete_or_merge": true,
+      "no_automatic_merge": true
+    }
+  },
+  "canonical_owners_to_reuse": [
+    "src/intelligence",
+    "src/observability",
+    "src/agg02",
+    "src/market",
+    "src/market_data_evolution",
+    "src/strategy",
+    "src/economics/flash_capital_graph",
+    "src/provider_governance",
+    "src/qualification_campaign",
+    "src/paper_shadow",
+    "src/execution/exact_simulation.py",
+    "src/production_qualification.py"
+  ],
+  "work_packages": [
+    {
+      "id": "OCA-W0",
+      "name": "Current owners and event correlation audit",
+      "priority": "P0",
+      "status": "READY",
+      "depends_on": [],
+      "mode": "AUDIT_ONLY",
+      "exclusive_write_scope": [
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/"
+      ],
+      "must_read": [
+        "AGENTS.md",
+        "CODEX_START_HERE.md",
+        "docs/roadmap/agent-execution-master-2026-11-13/PROJECT_KNOWLEDGE_BASE_MAP.md",
+        "CODEX_LOCAL_INTELLIGENCE_V2_START_HERE.md",
+        "CODEX_STORAGE_PRESSURE_START_HERE.md",
+        "docs/strategy/local-intelligence-v2/MASTER_CONTEXT_RU.md",
+        "docs/strategy/local-intelligence-v2/OPERATIONS.md",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/OPERATIONS_CONTEXT_AGGREGATOR_RU.md",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/CHATGPT_CODING_AGENT_CONTEXT_WORKFLOW_RU.md"
+      ],
+      "inspect": [
+        "src/observability/events.py",
+        "src/observability/store.py",
+        "src/observability/authoritative_store_pr195.py",
+        "src/observability/replay.py",
+        "src/observability/export.py",
+        "src/observability/cross_plane_pr196.py",
+        "src/operations/operator_readiness.py",
+        "src/agg02/storage.py",
+        "src/market/observations.py",
+        "src/market/streams.py",
+        "src/market_data_evolution/contracts.py",
+        "src/intelligence",
+        "src/intelligence/episode_builder.py",
+        "src/strategy/market_graph_ingest.py",
+        "src/strategy/conflict_scheduler.py",
+        "src/strategy/shadow_workers.py",
+        "src/strategy/shadow_portfolio.py",
+        "src/strategy/opportunity_identity.py"
+      ],
+      "deliverables": [
+        "AUDIT_CURRENT_OWNERS_RU.md",
+        "INTEGRATION_MATRIX.json",
+        "EVENT_CORRELATION_MATRIX.json",
+        "CLI_AND_TEST_BASELINE.json",
+        "GAP_PRIORITY_RU.md"
+      ],
+      "acceptance": [
+        "Every claimed existing capability points to exact source files and tests",
+        "EventEnvelope fields are traced from producer through store, export and replay",
+        "Strategy/source/config/repo/observation/operation joins are marked PRESENT, PARTIAL, MISSING or UNKNOWN",
+        "Language and artifact coverage gaps are explicit",
+        "Existing canonical owners and duplicate-owner risks are listed",
+        "Actual CLI command help and targeted tests are recorded on current main",
+        "No implementation code or runtime behavior is changed"
+      ]
+    },
+    {
+      "id": "OCA-W0A",
+      "name": "Parallel polyglot code-intelligence and tool bake-off",
+      "priority": "P0",
+      "status": "READY",
+      "depends_on": [],
+      "mode": "ISOLATED_READ_ONLY_BENCHMARK",
+      "exclusive_write_scope": [
+        "benchmarks/intelligence/",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/tooling/"
+      ],
+      "candidate_tools": [
+        "Native Studious Local Intelligence V2",
+        "DeusData/codebase-memory-mcp (native C, shared daemon, local graph, 164 grammar claims, Hybrid LSP subset)",
+        "colbymchenry/codegraph (native Rust, SQLite/WAL, watcher, MCP explore, framework/dynamic dispatch claims)",
+        "CodeGraphContext",
+        "Graphify",
+        "sdsrss/code-graph-mcp (Rust, SQLite/FTS5, BLAKE3 Merkle, multi-tier compact retrieval)",
+        "SylphxAI/repomap (Rust, local graph/MCP, impact and call paths)",
+        "Probe raw CLI/MCP",
+        "mariusei/scantool (JIT extraction, Git blob SHA cache, multi-resolution skeletons)",
+        "ThinkyMiner/codeTree (SQLite graph, impact/dataflow/taint)",
+        "agentralabs/agentic-codebase (portable .acb graph export)",
+        "entireio/entire-graph (PR impact tool; no MCP/background daemon)",
+        "achatainga/mcp-code-context (read-only AST slicing only; 2k file cap and limited language coverage)",
+        "vitali87/code-graph-rag (optional compiler/runtime trace experiment)",
+        "stakwork/stakgraph (optional Neo4j/multi-repo experiment)",
+        "SCIP language indexers for detected buildable languages",
+        "grep-ast/TreeContext",
+        "Aider RepoMap/PageRank ranking method",
+        "Repomix signature-only export (experimental/lossy, benchmark-only)",
+        "Joern/CPG only for scoped CFG/DFG/taint use cases",
+        "Glean deferred architecture review only",
+        "MakerViking/mimir (integrated local docs/code graph/typed memory candidate)",
+        "codician-team/growmos (provenance-carrying semantic facts / ADR / label memory candidate)",
+        "TheWinci/mimirs (additional local code memory candidate, distinguish project identity)"
+      ],
+      "guardrails": [
+        "Use same clean repo SHA and same 30-50 golden questions",
+        "Install candidates only in isolated uv tool, pipx or temporary environments",
+        "No production runtime dependencies or user-global MCP/client edits",
+        "Graphify semantic LLM pass and remote cloud stay disabled",
+        "CGC management tools are not exposed to analyst model profiles",
+        "jCodeMunch excluded until commercial license is approved",
+        "Record exact package versions, transitive licenses, SBOM/security and environment",
+        "Probe built-in edit/delegate/bash agent is disabled; only raw read/query tools are evaluated",
+        "Tools that auto-write AGENTS.md, hooks or MCP settings (for example GitNexus setup) must be run in scratch worktree only and their diffs reviewed",
+        "Do not adopt more than one persistent graph backend",
+        "Probe is JIT extraction and may complement one graph backend; expose only raw read/search/extract",
+        "Repomix compression is lossy and experimental; never treat it as source of truth",
+        "Prompt cache optimization applies only where the actual API supports cache controls/metrics; do not promise caching in ChatGPT UI",
+        "Git tree/blob hashes are the first content-addressed incremental mechanism; custom Merkle trees require demonstrated gap",
+        "Do not apply lossy prompt compression to code, identifiers, event IDs, evidence references or transaction logic",
+        "Benchmark persistent graph daemons separately from JIT extractors; do not confuse these layers",
+        "At most one primary persistent code graph is selected; Probe/Scantool may complement it only where measured value is distinct",
+        "Do not treat grammar count as call-edge accuracy; record per-language/parser tier and exact golden-query edge precision",
+        "CBM and CodeGraph installers may write MCP/hooks/AGENTS files; run in isolated HOME/client config and inspect every diff; do not modify user-global configuration",
+        "Disable remote/cloud indexing and telemetry for proprietary code unless explicitly approved; verify telemetry opt-out by inspection",
+        "Any MCP write/edit/delete/shell/admin tools remain disabled in analyst/reviewer profile",
+        "Include branch/worktree concurrency, shared daemon lock/WAL behavior and Windows/WSL path edge cases in bake-off",
+        "Do not install or index from a dirty/unpinned tree without recording the exact working-tree snapshot hash",
+        "Compare Mimir/growmos only as the semantic label/memory plane, not as raw-event or code graph authority",
+        "Adopt zero or one semantic memory overlay; never both by default",
+        "All agent-authored memory facts must link to immutable repo/event/observation/episode evidence IDs and remain provisional without evidence",
+        "Growmos headless semantic ingestion that invokes a configured LLM must be disabled for deterministic zero-LLM indexing path",
+        "Primary same-SHA bake-off is timeboxed to representative C/Rust/Python daemon candidates plus JIT and semantic-memory layer; long-tail watchlist projects are not all mandatory installs or benchmark runs"
+      ],
+      "deliverables": [
+        "TOOL_CANDIDATE_MATRIX.json",
+        "GOLDEN_REPO_QUERIES.json",
+        "CODE_GRAPH_BENCHMARK_RU.md",
+        "TOKEN_LATENCY_COVERAGE_RESULTS.json",
+        "ADOPTION_DECISION_RU.md",
+        "TOKEN_EFFICIENCY_MEASUREMENTS.json",
+        "PER_LANGUAGE_COVERAGE_MATRIX.json (syntax / calls / compiler resolution / docs / config support tiers)",
+        "INSTALL_SIDE_EFFECTS_AND_SECURITY_RU.md",
+        "SEMANTIC_MEMORY_ADOPTION_DECISION_RU.md (native labels vs one Mimir/growmos overlay)",
+        "TOOL_CANDIDATE_WATCHLIST.json for long-tail projects from original research, with NOT_VERIFIED status until upstream/license/install/benchmark verified",
+        "expanded same-SHA candidate comparison: sdsrss/code-graph-mcp, defendend/Claude-ast-index-search, aimasteracc/tree-sitter-analyzer, iliaal/codesage, n24q02m/crg, Glean and LadybugDB",
+        "separate bake-off reports for graph storage, AST navigation, call-resolution precision, temporal history, structural audit, JIT extraction and output/token compression"
+      ],
+      "acceptance": [
+        "Every candidate is tested on the same pinned SHA or explicitly marked NOT_RUN",
+        "Exact symbols/callers/callees/path/test-link precision is measured against expected evidence",
+        "Language and artifact coverage plus unsupported formats are explicit",
+        "Cold build, incremental update, stale-index detection, RAM, disk, p50/p95 and token budgets are measured",
+        "All edge provenance distinguishes extracted/compiler-resolved/inferred",
+        "At most one primary external graph backend is selected; no forced adoption",
+        "A lightweight native fallback is specified if no candidate beats existing code",
+        "Candidate scores separate grammar count, symbol recall, call-edge precision/recall, compiler-resolved coverage and docs/config inventory",
+        "Test multi-client daemon operation, single-writer fencing, branch isolation, SQLite WAL/checkpoint recovery and Windows/WSL behavior",
+        "Test FULL/SKELETON/REFERENCE/OVERVIEW levels: focus function remains complete and direct neighbors remain typed, source-linked skeletons",
+        "At least one JIT extractor is tested on historical Git refs using blob SHA cache and explicit coverage/exclusion trailer",
+        "Installers are run only in isolated config homes; all files/configs/hooks written by installer are listed and reviewed",
+        "All non-verified/newly discovered repository names are marked NOT_VERIFIED until source, license, release and behavior are checked",
+        "Semantic label/memory candidate benchmark tests provenance, deduplication, stale/superseded facts, conflict detection, export/recovery and multi-agent concurrency",
+        "Any selected Mimir/growmos overlay is non-authoritative for raw market events, quotes, settlement, PnL or runtime status",
+        "Memory facts link to exact Git SHA, event IDs, observation IDs or ADR/PR evidence; unsupported claims stay PROPOSED/UNKNOWN",
+        "No two semantic memory stores are deployed together unless a measured distinct requirement is approved",
+        "Long-tail candidates are explicitly catalogued as VERIFIED / NOT_VERIFIED / INACTIVE / LICENSE_BLOCKED / NOT_RELEVANT with evidence; no pasted feature claims are assumed true",
+        "Candidate URLs, pinned commit/tag, retrieval date, exact license paths, transitive dependencies, security status and setup side effects are recorded",
+        "Every graph candidate is benchmarked on identical repo SHA and golden corpus; static/compiler-resolved/runtime-observed relationships are scored separately",
+        "Only one persistent graph backend and at most one JIT extractor can be selected; zero adoption is valid when native systems meet requirements"
+      ]
+    },
+    {
+      "id": "OCA-W0C",
+      "name": "Provider/source/strategy extraction and flash-loan data-path inventory",
+      "priority": "P0",
+      "status": "READY",
+      "depends_on": [],
+      "mode": "PARALLEL_READ_ONLY_AUDIT",
+      "exclusive_write_scope": [
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/source-provider-inventory/"
+      ],
+      "must_reuse": [
+        "src/market/source_catalog.py",
+        "src/external_contracts",
+        "src/provider_governance",
+        "src/agg02",
+        "src/market/observations.py",
+        "src/market/streams.py",
+        "src/strategy",
+        "src/economics/flash_capital_graph",
+        "src/qualification_campaign",
+        "src/paper_shadow",
+        "src/observability"
+      ],
+      "inspect": [
+        "RPC/indexer/API/WebSocket/poller/one-shot providers and archive/history sources",
+        "DEX/AMM/aggregator quote and pool-state adapters",
+        "oracles, token/entity metadata and chain-native identity",
+        "flash lenders, capital providers, SDKs, IDLs and capacity/fee derivation",
+        "provider contracts, schemas, cursor/watermark and replay code",
+        "all strategy/provider consumers, configs, tests and runtime evidence owners",
+        "accessible PRs/issues/reviews/commits"
+      ],
+      "deliverables": [
+        "SOURCE_PROVIDER_CATALOGUE.jsonl",
+        "STRATEGY_PROVIDER_TRACE_MATRIX.json",
+        "SOURCE_CAPABILITY_GAP_REPORT_RU.md",
+        "FLASHLOAN_DATA_PATHS.md",
+        "source evidence manifest with exact main SHA/blob hashes/contract versions"
+      ],
+      "acceptance": [
+        "Every discovered source/provider/adapter is included or explicitly EXCLUDED_WITH_REASON/UNKNOWN",
+        "Declared and observed capabilities and source modes are separate",
+        "Strategy-to-provider trace links exact symbols, methods, configs and tests where proven",
+        "Raw payload/cursor to normalization/observation lineage is mapped without inventing runtime joins",
+        "Flash-capital availability/capacity/fee evidence is separate from market liquidity and strategy qualification",
+        "Chain/deployment/block-or-slot/transaction/event identity and reorg/correction semantics are inventoried",
+        "Missing stages, freshness, coverage, history/replay and runtime wiring remain explicit",
+        "No network probes, provider enablement, RPC mutation, signing, sending, borrowing or production actions"
+      ]
+    },
+    {
+      "id": "OCA-W0B",
+      "name": "First working repo-wide Knowledge Graph and compact catalogue",
+      "priority": "P0",
+      "status": "BLOCKED_ON_W0_W0A_W0C",
+      "depends_on": [
+        "OCA-W0",
+        "OCA-W0A",
+        "OCA-W0C"
+      ],
+      "mode": "ADDITIVE_DEV_INTELLIGENCE_IMPLEMENTATION",
+      "exclusive_write_scope": [
+        "src/intelligence/repo_graph/",
+        "tests/test_repo_graph_*.py",
+        "tools/repo-intel/",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/repo-graph/",
+        ".github/workflows/repo-intelligence-index.yml"
+      ],
+      "must_reuse": [
+        "src/intelligence/repo_snapshot.py",
+        "src/intelligence/repo_manifest.py",
+        "src/intelligence/repo_source.py",
+        "src/intelligence/repo_groups.py",
+        "src/intelligence/context_pack.py",
+        "src/intelligence/evidence_refs.py",
+        "src/strategy/registry.py",
+        "src/market/source_catalog.py",
+        "src/observability"
+      ],
+      "deliverables": [
+        "versioned repo graph schema and deterministic importer/generator",
+        "read-only CLI/query façade for search/symbol/callers/callees/path/impact",
+        "strategy/source/provider/tool/app/MCP/CLI one-line catalogues",
+        "300-500 token repo card and bounded task context pack",
+        "incremental index refresh and stale-SHA detection",
+        "branch/worktree isolation and coverage report",
+        "deterministic tests and first CHATGPT_CONTEXT_PACK.md",
+        "CI workflow for incremental index validation on push/PR and main updates, plus scheduled full consistency rebuild",
+        "compact PR index-delta / coverage / token-budget report and downloadable SHA-bound artifact",
+        "tool/parser/schema-version invalidation and deterministic rebuild command",
+        "temporal graph snapshots with exact repo SHA/ref and valid-time/recorded-time provenance",
+        "versioned label ontology and label lifecycle (PROPOSED/VERIFIED/STALE/NEEDS_REVIEW/RETIRED)",
+        "FULL/SKELETON/REFERENCE/OVERVIEW multi-resolution AST context API",
+        "content-addressed parser/graph cache by Git blob/tree hash and tool/schema version",
+        "background index resource manager with debounce/coalescing, single-writer lock and CPU/RAM/IO budgets",
+        "daily/PR graph quality and label drift report",
+        "complete strategy-idea catalogue incorporating accessible GitHub Issues, PR discussion/reviews and commit history, with inaccessible-history scope disclosed",
+        "OCA-W0C source/provider/strategy trace manifest consumed by graph import",
+        "LLM-FREE DETERMINISTIC INDEXING CONTRACT test report and CI evidence",
+        "complete tracked-file coverage manifest and unsupported artifact report",
+        "same-SHA deterministic build and clean-vs-incremental checksum receipts",
+        "minimal universal task_context(task, depth=adaptive, dimensions=auto, budget) query service and CLI entrypoint",
+        "expand_context(refs, dimensions, depth, budget, repo_sha) exact source/evidence expansion by stable IDs",
+        "single shared retrieval backend used by CLI, MCP facade and portable context-pack export"
+      ],
+      "acceptance": [
+        "A clean command builds a graph tied to exact Git tree SHA and tool versions",
+        "All code and non-code repository assets are inventoried with supported/partial/unsupported/excluded status",
+        "Every discovered strategy/source/tool record links to exact files/symbols/tests and provenance",
+        "Graph relations distinguish STATIC_EXTRACTED, COMPILER_RESOLVED, CANONICAL_REGISTRY, RUNTIME_OBSERVED, DOC_CLAIM, HUMAN_CONFIRMED and LLM_PROPOSED",
+        "Unknown or ambiguous edges remain UNKNOWN and dangling links fail verification",
+        "A compact catalogue can list all known strategies, sources, providers, tools/apps and subsystems without code bodies",
+        "Context packs honor hard token/byte budgets and fetch exact code/evidence by ID",
+        "Index update handles changed/deleted/renamed files and rejects stale or cross-branch indexes",
+        "No canonical raw market/observability/strategy database is duplicated",
+        "No production runtime dependency, signer, sender, live authority or destructive cleanup is added",
+        "The index can be rebuilt deterministically and tests prove secret exclusion",
+        "Query-time relevance ranking (PageRank or equivalent) selects graph slices under a hard target-token budget",
+        "Exact function bodies and AST-scoped contexts remain fetchable on demand; signature compression is never treated as full code understanding",
+        "Cache keys include exact repo SHA/blob hash, parser/tool version, graph schema, data generation, query hash and budget",
+        "Prompt outputs report actual target-token counts or clearly marked byte estimates",
+        "PR and push CI validates changed-file graph update, stale SHA, dangling edges, secret exclusion and pack budgets",
+        "merge to main refreshes the canonical main index; nightly full rebuild matches incremental graph checksums for the same SHA",
+        "CI artifacts carry exact repo SHA, data/index generation, parser/tool versions, checksums and coverage report",
+        "tool/parser/schema/schema-version changes invalidate affected cache keys and trigger a rebuild",
+        "large generated graphs/raw data are artifacts or external durable bundles, never committed as huge binary files",
+        "Every graph node/edge/label is versioned by repo ref/SHA, graph schema version and extraction/validity timestamps",
+        "Historical as-of queries reconstruct strategy/function/config labels active at a recorded paper/shadow operation time",
+        "Label ontology changes have deterministic migrations and old label versions are preserved",
+        "Labels are evidence-backed with source hash and author/provenance; LLM labels remain PROPOSED until human or deterministic rule approval",
+        "Changes revalidate affected labels and mark drifted/stale labels, rather than silently retaining old classification",
+        "Cache keys use Git blob SHA, parser/grammar version, graph schema and config; mtime alone is never authoritative",
+        "Incremental updates invalidate downstream symbols/tests/labels only when affected; full refresh is periodically compared with incremental checksums",
+        "Watchers and index jobs are debounced, coalesced, cancellable and single-writer; resource budgets prevent competition with runtime data capture",
+        "Multi-resolution context preserves target function body and exact evidence; skeletonization only reduces non-target neighborhood",
+        "Index quality reports supported/partial/unsupported coverage, unresolved calls, dynamic dispatch gaps, dangling edges, parser failures and stale age",
+        "Versioned label ontology and label records are machine-readable and durable; canonical verified labels are rebuildable/exportable independent of whichever optional memory overlay is selected",
+        "Label store supports exact provenance references, stale/superseded/conflicting labels, human approval and migration across ontology versions",
+        "Strategy discovery reports source corpus coverage (Git tree, docs, tests, Issues, PRs, reviews, commit history); inaccessible or unindexed sources are explicit",
+        "The complete first build and refresh path runs without LLM/model API/model network access; CI proves this",
+        "Two clean builds at identical SHA and pinned parser/schema versions produce identical canonical output checksums",
+        "Clean full rebuild and incremental result for the same SHA are checksum-equivalent",
+        "Every tracked file has INDEXED/PARTIAL/UNSUPPORTED/EXCLUDED_WITH_REASON/PARSE_ERROR/UNCLASSIFIED coverage status",
+        "Add/modify/delete/rename, stale SHA, branch isolation, parser/schema/ontology invalidation and unsupported-language tests pass",
+        "UNKNOWN/AMBIGUOUS/UNRESOLVED and heuristic semantic labels cannot be automatically promoted to VERIFIED",
+        "Nightly full rebuild reconciles with incremental graph and reports drift/missed triggers",
+        "Strategy-provider-flashloan source path catalogue exists with PROVEN/STATIC_ONLY/DOC_CLAIM/MISSING/UNKNOWN edge states",
+        "A generic bug/feature/refactor/architecture task and a Web3 strategy/provider task both return useful SHA-bound T0-T2 contexts",
+        "task_context reports requested/indexed SHA, graph generation, freshness, coverage, token count, included/omitted refs and next expansions",
+        "expand_context fetches exact full source/tests/configs/contracts by stable IDs at the same SHA without a full repository rescan",
+        "No separate or divergent CLI/MCP/export retrieval implementation is created",
+        "If index is stale or missing, the tool reports STALE/UNAVAILABLE and never represents old graph output as current"
+      ]
+    },
+    {
+      "id": "OCA-W1",
+      "name": "Correlation completeness contract",
+      "priority": "P0",
+      "status": "BLOCKED_ON_W0_AND_W0B",
+      "depends_on": [
+        "OCA-W0",
+        "OCA-W0B"
+      ],
+      "mode": "CONTRACT_AND_FIXTURE",
+      "exclusive_write_scope": [
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/contracts/"
+      ],
+      "deliverables": [
+        "EVENT_CORRELATION_CONTRACT_V1.md",
+        "EVENT_SCHEMA_GAP_MATRIX.json",
+        "CORRELATION_FIXTURES/"
+      ],
+      "acceptance": [
+        "No duplicate observability or market database is introduced",
+        "Existing identifiers are reused wherever possible",
+        "Missing typed fields are proposed only after producer-to-store audit",
+        "Repo SHA, config checksum, strategy version, observation refs and attempt identity are linked or explicitly UNKNOWN",
+        "Schema compatibility and historical replay rules are documented"
+      ]
+    },
+    {
+      "id": "OCA-W2",
+      "name": "Deterministic OperationEpisode projection",
+      "priority": "P1",
+      "status": "BLOCKED_ON_W1",
+      "depends_on": [
+        "OCA-W1"
+      ],
+      "mode": "ADDITIVE_PROJECTION",
+      "exclusive_write_scope": [
+        "src/intelligence/operation_context/",
+        "tests/test_operation_context_*.py"
+      ],
+      "deliverables": [
+        "OperationEpisode projection",
+        "deterministic evidence join",
+        "operation trace replay tests",
+        "coverage/unknown report",
+        "operation/stage/function metric projection over canonical EventEnvelope, observation, episode and reconciliation refs",
+        "deterministic per-operation diagnostic timeline with exact callsite/symbol, cohort and missing-join coverage"
+      ],
+      "acceptance": [
+        "Reads EventEnvelope, AGG-02, MarketObservation and MarketEpisode canonical owners",
+        "No raw market or observability store is duplicated",
+        "Join is deterministic and reproducible from pinned repo/data versions",
+        "Unmatched/ambiguous relations remain UNKNOWN",
+        "Terminal outcomes require authoritative reconciliation evidence",
+        "OperationEpisode preserves metric denominators, units, event-time/recorded-time and repo/config generations; aggregate results are reproducible from pinned source evidence",
+        "Technical stage metrics, simulated outcomes and authoritative reconciled outcomes remain separate typed dimensions"
+      ]
+    },
+    {
+      "id": "OCA-W3",
+      "name": "Stable code callsite IDs",
+      "priority": "P1",
+      "status": "BLOCKED_ON_W1_AND_W0B",
+      "depends_on": [
+        "OCA-W1",
+        "OCA-W0B"
+      ],
+      "mode": "STATIC_SCANNER_AND_FOCUSED_RUNTIME_WIRING",
+      "exclusive_write_scope": [
+        "src/intelligence/logsites/",
+        "tests/test_logsite_*.py"
+      ],
+      "deliverables": [
+        "logsite/statement ID manifest",
+        "Python AST scanner",
+        "high-value event producer mapping",
+        "rename/ambiguity fixtures"
+      ],
+      "acceptance": [
+        "IDs survive source line shifts",
+        "Repo SHA binds mapping to exact source",
+        "Ambiguous rename/move returns NEEDS_REVIEW or UNKNOWN",
+        "No LLM in correlation hot path",
+        "No broad rewrite of all logging calls"
+      ]
+    },
+    {
+      "id": "OCA-W4",
+      "name": "Bounded operation and strategy context pack",
+      "priority": "P1",
+      "status": "BLOCKED_ON_W2_W3_W0B_W10_W11",
+      "depends_on": [
+        "OCA-W2",
+        "OCA-W3",
+        "OCA-W0B",
+        "OCA-W10",
+        "OCA-W11"
+      ],
+      "mode": "READ_ONLY_QUERY_API",
+      "exclusive_write_scope": [
+        "src/intelligence/operation_context/",
+        "src/intelligence/cli.py",
+        "tests/test_operation_context_pack_*.py"
+      ],
+      "deliverables": [
+        "context pack builder",
+        "evidence manifest",
+        "continuation support",
+        "golden query fixtures",
+        "adaptive task router for generic repository tasks and Web3 domain tasks",
+        "task_context / expand_context request and response schemas with stable IDs and continuation",
+        "task-conditioned exact/lexical/graph/test/change/runtime ranking with provenance filters",
+        "budget-overflow recovery and explicit must-expand/omitted-reference manifest",
+        "retrieval cache and deduplication keyed by SHA, generation, query, depth, dimensions, tokenizer and budget"
+      ],
+      "acceptance": [
+        "Pack includes exact repo SHA and data generation",
+        "Pack budget is bounded by bytes and target-model tokenizer when configured",
+        "Pack includes source refs, tests, negative evidence and coverage gaps",
+        "Raw payload is fetched by ID on demand",
+        "Same input snapshot/query parameters produce deterministic pack",
+        "Query surface is read-only",
+        "Golden generic tasks (bug, feature, refactor, test failure, performance, security) and Web3 tasks all select expected evidence",
+        "Adaptive retrieval does not require an LLM or remote embedding service",
+        "Budget-limited results never cut target functions mid-body and always return exact expansion refs",
+        "Same query/SHA/versions/config/budget returns deterministic selection and continuation",
+        "Token savings are reported with retrieval recall, citation precision and critical omission rate; low-token incomplete packs fail"
+      ]
+    },
+    {
+      "id": "OCA-W5",
+      "name": "Strategy resource conflict and parallel admission report",
+      "priority": "P1",
+      "status": "BLOCKED_ON_W0_AND_W0B",
+      "depends_on": [
+        "OCA-W0",
+        "OCA-W0B"
+      ],
+      "mode": "REUSE_EXISTING_SCHEDULER",
+      "exclusive_write_scope": [
+        "src/intelligence/operation_context/conflicts.py",
+        "tests/test_operation_conflict_report_*.py"
+      ],
+      "deliverables": [
+        "ResourceSet projection",
+        "conflict/overlap report",
+        "scheduler decision evidence joins"
+      ],
+      "acceptance": [
+        "Reuses ConflictAwareScheduler and existing reservation owners",
+        "Solana account read/write locks and shared pools are represented",
+        "EVM sender nonce lanes and shared state resources are represented where applicable",
+        "Provider quota and shared capital constraints are represented",
+        "Does not add signer, sender, nonce authority or live execution"
+      ]
+    },
+    {
+      "id": "OCA-W6",
+      "name": "Bounded external evidence profiles",
+      "priority": "P2",
+      "status": "BLOCKED_ON_W0_AND_W0B",
+      "depends_on": [
+        "OCA-W0",
+        "OCA-W0B"
+      ],
+      "mode": "READ_ONLY_ADAPTERS",
+      "exclusive_write_scope": [
+        "src/intelligence/external_evidence/",
+        "tools/mcp-profiles.example.json",
+        "tests/test_external_evidence_*.py"
+      ],
+      "deliverables": [
+        "SQD bounded query adapter/profile",
+        "Antseer narrow profile",
+        "source provenance and pagination receipts"
+      ],
+      "acceptance": [
+        "External reads are bounded, paginated and rate-aware",
+        "Network/window/query hash/freshness/coverage are preserved",
+        "External analytics are not treated as execution/settlement truth",
+        "No secrets are committed",
+        "All persisted ingestion passes existing source governance"
+      ]
+    },
+    {
+      "id": "OCA-W7",
+      "name": "Golden retrieval, token-efficiency and adoption benchmark",
+      "priority": "P1",
+      "status": "BLOCKED_ON_W0B_AND_W4",
+      "depends_on": [
+        "OCA-W0A",
+        "OCA-W0B",
+        "OCA-W4"
+      ],
+      "mode": "BENCHMARK_ONLY",
+      "exclusive_write_scope": [
+        "benchmarks/intelligence/",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/benchmarks/"
+      ],
+      "deliverables": [
+        "30-50 repository golden questions with expected exact evidence",
+        "retrieval precision/recall and citation correctness report",
+        "500/1000/2000-token context-pack comparison",
+        "p50/p95 latency, refresh, RAM and disk measurements",
+        "tool adoption / keep / remove recommendations"
+      ],
+      "acceptance": [
+        "All candidate retrieval paths use the same pinned repo/data SHA and golden questions",
+        "Every answer's file/symbol/test/evidence link is checked against expected refs",
+        "Token counts use the target model tokenizer where available",
+        "Stale-index, branch-isolation, rename and dynamic-import false-positive cases are tested",
+        "No vendor token-saving claim is treated as a guarantee",
+        "At least one strategy novelty/duplicate question is answered from repo evidence",
+        "Label accuracy, semantic drift detection, historical as-of answer quality and ontology migration are included in golden tests",
+        "Evaluation reports precision, recall, citation correctness, unknown rate, answer completeness, token count, latency and reproducibility",
+        "Static call edges and runtime-observed call edges are evaluated separately",
+        "Multi-resolution skeletons are checked against full-source answers to ensure no target implementation logic was lost"
+      ]
+    },
+    {
+      "id": "OCA-W8",
+      "name": "Operations cockpit and human review workflow",
+      "priority": "P2",
+      "status": "BLOCKED_ON_W4_W5_W7_W10_W11",
+      "depends_on": [
+        "OCA-W4",
+        "OCA-W5",
+        "OCA-W7",
+        "OCA-W10",
+        "OCA-W11"
+      ],
+      "mode": "REPORT_AND_READ_ONLY_UI",
+      "exclusive_write_scope": [
+        "src/intelligence/operation_context/reports.py",
+        "docs/operations/"
+      ],
+      "deliverables": [
+        "run overview report",
+        "strategy performance report",
+        "provider quality report",
+        "incident/operation trace report"
+      ],
+      "acceptance": [
+        "Only canonical owners provide facts",
+        "Unknown and stale states are visible",
+        "Simulated/paper/realized economics remain separate",
+        "No UI control can sign, send, borrow or promote"
+      ]
+    },
+    {
+      "id": "OCA-W9",
+      "name": "Storage scale and retention benchmark",
+      "priority": "P2",
+      "status": "CONDITIONAL",
+      "depends_on": [
+        "OCA-W0",
+        "OCA-W2",
+        "OCA-W10"
+      ],
+      "mode": "MEASURE_BEFORE_INFRASTRUCTURE",
+      "exclusive_write_scope": [
+        "benchmarks/storage/",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/benchmarks/"
+      ],
+      "deliverables": [
+        "24h/7d ingest/query/replay soak report",
+        "SQLite/WAL/Parquet/index measurements",
+        "ClickHouse/NATS/object-store decision",
+        "indexer CPU/RAM/IO/WAL/cache contention report under simultaneous runtime ingestion and multiple agents"
+      ],
+      "acceptance": [
+        "Actual bytes/sec, events/sec, p50/p95 query and replay are measured",
+        "Retention pins and exact replay are proven",
+        "ClickHouse/NATS/S3 are added only if measured bottleneck justifies them",
+        "If not needed, record NOT_REQUIRED_YET with measurements",
+        "Indexing resource budgets and background queues are load-tested while paper/shadow capture continues",
+        "Storage pressure produces explicit backpressure/admission pause before deleting pinned raw or episode evidence"
+      ]
+    },
+    {
+      "id": "OCA-W10",
+      "name": "Paper/shadow runtime event capture and strategy-to-function telemetry",
+      "priority": "P0",
+      "status": "BLOCKED_ON_W0_W1_W3",
+      "depends_on": [
+        "OCA-W0",
+        "OCA-W1",
+        "OCA-W3"
+      ],
+      "mode": "ADDITIVE_RUNTIME_INSTRUMENTATION",
+      "exclusive_write_scope": [
+        "src/observability/runtime_capture/",
+        "src/runtime_observability/",
+        "tests/test_runtime_capture_*.py",
+        "tests/fixtures/runtime_capture/"
+      ],
+      "inspect_producers_after_W0": true,
+      "canonical_owners_to_reuse": [
+        "src/observability/events.py",
+        "src/observability/store.py",
+        "src/observability/replay.py",
+        "src/agg02/storage.py",
+        "src/market/observations.py",
+        "src/market/streams.py",
+        "src/intelligence/episode_builder.py",
+        "src/runtime_discovery_coordinator.py",
+        "src/strategy"
+      ],
+      "deliverables": [
+        "versioned EventEnvelope correlation field/attribute gap contract",
+        "runtime capture adapter and small high-value producer instrumentation",
+        "strategy_id/version + repo/config generation + stable callsite/symbol + source observation refs where proven",
+        "trace_id/span_id context propagation for async operation boundaries where useful",
+        "stage timeline covering discovery, observations, strategy decisions, quote, flash-capital, route/sizing, planning/compiler, simulation, reconciliation and paper/shadow outcome",
+        "durable append/outbox/replay and observability-degraded/incomplete receipts",
+        "capture coverage and latency/drop/lag report",
+        "coverage matrix for every currently supported strategy/provider/venue/flash-capital route and lifecycle stage (WIRED / PARTIAL / NO_RUNTIME_PATH / BLOCKED / UNKNOWN)",
+        "continuous bounded runtime capture lifecycle for configured supported paper/shadow collectors (start/stop/health/reconnect/backfill/checkpoint), reusing existing stream/journal owners",
+        "long-running capture soak report with event-to-store lag, queue/backpressure, provider/source freshness and loss/gap accounting",
+        "per-stage and per-stable-callsite invocation measurements: count/denominator, duration, queue wait, success/error/retry/timeout/cancel and reason codes",
+        "input/output counts, contract/normalization failures, freshness/gap/duplicate/loss and durable-capture health where measured",
+        "strategy/function diagnostic evidence fields with explicit UNKNOWN and LOW_SAMPLE rather than inferred zero values"
+      ],
+      "acceptance": [
+        "W0 proves the existing production producer paths before changes are made",
+        "First prove one real supported offline/paper/shadow vertical end-to-end, then inventory and instrument all currently supported paper/shadow runtime paths; every strategy/provider/venue/flash-capital route and lifecycle stage has explicit WIRED/PARTIAL/NO_RUNTIME_PATH/BLOCKED/UNKNOWN status, with exact producer evidence",
+        "Critical decisions, rejections, source gaps/corrections, flash-capital evidence and terminal outcomes are not sampled",
+        "Every emitted event is linked to exact runtime, trace, opportunity/candidate, strategy/version, config, code SHA and logsite/symbol where available; missing values are explicit UNKNOWN",
+        "Raw payload is stored once in the canonical journal/archive and referenced by ID/hash; no duplicate raw market database",
+        "No silent event loss; outbox/queue/append failure becomes explicit degraded/incomplete episode and can be replayed/reconciled",
+        "OpenTelemetry is optional trace context only; EventEnvelope store remains canonical durable event ledger",
+        "Capture overhead and event-to-store p50/p95/p99 latency are measured under bounded load",
+        "No signer, submission, borrowing, spending, LIVE mode or new trading authority is introduced",
+        "Event schema changes preserve migration, compatibility and historical replay",
+        "Every event producer path touched by the agent is explicitly listed in the work receipt with before/after source refs and owner/tests",
+        "Capture coverage is measured by stage and producer; absent runtime stages are shown as NOT_OBSERVED, not inferred from class/type presence",
+        "Do not declare whole-bot telemetry complete when only the initial vertical is instrumented; uncovered supported paths remain explicit gaps and block a full-coverage claim",
+        "Static and runtime-observed call edges remain separate; runtime frequency/last-seen is only recorded from actual traces/events",
+        "Trace and source data include occurred_at, recorded_at, repo SHA and strategy/config generation so as-of reconstruction is possible",
+        "When a supported paper/shadow runtime is running, operation events and configured decision-relevant market observations continue to be captured across repeated cycles/reconnects; one-shot capture is not presented as continuous streaming",
+        "Run a bounded long-running soak and restart/reconnect/backfill test; measure capture lag and prove no silent loss of critical decision events",
+        "If an upstream source only supports bounded polling or one-shot reads, the source capability is explicitly marked POLL_ONLY / ONE_SHOT / STREAMING with cadence, limits, freshness and coverage; do not claim full-network or true stream capture",
+        "Function/stage technical health metrics are emitted only at proven supported producer boundaries and join to exact callsite/symbol, strategy/version, repo SHA and config generation where available",
+        "Observed runtime association is never represented as causal root cause without a controlled test/replay; upstream provider, queue, market and capital alternatives remain visible",
+        "Missing telemetry, absent calls and unsupported routes are NOT_OBSERVED/UNKNOWN, never zero errors or proof of healthy execution"
+      ],
+      "scope_note": "W0 must enumerate the exact existing producer files. Any producer file outside the new adapter directories must be added as an explicit allowlisted touch path with owner/test impact; do not widen to whole src/strategy."
+    },
+    {
+      "id": "OCA-W11",
+      "name": "Unified queryable data plane, portable evidence bundles and replay",
+      "priority": "P0",
+      "status": "BLOCKED_ON_W0B_W2_W10",
+      "depends_on": [
+        "OCA-W0B",
+        "OCA-W2",
+        "OCA-W10"
+      ],
+      "mode": "READ_ONLY_CROSS_OWNER_PROJECTION_AND_EXPORT",
+      "exclusive_write_scope": [
+        "src/intelligence/universal_data_plane/",
+        "tests/test_universal_data_plane_*.py",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/data-plane/"
+      ],
+      "deliverables": [
+        "unified read-only query facade across code graph, EventEnvelope, AGG-02, MarketObservation, MarketEpisode and Work Result Receipts",
+        "stable-ID resolution and cross-plane lineage manifest",
+        "portable versioned export bundle (manifest + JSONL events + Parquet datasets where existing owners support them + hashes/schema/replay receipts)",
+        "coverage, freshness, lag, gaps, corrections, unresolved joins and retention-pin report",
+        "rebuild/restore/replay validation",
+        "portable bitemporal label/event manifest and graph schema migration receipts",
+        "cross-repository namespace federation contract (even if initial implementation has one repo)",
+        "small allowlisted read-only local MCP profile/server with composite queries for repo overview, strategy inventory/explain/compare, source/provider lineage, symbol/call path, operation trace and context-pack build",
+        "portable one-command context-pack/export generation and client setup/health-check instructions for supported coding-agent/ChatGPT connector environments",
+        "read-only MCP exposes task_context and expand_context over the shared repo-intel query backend",
+        "universal task-context tool schemas, health/freshness check and client connection smoke test"
+      ],
+      "acceptance": [
+        "One query/ID follows references to canonical owner data without copying the full raw payload into a second database",
+        "All decision-relevant data points are durably stored or their capture failure/gap is explicitly recorded",
+        "No claim to store every network packet or infinite history; raw high-volume data follows a declared policy and exact coverage is reported",
+        "Raw observations, structured operation events, strategy stage decisions, flash-capital inputs, simulations, reconciliation and outcomes remain queryable and traceable",
+        "Portable export bundle can be imported/replayed on a clean environment with matching hashes and schema/tool versions",
+        "Pinned evidence survives compaction/retention; no model-driven deletion",
+        "Read-only query response contains exact repo SHA/data generation and evidence refs",
+        "No second canonical raw event/market store or mandatory external database is added",
+        "Historical pack can query the code graph and label ontology as of the exact operation repo SHA and event time",
+        "Graph/event/schema migrations preserve provenance and can replay prior exported bundle",
+        "Cross-repository IDs are namespaced and no duplicate symbol IDs collide when a second repo is linked",
+        "MCP query surface has few composite read-only tools, bounded outputs, cursor continuation, no shell/edit/delete/admin/market-write tools and no secrets",
+        "Fresh environment can import portable bundle and execute the same evidence queries/replay; setup guide distinguishes installed local server from a client that is actually connected",
+        "ChatGPT data delivery is explicitly documented as uploaded pack, authorized GitHub access or connected local MCP; no claim of automatic new-chat memory",
+        "The MCP task_context and expand_context tools return exact SHA, graph generation, freshness, evidence refs, omissions and deterministic continuation",
+        "An unconnected client or stale/missing index is reported honestly; no implicit local-disk access is claimed"
+      ]
+    },
+    {
+      "id": "OCA-W12",
+      "name": "License, SBOM and software supply-chain governance gate",
+      "priority": "P0",
+      "status": "BLOCKED_ON_W0_AND_W0A",
+      "depends_on": [
+        "OCA-W0",
+        "OCA-W0A"
+      ],
+      "mode": "PATH_LEVEL_LICENSE_AND_PROVENANCE_GOVERNANCE",
+      "exclusive_write_scope": [
+        "policy/licenses/",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/licenses/",
+        "tools/license-audit/",
+        "tests/test_license_governance_*.py",
+        ".github/workflows/dependency-governance.yml"
+      ],
+      "deliverables": [
+        "versioned dependency/source license ledger for packages, nested paths, rulesets, dataflow packs, models, embeddings, datasets and external executables",
+        "SPDX expression + exact version/commit/blob + source URL/retrieval time + transitive dependency inventory per candidate",
+        "path-aware mixed-license allow/deny/exception policy and NOTICE attribution checks",
+        "SBOM output and reproducible license/security/secret scan commands",
+        "subprocess/executable integration record: launch model, IPC/protocol, files exchanged, patches, distribution and hosted-service use",
+        "CodeQL CLI entitlement check, GitNexus noncommercial gate, ELv2 conditions, libgit2 linking-exception handling and mixed-license path tests"
+      ],
+      "acceptance": [
+        "Every adopted or evaluated component has a pinned source identity and license evidence; unknown license is BLOCKED",
+        "Root LICENSE is never treated as the license for every nested directory or rules/model/data package",
+        "Commercial use is not incorrectly rejected solely because a project uses Elastic License 2.0; hosted-service/key/notices limits are recorded",
+        "CodeQL CLI binary terms are distinct from github/codeql query-source license; closed-source automated use is blocked without the applicable entitlement",
+        "GitNexus PolyForm Noncommercial use is blocked for commercial production absent separate grant",
+        "libgit2 GPL-2.0 with Linking Exception is assessed under the actual exception; modified libgit2 remains separately reviewed",
+        "Subprocess boundary is not treated as automatic GPL/compliance exemption",
+        "SBOM, advisory, source, duplicate, secret and notice gates run in CI or have an exact documented permission blocker",
+        "No scanner result is represented as legal approval; reviewer and decision are recorded"
+      ]
+    },
+    {
+      "id": "OCA-W13",
+      "name": "Generic provider catalogue, versioned adapter contracts and data quality evidence",
+      "priority": "P0",
+      "status": "BLOCKED_ON_W0_AND_W1",
+      "depends_on": [
+        "OCA-W0",
+        "OCA-W1"
+      ],
+      "mode": "ADDITIVE_READ_ONLY_PROVIDER_CONTRACTS",
+      "exclusive_write_scope": [
+        "src/intelligence/provider_contracts/",
+        "tests/test_provider_contracts_*.py",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/contracts/providers/"
+      ],
+      "must_reuse": [
+        "src/market/source_catalog.py",
+        "src/agg02/",
+        "src/market/observations.py",
+        "src/market/streams.py",
+        "src/intelligence/evidence_refs.py"
+      ],
+      "deliverables": [
+        "ProviderCapabilityRegistry and versioned adapter contract",
+        "DataContract with required fields, units, decimals, timestamp/null semantics and compatibility",
+        "ProviderCapability, SourceHealthEpisode, EntityIdentity, NormalizationRule, DataQualityEvidence, SourceDisagreement and DataLineageEdge schemas",
+        "source mode classification STREAMING / POLL_ONLY / ONE_SHOT / UNAVAILABLE with observed-vs-declared evidence",
+        "cursor, watermark, event/ingest/recorded times, freshness, lag, coverage, gaps, reconnects, quotas and rate-limit receipts",
+        "raw payload ID/hash references, dedup keys, correction/retraction/reorg and backfill/replay semantics",
+        "chain identity and block/transaction/log/finality/canonicality evidence contract"
+      ],
+      "acceptance": [
+        "A new provider can be added through a versioned adapter contract without modifying individual strategy business logic",
+        "Provider capability is proven by tests/capture receipts, not inferred from docs or a successful HTTP response",
+        "Raw provider payload remains owned by AGG-02 or an existing canonical archive; contracts store references/hashes",
+        "Unknown, stale, incomplete, contradictory and corrected values remain explicit and queryable",
+        "Blockchain facts include chain identity, block number/hash, tx hash, log index and finality/canonicality where applicable",
+        "Reorg/correction/retraction creates an auditable correction/replay event and never silently overwrites history",
+        "Adapter pagination, quotas, retries, cursor resume and rate limits have positive and negative tests",
+        "Provider registry and schemas expose version/freshness/coverage and do not enable provider by default"
+      ]
+    },
+    {
+      "id": "OCA-W14",
+      "name": "Strategy Data Requirements and provider compatibility qualification",
+      "priority": "P0",
+      "status": "BLOCKED_ON_W13_AND_W5",
+      "depends_on": [
+        "OCA-W13",
+        "OCA-W5"
+      ],
+      "mode": "DECLARATIVE_STRATEGY_REQUIREMENTS",
+      "exclusive_write_scope": [
+        "src/intelligence/strategy_requirements/",
+        "tests/test_strategy_requirements_*.py",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/contracts/strategy-data/"
+      ],
+      "deliverables": [
+        "StrategyDataRequirement schema keyed by strategy family/id/version and code/config generation",
+        "required capability, chain/protocol/venue/entity, replay, freshness, coverage, source-independence and correction requirements",
+        "stale-data, missing-data, disagreement and reorg handling policies",
+        "ProviderCapabilityRegistry + StrategyRequirementRegistry + CompatibilityEvaluator",
+        "compatibility outcomes COMPATIBLE / PARTIAL / INCOMPATIBLE / UNKNOWN with exact evidence and reason codes",
+        "qualification history and dependency invalidation when provider, schema, code or strategy requirement changes"
+      ],
+      "acceptance": [
+        "Strategies depend on capabilities/contracts, not hard-coded provider implementation classes",
+        "Thresholds are sourced from strategy-specific tests/qualification evidence; no universal fabricated freshness/coverage value",
+        "An adapter's existence does not imply strategy compatibility or strategy qualification",
+        "Provider/schema/source-health changes enumerate affected strategies and request requalification where policy requires",
+        "UNKNOWN requirements or missing quality evidence cannot be upgraded to QUALIFIED",
+        "Economic eligibility, data availability, flash-capital availability and runtime authority remain separate states"
+      ]
+    },
+    {
+      "id": "OCA-W15",
+      "name": "Typed temporal ontology, provenance-aware multi-layer graph and schema migrations",
+      "priority": "P1",
+      "status": "BLOCKED_ON_W1_W2_W3_W13_W14",
+      "depends_on": [
+        "OCA-W1",
+        "OCA-W2",
+        "OCA-W3",
+        "OCA-W13",
+        "OCA-W14"
+      ],
+      "mode": "DERIVED_TYPED_TEMPORAL_KNOWLEDGE_GRAPH",
+      "exclusive_write_scope": [
+        "src/intelligence/temporal_ontology/",
+        "tests/test_temporal_ontology_*.py",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/contracts/ontology/"
+      ],
+      "deliverables": [
+        "versioned layered node/edge ontology for code, build/config, strategy, market, provider/data, runtime, outcome and engineering/governance",
+        "stable cross-layer IDs and explicit edge families for static/compiler/runtime-observed relations",
+        "bitemporal fields valid_from/valid_to, recorded_at and source_event_time plus repo SHA/blob, config generation, schema and ontology versions",
+        "edge provenance, source/evidence refs, resolver/producer version, confidence and verification states",
+        "as-of repo SHA + operation-time queries and schema/ontology migration receipts",
+        "graph reconciliation for dangling, stale, duplicate, contradictory and invalid-time nodes/edges",
+        "typed runtime invocation/stage-measurement nodes and provenance-backed edges from operation/episode to callsite/symbol, provider/observation and outcome",
+        "time- and generation-bound diagnostic metric/baseline cohort references with explicit coverage and confidence state"
+      ],
+      "acceptance": [
+        "A static CALLS edge is never represented as runtime-observed execution",
+        "Ambiguous/unresolved/inferred edges are explicit and cannot masquerade as verified edges",
+        "Historical episode reconstruction resolves the strategy/config/schema/provider/code version actually valid at the time",
+        "Schema migrations are deterministic, reversible or have a verified forward-recovery plan, and preserve evidence references",
+        "Graph is a derived projection; canonical facts stay with existing owners",
+        "Full reconciliation can detect and report incremental graph drift",
+        "Runtime invocation edges require actual producer/trace evidence; static CALLS edges cannot satisfy function-execution coverage",
+        "Diagnostic graph preserves distinction between OBSERVED_ANOMALY, ASSOCIATED_STAGE, ROOT_CAUSE_HYPOTHESIS and controlled/proven causality"
+      ]
+    },
+    {
+      "id": "OCA-W16",
+      "name": "Incremental computation, dependency invalidation and resource governor",
+      "priority": "P1",
+      "status": "BLOCKED_ON_W0B_AND_W15",
+      "depends_on": [
+        "OCA-W0B",
+        "OCA-W15"
+      ],
+      "mode": "BOUNDED_INCREMENTAL_DERIVATION",
+      "exclusive_write_scope": [
+        "src/intelligence/incremental_engine/",
+        "tests/test_incremental_engine_*.py",
+        "benchmarks/intelligence/incremental/"
+      ],
+      "deliverables": [
+        "separate signature/declaration/import index and body/content index",
+        "content-addressed derived artifacts keyed by Git blob/tree plus parser/grammar/resolver/schema/ontology/normalizer versions",
+        "dependency-aware invalidation, early cutoff on unchanged output hashes and incremental test/index selection",
+        "rename/delete/branch-switch/rebase/force-push handling with stale-generation rejection",
+        "cancellation, priority scheduling, queue coalescing, single-writer leases and branch snapshots",
+        "resource governor for CPU/RAM/IO/disk/WAL/queue/time",
+        "periodic full-vs-incremental consistency reconciliation and auditable drift report"
+      ],
+      "acceptance": [
+        "No cache is keyed by path or mtime alone",
+        "Only affected downstream derivations are recomputed when dependency evidence proves the boundary",
+        "An unchanged recomputation stops propagation through early cutoff",
+        "Full rebuild and incremental update produce equivalent canonical outputs on golden fixtures",
+        "Indexing cannot starve paper/shadow event capture; backpressure pauses/deprioritizes index work before critical runtime work",
+        "Branch/worktree indexes cannot leak state across tasks or accept stale SHA results",
+        "Unsupported parser paths and failures remain visible in coverage"
+      ]
+    },
+    {
+      "id": "OCA-W17",
+      "name": "Agent access policy, task isolation, work receipts and read-only MCP facade",
+      "priority": "P1",
+      "status": "BLOCKED_ON_W0B_W11_W12",
+      "depends_on": [
+        "OCA-W0B",
+        "OCA-W11",
+        "OCA-W12"
+      ],
+      "mode": "READ_ONLY_ANALYST_AND_ISOLATED_CODING_WORKER",
+      "exclusive_write_scope": [
+        "src/intelligence/agent_access/",
+        "tests/test_agent_access_*.py",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/security/agent-access/"
+      ],
+      "deliverables": [
+        "typed capability registry with read/write/network/secret/admin classes and per-profile policy",
+        "stable universal read-only MCP façade: task_context and expand_context as generic composite tools; specialized query operations are backend functions",
+        "bounded progressive disclosure, cursor continuation, truncation/completeness/freshness and evidence refs",
+        "task ID/base SHA/owner/write scope/worktree/lease TTL/resource-budget contract",
+        "WorkResultReceipt with changed paths/symbols/tests/results/unresolved risks/artifact hashes and checkpoint",
+        "sandbox policy for CPU/RAM/disk/time, network allowlist, secret exclusion and prompt-injection isolation",
+        "separate administrative plane for index maintenance and any write operations, never exposed to analyst agents"
+      ],
+      "acceptance": [
+        "MCP tools/list is stable for a given authorized profile; no request-driven schema mutation",
+        "Analyst query surface exposes no shell/edit/delete/admin/secret/market-write action",
+        "Each coding worker is isolated to a task worktree and leased write scope",
+        "Build/test sandbox has no runtime trading credentials, private keys or signer capability",
+        "All tool invocations and mutations have auditable receipts",
+        "Truncated responses identify omitted evidence and provide a deterministic continuation cursor",
+        "Human review is required for merge, capability elevation and strategy/operational promotion",
+        "The only generic analyst entrypoints can retrieve and expand context; neither exposes shell, edit, delete, admin or financial/production capabilities",
+        "Retrieved repository instructions and external payload text are treated as untrusted data and cannot grant tools or authority"
+      ]
+    },
+    {
+      "id": "OCA-W18",
+      "name": "Coverage-driven verification, retrieval correctness and test economics",
+      "priority": "P1",
+      "status": "BLOCKED_ON_W0B_W7_W15",
+      "depends_on": [
+        "OCA-W0B",
+        "OCA-W7",
+        "OCA-W15"
+      ],
+      "mode": "EVIDENCE_BACKED_TEST_SELECTION",
+      "exclusive_write_scope": [
+        "src/intelligence/verification/",
+        "tests/test_verification_intelligence_*.py",
+        "benchmarks/verification/",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/benchmarks/verification/"
+      ],
+      "deliverables": [
+        "symbol/callsite-to-test/coverage-context mapping and affected-test selection",
+        "critical safety/smoke/invariant/protocol/strategy regression test always-run policy",
+        "flaky test registry with owner, history, pass rate and quarantine reason",
+        "failure minimization/shrinking for reproducible failures and targeted mutation testing for high-risk invariants",
+        "AST structural audit rules and breaking schema/API/contract diff gates",
+        "retrieval precision/recall, ambiguity, evidence completeness and omission-loss benchmark",
+        "performance-diagnostic golden corpus and controlled fault-injection/replay benchmark for stage/function localization",
+        "false-attribution, low-sample handling, evidence precision/recall and critical-omission report"
+      ],
+      "acceptance": [
+        "Test selection is an optimization and never permanently removes or suppresses critical tests",
+        "Every selected/skipped test decision exposes coverage/dependency evidence and policy version",
+        "Flaky quarantine has owner, expiry/review and cannot hide invariant failure",
+        "Failure shrinking preserves original case and hashes both original/minimized inputs",
+        "Mutation testing is scoped to high-risk logic and reports surviving mutations",
+        "Retrieval tests distinguish precision/recall, citation correctness, ambiguity and missing evidence",
+        "All benchmarks pin repo SHA, tool versions, corpus and result artifacts",
+        "Injected stale data, cursor gaps, schema/decimal errors, timeouts, backpressure, persistence loss and simulation/reconciliation divergence map to the correct observed stage/callsite without false causal claims",
+        "No ranking or root-cause claim is emitted from insufficient samples, missing telemetry or static-only call edges"
+      ]
+    },
+    {
+      "id": "OCA-W20",
+      "name": "Strategy/function performance diagnostics and evidence-backed fault localization",
+      "priority": "P1",
+      "status": "BLOCKED_ON_W2_W10_W13_W14_W15_W18",
+      "depends_on": [
+        "OCA-W2",
+        "OCA-W10",
+        "OCA-W13",
+        "OCA-W14",
+        "OCA-W15",
+        "OCA-W18"
+      ],
+      "mode": "DERIVED_READ_ONLY_STRATEGY_FUNCTION_DIAGNOSTICS",
+      "exclusive_write_scope": [
+        "src/intelligence/performance_diagnostics/",
+        "tests/intelligence/test_performance_diagnostics*.py",
+        "benchmarks/performance_diagnostics/",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/performance-diagnostics/"
+      ],
+      "must_reuse": [
+        "src/observability/events.py",
+        "src/observability/store.py",
+        "src/observability/replay.py",
+        "src/agg02/storage.py",
+        "src/market/observations.py",
+        "src/intelligence/operation_context/",
+        "src/intelligence/temporal_ontology/",
+        "src/intelligence/logsites/",
+        "src/strategy",
+        "src/economics/flash_capital_graph",
+        "src/paper_shadow"
+      ],
+      "deliverables": [
+        "read-only strategy/version → operation/episode → stage → stable callsite/symbol → input/output evidence → provider/capital → simulation/reconciliation outcome diagnostic projection",
+        "cohort-aware function/stage metrics: invocation denominators, success/error/retry/timeout, latency quantiles, queue wait, data-quality and capture-loss measures",
+        "separate technical-health and financial-outcome comparisons with units, decimals and evidence refs",
+        "baseline cohort definition and sample-size/coverage/confidence reporting",
+        "anomaly and root-cause hypothesis model that distinguishes observed association from controlled causal evidence",
+        "bounded CLI/query interface and performance_diagnostics operation inside web3_data_trace; no third MCP schema",
+        "golden diagnostic corpus, controlled fault-injection/replay receipts and end-to-end supported offline/paper/shadow reconstruction"
+      ],
+      "acceptance": [
+        "Every reported function metric is bound to exact repo SHA, config generation, strategy/version, stable callsite/symbol and event/trace refs wherever those joins are proven",
+        "Only actual runtime observations establish invocation counts, latency and errors; static graph edges never imply a function ran",
+        "Every rate carries a denominator, period, cohort definition and coverage; low sample or missing telemetry returns LOW_SAMPLE/UNKNOWN rather than healthy/poor classification",
+        "Technical latency/reliability/data quality are kept distinct from strategy profitability and reconciled execution outcomes",
+        "Comparisons use compatible strategy/version/config/provider/chain/venue/capital and regime cohorts; mismatched cohorts are not ranked together",
+        "A function is not declared the cause of a bad outcome from correlation alone; causal status requires a reproducible controlled fault/replay or equivalent explicit evidence",
+        "Every anomaly links to exact operations, callsites, source/evidence refs and upstream/downstream alternatives",
+        "Durable event loss, missing joins and unsupported paths are explicit and block full-coverage claims",
+        "No critical decision/rejection/gap/correction/reconciliation/outcome event is sampled; all queues/backpressure remain bounded",
+        "End-to-end diagnostics can be reconstructed after restart from canonical owners on a real supported offline/paper/shadow vertical",
+        "No automatic parameter/code/provider/risk/financial/execution mutation, no LIVE authority, no signing/sending/borrowing/spending/deployment"
+      ],
+      "guardrails": [
+        "Derived read-only projection; no duplicate raw market, event, PnL or strategy database",
+        "No attribution claim without source/evidence refs and confidence class",
+        "Only one shared query backend for CLI/MCP/export; two existing compact Web3 MCP tool schemas remain the limit"
+      ]
+    },
+    {
+      "id": "OCA-W19",
+      "name": "Conditional lineage, schema-registry, event transport and durable workflow bake-off",
+      "priority": "P2",
+      "status": "CONDITIONAL",
+      "depends_on": [
+        "OCA-W13",
+        "OCA-W15",
+        "OCA-W9"
+      ],
+      "mode": "MEASURED_ADOPTION_ONLY",
+      "exclusive_write_scope": [
+        "benchmarks/intelligence/integration-bakeoff/",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/integration-bakeoff/"
+      ],
+      "deliverables": [
+        "same-workload reference test for OpenLineage, DataHub, Apicurio Registry, NATS JetStream, Debezium and Temporal",
+        "decision matrix of existing native journal/queue/schema functions versus external infrastructure",
+        "failure/restart/replay/schema compatibility/operational cost benchmark",
+        "explicit NOT_REQUIRED_YET decision when current owners satisfy throughput and recovery requirements"
+      ],
+      "acceptance": [
+        "No tool is deployed merely because it exists in the shortlist",
+        "NATS is evaluated as transport, not canonical storage; Debezium only for actual CDC use cases",
+        "OpenLineage facets extend existing provenance and do not replace EventEnvelope/AGG-02 contracts",
+        "DataHub is not assumed to contain all target DEX/RPC provider integrations",
+        "Apicurio is adopted only when Git + CI schema versioning is insufficient",
+        "Temporal is adopted only when current workflow receipts/retries cannot satisfy measured durability needs",
+        "Infrastructure cost, operational burden, security surface and rollback are measured before adoption"
+      ]
+    },
+    {
+      "id": "OCA-W0B2",
+      "name": "Complete repository coverage and polyglot structural knowledge graph",
+      "priority": "P0",
+      "status": "READY_AFTER_W0B_W0A_W0C",
+      "depends_on": [
+        "OCA-W0B",
+        "OCA-W0A",
+        "OCA-W0C"
+      ],
+      "mode": "POLYGLOT_GRAPH_AND_ASSET_EXTRACTORS",
+      "exclusive_write_scope": [
+        "src/intelligence/repo_graph/",
+        "tests/intelligence/",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/"
+      ],
+      "deliverables": [
+        "per-language/per-artifact coverage matrix for every tracked Git-tree path",
+        "Tree-sitter parser adapters for detected first-party code languages",
+        "selective SCIP/LSP imports for languages with reproducible indexers/builds",
+        "structured docs/config/schema/test/workflow/build/dependency extractors",
+        "stable cross-language symbol/callsite identities and evidence-bearing typed edges",
+        "W0B2 language coverage receipt and expanded multi-language golden corpus"
+      ],
+      "acceptance": [
+        "100% tracked Git-tree paths have exactly one inventory/coverage record or explicit submodule/LFS boundary",
+        "100% first-party code files are classified by language and parser capability",
+        "Every first-party source language is STRUCTURE_INDEXED or explicitly PARTIAL/UNSUPPORTED with reason, owner and remediation; no silent 'other' bucket",
+        "Docs/configs/schemas/tests/workflows/build files are text/structure searchable with exact refs and proven relations",
+        "Stable IDs survive tested rename and source-line shifts",
+        "Same-SHA deterministic build and clean-vs-incremental parity remain true",
+        "Golden corpus covers every detected first-party language and important artifact classes",
+        "Static, documentary, proposed and runtime-observed relations remain distinct"
+      ],
+      "guardrails": [
+        "No LLM/model API/remote embeddings in bootstrap or deterministic indexing",
+        "Tree-sitter/SCIP/LSP capability selected from actual repository language inventory, not package popularity",
+        "No new graph DB unless existing query/storage limitations are measured",
+        "No dynamic call edges inferred from same-name matches",
+        "No secret values or private keys in graph/index/context packs"
+      ]
+    },
+    {
+      "id": "OCA-W4B",
+      "name": "Tokenizer-accurate and loss-aware task context retrieval",
+      "priority": "P1",
+      "status": "READY_AFTER_W0B2_AND_W4",
+      "depends_on": [
+        "OCA-W0B2",
+        "OCA-W4",
+        "OCA-W7"
+      ],
+      "mode": "MEASURED_CONTEXT_PACK_RETRIEVAL",
+      "exclusive_write_scope": [
+        "src/intelligence/repo_graph/",
+        "tests/intelligence/",
+        "benchmarks/intelligence/"
+      ],
+      "deliverables": [
+        "model/client tokenizer adapters with explicitly labelled fallback estimator",
+        "query-conditioned PageRank-style ranking and AST enclosing-scope extraction",
+        "signature/body content hashes and per-reference token-cost accounting",
+        "loss-aware FULL/SKELETON/REFERENCE/OVERVIEW pack builder",
+        "critical omission, citation correctness and token reduction benchmark receipts"
+      ],
+      "acceptance": [
+        "Actual tokenizer is used when configured; byte estimate is clearly labelled otherwise",
+        "Target functions and decision-critical financial logic are FULL or explicitly queued for expansion",
+        "No target function is truncated mid-body",
+        "Golden Web3 and general coding/security/test tasks meet critical omission rate zero",
+        "Token reduction is reported with recall, precision, citation correctness and latency",
+        "Same SHA/query/dimensions/tokenizer/budget yields deterministic packs"
+      ],
+      "guardrails": [
+        "No lossy compression of source code, IDs, decimals, units, fees, slippage, risk constraints or evidence",
+        "No claim of ChatGPT UI prompt caching without a supported API metric",
+        "No vector database unless lexical/graph recall has a measured gap"
+      ]
+    },
+    {
+      "id": "OCA-W11B",
+      "name": "Expanded universal typed graph-query MCP and client handoff",
+      "priority": "P1",
+      "status": "READY_AFTER_W0B2_W4_W11",
+      "depends_on": [
+        "OCA-W0B2",
+        "OCA-W4",
+        "OCA-W11",
+        "OCA-W15"
+      ],
+      "mode": "READ_ONLY_COMPOSITE_QUERY_API",
+      "exclusive_write_scope": [
+        "src/intelligence/universal_data_plane/",
+        "src/intelligence/repo_graph/",
+        "tests/intelligence/",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/"
+      ],
+      "deliverables": [
+        "repo_overview, task_context, expand_context, graph_query, symbol_search, trace_path, domain_catalog, impact_query and history_query MCP tools",
+        "repo_ref resolution and explicit SHA pinning for every query",
+        "bounded filters, pagination, deterministic continuation and common evidence envelope",
+        "local stdio MCP setup, health-check, tools/list and client connection smoke test",
+        "explicit unavailable states until W15/W2/W10 domain/runtime joins are wired"
+      ],
+      "acceptance": [
+        "All MCP tools call the same query backend as CLI/export",
+        "Every response includes SHA, tree SHA, graph generation, freshness, coverage, provenance, omissions and cursor",
+        "Queries work for source code, docs, configs, schemas, tests, strategies, providers and history to the extent the relevant layer is available",
+        "Runtime queries never fabricate producer evidence before OCA-W10",
+        "Tools remain bounded/read-only with no shell/edit/delete/admin/signing/sending/borrowing/spending/deployment/LIVE capability",
+        "Fresh environment can connect a supported client using documented stdio config and pass a tools/list + real query smoke test"
+      ]
+    },
+    {
+      "id": "OCA-W4C",
+      "name": "Web3 Strategy Intelligence catalogue, comparison and evidence query tools",
+      "priority": "P1",
+      "status": "READY_AFTER_CORE_GRAPH_AND_PROVIDER_CONTRACTS",
+      "depends_on": [
+        "OCA-W0C",
+        "OCA-W0B2",
+        "OCA-W4B",
+        "OCA-W11B",
+        "OCA-W13",
+        "OCA-W14",
+        "OCA-W15",
+        "OCA-W20"
+      ],
+      "mode": "READ_ONLY_STRATEGY_AND_PROVIDER_RESEARCH_API",
+      "exclusive_write_scope": [
+        "src/intelligence/universal_data_plane/",
+        "src/intelligence/repo_graph/",
+        "tests/intelligence/",
+        "benchmarks/intelligence/",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/"
+      ],
+      "deliverables": [
+        "deterministic evidence-linked Strategy Card projection discovered from registries/source/configs/tests/fixtures/docs and permission-available GitHub history",
+        "complete paginated strategy/family/version/candidate catalogue with lifecycle and evidence states",
+        "strategy_context and strategy_compare query operations over exact source, economics, configs, providers, flash capital, tests, qualification and negative evidence",
+        "provider_trace and flash_capital_trace operations over canonical source/provider/capital/observation owners",
+        "operation_trace query operation with explicit W10/W2/W15 capability gate",
+        "two compact read-only MCP tools (`strategy_research`, `web3_data_trace`) implementing six typed operations over the existing QueryBackend",
+        "Web3 strategy golden-question corpus and token/recall/citation/latency receipts",
+        "performance_diagnostics query operation over the same read-only QueryBackend, exposing strategy/stage/function health, anomalies, baseline cohorts and exact evidence refs"
+      ],
+      "acceptance": [
+        "All discovered candidates from canonical registries, source, configs, tests, fixtures, docs and permitted GitHub history appear in the catalogue or have explicit reason-coded exclusions/UNKNOWN state",
+        "Registered, implemented, configured, tested, fixture-only, doc-only, rejected, deprecated, qualified and runtime-observed states are distinct and evidence-linked",
+        "strategy_context expands exact full target source, relevant call paths, configs, provider/data contracts, capital evidence and tests at one pinned SHA",
+        "strategy_compare identifies shared vs unique implementation/economic/data dependencies and labels novelty only as evidence-backed candidates",
+        "provider_trace separates declared/configured/tested/captured/runtime-observed source states and never invents health/replay/actual use",
+        "flash_capital_trace separates market liquidity from evidenced lender borrow capacity, fees, repayment and route capability",
+        "operation_trace returns UNAVAILABLE/PARTIAL until W10/W2/W15 supply real producer and join evidence",
+        "All tools use the same backend as CLI/generic MCP/export; bounded pagination and continuation are deterministic",
+        "Web3 golden set has zero critical omissions and zero fabricated runtime/provider/qualification claims",
+        "Token reduction is reported with recall, citation precision, critical omissions and latency using real tokenizer or labelled fallback",
+        "performance_diagnostics remains UNAVAILABLE/PARTIAL until W10/W2/W15/W20 provide real runtime measurements and valid joins; it never fabricates function health or causal attribution"
+      ],
+      "guardrails": [
+        "Read-only only; no signing, sending, borrowing, spending, deployment, provider enablement, production mutation or LIVE authority",
+        "No duplicate strategy/provider/raw-market canonical stores",
+        "LLM may draft analysis but cannot create canonical verified strategy labels or facts",
+        "Do not hide unregistered/source-only strategy candidates or rejected/negative experiments",
+        "Do not install every candidate application; adopt functions and tools only after licensing/security and measured benchmark"
+      ]
+    }
+  ],
+  "global_invariants": [
+    "LIVE remains hard-denied",
+    "No signer or sender authority is added",
+    "No production credentials or private keys in repo or context packs",
+    "No duplicate canonical raw event/market/strategy authority",
+    "All context packs are bounded and evidence-backed",
+    "LLM suggestions remain provisional until reviewed",
+    "No destructive retention based on model scores",
+    "Implementation PRs require human approval",
+    "All decision-relevant runtime events and raw evidence refs are durably captured or explicit missing/gap receipts are produced; no silent loss",
+    "Only existing supported test/shadow/paper runtime modes are instrumented; no live execution authority",
+    "A single logical read-only query plane references multiple canonical physical stores; do not copy all raw data into a new database",
+    "Provider adapters are versioned and expose observed STREAMING/POLL_ONLY/ONE_SHOT/UNAVAILABLE capability states with cursors, watermarks, freshness, gaps and replay evidence",
+    "Strategy versions declare data requirements and are evaluated against provider capabilities; adapter presence is not qualification",
+    "Bitemporal graph facts preserve valid-time, recorded-time, repo SHA, schema/ontology version and evidence provenance",
+    "License and SBOM checks are path-aware; subprocess boundaries do not automatically exempt licensing obligations",
+    "Indexer resource budgets must not starve decision-relevant market capture or paper/shadow runtime",
+    "Read-only MCP query facade is stable, bounded and allowlisted; management/write/admin actions remain separate",
+    "Historical blockchain corrections and reorgs create explicit correction/retraction evidence rather than silent overwrite",
+    "Live execution, signing, submission, borrowing, spending and production promotion remain outside this intelligence-plane scope"
+  ],
+  "first_action": "Fetch latest main and record its exact SHA; run OCA-W0, OCA-W0A and OCA-W0C in parallel read-only worktrees; reconcile #672-#676; then implement OCA-W0B against latest main and satisfy LLM_FREE_DETERMINISTIC_INDEXING_CONTRACT_RU.md before proceeding through the dependency-ordered Web3 data-plane waves. Do not stop after audit, do not run all packages concurrently, and do not merge without explicit human approval.",
+  "token_efficiency_policy": {
+    "repo_card_tokens_target": [
+      300,
+      500
+    ],
+    "initial_task_subgraph_tokens_target": [
+      1000,
+      2000
+    ],
+    "retrieval": "lazy 1-3 hop graph expansion; fetch code/test/config/evidence bodies by ID only on demand",
+    "ranking": "query-time personalized PageRank or equivalent relevance ranking",
+    "search": "lexical/BM25 plus structural graph first; embeddings only after measured semantic recall gap",
+    "slicing": "Probe raw CLI/MCP or grep-ast",
+    "prompt_cache": "stable prefix/tool definitions only where provider API supports prompt caching and metrics",
+    "content_addressing": "Git tree/blob SHA; custom Merkle cache deferred",
+    "lossy_compression": "overview only; never remove logic from authoritative code/evidence",
+    "multi_resolution_ast": {
+      "levels": [
+        "FULL",
+        "SKELETON",
+        "REFERENCE",
+        "OVERVIEW"
+      ],
+      "rule": "target implementation FULL; direct dependencies SKELETON; outer neighborhood REFERENCE; subsystem OVERVIEW",
+      "invariant": "Never remove target function logic, identifiers, critical branches, evidence refs or uncertainty to save tokens"
+    }
+  },
+  "continuous_evolution": {
+    "cache_authority": "Git tree/blob hashes, not mtime alone",
+    "graph_schema_versioning": true,
+    "label_ontology_versioning": true,
+    "temporal_queries": [
+      "valid_from_sha",
+      "valid_to_sha",
+      "recorded_at",
+      "source_event_time"
+    ],
+    "stale_label_revalidation": true,
+    "periodic_full_vs_incremental_reconciliation": true,
+    "resource_quotas": [
+      "cpu",
+      "ram",
+      "io",
+      "disk",
+      "wal",
+      "queue_depth"
+    ],
+    "branch_worktree_isolation": true,
+    "multi_repo_namespace_ready": true
+  },
+  "semantic_memory_policy": {
+    "canonical_label_owner": "Studious repo graph / versioned deterministic label store",
+    "candidates": [
+      "MakerViking/mimir",
+      "codician-team/growmos",
+      "TheWinci/mimirs"
+    ],
+    "maximum_adopted_overlays": 1,
+    "selection": "Benchmark only after W0A; choose none if native label store/context retrieval is sufficient",
+    "facts_must_link_to": [
+      "repo_sha_and_symbol_id",
+      "event_id",
+      "observation_id",
+      "episode_id",
+      "ADR_or_PR_ref"
+    ],
+    "never_authoritative_for": [
+      "raw_market_facts",
+      "quotes",
+      "settlement",
+      "realized_pnl",
+      "runtime_execution_status"
+    ]
+  },
+  "expanded_design_doc": "docs/roadmap/intelligence-operating-plane-2026-11-21/UNIVERSAL_KNOWLEDGE_DATA_PLANE_EXPANSION_RU.md",
+  "last_verified_main_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+  "last_verified_at": "2026-11-21",
+  "expanded_scope": {
+    "work_package_ids": [
+      "OCA-W12",
+      "OCA-W13",
+      "OCA-W14",
+      "OCA-W15",
+      "OCA-W16",
+      "OCA-W17",
+      "OCA-W18",
+      "OCA-W19"
+    ],
+    "implementation_rule": "Implement capability contracts and measured adapters; do not install all candidate projects or add a duplicate canonical store.",
+    "required_reading": "docs/roadmap/intelligence-operating-plane-2026-11-21/UNIVERSAL_KNOWLEDGE_DATA_PLANE_EXPANSION_RU.md"
+  },
+  "candidate_profiles": {
+    "primary_graph": [
+      "https://github.com/sdsrss/code-graph-mcp",
+      "https://github.com/colbymchenry/codegraph",
+      "https://github.com/CodeGraphContext/CodeGraphContext",
+      "https://github.com/Graphify-Labs/graphify"
+    ],
+    "symbol_navigation": [
+      "https://github.com/defendend/Claude-ast-index-search"
+    ],
+    "resolution_precision": [
+      "https://github.com/aimasteracc/tree-sitter-analyzer"
+    ],
+    "retrieval_risk": [
+      "https://github.com/iliaal/codesage"
+    ],
+    "temporal_graph": [
+      "https://github.com/n24q02m/crg"
+    ],
+    "conditional_graph_scale": [
+      "https://github.com/facebookincubator/Glean",
+      "https://github.com/LadybugDB/ladybug"
+    ],
+    "structural_audit": [
+      "https://github.com/ast-grep/ast-grep",
+      "https://github.com/Aider-AI/grep-ast"
+    ],
+    "token_efficiency": [
+      "https://github.com/rtk-ai/rtk",
+      "https://github.com/dweve-ai/hedl"
+    ],
+    "rca": [
+      "https://github.com/sebdenes/code-graph-rca"
+    ],
+    "policy": "Candidates are isolated evaluation profiles; no automatic vendoring, runtime installation or production authority."
+  },
+  "strategic_web3_infrastructure_assignments": {
+    "document": "docs/roadmap/intelligence-operating-plane-2026-11-21/STRATEGIC_WEB3_INFRA_ASSIGNMENTS_RU.md",
+    "execution_mode": "WEB3_FIRST_BACKLOG",
+    "auto_dispatch": false,
+    "human_approval_required_for_implementation_merge": true,
+    "canonical_owner_policy": "REUSE_EXISTING_OWNERS; intelligence/catalogue/lineage are read-only projections",
+    "sequence": [
+      {
+        "id": "WEB3-INFRA-S0",
+        "maps_to": [
+          "OCA-W0"
+        ],
+        "priority": "P0",
+        "mode": "AUDIT_ONLY",
+        "depends_on": []
+      },
+      {
+        "id": "WEB3-INFRA-S1",
+        "maps_to": [
+          "OCA-W13"
+        ],
+        "priority": "P0",
+        "mode": "VERSIONED_PROVIDER_AND_DATA_CONTRACTS",
+        "depends_on": [
+          "WEB3-INFRA-S0"
+        ]
+      },
+      {
+        "id": "WEB3-INFRA-S2",
+        "maps_to": [
+          "OCA-W13",
+          "OCA-W10"
+        ],
+        "priority": "P0",
+        "mode": "PROVIDER_HEALTH_QUALITY_DISAGREEMENT",
+        "depends_on": [
+          "WEB3-INFRA-S1"
+        ]
+      },
+      {
+        "id": "WEB3-INFRA-S3",
+        "maps_to": [
+          "OCA-W13",
+          "OCA-W15"
+        ],
+        "priority": "P0",
+        "mode": "CHAIN_IDENTITY_FINALITY_REORG",
+        "depends_on": [
+          "WEB3-INFRA-S1"
+        ]
+      },
+      {
+        "id": "WEB3-INFRA-S4",
+        "maps_to": [
+          "OCA-W14"
+        ],
+        "priority": "P0",
+        "mode": "STRATEGY_DATA_REQUIREMENT_COMPATIBILITY",
+        "depends_on": [
+          "WEB3-INFRA-S1",
+          "WEB3-INFRA-S2",
+          "WEB3-INFRA-S3"
+        ]
+      },
+      {
+        "id": "WEB3-INFRA-S5",
+        "maps_to": [
+          "OCA-W1",
+          "OCA-W2",
+          "OCA-W3",
+          "OCA-W10"
+        ],
+        "priority": "P0",
+        "mode": "EVIDENCE_LINEAGE_TO_OUTCOME",
+        "depends_on": [
+          "WEB3-INFRA-S0",
+          "WEB3-INFRA-S1",
+          "WEB3-INFRA-S2",
+          "WEB3-INFRA-S3"
+        ]
+      },
+      {
+        "id": "WEB3-INFRA-S6",
+        "maps_to": [
+          "OCA-W10",
+          "OCA-W11"
+        ],
+        "priority": "P0",
+        "mode": "CURSOR_BACKFILL_REPLAY_RECOVERY",
+        "depends_on": [
+          "WEB3-INFRA-S1",
+          "WEB3-INFRA-S3",
+          "WEB3-INFRA-S5"
+        ]
+      },
+      {
+        "id": "WEB3-INFRA-S7",
+        "maps_to": [
+          "OCA-W11"
+        ],
+        "priority": "P1",
+        "mode": "READ_ONLY_CATALOGUE_QUERY",
+        "depends_on": [
+          "WEB3-INFRA-S1",
+          "WEB3-INFRA-S5",
+          "WEB3-INFRA-S6"
+        ]
+      },
+      {
+        "id": "WEB3-INFRA-S8",
+        "maps_to": [
+          "OCA-W12",
+          "OCA-W18"
+        ],
+        "priority": "P0_CROSS_CUTTING",
+        "mode": "SCHEMA_SECURITY_TEST_RESOURCE_GATES",
+        "depends_on": [
+          "WEB3-INFRA-S0"
+        ]
+      },
+      {
+        "id": "WEB3-INFRA-S9",
+        "maps_to": [
+          "OCA-W19"
+        ],
+        "priority": "P2_CONDITIONAL",
+        "mode": "MEASURED_INFRASTRUCTURE_BAKEOFF",
+        "depends_on": [
+          "WEB3-INFRA-S1",
+          "WEB3-INFRA-S2",
+          "WEB3-INFRA-S3",
+          "WEB3-INFRA-S4",
+          "WEB3-INFRA-S5",
+          "WEB3-INFRA-S6",
+          "WEB3-INFRA-S7",
+          "WEB3-INFRA-S8"
+        ]
+      }
+    ],
+    "no_duplicate_owners": [
+      "src/market/source_catalog.py",
+      "src/external_contracts",
+      "src/provider_governance",
+      "src/agg02",
+      "src/market/observations.py",
+      "src/market/streams.py",
+      "src/observability",
+      "existing strategy and qualification owners"
+    ],
+    "upstream_pr_reconciliation": [
+      {
+        "pr": 672,
+        "area": "schema compatibility gate",
+        "status_at_assignment_creation": "OPEN_NOT_MERGED",
+        "instruction": "review and extend in existing owner; do not duplicate"
+      },
+      {
+        "pr": 673,
+        "area": "read-only DataHub-style catalogue projection",
+        "status_at_assignment_creation": "OPEN_NOT_MERGED",
+        "instruction": "reuse projection; do not deploy a DataHub server by default"
+      },
+      {
+        "pr": 674,
+        "area": "Debezium CDC adoption decision",
+        "status_at_assignment_creation": "OPEN_NOT_MERGED",
+        "instruction": "decision gate only; CDC remains conditional"
+      },
+      {
+        "pr": 675,
+        "area": "NATS JetStream adoption decision",
+        "status_at_assignment_creation": "OPEN_NOT_MERGED",
+        "instruction": "decision gate only; transport remains conditional"
+      },
+      {
+        "pr": 676,
+        "area": "OpenLineage RunEvent projection",
+        "status_at_assignment_creation": "OPEN_DRAFT_NOT_MERGED",
+        "instruction": "reuse projection; still prove actual runtime producers"
+      }
+    ],
+    "execution_guardrails": [
+      "Do not auto-dispatch this backlog while WEB3_FIRST focus remains active",
+      "One assignment, one owner, one isolated worktree, one reviewable PR",
+      "Re-fetch main/open PRs/CI and AGENTS.md before every assignment",
+      "Provider/schema/catalogue/lineage presence never enables a provider or qualifies a strategy",
+      "No LIVE/signing/submission/borrowing/spending/deployment/production mutation authority",
+      "Conditional infrastructure requires measured bottleneck and rollback plan"
+    ]
+  },
+  "repo_intelligence_strategy_rnd_blueprint": {
+    "document": "docs/roadmap/intelligence-operating-plane-2026-11-21/REPO_INTELLIGENCE_AND_STRATEGY_RND_BLUEPRINT_RU.md",
+    "purpose": "SHA-bound repo-wide knowledge graph, strategy R&D catalogue and token-efficient ChatGPT retrieval product",
+    "execution_mode": "WEB3_FIRST_STAGED_REPO_INTELLIGENCE_IMPLEMENTATION",
+    "first_useful_vertical_slice": [
+      "SHA-bound repo card",
+      "strategy idea/family/version catalogue with status and novelty/duplicate evidence",
+      "exact symbols/callers/imports/tests for a selected Web3 domain slice",
+      "one detailed strategy card linking implementation/config/providers/tests/evidence",
+      "bounded T0-T3 ChatGPT context pack with token estimate/actual count, omissions and evidence manifest",
+      "golden-question recall/critical-omission benchmark",
+      "deterministic rebuild and stale-SHA rejection"
+    ],
+    "capability_letters": [
+      {
+        "letter": "A",
+        "name": "Repository inventory and typed SymbolGraph",
+        "priority": "P0",
+        "maps_to": [
+          "OCA-W0",
+          "OCA-W0A",
+          "OCA-W0B"
+        ]
+      },
+      {
+        "letter": "B",
+        "name": "Incremental computation and content-addressed invalidation",
+        "priority": "P1",
+        "maps_to": [
+          "OCA-W16"
+        ]
+      },
+      {
+        "letter": "C",
+        "name": "Temporal provenance and versioned strategy/code history",
+        "priority": "P0_FOUNDATION",
+        "maps_to": [
+          "OCA-W1",
+          "OCA-W2",
+          "OCA-W3",
+          "OCA-W15"
+        ]
+      },
+      {
+        "letter": "D",
+        "name": "Agent-safe task isolation and sandbox",
+        "priority": "P1_MINIMUM_GUARDS_P0",
+        "maps_to": [
+          "OCA-W17"
+        ]
+      },
+      {
+        "letter": "E",
+        "name": "Retrieval, T0-T4 context packs and ChatGPT handoff",
+        "priority": "P0",
+        "maps_to": [
+          "OCA-W4",
+          "OCA-W7",
+          "OCA-W11"
+        ]
+      },
+      {
+        "letter": "F",
+        "name": "Verification and test economics",
+        "priority": "P1_CRITICAL_TEST_GATES_P0",
+        "maps_to": [
+          "OCA-W18"
+        ]
+      },
+      {
+        "letter": "G",
+        "name": "Large-repository plumbing and scaling",
+        "priority": "P2_CONDITIONAL",
+        "maps_to": [
+          "OCA-W0A",
+          "OCA-W9",
+          "OCA-W19"
+        ]
+      },
+      {
+        "letter": "H",
+        "name": "Token, security, license and resource governance",
+        "priority": "P0_CROSS_CUTTING",
+        "maps_to": [
+          "OCA-W12",
+          "OCA-W17",
+          "OCA-W18"
+        ]
+      }
+    ],
+    "recommended_build_order": [
+      "H0+C0 minimum security/provenance/receipt guardrails and owner/PR reconciliation",
+      "A repository inventory and native typed symbol graph",
+      "E retrieval/context packs/ChatGPT read-only delivery",
+      "WEB3-INFRA-S1..S6 provider contracts, quality, chain identity, strategy requirements, lineage and replay",
+      "F symbol-to-test/evidence verification",
+      "B incremental index and early cutoff",
+      "D strengthen sandbox/task capabilities before increasing write autonomy",
+      "G scale only when measured"
+    ],
+    "context_tiers": [
+      {
+        "tier": "T0",
+        "target_tokens": [
+          300,
+          500
+        ],
+        "content": "Repo card: SHA, modules, strategy families, coverage and risks"
+      },
+      {
+        "tier": "T1",
+        "target_tokens": [
+          1000,
+          3000
+        ],
+        "content": "Compact catalogs of strategies, providers, tools, tests and schemas"
+      },
+      {
+        "tier": "T2",
+        "target_tokens": [
+          1000,
+          2000
+        ],
+        "content": "Task-specific graph slice, lazy 1-3 hop retrieval"
+      },
+      {
+        "tier": "T3",
+        "target_tokens": null,
+        "content": "Exact full functions/configs/tests/evidence on demand"
+      },
+      {
+        "tier": "T4",
+        "target_tokens": null,
+        "content": "Deep dossier including history, alternatives, failures, replay and unresolved questions"
+      }
+    ],
+    "strategy_card_required_fields": [
+      "stable_strategy_id_and_family",
+      "aliases_variants_and_novelty_status",
+      "status_and_temporal_versions",
+      "source_docs_commits_prs_issues_and_repo_sha",
+      "exact_symbols_call_paths_configs_and_tests",
+      "required_chain_protocol_venue_provider_capabilities",
+      "experiments_simulation_paper_shadow_and_negative_results",
+      "qualification_reasons_blockers_unknowns_and_next_evidence"
+    ],
+    "retrieval_order": [
+      "exact IDs/symbols",
+      "lexical BM25/FTS/trigram",
+      "typed graph and call paths",
+      "strategy/config/test relevance",
+      "Git churn/co-change",
+      "proven runtime outcomes",
+      "semantic search only after measured recall gap"
+    ],
+    "chatgpt_delivery_paths": [
+      "authorized GitHub connector",
+      "approved read-only MCP",
+      "explicit uploaded SHA-bound context pack"
+    ],
+    "token_safety_invariants": [
+      "target code/economic logic/safety logic/schema/units/decimals/time semantics/tests/evidence refs remain FULL",
+      "only surrounding context may be skeletonized or summarized",
+      "every pack reports token count or labelled estimate, omissions, completeness, freshness and deterministic continuation",
+      "UNKNOWN remains UNKNOWN; no fabricated repository coverage"
+    ],
+    "candidate_policy": {
+      "tree_sitter_and_scip_lsp": "parsers/resolvers selected per language/build, pin and benchmark",
+      "aider_repo_map": "ranking pattern, no dependency required",
+      "grep_ast_and_ast_grep": "scoped source retrieval and executable audit rules",
+      "sqlite_fts_bm25": "baseline lexical retrieval",
+      "rtk": "output trimming benchmark only, verify information loss",
+      "zoekt_tantivy": "conditional lexical scale",
+      "salsa_buck2_cocoindex": "incremental computation patterns, not default wholesale adoption",
+      "code_graph_backend": "zero or one selected after same-SHA golden benchmark",
+      "glean_ladybugdb": "conditional graph-scale backends",
+      "datahub_apicurio_openlineage_nats_debezium_temporal": "reuse current PRs/owners; deploy only on measured integration/recovery gap",
+      "semantic_overlay": "zero or one, evidence-linked and never canonical for finance/runtime truth"
+    },
+    "canonical_owner_reuse": [
+      "src/intelligence",
+      "src/strategy and qualification owners",
+      "src/market/source_catalog.py",
+      "src/external_contracts",
+      "src/provider_governance",
+      "src/agg02",
+      "src/market/observations.py",
+      "src/market/streams.py",
+      "src/observability"
+    ],
+    "one_pr_policy": "One owner, one isolated worktree, one bounded write scope, one reviewable implementation PR; no broad infrastructure swarm.",
+    "auto_dispatch": false,
+    "human_approval_required_for_merge": true,
+    "first_execution_wave": [
+      "OCA-W0",
+      "OCA-W0A",
+      "OCA-W0C"
+    ],
+    "mandatory_gate": "docs/roadmap/intelligence-operating-plane-2026-11-21/LLM_FREE_DETERMINISTIC_INDEXING_CONTRACT_RU.md",
+    "llm_free_build": {
+      "bootstrap_requires_llm": false,
+      "model_api_or_model_network_required": false,
+      "unknown_semantics_are_preserved": true,
+      "full_vs_incremental_reconciliation": true,
+      "required_file_coverage_states": [
+        "INDEXED",
+        "PARTIAL",
+        "UNSUPPORTED",
+        "EXCLUDED_WITH_REASON",
+        "PARSE_ERROR",
+        "UNCLASSIFIED"
+      ],
+      "CI_and_nightly_refresh_required": true
+    },
+    "required_query_operations": [
+      "task_context",
+      "expand_context",
+      "repo_overview",
+      "strategy_search",
+      "strategy_explain",
+      "strategy_compare",
+      "provider_search",
+      "provider_explain",
+      "provider_trace",
+      "flash_capital_trace",
+      "symbol_context",
+      "route_trace",
+      "operation_trace",
+      "change_impact",
+      "test_impact",
+      "as_of",
+      "tool_inventory",
+      "build_context_pack"
+    ],
+    "source_trace_chain": [
+      "strategy/version/entrypoint",
+      "symbols/callers/config",
+      "data requirements",
+      "provider/adapter/endpoint/method/contract",
+      "raw payload/cursor/watermark",
+      "normalized observation/quality/correction",
+      "candidate/decision/rejection",
+      "flash capital/lender capacity and fee evidence",
+      "quote/sizing/route/planner/compiler",
+      "sender-free simulation",
+      "reconciliation",
+      "paper/shadow outcome/qualification"
+    ],
+    "execution_guardrail": "One owner + one isolated worktree + one bounded write scope + one reviewable PR; do not dispatch all packages concurrently; recheck #672-#676 and reuse their work.",
+    "universal_task_interface": {
+      "primary_entrypoints": [
+        "task_context",
+        "expand_context"
+      ],
+      "implementation_stage": {
+        "OCA-W0B": "minimal deterministic task_context + expand_context service/CLI",
+        "OCA-W4": "adaptive retrieval/token-budget/quality hardening",
+        "OCA-W11": "same backend exposed via read-only MCP"
+      },
+      "api_spec": "docs/roadmap/intelligence-operating-plane-2026-11-21/UNIVERSAL_TASK_CONTEXT_API_RU.md",
+      "generic_task_support": true,
+      "model_required_for_indexing": false,
+      "model_required_for_retrieval_baseline": false,
+      "stale_index_must_be_disclosed": true
+    }
+  },
+  "llm_free_deterministic_indexing_contract": {
+    "document": "docs/roadmap/intelligence-operating-plane-2026-11-21/LLM_FREE_DETERMINISTIC_INDEXING_CONTRACT_RU.md",
+    "mandatory_for": [
+      "OCA-W0B",
+      "incremental refresh",
+      "push/PR/main CI",
+      "nightly rebuild"
+    ],
+    "llm_required": false,
+    "model_api_required": false,
+    "model_network_required": false,
+    "deterministic_inputs": [
+      "repo tree SHA",
+      "Git blob SHA",
+      "parser/grammar/resolver versions",
+      "normalizer version",
+      "graph schema version",
+      "label ontology version",
+      "indexer version",
+      "deterministic config"
+    ],
+    "mandatory_file_statuses": [
+      "INDEXED",
+      "PARTIAL",
+      "UNSUPPORTED",
+      "EXCLUDED_WITH_REASON",
+      "PARSE_ERROR",
+      "UNCLASSIFIED"
+    ],
+    "forbidden_promotions": [
+      "UNKNOWN_TO_VERIFIED",
+      "AMBIGUOUS_TO_VERIFIED_BY_NAME_MATCH",
+      "STATIC_TO_RUNTIME_OBSERVED",
+      "DOC_CLAIM_TO_CANONICAL_FACT",
+      "LLM_PROPOSED_TO_VERIFIED_WITHOUT_HUMAN_EVIDENCE"
+    ],
+    "refresh_triggers": [
+      "local explicit refresh or approved post-commit hook",
+      "GitHub push",
+      "PR update",
+      "merge to main",
+      "parser/schema/ontology version change",
+      "scheduled nightly full rebuild"
+    ],
+    "required_ci_tests": [
+      "offline no-model build",
+      "same-input byte-identical build",
+      "clean-vs-incremental checksum parity",
+      "add/modify/delete/rename handling",
+      "stale-SHA rejection",
+      "branch/worktree isolation",
+      "parser/resolver/schema invalidation",
+      "no dangling edges",
+      "secret exclusion",
+      "static-vs-runtime separation",
+      "nightly drift detection"
+    ],
+    "acceptance_is_blocking": true
+  },
+  "last_refreshed_for_contract": "2026-11-22",
+  "execution_wave_plan": {
+    "authorized_on": "2026-11-22",
+    "parallel_read_only_wave": [
+      "OCA-W0",
+      "OCA-W0A",
+      "OCA-W0C"
+    ],
+    "cross_cutting_audit": "OCA-W0A includes a read-only preliminary path-level license/SBOM/security inventory; the dedicated OCA-W12 gate/remediation follows after the candidate list is pinned.",
+    "first_implementation": "OCA-W0B deterministic graph/index, CLI, context packs, CI and nightly reconciliation",
+    "next_waves": [
+      [
+        "OCA-W1",
+        "OCA-W3",
+        "WEB3-INFRA-S1",
+        "WEB3-INFRA-S2",
+        "WEB3-INFRA-S3"
+      ],
+      [
+        "OCA-W13",
+        "WEB3-INFRA-S4",
+        "OCA-W14",
+        "OCA-W5"
+      ],
+      [
+        "OCA-W2",
+        "OCA-W15",
+        "WEB3-INFRA-S5",
+        "WEB3-INFRA-S6"
+      ],
+      [
+        "OCA-W10",
+        "OCA-W11",
+        "OCA-W4",
+        "OCA-W7",
+        "OCA-W18"
+      ],
+      [
+        "OCA-W16",
+        "OCA-W17"
+      ],
+      [
+        "OCA-W19 conditional"
+      ]
+    ],
+    "parallelism_rule": "Parallelize only different owners and disjoint exclusive_write_scope paths; shared canonical owners must be serialized.",
+    "merge_policy": "No automatic merge; human approval required.",
+    "universal_api_milestones": [
+      "W0B: native deterministic retrieval service + task_context/expand_context CLI and T0-T2 starter packs",
+      "W4: adaptive task routing, tokenizer budget, deduplication, exact source expansion, recall/omission benchmarks",
+      "W11: expose the same backend via read-only MCP and portable export"
+    ],
+    "full_repository_completion": [
+      "Reconcile PRs #680–#690 and verify their actual dependency/base relationships",
+      "OCA-W0B2: whole-tree path accounting + polyglot structural and asset graph",
+      "OCA-W4B: actual tokenizer, task-conditioned ranking, AST scope extraction and loss-aware token benchmark",
+      "OCA-W11B: expanded typed read-only query API + documented actual client connection",
+      "Complete existing W15/W16/W2/W10/W7/W12 dependency lanes without duplicate canonical owners"
+    ]
+  },
+  "universal_task_context_api": {
+    "document": "docs/roadmap/intelligence-operating-plane-2026-11-21/UNIVERSAL_TASK_CONTEXT_API_RU.md",
+    "primary_tools": [
+      "task_context",
+      "expand_context"
+    ],
+    "shared_backend_surfaces": [
+      "repo-intel CLI",
+      "local read-only MCP",
+      "portable context-pack export"
+    ],
+    "no_duplicate_retrieval_implementations": true,
+    "default_depth": "adaptive",
+    "default_dimensions": "auto",
+    "required_task_classes": [
+      "bug",
+      "feature",
+      "refactor",
+      "architecture",
+      "test_failure",
+      "performance",
+      "security",
+      "license_audit",
+      "provider_integration",
+      "strategy_RnD",
+      "PR_review"
+    ],
+    "required_response_fields": [
+      "requested_sha",
+      "indexed_sha",
+      "tree_sha",
+      "graph_generation",
+      "freshness",
+      "coverage",
+      "dimensions",
+      "depth",
+      "actual_tokens_or_labelled_estimate",
+      "tokenizer_version",
+      "included_refs",
+      "omitted_refs",
+      "provenance",
+      "verification_state",
+      "confidence",
+      "next_expansions",
+      "continuation_cursor"
+    ],
+    "token_efficiency": {
+      "deduplicate_by": [
+        "stable_symbol_id",
+        "evidence_id",
+        "content_hash"
+      ],
+      "compression_policy": "target_code_and_critical_evidence_full; only surrounding context may be skeletonized/referenced",
+      "overflow": "BUDGET_LIMITED_with_exact_expansion_refs; never truncate critical target code",
+      "cache_key": [
+        "repo_sha",
+        "graph_generation",
+        "task_query_hash",
+        "dimensions",
+        "depth",
+        "tokenizer_version",
+        "budget"
+      ],
+      "optional_semantic_retrieval": "only after measured exact/lexical/graph recall gap"
+    },
+    "stale_index_policy": "report STALE/UNAVAILABLE and use disclosed authorized GitHub/source fallback; never claim MCP/index usage when not connected",
+    "read_only": true,
+    "expanded_mcp_tools": [
+      "repo_overview",
+      "task_context",
+      "expand_context",
+      "graph_query",
+      "symbol_search",
+      "trace_path",
+      "domain_catalog",
+      "impact_query",
+      "history_query"
+    ],
+    "repo_ref_resolution_required": true,
+    "actual_client_connection_required": true,
+    "model_tokenizer_or_labelled_fallback": true,
+    "web3_domain_tools": [
+      "strategy_research",
+      "web3_data_trace"
+    ],
+    "strategy_catalog_complete_pagination_required": true,
+    "strategy_evidence_states": [
+      "CANONICAL_REGISTERED",
+      "IMPLEMENTED",
+      "CONFIGURED",
+      "TESTED",
+      "QUALIFICATION_PENDING",
+      "PAPER_SHADOW_OBSERVED",
+      "FIXTURE_ONLY",
+      "DOC_ONLY",
+      "REJECTED",
+      "DEPRECATED",
+      "SUPERSEDED",
+      "UNCLASSIFIED",
+      "UNKNOWN"
+    ],
+    "web3_domain_operations": [
+      "strategy_catalog",
+      "strategy_context",
+      "strategy_compare",
+      "provider_trace",
+      "flash_capital_trace",
+      "operation_trace",
+      "performance_diagnostics"
+    ],
+    "web3_domain_tool_schema_policy": "Two composite MCP schemas, seven typed operations, one shared backend."
+  },
+  "full_repository_graph_and_mcp_expansion": {
+    "document": "docs/roadmap/intelligence-operating-plane-2026-11-21/FULL_REPOSITORY_GRAPH_AND_MCP_EXPANSION_RU.md",
+    "scope": "Complete inventory + polyglot code graph + asset graph + evidence-backed Web3 domain graph + expanded read-only query surface",
+    "current_implementation_boundary": {
+      "w0b": "All tracked paths inventoried; Python stdlib AST structural graph; non-Python structural coverage remains incomplete",
+      "w4": "Adaptive routing/directory refs; current tokenizer is byte estimate until W4B",
+      "w11": "Three local stdio tools; no automatic ChatGPT client connection",
+      "incremental": "Blob/parser cache exists; full graph-delta invalidation/early cutoff remains OCA-W16",
+      "runtime": "Runtime producer joins unavailable until OCA-W10; temporal cross-store joins need OCA-W2/W15"
+    },
+    "required_tool_surface": [
+      "repo_overview",
+      "task_context",
+      "expand_context",
+      "graph_query",
+      "symbol_search",
+      "trace_path",
+      "domain_catalog",
+      "impact_query",
+      "history_query"
+    ],
+    "completion_claims": {
+      "inventory_complete": "100% tracked tree paths have coverage records",
+      "structural_graph_complete": "all first-party source languages structurally indexed or explicit approved gaps",
+      "domain_graph_complete": "only strategy/provider/domain dimensions represented with evidence",
+      "runtime_lineage_complete": "only supported paths with real producers, recovery and replay tests"
+    },
+    "adopted_functions_not_products": [
+      "Tree-sitter parser adapters",
+      "selective SCIP/LSP",
+      "Aider-style query-conditioned PageRank",
+      "grep-ast/TreeContext-style AST scope extraction",
+      "ast-grep structural rules where useful",
+      "SQLite FTS/BM25 baseline; Zoekt/Tantivy only at measured scale",
+      "Git blob/tree content-addressed cache, signature/body split, early cutoff",
+      "coverage-context and dependency-driven test impact",
+      "OpenLineage-compatible facets over existing canonical owners"
+    ],
+    "conditional_candidates": [
+      "Glean",
+      "LadybugDB",
+      "Salsa",
+      "Buck2 DICE",
+      "CocoIndex",
+      "Joern/CPG",
+      "DataHub",
+      "Apicurio",
+      "NATS JetStream",
+      "Debezium",
+      "Temporal",
+      "RTK"
+    ],
+    "execution_order": [
+      "OCA-W0B2",
+      "OCA-W4B",
+      "OCA-W11B",
+      "OCA-W15",
+      "OCA-W16",
+      "OCA-W2",
+      "OCA-W10",
+      "OCA-W7",
+      "OCA-W12"
+    ],
+    "merge_policy": "Human approval only; dependent PRs must be correctly stacked or rebased after parent merge"
+  },
+  "web3_strategy_intelligence": {
+    "document": "docs/roadmap/intelligence-operating-plane-2026-11-21/WEB3_STRATEGY_INTELLIGENCE_QUERY_TOOLS_RU.md",
+    "package": "OCA-W4C",
+    "objective": "Complete evidence-linked discovery and token-efficient research over every existing Web3 strategy candidate",
+    "tools": [
+      "strategy_research",
+      "web3_data_trace"
+    ],
+    "shared_backend": "same QueryBackend used by generic CLI/MCP/context export",
+    "source_union": [
+      "canonical strategy registries and manifests",
+      "first-party implementation symbols/call paths",
+      "configs, capability matrices and feature flags",
+      "tests, fixtures, benchmarks and qualification evidence",
+      "docs, ADRs and research notes",
+      "permission-available GitHub history as a separate evidence feed"
+    ],
+    "tiers": [
+      "T0 repo/coverage card",
+      "T1 complete paginated strategy catalogue",
+      "T2 strategy-family subgraph",
+      "T3 exact FULL source/config/contracts/tests",
+      "T4 history/negative evidence/runtime replay"
+    ],
+    "no_lossy_fields": [
+      "financial formulas",
+      "integer/decimal arithmetic",
+      "units/decimals",
+      "fees/interest/repayment",
+      "slippage",
+      "route ordering",
+      "chain/program identity",
+      "block/time semantics",
+      "risk gates",
+      "test assertions",
+      "negative evidence",
+      "provenance"
+    ],
+    "execution_order": [
+      "OCA-W0B2",
+      "OCA-W4B",
+      "OCA-W11B",
+      "OCA-W4C"
+    ],
+    "runtime_gate": "operation_trace and performance_diagnostics remain UNAVAILABLE/PARTIAL until OCA-W10/OCA-W2/OCA-W15/OCA-W20 producer, metric and temporal-join evidence is verified",
+    "merge_policy": "human approval only; do not duplicate canonical owners or merge automatically",
+    "operations": [
+      "strategy_catalog",
+      "strategy_context",
+      "strategy_compare",
+      "provider_trace",
+      "flash_capital_trace",
+      "operation_trace",
+      "performance_diagnostics"
+    ],
+    "tool_schema_budget": "Expose 2 composite MCP tool schemas to reduce persistent tool-description token overhead; web3_data_trace supports provider_trace, flash_capital_trace, operation_trace and performance_diagnostics."
+  },
+  "current_base_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+  "base_refreshed_at": "2026-11-22",
+  "implementation_delivery_crosswalk": {
+    "schema": "studious.oca.delivery-crosswalk.v1",
+    "note": "map of work packages to opened implementation PRs (all OPEN, none merged; human approval required)",
+    "deliveries": {
+      "OCA-W0": {
+        "pr": 680,
+        "state": "OPEN"
+      },
+      "OCA-W0A": {
+        "pr": 681,
+        "state": "OPEN"
+      },
+      "OCA-W0C": {
+        "pr": 682,
+        "state": "OPEN"
+      },
+      "OCA-W0B": {
+        "pr": 684,
+        "state": "OPEN"
+      },
+      "OCA-W4": {
+        "pr": 685,
+        "state": "OPEN"
+      },
+      "OCA-W11": {
+        "pr": 686,
+        "state": "OPEN"
+      },
+      "OCA-W1": {
+        "pr": 687,
+        "state": "OPEN"
+      },
+      "OCA-W3": {
+        "pr": 688,
+        "state": "OPEN"
+      },
+      "OCA-W13": {
+        "pr": 689,
+        "state": "OPEN"
+      },
+      "OCA-W14": {
+        "pr": 690,
+        "state": "OPEN"
+      },
+      "OCA-W0B2": {
+        "pr": 700,
+        "state": "OPEN"
+      },
+      "OCA-W4B": {
+        "pr": 702,
+        "state": "OPEN"
+      },
+      "OCA-W11B": {
+        "pr": 703,
+        "state": "OPEN"
+      },
+      "OCA-W2": {
+        "pr": 704,
+        "state": "OPEN"
+      },
+      "OCA-W10": {
+        "pr": 706,
+        "state": "OPEN"
+      },
+      "OCA-W15": {
+        "pr": 707,
+        "state": "OPEN"
+      },
+      "OCA-W18": {
+        "pr": 709,
+        "state": "OPEN"
+      },
+      "OCA-W20": {
+        "pr": 713,
+        "state": "OPEN"
+      },
+      "OCA-W4C": {
+        "pr": 717,
+        "state": "OPEN"
+      }
+    },
+    "chain_a": [
+      684,
+      685,
+      686,
+      700,
+      702,
+      703
+    ],
+    "chain_b": [
+      689,
+      690,
+      704,
+      707,
+      709,
+      706,
+      713,
+      717
+    ],
+    "independent": [
+      680,
+      681,
+      682,
+      687,
+      688
+    ],
+    "notes": [
+      "chains list PR delivery order by actual merge ancestry (merge-base verified), not matrix depends_on order",
+      "matrix depends_on fields reference work-package dependencies; several are satisfied by chain merges (e.g. W4/W11 runtime deps land via chain_b merges into W20/W4C)",
+      "chain_b tail (#713/#717) includes real merge commits joining chain A, so the two chains are dependency-closed at W4C"
+    ],
+    "not_yet_opened": {
+      "OCA-W5": "no PR yet (deps W0/W0B satisfied by #680/#684)",
+      "OCA-W6": "no PR yet",
+      "OCA-W7": "no PR yet (deps W0A/W0B/W4 satisfied; formal benchmark lane)",
+      "OCA-W8": "no PR yet (blocked on W4/W5/W7/W10/W11 deliveries)",
+      "OCA-W9": "no PR yet (conditional)",
+      "OCA-W12": "no PR yet (deps satisfied; recommended next)",
+      "OCA-W16": "no PR yet (deps W0B/W15 satisfied via chain B)",
+      "OCA-W17": "no PR yet (deps W0B/W11/W12; W12 pending)",
+      "OCA-W19": "no PR yet (conditional)"
+    }
+  }
+}

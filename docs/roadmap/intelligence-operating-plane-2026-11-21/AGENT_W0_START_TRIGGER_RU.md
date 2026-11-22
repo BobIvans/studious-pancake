@@ -335,7 +335,7 @@ Read **FULL_REPOSITORY_GRAPH_AND_MCP_EXPANSION_RU.md** as a mandatory scope exte
 
 ## 14. Web3 Strategy Intelligence — dedicated token-efficient research tools
 
-Read `WEB3_STRATEGY_INTELLIGENCE_QUERY_TOOLS_RU.md`. The generic repo graph is not enough by itself for high-quality strategy R&D: implement a derived evidence-linked Strategy Card/catalogue and six bounded domain query tools over the **same** read-only query backend:
+Read `WEB3_STRATEGY_INTELLIGENCE_QUERY_TOOLS_RU.md`. The generic repo graph is not enough by itself for high-quality strategy R&D: implement a derived evidence-linked Strategy Card/catalogue and six bounded domain query operations exposed through only two compact MCP tools over the **same** read-only query backend:
 
 - `strategy_catalog` — enumerate every discovered registered/unregistered/incomplete/rejected/fixture/doc-only candidate with cursor pagination.
 - `strategy_context` — retrieve full strategy implementation/economics/config/provider/test/qualification context by stable refs.

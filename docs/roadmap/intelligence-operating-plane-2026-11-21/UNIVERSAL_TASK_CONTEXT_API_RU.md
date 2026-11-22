@@ -188,15 +188,11 @@ A client setup/health-check guide and tools/list smoke test are required. Local 
 
 ## 10. Web3 Strategy Intelligence domain tools
 
-The generic API remains the entrypoint for any task. For deep strategy research the same backend additionally exposes bounded read-only domain tools specified normatively in `WEB3_STRATEGY_INTELLIGENCE_QUERY_TOOLS_RU.md`:
+The generic API remains the entrypoint for any task. For deep strategy research the same backend additionally exposes only two compact MCP tool schemas, specified normatively in `WEB3_STRATEGY_INTELLIGENCE_QUERY_TOOLS_RU.md`:
 
-- `strategy_catalog`: complete, cursor-paginated strategy/family/version/candidate inventory;
-- `strategy_context`: exact implementation, economics, configs, providers, capital, tests, qualification and negative evidence;
-- `strategy_compare`: evidence-backed version/variant/novelty comparison;
-- `provider_trace`: provider-to-observation-to-strategy path and declared/tested/captured/observed state;
-- `flash_capital_trace`: lender/program/SDK/IDL/fees/repayment/capacity evidence and strategy integration;
-- `operation_trace`: real operation lifecycle/replay, unavailable until proven runtime producer and joins exist.
+- `strategy_research(operation=catalog|context|compare)`: complete strategy inventory, exact implementation/economics/provider/test context and evidence-backed version/variant comparison;
+- `web3_data_trace(operation=provider_trace|flash_capital_trace|operation_trace)`: provider-to-observation-to-strategy paths, flash-capital evidence and actual paper/shadow lifecycle/replay.
 
-These operations are purpose-built composite tools, not six independent databases. They call the same query backend and canonical owner APIs as task_context/expand_context. Results are bounded by budget and paginated. Each response is SHA-bound, includes evidence/provenance/verification, explicit omissions/UNKNOWN and deterministic cursors.
+The six operations are purpose-built query modes, not six tools/databases. They call the same query backend and canonical owner APIs as task_context/expand_context. Results are bounded by budget and paginated. Each response is SHA-bound, includes evidence/provenance/verification, explicit omissions/UNKNOWN and deterministic cursors.
 
 The catalogue must include candidates discovered outside the canonical strategy registry (source, config, test, fixture, docs and permission-available GitHub history) while preserving their different evidence states. Never present DOC_ONLY, FIXTURE_ONLY, IMPLEMENTED, CONFIGURED, TESTED, QUALIFIED and RUNTIME_OBSERVED as interchangeable states.

@@ -71,11 +71,11 @@ Each discovered StrategyIdea/Family/Version gets a deterministic, evidence-linke
 
 Numerical thresholds and economic values must come from exact code/config/contracts/tests or authoritative qualification evidence. Never fill missing fees, decimals, slippage, capacity, freshness or profitability with plausible values.
 
-## 3. Six dedicated bounded read-only Web3 MCP tools
+## 3. Six domain operations exposed through two bounded read-only Web3 MCP tools
 
-Keep the existing generic MCP interface (repo_overview, task_context, expand_context, graph_query, symbol_search, trace_path, domain_catalog, impact_query, history_query) and add six domain-specialized composite tools. All tools call the **same** query backend and canonical owner APIs; no duplicate graph, provider registry or raw market store.
+Keep the existing generic MCP interface and add only **two** domain-specialized MCP tool schemas to limit permanent tool-description/token overhead. Each schema selects a typed operation. The six operations below all call the **same** query backend and canonical owner APIs; they do not create six engines or six databases.
 
-### 3.1 strategy_catalog
+### 3.1 strategy_research — operation `catalog`
 
 **Purpose:** enumerate the full discovered strategy universe compactly, with stable pagination.
 
@@ -83,7 +83,7 @@ Inputs: repo_ref/repo_sha, optional query/family/chain/protocol/venue/status fil
 
 Returns: total discovered count, page rows with Strategy Card summaries, canonical/implementation/config/test/runtime states, provider and capital-source refs, coverage counts, UNKNOWNs, exact refs and cursor. A request for "all" must page through every row; never silently return only top-N.
 
-### 3.2 strategy_context
+### 3.2 strategy_research — operation `context`
 
 **Purpose:** explain one or several strategies deeply while preserving exact source.
 
@@ -93,7 +93,7 @@ Supported dimensions: source, entrypoints, callers, callees, formulas, economics
 
 Returns: T0–T4 evidence pack with exact implementation function bodies on demand, source ranges, call paths, shared component refs, data requirements, provider/capital trace, tests, evidence, omissions and deterministic continuation.
 
-### 3.3 strategy_compare
+### 3.3 strategy_research — operation `compare`
 
 **Purpose:** compare versions/families/new proposals without duplicating existing strategies.
 
@@ -101,7 +101,7 @@ Inputs: strategy_refs or a proposal description, repo_sha, comparison dimensions
 
 Returns: common vs unique symbols, algorithm/economic differences, capital requirements, data/provider capabilities, config differences, tests/outcomes and missing evidence. Include a novelty relation only as evidence-backed candidate classification: DISTINCT_CANDIDATE / RELATED_VARIANT / EXTENSION / POSSIBLE_DUPLICATE / UNKNOWN. An LLM may draft an explanation, but may not turn a proposal into a canonical verified fact.
 
-### 3.4 provider_trace
+### 3.4 web3_data_trace — operation `provider_trace`
 
 **Purpose:** map the actual source/data path for a strategy or provider.
 
@@ -109,7 +109,7 @@ Inputs: strategy_refs and/or provider_refs, repo_sha, requested dimensions, budg
 
 Returns: provider → adapter/method/endpoint/stream → schema/DataContract → raw payload/cursor → normalization → MarketObservation/dataset → strategy consumer, with declared-vs-tested-vs-enabled-vs-captured-vs-runtime-observed states clearly separated. Include source modes, freshness/lag/coverage/gaps/rate limits/replay/reorg/correction evidence only where supported. Use existing canonical source, provider-governance, AGG-02 and MarketObservation owners.
 
-### 3.5 flash_capital_trace
+### 3.5 web3_data_trace — operation `flash_capital_trace`
 
 **Purpose:** explain flash-capital routes independently from ordinary market liquidity.
 
@@ -117,7 +117,7 @@ Inputs: strategy_refs and/or lender_refs, chain/protocol/asset filters, repo_sha
 
 Returns: lender/program/market identity, adapter/SDK/IDL/instruction path, supported assets and methods, fee/interest/repayment semantics, amount/capacity evidence, availability constraints, atomicity/route integration, tests, simulation and qualification references. Every field carries source and verification status. An advertised market liquidity value is not flash-borrow capacity; an adapter or SDK is not executable lender support.
 
-### 3.6 operation_trace
+### 3.6 web3_data_trace — operation `operation_trace`
 
 **Purpose:** reconstruct an observed paper/shadow operation across the supported lifecycle.
 

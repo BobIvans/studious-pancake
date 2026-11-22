@@ -448,3 +448,4 @@ src/intelligence/repo_graph/store.py
 src/intelligence/repo_graph/service.py
 src/intelligence/repo_graph/cli.py
 tests/intelligence/test_repo_graph.py
+tests/intelligence/test_repo_graph_w4.py

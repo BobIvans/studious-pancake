@@ -20,6 +20,48 @@ from .store import artifact_path, load_manifest
 TOKENIZER = "byte-estimate-v1 (utf-8 bytes / 4; no model tokenizer installed)"
 DEFAULT_BUDGET_TOKENS = 2000
 
+# Deterministic task-type routing (OCA-W4). Keyword rules pick the type; the
+# boost table is prefix-based and never promotes provenance or verification
+# state — it only reorders retrieval.
+_TASK_KEYWORDS: dict[str, set[str]] = {
+    "bug": {"bug", "error", "failure", "traceback", "crash", "exception", "fix"},
+    "test": {"test", "tests", "coverage", "flaky", "assertion"},
+    "provider": {"provider", "adapter", "endpoint", "quote", "rpc", "source"},
+    "strategy": {"strategy", "arbitrage", "flash", "capital", "lender", "lending"},
+    "refactor": {"refactor", "rename", "move", "cleanup", "split"},
+    "architecture": {"architecture", "design", "dependency", "impact", "structure"},
+}
+TASK_TYPE_BOOSTS: dict[str, dict[str, float]] = {
+    "bug": {"tests/": 3.0, "config/": 2.0},
+    "test": {"tests/": 3.0},
+    "provider": {
+        "src/providers/": 3.0,
+        "src/lending/": 3.0,
+        "src/gpr_sui_shadow/": 3.0,
+        "src/external_contracts/": 2.0,
+        "src/provider_governance/": 2.0,
+    },
+    "strategy": {"src/strategy/": 3.0, "src/economics/": 2.0, "src/planning/": 2.0},
+    "refactor": {},
+    "architecture": {"src/intelligence/": 1.0},
+    "generic": {},
+}
+
+
+def detect_task_type(task: str) -> str:
+    words = set(re.split(r"[^a-z0-9_]+", task.lower())) - {""}
+    for task_type in (
+        "bug",
+        "test",
+        "provider",
+        "strategy",
+        "refactor",
+        "architecture",
+    ):
+        if words & _TASK_KEYWORDS[task_type]:
+            return task_type
+    return "generic"
+
 
 class GraphNotAvailable(RuntimeError):
     """Raised when no graph artifact exists for the requested repo SHA."""
@@ -108,6 +150,7 @@ class QueryBackend:
         dimensions: list[str] | None = None,
         must_include_refs: list[str] | None = None,
         exclude_refs: list[str] | None = None,
+        continuation_cursor: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         fresh = self.freshness(repo_sha)
         if fresh["status"] in {"UNAVAILABLE", "STALE"}:
@@ -125,8 +168,14 @@ class QueryBackend:
         must_include = list(must_include_refs or [])
         excluded = set(exclude_refs or [])
         dimensions = list(dimensions or ["auto"])
+        resolved_directories = self._resolve_directory_refs(repo_sha, must_include)
 
-        ranked = self._rank(target, manifest, task, must_include)
+        task_type = detect_task_type(task)
+        ranked = self._rank(target, manifest, task, must_include, task_type)
+        if continuation_cursor:
+            if continuation_cursor.get("task_hash") != _task_hash(task, repo_sha):
+                raise ValueError("stale task continuation cursor")
+            ranked = ranked[int(continuation_cursor.get("offset", 0)) :]
         included: list[dict[str, Any]] = []
         omitted: list[dict[str, Any]] = []
         used = 0
@@ -160,6 +209,13 @@ class QueryBackend:
             "indexed_sha": manifest["repo_sha"],
             "freshness": fresh,
             "dimensions_used": dimensions,
+            "task_type": task_type,
+            "resolved_directory_refs": resolved_directories,
+            "continuation_cursor": (
+                {"task_hash": _task_hash(task, repo_sha), "offset": len(ranked)}
+                if omitted
+                else None
+            ),
             "budget_tokens": budget_tokens or DEFAULT_BUDGET_TOKENS,
             "budget_used_bytes": used,
             "budget_cap_bytes": budget,
@@ -241,8 +297,29 @@ class QueryBackend:
             artifact_path(self._state_root, repo_sha) / "graph.sqlite"
         )
 
+    def _resolve_directory_refs(
+        self, repo_sha: str, refs: list[str]
+    ) -> dict[str, list[str]]:
+        """Map directory refs to their contained tracked files (bounded)."""
+        manifest = load_manifest(self._state_root, repo_sha)
+        blob_by_path = manifest["path_to_blob"]
+        resolved: dict[str, list[str]] = {}
+        for ref in refs:
+            if ref in blob_by_path:
+                continue
+            prefix = ref.rstrip("/") + "/"
+            contained = sorted(path for path in blob_by_path if path.startswith(prefix))
+            if contained:
+                resolved[ref] = contained[:20]
+        return resolved
+
     def _rank(
-        self, target: Path, manifest: dict[str, Any], task: str, must_include: list[str]
+        self,
+        target: Path,
+        manifest: dict[str, Any],
+        task: str,
+        must_include: list[str],
+        task_type: str = "generic",
     ) -> list[dict[str, Any]]:
         blob_by_path = manifest["path_to_blob"]
         inventory = {row["path"]: row for row in manifest["inventory"]}
@@ -255,6 +332,13 @@ class QueryBackend:
         for ref in must_include:
             if ref in blob_by_path:
                 scored[ref] = 1_000.0
+            else:
+                prefix = ref.rstrip("/") + "/"
+                contained = sorted(
+                    path for path in blob_by_path if path.startswith(prefix)
+                )
+                for path in contained[:20]:
+                    scored[path] = max(scored.get(path, 0.0), 900.0)
         connection = self._connection(manifest["repo_sha"])
         try:
             for token in tokens:
@@ -287,6 +371,10 @@ class QueryBackend:
                     weight += 1.0
             if weight and path not in scored:
                 scored[path] = weight
+        for path in scored:
+            for prefix, boost in TASK_TYPE_BOOSTS.get(task_type, {}).items():
+                if path.startswith(prefix):
+                    scored[path] += boost
         ranked = [
             {
                 "path": path,
@@ -344,6 +432,12 @@ class QueryBackend:
             "end_byte",
         )
         return dict(zip(keys, row))
+
+
+def _task_hash(task: str, repo_sha: str) -> str:
+    import hashlib
+
+    return hashlib.sha256(f"{repo_sha}|{task}".encode("utf-8")).hexdigest()[:24]
 
 
 def _count_by(rows: list[dict[str, Any]], key: str) -> dict[str, int]:

@@ -223,7 +223,17 @@ def _extract_dependency_pins(path: str, data: bytes) -> dict[str, Any] | None:
 
 
 def _extract_markdown(path: str, data: bytes) -> dict[str, Any] | None:
+    """Markdown headings/links with UTF-8 BYTE offsets (P2-6).
+
+    The regexes run on the decoded string for Unicode-safe matching, but every
+    recorded start_byte/end_byte is mapped back to byte space so expand_context
+    byte-range slicing stays exact.
+    """
     text = data.decode("utf-8", "replace")
+
+    def byte_offset(char_index: int) -> int:
+        return len(text[:char_index].encode("utf-8"))
+
     nodes: list[dict[str, Any]] = []
     for match in _HEADING_RE.finditer(text):
         level = len(match.group(1))
@@ -237,8 +247,8 @@ def _extract_markdown(path: str, data: bytes) -> dict[str, Any] | None:
                 "kind": "doc_heading",
                 "name": title[:80],
                 "qualified_name": qualified,
-                "start_byte": match.start(),
-                "end_byte": match.end(),
+                "start_byte": byte_offset(match.start()),
+                "end_byte": byte_offset(match.end()),
             }
         )
     for match in _MD_LINK_RE.finditer(text):
@@ -251,12 +261,12 @@ def _extract_markdown(path: str, data: bytes) -> dict[str, Any] | None:
                 "kind": "doc_link",
                 "name": target[:80],
                 "qualified_name": f"link:{target[:80]}",
-                "start_byte": match.start(),
-                "end_byte": match.end(),
+                "start_byte": byte_offset(match.start()),
+                "end_byte": byte_offset(match.end()),
             }
         )
     nodes.sort(key=lambda item: item["start_byte"])
-    return {"nodes": nodes, "parser": "regex-markdown"}
+    return {"nodes": nodes, "parser": "regex-markdown-utf8-bytes"}
 
 
 def _extract_workflow_fallback(path: str, data: bytes) -> dict[str, Any] | None:

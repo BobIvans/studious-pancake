@@ -1,7 +1,7 @@
 """Tree-sitter structural parser adapters (OCA-W0B2).
 
 Import-guarded: grammars are an optional pinned dependency
-(``[repo-graph-parsers]``). When absent, callers must record explicit
+(dev profile pins). When absent, callers must record explicit
 PARTIAL/UNSUPPORTED states with reasons — never a silent fallback. Python
 keeps the native stdlib-AST pipeline as primary (contract §4).
 """

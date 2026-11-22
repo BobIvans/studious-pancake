@@ -63,11 +63,13 @@ def build_operation_episodes(store: Any) -> dict[str, Any]:
             }
             for event in ordered
         ]
+        # P2-4: terminal outcomes are authoritative reconciliation events
+        # only — simulation success alone is never terminal, and outcome
+        # enums do not encode reconciliation.
         terminal = [
             event
             for event in ordered
-            if (event.get("outcome") or "")
-            in {"RECONCILED", "SIMULATED_PASS", "PAPER_QUALIFIED"}
+            if str(event.get("event_type")) == "reconciliation_completed"
         ]
         joins = {
             "market_episode": "UNKNOWN (no episode_id field on EventEnvelope; join key missing)",
@@ -93,7 +95,7 @@ def build_operation_episodes(store: Any) -> dict[str, Any]:
                     if terminal
                     else {
                         "outcome": "UNKNOWN",
-                        "reason": "NO_AUTHORITATIVE_RECONCILIATION_EVIDENCE",
+                        "reason": "NO_AUTHORITATIVE_RECONCILIATION_EVENT (simulation/paper success is not terminal without reconciliation)",
                     }
                 ),
                 "joins": joins,

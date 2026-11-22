@@ -28,7 +28,6 @@ jobs:
           python-version: '3.13'
       - run: python -m pip install -r requirements.lock -r requirements-dev.lock
       - run: python -m pip install --no-deps .
-      - run: python -m pip install --no-deps -e ".[repo-graph-parsers]"
       - name: Gates
         run: |
           python -m black --check src/intelligence/repo_graph tests/intelligence/test_repo_graph.py tests/intelligence/test_repo_graph_polyglot.py
@@ -49,7 +48,9 @@ jobs:
       - run: python -m pip install -r requirements.lock -r requirements-dev.lock
       - run: python -m pip install --no-deps .
       - name: Contract tests without tree-sitter grammars
-        run: python -m pytest -q tests/intelligence/test_repo_graph.py tests/intelligence/test_repo_graph_polyglot.py --disable-socket --allow-unix-socket
+        run: |
+          python -m pip uninstall -y tree-sitter tree-sitter-bash tree-sitter-yaml tree-sitter-markdown
+          python -m pytest -q tests/intelligence/test_repo_graph.py tests/intelligence/test_repo_graph_polyglot.py --disable-socket --allow-unix-socket
       - name: Determinism (two clean builds must be checksum-identical)
         run: |
           python - <<'PY'
@@ -74,7 +75,6 @@ jobs:
           python-version: '3.13'
       - run: python -m pip install -r requirements.lock -r requirements-dev.lock
       - run: python -m pip install --no-deps .
-      - run: python -m pip install --no-deps -e ".[repo-graph-parsers]"
       - name: Full rebuild reconciliation
         run: |
           python - <<'PY'

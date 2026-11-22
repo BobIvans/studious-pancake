@@ -70,7 +70,9 @@ def test_continuation_cursor_round_trip(fixture_repo: Path, tmp_path: Path) -> N
     cursor = first["continuation_cursor"]
     if cursor is None:
         pytest.skip("no omissions at this budget")
-    assert cursor["task_hash"] == _task_hash("engine run normalise util core", sha)
+    assert cursor["task_hash"] == _task_hash(
+        "engine run normalise util core", sha, 1, ("auto",)
+    )
     second = backend.task_context(
         "engine run normalise util core",
         repo_sha=sha,

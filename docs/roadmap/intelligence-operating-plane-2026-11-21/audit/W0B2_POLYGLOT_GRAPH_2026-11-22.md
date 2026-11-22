@@ -14,7 +14,7 @@ All ten PRs OPEN/MERGEABLE on `0a0c8ad9`; remote heads equal local tips; `git me
 |---|---|
 | Artifact-class classifier (14 classes) + first-party/vendor rules | `src/intelligence/repo_graph/extractors.py` (`classify_artifact`) |
 | Expanded coverage statuses (STRUCTURE_INDEXED/TEXT_INDEXED/METADATA_ONLY/PARTIAL/…) | `src/intelligence/repo_graph/schema.py` |
-| Tree-sitter adapters, import-guarded, pinned | `src/intelligence/repo_graph/parsers.py` + `[repo-graph-parsers]` pyproject extra (`tree-sitter==0.25.2`, bash `0.25.1`, yaml `0.7.2`, markdown `0.5.4`; all MIT; `requirements.lock` untouched) |
+| Tree-sitter adapters, import-guarded, pinned | `src/intelligence/repo_graph/parsers.py` + pinned tree-sitter packages now in the `dev` profile (`tree-sitter==0.25.2`, bash `0.25.1`, yaml `0.7.2`, markdown `0.5.4`; all MIT; locks regenerated via scripts/lock_requirements.py in the W4C contract fix) |
 | Stdlib structured extractors (json/toml/ini/dependency-pins/markdown/workflow-fallback) — keys/names only, never values | `src/intelligence/repo_graph/extractors.py` |
 | Polyglot build integration (per-file status decision, `_index_non_python`, cross-language node records `<lang>::<path>::<qualified>`) | `src/intelligence/repo_graph/graph_build.py` |
 | Polyglot + multi-language golden tests (7) | `tests/intelligence/test_repo_graph_polyglot.py` |

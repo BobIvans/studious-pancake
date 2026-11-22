@@ -74,7 +74,7 @@ def test_unknown_joins_and_terminal_outcome_honesty(tmp_path) -> None:
     episode = by_opportunity["opp-1"]
     # No reconciliation evidence -> terminal outcome stays UNKNOWN.
     assert episode["terminal_outcome"]["outcome"] == "UNKNOWN"
-    assert "NO_AUTHORITATIVE_RECONCILIATION_EVIDENCE" in (
+    assert "NO_AUTHORITATIVE_RECONCILIATION_EVENT" in (
         episode["terminal_outcome"]["reason"]
     )
     # Joins stay explicit; unknown is never zero.

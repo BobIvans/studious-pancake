@@ -21,15 +21,19 @@ from src.observability.runtime_capture import (
 from src.observability.store import ObservabilityError
 
 
-def _captured_store(tmp_path: Path, *, opportunities: int = 2):
+def _captured_store(tmp_path: Path, *, opportunities: int = 2, strategy_ref=None):
     adapter = default_vertical_adapter(tmp_path / "events.sqlite")
     for index in range(opportunities):
-        run_vertical(adapter, logical_opportunity_id=f"opp-{index}")
+        run_vertical(
+            adapter,
+            logical_opportunity_id=f"opp-{index}",
+            strategy_ref=strategy_ref,
+        )
     return adapter._store
 
 
 def test_diagnostics_over_real_vertical(tmp_path: Path) -> None:
-    store = _captured_store(tmp_path)
+    store = _captured_store(tmp_path, strategy_ref="fixture-atomic-vertical")
     result = build_diagnostics(
         store=store,
         repo_sha="0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
@@ -71,6 +75,7 @@ def test_low_sample_never_ranks(tmp_path: Path) -> None:
             logical_opportunity_id="opp-small",
             sequence_no=sequence,
             event_type=EventType.opportunity_detected,
+            strategy_ref="fixture-small",
         )
     result = build_diagnostics(
         store=adapter._store,
@@ -100,6 +105,7 @@ def test_fault_injection_localizes_with_causality_gate(tmp_path: Path) -> None:
             stage="simulation",
             reason_code="SIMULATION_INSTRUCTION_ERROR",
             critical=True,
+            strategy_ref="fixture-fault",
         )
     result = build_diagnostics(
         store=adapter._store,

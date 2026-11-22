@@ -50,6 +50,7 @@ def run_vertical(
     *,
     logical_opportunity_id: str,
     start_sequence: int = 1,
+    strategy_ref: str | None = None,
 ) -> dict[str, Any]:
     """Capture the full supported vertical for one opportunity.
 
@@ -69,6 +70,7 @@ def run_vertical(
                 venue_id=stage.get("venue_id"),
                 critical=stage["critical"],
                 attributes={"stage_index": offset},
+                strategy_ref=strategy_ref,
             )
         )
     degraded = [receipt for receipt in receipts if receipt["status"] != "CAPTURED"]

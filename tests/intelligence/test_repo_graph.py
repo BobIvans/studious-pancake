@@ -176,7 +176,7 @@ def test_coverage_statuses_no_silent_omissions(
     assert by_path["blob.bin"]["coverage"] == "UNSUPPORTED"
     assert by_path["config/app.json"]["coverage"] == "STRUCTURE_INDEXED"
     assert by_path["README.md"]["coverage"] == "STRUCTURE_INDEXED"
-    assert by_path["README.md"]["parser"] == "regex-markdown"
+    assert by_path["README.md"]["parser"] == "regex-markdown-utf8-bytes"
     core = by_path["src/pkg/core.py"]
     assert core["coverage"] == "STRUCTURE_INDEXED"
     assert core["symbol_count"] >= 3

@@ -18,9 +18,11 @@ def coverage_matrix() -> dict[str, Any]:
         "routes": [
             {
                 "route": "paper-shadow:solana:atomic-vertical",
-                "status": "WIRED",
+                "status": "PARTIAL",
                 "evidence": "tests/intelligence/test_runtime_capture.py::test_vertical_end_to_end_and_replay",
-                "note": "sender-free offline paper vertical; full stage timeline captured",
+                "note": "P2-2 downgrade: capture path proven in tests only; no production caller invokes the adapter on the installed boot path yet (grep-verified). Upgrades to WIRED only with a wired production callsite + receipt.",
+                "wiring_gap": "no production caller of RuntimeCaptureAdapter outside tests",
+                "owner": "OCA-W10 follow-up",
             },
             {
                 "route": "paper-shadow:solana:durable-service",

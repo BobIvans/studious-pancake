@@ -18,7 +18,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from ..events import EventEnvelope, EventType, Outcome, make_event
+from ..events import Environment, EventEnvelope, EventType, Outcome, make_event
 from ..reasons import ReasonCode
 from ..authoritative_store_pr195 import AuthoritativeObservabilityStore
 
@@ -40,11 +40,15 @@ class RuntimeCaptureAdapter:
         runtime_id: str,
         config_checksum: str,
         route: str,
+        environment: Environment = Environment.paper,
     ) -> None:
         self._store = store
         self._runtime_id = runtime_id
         self._config_checksum = config_checksum
         self._route = route
+        # P2-3: paper/shadow captures must carry the paper/shadow environment,
+        # never the make_event test default.
+        self._environment = environment
 
     @property
     def route(self) -> str:
@@ -63,6 +67,7 @@ class RuntimeCaptureAdapter:
         venue_id: str | None = None,
         critical: bool = False,
         attributes: dict[str, Any] | None = None,
+        strategy_ref: str | None = None,
     ) -> CaptureReceipt:
         """Produce and store one stage event with real provenance.
 
@@ -79,6 +84,7 @@ class RuntimeCaptureAdapter:
             "stage": stage,
             "reason_code": reason_code,
             "route": self._route,
+            "strategy_ref": strategy_ref,
         }
         idempotency_key = hashlib.sha256(
             json.dumps(intent, sort_keys=True).encode("utf-8")
@@ -91,6 +97,7 @@ class RuntimeCaptureAdapter:
             envelope = make_event(
                 event_type=event_type,
                 logical_opportunity_id=logical_opportunity_id,
+                environment=self._environment,
                 plan_hash=self._config_checksum,
                 sequence_no=sequence_no,
                 stage=stage or event_type.value,
@@ -98,7 +105,13 @@ class RuntimeCaptureAdapter:
                 reason_code=reason_code,
                 provider_id=provider_id,
                 venue_id=venue_id,
-                attributes={**(attributes or {}), "route": self._route},
+                attributes={
+                    **(attributes or {}),
+                    "route": self._route,
+                    # P2-1: strategy attribution rides on every event so
+                    # diagnostics cohorts bind strategy/version, never guess.
+                    "strategy_ref": strategy_ref,
+                },
                 critical=critical,
                 runtime_id=self._runtime_id,
                 producer_code_version=PRODUCER_CODE_VERSION,
@@ -147,7 +160,9 @@ def default_vertical_adapter(
     pattern) before the adapter binds to the store.
     """
     identity = {
-        "environment": environment,
+        "environment": (
+            environment.value if hasattr(environment, "value") else environment
+        ),
         "cluster_genesis": cluster_genesis,
         "release_id": release_id,
     }
@@ -172,4 +187,9 @@ def default_vertical_adapter(
         runtime_id=runtime_id,
         config_checksum=config_checksum,
         route="paper-shadow:solana:atomic-vertical",
+        environment=(
+            environment
+            if isinstance(environment, Environment)
+            else Environment(environment)
+        ),
     )

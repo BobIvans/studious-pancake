@@ -174,12 +174,24 @@ class QueryBackend:
         resolved_directories = self._resolve_directory_refs(repo_sha, must_include)
 
         task_type = detect_task_type(task)
+        continuation_offset_base = 0
         ranked = self._rank(target, manifest, task, must_include, task_type)
         adapter, tokenizer_meta = resolve_tokenizer(token_profile)
         if continuation_cursor:
-            if continuation_cursor.get("task_hash") != _task_hash(task, repo_sha):
+            # P2-5: cursor binds task + SHA + budget + dimensions; offsets
+            # beyond the ranked set are rejected instead of yielding empty.
+            if continuation_cursor.get("task_hash") != _task_hash(
+                task,
+                repo_sha,
+                budget_tokens or DEFAULT_BUDGET_TOKENS,
+                tuple(dimensions),
+            ):
                 raise ValueError("stale task continuation cursor")
-            ranked = ranked[int(continuation_cursor.get("offset", 0)) :]
+            offset = int(continuation_cursor.get("offset", 0))
+            if offset < 0 or offset > len(ranked):
+                raise ValueError("continuation offset out of range")
+            continuation_offset_base = offset
+            ranked = ranked[offset:] if offset < len(ranked) else []
         included: list[dict[str, Any]] = []
         omitted: list[dict[str, Any]] = []
         used = 0
@@ -235,8 +247,16 @@ class QueryBackend:
             "task_type": task_type,
             "resolved_directory_refs": resolved_directories,
             "continuation_cursor": (
-                {"task_hash": _task_hash(task, repo_sha), "offset": len(ranked)}
-                if omitted
+                {
+                    "task_hash": _task_hash(
+                        task,
+                        repo_sha,
+                        budget_tokens or DEFAULT_BUDGET_TOKENS,
+                        tuple(dimensions),
+                    ),
+                    "offset": continuation_offset_base + len(ranked),
+                }
+                if omitted and ranked
                 else None
             ),
             "budget_tokens": budget_tokens or DEFAULT_BUDGET_TOKENS,
@@ -520,10 +540,11 @@ class QueryBackend:
         return dict(zip(keys, row))
 
 
-def _task_hash(task: str, repo_sha: str) -> str:
+def _task_hash(task: str, repo_sha: str, budget_tokens: int, dimensions: tuple) -> str:
     import hashlib
 
-    return hashlib.sha256(f"{repo_sha}|{task}".encode("utf-8")).hexdigest()[:24]
+    payload = f"{repo_sha}|{task}|{budget_tokens}|{','.join(dimensions)}"
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:24]
 
 
 def _count_by(rows: list[dict[str, Any]], key: str) -> dict[str, int]:

@@ -10,6 +10,7 @@ correlation never becomes causation without a controlled replay record.
 
 from __future__ import annotations
 
+import json
 import statistics
 from typing import Any
 
@@ -94,6 +95,13 @@ def build_diagnostics(
     for row in rows:
         record = {key: row[key] for key in row.keys()}
         record["outcome"] = str(record.get("outcome"))
+        # P2-1: strategy attribution comes from captured payload attributes
+        # (written by capture_stage), never guessed from names.
+        try:
+            payload = json.loads(record.get("payload_json") or "{}")
+            record["strategy_ref"] = payload.get("attributes", {}).get("strategy_ref")
+        except (ValueError, TypeError):
+            record["strategy_ref"] = None
         events.append(record)
     if not events:
         return {
@@ -108,6 +116,18 @@ def build_diagnostics(
 
     health = _stage_health(events)
     # Cohort definition and compatibility (W20 §2.3).
+    attributed: dict[str, int] = {}
+    for event in events:
+        key = event["strategy_ref"] or "UNATTRIBUTED"
+        attributed[key] = attributed.get(key, 0) + 1
+    if strategy_ref != "unspecified":
+        attributed_count = attributed.get(strategy_ref, 0)
+        attribution_status = (
+            "ATTRIBUTED" if attributed_count else "INSUFFICIENT_EVIDENCE"
+        )
+    else:
+        attribution_status = "UNFILTERED"
+        attributed_count = len(events)
     cohort = {
         "repo_sha": repo_sha,
         "config_checksum": config_checksum,
@@ -116,7 +136,26 @@ def build_diagnostics(
         "compatibility": "COMPATIBLE_BASELINE (same repo SHA + config generation)",
         "sample_size": len(events),
         "low_sample": len(events) < _MIN_SAMPLE,
+        "attribution_by_strategy_ref": dict(sorted(attributed.items())),
+        "requested_strategy_ref": strategy_ref,
+        "attribution_status": attribution_status,
+        "attribution_note": (
+            "events without a captured strategy_ref stay UNATTRIBUTED and are "
+            "never silently assigned to the requested cohort"
+        ),
     }
+    if strategy_ref != "unspecified" and attributed_count == 0:
+        return {
+            "schema": SCHEMA,
+            "status": STATUS_INSUFFICIENT_EVIDENCE,
+            "strategy_ref": strategy_ref,
+            "repo_sha": repo_sha,
+            "cohort": cohort,
+            "unknowns": [
+                "no events attributed to the requested strategy_ref; "
+                "attribution must come from capture_stage(strategy_ref=...)"
+            ],
+        }
     total_invocations = len(events)
     total_errors = sum(entry["errors"] for entry in health.values())
     unknown_stages = sorted(

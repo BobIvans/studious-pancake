@@ -27,6 +27,8 @@ def test_vertical_end_to_end_and_replay(tmp_path: Path) -> None:
     # Real provenance: no test-runtime defaults from this producer path.
     receipt = run["receipts"][0]
     assert receipt["runtime_id"] == "paper-vertical-1"
+    # P2-3: paper events carry the paper environment, not the test default.
+    assert receipt["status"] == "CAPTURED"
     assert receipt["producer_code_version"] == "runtime-capture@v1"
     assert receipt["config_checksum"] == "vertical-config-v1"
     # Restart from the durable store: same stages observable, no loss.
@@ -103,7 +105,13 @@ def test_degraded_capture_is_explicit(tmp_path: Path) -> None:
 def test_coverage_matrix_reports_uncovered_routes() -> None:
     matrix = coverage_matrix()
     statuses = {route["route"]: route["status"] for route in matrix["routes"]}
-    assert statuses["paper-shadow:solana:atomic-vertical"] == "WIRED"
+    atomic = next(
+        r
+        for r in matrix["routes"]
+        if r["route"] == "paper-shadow:solana:atomic-vertical"
+    )
+    assert atomic["status"] == "PARTIAL"
+    assert "no production caller" in atomic["note"]
     assert statuses["paper-shadow:sui"] == "NO_RUNTIME_PATH"
     assert statuses["submission:any"] == "BLOCKED"
     assert statuses["live:any"] == "BLOCKED"

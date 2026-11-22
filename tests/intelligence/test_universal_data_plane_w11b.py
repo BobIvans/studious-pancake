@@ -201,6 +201,6 @@ def test_client_setup_and_connection_smoke(fixture_repo: Path, tmp_path: Path) -
     smoke = smoke_test(config, fixture_repo, pythonpath=pythonpath)
     assert smoke["connected"] is True
     assert smoke["real_query_ok"] is True
-    assert len(smoke["tools_listed"]) == 9
+    assert len(smoke["tools_listed"]) == 11
     # No global config writes: everything lives under the repo-local dir.
     assert ".repo-intel" in str(config)

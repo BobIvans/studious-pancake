@@ -114,7 +114,11 @@ def test_operation_trace_and_performance_diagnostics(
     root = tmp_path / "state"
     receipt = build_graph(strategy_repo, root)
     adapter = default_vertical_adapter(strategy_repo / "events.sqlite")
-    run_vertical(adapter, logical_opportunity_id=VERTICAL_OPPORTUNITY)
+    run_vertical(
+        adapter,
+        logical_opportunity_id=VERTICAL_OPPORTUNITY,
+        strategy_ref="fixture-vertical",
+    )
     trace = web3_tools.web3_data_trace(
         str(root),
         receipt["repo_sha"],

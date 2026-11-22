@@ -12,7 +12,7 @@ LATEST MAIN + PR/OWNER RECONCILIATION
               |
               +---- DURABLE SOURCE INTAKE / RAW EVIDENCE (DATA-01)
               |
-              +---- INDEPENDENT RPC PROFILE + QUORUM CHECK (RPC-01)
+              +---- IF ROOTED-STATE READS ARE IN SCOPE: INDEPENDENT RPC QUORUM (RPC-01)
               |
               +---- ASSET/MINT/TOKEN-2022 IDENTITY (ASSET-01)
               |
@@ -24,7 +24,11 @@ HUMAN OPERATOR APPROVAL OF EXACT MANIFEST + PROFILES + BUDGET
               v
 CAPTURE_ONLY (NO TRADE) --> OFFLINE REPLAY + COVERAGE RECEIPT
               |
-              v
+              +--> no rooted RPC: discovery-only; rooted verdict remains BLOCKED_SINGLE_SOURCE
+              |
+              +--> rooted state reads: RPC-01 PASS + exact context/hash agreement
+                                  |
+                                  v
 EXACT MARKET STATE + AMOUNT-SPECIFIC DIRECT QUOTES
 (CPMM #659; CLMM/DLMM #660; route dedup; PR118 size grid)
               |
@@ -60,7 +64,7 @@ EXACT MARKET STATE + AMOUNT-SPECIFIC DIRECT QUOTES
 | CAMPAIGN_START CS-01..CS-10 | executable gate до transport open; manifest/source/profile/config/code hashes; verified operator approval; budgets | документация #671, ручная проверка строк, environment boolean |
 | Source readiness | свежий official docs/ToS/license/schema/auth/quota/profile; current generation; source ID crosswalk | HTTP 200, старый checked_at, неизвестная ToS |
 | Source intake/evidence | raw bytes or exact retained reference, request fingerprint, hash, source generation, cursor/gaps, attempts, latency, typed errors, replay | только normalized candidate list |
-| RPC role | для rooted snapshot — 2 independent operators/correlation groups, same genesis, finalized context, slot/skew/hash evidence | две API keys или два endpoint у одного operator |
+| RPC role | Для discovery-only CAPTURE_ONLY rooted quorum не нужен, если rooted reads исключены из manifest. Для любого rooted snapshot обязательны 2 independent operators/correlation groups, same genesis, finalized context, slot/skew/hash evidence | две API keys или два endpoint у одного operator |
 | Asset identity | exact mint/program/decimals/extensions and venue/pool/vault identity | ticker, symbol, registry reference decimals |
 | Budget/retention | enforced durable attempt/storage limits across process restarts, replay, rollback and quota attribution | config field not enforced at write boundary |
 | Platform | native Windows verification receipt when Windows is deployment target | Linux CI alone or historical receipt |
@@ -70,6 +74,7 @@ EXACT MARKET STATE + AMOUNT-SPECIFIC DIRECT QUOTES
 
 ## Что не блокирует сбор discovery, но блокирует exact market / paper
 
+- RPC-01 rooted quorum: не блокирует discovery-only capture без rooted reads; обязателен до любого rooted-state verdict. Если есть только один источник, оставить BLOCKED_SINGLE_SOURCE.
 - R02 lender capacity: не нужен для первого read-only discovery capture; нужен before executable financing edge.
 - R03 builder conformance: не нужен для discovery; нужен для same lender resource and actual route.
 - R04/R05: не нужны для CAPTURE_ONLY; обязательны before paper.

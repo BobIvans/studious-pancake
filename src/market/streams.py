@@ -314,11 +314,26 @@ class RecoverableStreamJournal:
         import sqlite3
 
         self.db = sqlite3.connect(str(path), isolation_level=None, timeout=30)
-        # DATA-01: multi-process intake opens the same journal concurrently;
-        # without a busy timeout the first writers racing schema/PRAGMA
-        # initialization fail with SQLITE_BUSY instead of serializing.
+        # DATA-01: multi-process intake opens the same journal concurrently.
+        # busy_timeout serializes ordinary lock waits, but PRAGMA
+        # journal_mode=WAL needs brief exclusive access and ignores it, so
+        # skip the pragma when the database already runs in WAL and retry
+        # the switch while first-time creators race.
         self.db.execute("PRAGMA busy_timeout=30000")
-        self.db.execute("PRAGMA journal_mode=WAL")
+        import time as _time
+
+        for _attempt in range(100):
+            try:
+                current_mode = str(
+                    self.db.execute("PRAGMA journal_mode").fetchone()[0]
+                ).lower()
+                if current_mode != "wal":
+                    self.db.execute("PRAGMA journal_mode=WAL")
+                break
+            except sqlite3.OperationalError:
+                _time.sleep(0.05)
+        else:
+            raise ObservationError("journal WAL initialization timed out")
         self.db.execute("PRAGMA synchronous=FULL")
         self.db.execute(
             "CREATE TABLE IF NOT EXISTS raw_stream_events (identity TEXT PRIMARY KEY, source TEXT NOT NULL, partition TEXT NOT NULL, generation INTEGER NOT NULL, cursor INTEGER NOT NULL, available_ns INTEGER NOT NULL, payload TEXT NOT NULL, UNIQUE(source,partition,generation,cursor))"

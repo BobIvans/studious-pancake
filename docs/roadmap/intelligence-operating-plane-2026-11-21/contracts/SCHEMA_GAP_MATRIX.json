@@ -1,0 +1,17 @@
+{
+  "schema": "studious.oca-w1.schema-gap-matrix.v1",
+  "date": "2026-11-22",
+  "base_main_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+  "rows": [
+    {"join": "agg02_to_market_observation", "keys": ["source_cursor", "payload_sha256", "normalization_version"], "owner": ["src/agg02/storage.py", "src/market/observations.py"], "status": "PARTIAL", "gap": "cursor->watermark promotion monotonicity is owned but not contract-tested end to end", "closing_lane": "OCA-W2/W10"},
+    {"join": "market_observation_to_market_episode", "keys": ["observation_ids", "episode_stage_inputs"], "owner": ["src/market_data_evolution/contracts.py", "src/intelligence/episode_builder.py"], "status": "PRESENT", "gap": null, "closing_lane": null},
+    {"join": "strategy_to_provider_data_requirement", "keys": ["strategy_id", "provider_id", "capability"], "owner": ["src/strategy/registry.py", "src/market/source_catalog.py"], "status": "PARTIAL", "gap": "no StrategyDataRequirement schema or CompatibilityEvaluator (UNKNOWN must not reach QUALIFIED)", "closing_lane": "OCA-W14 (over OCA-W13)"},
+    {"join": "decision_to_outcome_operation_events", "keys": ["trace_id", "correlation_id", "sequence_no", "attempt_id"], "owner": ["src/observability/events.py", "src/observability/store.py"], "status": "MISSING", "gap": "zero production make_event() callsites; producer chain unwired (PR #680 trace)", "closing_lane": "OCA-W10"},
+    {"join": "code_symbol_to_runtime_callsite", "keys": ["py::stable_symbol_id", "callsite_id"], "owner": ["src/intelligence/repo_graph (PR #684)"], "status": "MISSING", "gap": "no rename-safe callsite IDs; symbol-level IDs exist", "closing_lane": "OCA-W3"},
+    {"join": "static_edge_to_runtime_observed", "keys": ["provenance_class"], "owner": ["src/intelligence/repo_graph/schema.py"], "status": "ENFORCED", "gap": null, "closing_lane": null},
+    {"join": "raw_payload_identity", "keys": ["payload_sha256", "dedupe_key"], "owner": ["src/agg02/storage.py"], "status": "PRESENT", "gap": null, "closing_lane": null},
+    {"join": "chain_identity_and_reorg", "keys": ["slot_or_block", "block_hash", "tx_signature", "log_index", "finality"], "owner": ["per-chain readers"], "status": "MISSING", "gap": "no unified chain-identity/reorg-correction schema (corrections must append linked facts)", "closing_lane": "OCA-W13/W15"}
+  ],
+  "no_duplicate_stores_rule": "every join resolves through the canonical owner listed; new projections are derived read-only views (W0B/W11 pattern)",
+  "evidence_refs": {"owners_trace": "PR #680 (OCA-W0)", "source_inventory": "PR #682 (OCA-W0C)"}
+}

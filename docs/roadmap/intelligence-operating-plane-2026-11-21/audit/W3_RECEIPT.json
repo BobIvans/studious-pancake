@@ -1,0 +1,32 @@
+{
+  "schema": "studious-pancake.lane-receipt.v1",
+  "lane": "OCA-W3",
+  "date": "2026-11-22",
+  "branch": "codex/oca-w3-callsite-ids-2026-11-22",
+  "base_main_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+  "deliverables": [
+    "src/intelligence/logsites/__init__.py",
+    "src/intelligence/logsites/scanner.py",
+    "tests/intelligence/test_logsites.py"
+  ],
+  "checks": {
+    "callsite_ids_survive_line_shifts": true,
+    "dynamic_dispatch_is_needs_review": true,
+    "manifest_deterministic_two_builds_equal": true,
+    "producer_mapping_owner_pinned": {"make_event": "src/observability/events.py", "EventEnvelope": "src/observability/events.py", "ObservabilityStore.append": "src/observability/store.py"},
+    "caller_ids_reuse_w0b_symbol_convention": true,
+    "llm_in_hot_path": false,
+    "w3_tests": {"passed": 3, "failed": 0},
+    "quality_gates": {"black": "PASS", "flake8": "PASS", "mypy": "PASS", "quality_gate_script": "PASS"},
+    "format_targets_registered": 3
+  },
+  "safety": {
+    "live": "HARD_DENIED",
+    "sign_enabled": false,
+    "send_enabled": false,
+    "execution_authority": "NONE",
+    "merge_authority": "HUMAN_ONLY"
+  },
+  "blockers": [],
+  "related": {"design_pr": 666, "w1_pr": 687, "w0b_pr": 684}
+}

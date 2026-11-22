@@ -192,3 +192,15 @@ A complete catalogue is not the same as complete semantic understanding. Every c
 - operation_trace is available only to the extent W10/W2/W15 have verified producers and joins.
 - Keep all tools read-only and bounded. No signer, sender, borrowing, spending, deployment, provider enablement, production mutation or LIVE authority.
 - Reconcile PR #680–#690 before implementation; use one owner/worktree/PR per task. Do not duplicate overlapping open work or misrepresent stacked PR ancestry.
+
+## 3.7 web3_data_trace — operation `performance_diagnostics`
+
+**Purpose:** diagnose measured strategy, lifecycle-stage and function/callsite health across observed paper/shadow operations. Normative contract: `STRATEGY_FUNCTION_PERFORMANCE_DIAGNOSTICS_RU.md`.
+
+Inputs: strategy/version refs, operation/episode refs, time range, stage/callsite/symbol refs, provider/venue/chain/config filters, compatible baseline cohort, result budget and cursor.
+
+Returns: pipeline conversion/coverage; per-stage and per-callsite invocation denominators, success/error/retry/timeout rates, latency quantiles and data-quality/capture-loss measures; provider/capital and observation evidence; separated simulation versus authoritative reconciliation outcomes; anomalies with exact event, operation, callsite, source and baseline refs; sample/coverage/confidence state; UNKNOWNs and alternative upstream/downstream explanations.
+
+The operation is UNAVAILABLE/PARTIAL until W10 producers, W2 episode joins, W15 temporal graph and W20 diagnostics are proven. Static CALLS never counts as a runtime invocation. A statistical association or latency outlier is not a causal root cause; use ROOT_CAUSE_HYPOTHESIS unless controlled replay/fault injection supports causality. Read-only only; no automatic remediation or LIVE authority.
+
+**Tool-schema budget:** this is the seventh typed operation within the existing `web3_data_trace` schema; it does not add another MCP tool schema or backend.

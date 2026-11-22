@@ -1,4 +1,4 @@
-
+#
 # Incremental Black baseline. Every file added here is checked in CI.
 isolated_signer_service/src/flashloan_isolated_signer/__init__.py
 isolated_signer_service/src/flashloan_isolated_signer/boundary.py
@@ -44,7 +44,6 @@ scripts/verify_sp_q01_protocol_admission.py
 scripts/verify_super01.py
 scripts/verify_super05_strategy_closure.py
 scripts/verify_super07_closure.py
-setup.py
 src/agg02/__init__.py
 src/agg02/historical_membership.py
 src/agg02/storage.py
@@ -302,6 +301,7 @@ tests/test_cam04_campaign_budgets.py
 tests/test_cpmm_fee_accounting.py
 tests/test_cpmm_split_replay.py
 tests/test_data01_durable_intake.py
+tests/test_disc01_stage_receipts.py
 tests/test_exact_cpmm_capacity.py
 tests/test_fast_q1_qualification_report.py
 tests/test_fast_q_automation.py

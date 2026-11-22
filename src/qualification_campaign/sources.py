@@ -36,6 +36,91 @@ def _https(value):
         raise ValueError("credential-free official HTTPS URL required")
 
 
+SUPPORTED_CAPABILITIES = frozenset(
+    {"candidate-discovery", "bounded-pagination", "public-limited-read"}
+)
+
+
+def require_supported_capabilities(dossier: "SourceDossier") -> None:
+    """DISC-01: no unsupported capability claims (streaming is unsupported).
+
+    A dossier claiming a capability the intake runtime does not implement
+    (e.g. streaming) fails closed before any wire activity.
+    """
+
+    unsupported = tuple(
+        c for c in dossier.capabilities if c not in SUPPORTED_CAPABILITIES
+    )
+    if unsupported:
+        raise ValueError(
+            "UNSUPPORTED_SOURCE_CAPABILITY:" + ";".join(sorted(unsupported))
+        )
+
+
+def independent_correlation_groups(dossiers) -> dict:
+    """DISC-01 independence denominators over correlation groups.
+
+    Sources sharing a correlation group are one observation channel, never
+    independent liquidity; aggregator-classified sources are excluded from
+    the independent count entirely.
+    """
+
+    groups: dict[str, list[str]] = {}
+    for dossier in dossiers:
+        profile = dossier.profile
+        if "aggregator" in profile.correlation_group:
+            continue
+        groups.setdefault(profile.correlation_group, []).append(dossier.source_id)
+    return {
+        "independent_correlation_groups": len(groups),
+        "groups": {k: sorted(v) for k, v in sorted(groups.items())},
+        "aggregator_sources_excluded": sum(
+            1 for d in dossiers if "aggregator" in d.profile.correlation_group
+        ),
+    }
+
+
+@dataclass(frozen=True)
+class SourceStageReceipt:
+    """DISC-01 per-source intake stage receipt.
+
+    Every denominator of the intake stage is reported from the durable
+    evidence journal, never from in-memory counters, so the receipt is
+    deterministic across processes and restarts.
+    """
+
+    source_id: str
+    requests: int
+    attempts: int
+    responded: int
+    normalized: int
+    candidates: int
+    rejected: int
+    schema_drift: bool
+    quota_status: str
+    response_bytes_total: int
+    latency_ns_total: int
+    terminal_results: dict
+
+    def to_dict(self) -> dict:
+        return {
+            "source_id": self.source_id,
+            "stage_denominators": {
+                "requests": self.requests,
+                "attempts": self.attempts,
+                "responded": self.responded,
+                "normalized": self.normalized,
+                "candidates": self.candidates,
+                "rejected": self.rejected,
+            },
+            "schema_drift": self.schema_drift,
+            "quota_status": self.quota_status,
+            "response_bytes_total": self.response_bytes_total,
+            "latency_ns_total": self.latency_ns_total,
+            "terminal_results": self.terminal_results,
+        }
+
+
 @dataclass(frozen=True)
 class SourceDossier:
     source_id: str
@@ -335,6 +420,7 @@ class SourceIntakePlane:
             raise ValueError("PROVIDER_GENERATION_MISMATCH")
         if digest(adapter.schema_contract()) != dossier.schema_fingerprint:
             raise ValueError("SOURCE_SCHEMA_CONTRACT_MISMATCH")
+        require_supported_capabilities(dossier)
         request = adapter.request()
         if request.url != profile.endpoint or set(dict(request.params)) - set(
             profile.allowed_query_parameters
@@ -364,6 +450,9 @@ class SourceIntakePlane:
             "classification": "DISCOVERY_ONLY",
             "quality_state": "pending",
             "raw_payload": None,
+            "response_bytes": 0,
+            "latency_ns": 0,
+            "quota_status": "UNKNOWN" if dossier.daily_quota is None else "CAPPED",
             # Typed terminal/error result (DATA-01): exactly one value from
             # the bounded result vocabulary, written before persistence.
             "terminal_result": "PENDING",
@@ -409,6 +498,8 @@ class SourceIntakePlane:
                 raw_payload=redact_payload(payload, headers),
                 retry_after=response_headers.get("retry-after"),
                 hash_kind="canonical-json-sha256",
+                response_bytes=len(payload),
+                latency_ns=max(0, self.wall_ns() - started),
             )
             if status == 200:
                 candidates, rejections = adapter.normalize(payload)
@@ -555,6 +646,76 @@ class SourceIntakePlane:
             )
             records.append((candidate, provenance))
         return tuple(records), envelope
+
+    def stage_receipts(self) -> tuple[SourceStageReceipt, ...]:
+        """DISC-01: per-source stage denominators from the evidence journal.
+
+        Recomputed deterministically from retained observations (never from
+        in-memory state), so replay in a fresh process yields the identical
+        receipt set.
+        """
+
+        by_source: dict[str, list[dict]] = {}
+        for event in self.evidence.replay():
+            if event.get("kind") != "source_observation":
+                continue
+            by_source.setdefault(str(event.get("source_id")), []).append(event)
+
+        receipts: list[SourceStageReceipt] = []
+        for source_id, observations in sorted(by_source.items()):
+            responded = [o for o in observations if o.get("http_status") == 200]
+            candidates = sum(
+                1
+                for e in self.evidence.replay()
+                if e.get("kind") == "discovery_candidate"
+                and e.get("provenance", {}).get("source_id") == source_id
+            )
+            rejected = sum(
+                sum(int(v) for v in (o.get("rejections") or {}).values())
+                for o in responded
+            )
+            results: dict[str, int] = {}
+            for o in observations:
+                key = str(o.get("terminal_result", "PENDING"))
+                results[key] = results.get(key, 0) + 1
+            receipts.append(
+                SourceStageReceipt(
+                    source_id=source_id,
+                    requests=len(observations),
+                    attempts=(
+                        sum(
+                            1
+                            for e in self.evidence.replay()
+                            if e.get("kind") == "attempt"
+                            and e.get("provider_id")
+                            == observations[0].get("provider_id")
+                        )
+                        if observations
+                        else 0
+                    ),
+                    responded=len(responded),
+                    normalized=len(responded),
+                    candidates=candidates,
+                    rejected=rejected,
+                    schema_drift=any(
+                        o.get("quality_state") == "schema-drift" for o in observations
+                    ),
+                    quota_status=observations[0].get("quota_status", "UNKNOWN"),
+                    response_bytes_total=sum(
+                        int(o.get("response_bytes") or 0) for o in observations
+                    ),
+                    latency_ns_total=sum(
+                        int(o.get("latency_ns") or 0) for o in observations
+                    ),
+                    terminal_results=results,
+                )
+            )
+        return tuple(receipts)
+
+    def stage_receipts_digest(self) -> str:
+        """Deterministic digest of the stage-receipt set (DISC-01 replay)."""
+
+        return digest([r.to_dict() for r in self.stage_receipts()])
 
     def link_verification(
         self, candidate: Candidate, provenance: dict, verification_id: str

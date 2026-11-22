@@ -291,6 +291,51 @@ class CampaignEvidenceStore:
             else 0
         )
 
+    def outstanding_reservation_bytes(self) -> int:
+        """Byte sum of creation reserves for stores not yet materialized."""
+
+        return sum(self.outstanding_reservations.values())
+
+    def materialize_reservation(self, name: str, actual_paths) -> int:
+        """Reconcile a materialized store against its outstanding reserve.
+
+        Must be called (under the campaign lock) right after the store is
+        created and before any further journal activity: the actual
+        DB/WAL/SHM footprint is compared with the reservation, the reserve is
+        released, and the whole-campaign invariant is re-checked.  Overages
+        fail closed.  Returns the reconciled actual byte size.
+        """
+
+        if self.campaign_budgets is None:
+            raise ValueError("CAMPAIGN_STORAGE_RESERVATION_WITHOUT_BUDGET")
+        with self.lock_path.open("a") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            try:
+                if name not in self.outstanding_reservations:
+                    raise ValueError("CAMPAIGN_STORAGE_RESERVATION_UNKNOWN:" + name)
+                actual = artifact_footprint_bytes(actual_paths)
+                reserved = self.outstanding_reservations.pop(name)
+                if actual > reserved:
+                    raise ValueError("CAMPAIGN_STORAGE_BUDGET_EXCEEDED")
+                self.append(
+                    "campaign",
+                    {
+                        "kind": "storage_reservation_materialized",
+                        "name": name,
+                        "actual_bytes": actual,
+                    },
+                    observed_at_ns=self.wall_ns(),
+                )
+                if (
+                    self.campaign_storage_bytes()
+                    + self.outstanding_reservation_bytes()
+                    > self.campaign_budgets.storage_bytes_max
+                ):
+                    raise ValueError("CAMPAIGN_STORAGE_BUDGET_EXCEEDED")
+                return actual
+            finally:
+                fcntl.flock(lock, fcntl.LOCK_UN)
+
     def append(
         self,
         source: str,
@@ -349,10 +394,14 @@ class CampaignEvidenceStore:
             # BEFORE any write.
             projected = (
                 self.campaign_storage_bytes()
+                + sum(self.outstanding_reservations.values())
                 + blob_bytes
                 + journal_growth_bound(row_len, self.page_size)
             )
             if projected > self.campaign_budgets.storage_bytes_max:
+                # Journal appends cannot consume the budget reserved for a
+                # not-yet-materialized store (authority.sqlite): outstanding
+                # creation reservations ride on top of every reservation.
                 raise ValueError("CAMPAIGN_STORAGE_BUDGET_EXHAUSTED")
         if is_blob:
             self.blob_dir.mkdir(exist_ok=True)

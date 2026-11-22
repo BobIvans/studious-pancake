@@ -352,8 +352,16 @@ def test_authorized_capture_end_to_end(tmp_path, monkeypatch):
     finally:
         CampaignEvidenceStore.__init__ = real_init
 
-    # The gate authorized the run (blocked starts return before evidence).
-    assert result["campaign_start_gate"]["phase"] == "CAPTURE_AUTHORIZED"
+    # The gate authorized the run: the SUCCESS path returns the final
+    # report (blocked starts return the blocked receipt instead).
+    assert "governance" in result
+    assert result.get("production_promotion") is False
+    gate_event = [
+        json.loads(e.payload_json)
+        for e in _events(journal)
+        if json.loads(e.payload_json).get("kind") == "campaign_start_decision"
+    ]
+    assert gate_event and gate_event[0]["decision"]["phase"] == "CAPTURE_AUTHORIZED"
     # v3 ordering: authority store on disk before any evidence append.
     assert init_spy["authority_exists_at_evidence_init"] is True
     reconcile_materialized_artifacts(

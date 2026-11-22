@@ -400,3 +400,24 @@ The first implementation establishes a useful Python-focused baseline. It does n
 - one expanded read-only MCP query backend with typed graph/domain/history/impact operations.
 
 Do not assume 42/42 on the first golden set proves all languages and asset classes. Add golden questions for every detected source language, strategy/provider path, config/schema/test/workflow class and runtime evidence boundary. Report recall, citation correctness, critical omissions, token reduction and latency separately. Preserve full target implementation and financial semantics.
+
+
+---
+
+## 17. Web3 strategy research compression and query optimization
+
+For the full strategy universe, optimize the *retrieval path*, not the truth:
+
+- Build a SHA-bound, paginated Strategy Card catalogue once from registries + code + configs + tests/fixtures + documentation + available GitHub history.
+- Return one compact row per discovered candidate with lifecycle/evidence states and stable refs; do not limit "all strategies" to top-N.
+- Group common implementation/provider/test dependencies by stable IDs so variants reference shared evidence once.
+- Use strategy-family and provider subgraphs before fetching source bodies.
+- Fetch exact full functions, classes, formulas, configs and tests by stable ID on demand; never reconstruct implementation from signatures.
+- Use task-conditioned graph ranking/PageRank and AST-aware enclosing-scope extraction; source-function target always FULL.
+- Use target-model tokenizers when configured. UTF-8 bytes/4 is only a clearly labelled fallback estimate.
+- Continue paginated catalogues and packs with SHA-bound cursors; avoid repeating already included code/evidence.
+- Cache catalogue/context results by repo SHA, graph generation, source-data generation, ontology/schema, query, dimensions, tokenizer and budget.
+- Preserve distinct negative experiments and rejection evidence while deduplicating repeated payload bodies.
+- Benchmark Web3 tasks specifically: strategy discovery, compare variants, exact source trace, provider replay support, flash capital fee/repayment/capacity, sizing/slippage semantics, config impact and paper/shadow replay.
+
+Use the six domain query tools in `WEB3_STRATEGY_INTELLIGENCE_QUERY_TOOLS_RU.md` through the shared MCP backend. They are composite retrieval functions, not additional indexing engines. RTK-like command-log trimming, vector retrieval, semantic summaries and external graph products stay measured optional optimizations, never substitutes for exact source/evidence.

@@ -1136,6 +1136,57 @@
         "Tools remain bounded/read-only with no shell/edit/delete/admin/signing/sending/borrowing/spending/deployment/LIVE capability",
         "Fresh environment can connect a supported client using documented stdio config and pass a tools/list + real query smoke test"
       ]
+    },
+    {
+      "id": "OCA-W4C",
+      "name": "Web3 Strategy Intelligence catalogue, comparison and evidence query tools",
+      "priority": "P1",
+      "status": "READY_AFTER_CORE_GRAPH_AND_PROVIDER_CONTRACTS",
+      "depends_on": [
+        "OCA-W0C",
+        "OCA-W0B2",
+        "OCA-W4B",
+        "OCA-W11B",
+        "OCA-W13",
+        "OCA-W14",
+        "OCA-W15"
+      ],
+      "mode": "READ_ONLY_STRATEGY_AND_PROVIDER_RESEARCH_API",
+      "exclusive_write_scope": [
+        "src/intelligence/universal_data_plane/",
+        "src/intelligence/repo_graph/",
+        "tests/intelligence/",
+        "benchmarks/intelligence/",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/"
+      ],
+      "deliverables": [
+        "deterministic evidence-linked Strategy Card projection discovered from registries/source/configs/tests/fixtures/docs and permission-available GitHub history",
+        "complete paginated strategy/family/version/candidate catalogue with lifecycle and evidence states",
+        "strategy_context and strategy_compare query operations over exact source, economics, configs, providers, flash capital, tests, qualification and negative evidence",
+        "provider_trace and flash_capital_trace operations over canonical source/provider/capital/observation owners",
+        "operation_trace query operation with explicit W10/W2/W15 capability gate",
+        "six bounded read-only MCP tools sharing the existing QueryBackend",
+        "Web3 strategy golden-question corpus and token/recall/citation/latency receipts"
+      ],
+      "acceptance": [
+        "All discovered candidates from canonical registries, source, configs, tests, fixtures, docs and permitted GitHub history appear in the catalogue or have explicit reason-coded exclusions/UNKNOWN state",
+        "Registered, implemented, configured, tested, fixture-only, doc-only, rejected, deprecated, qualified and runtime-observed states are distinct and evidence-linked",
+        "strategy_context expands exact full target source, relevant call paths, configs, provider/data contracts, capital evidence and tests at one pinned SHA",
+        "strategy_compare identifies shared vs unique implementation/economic/data dependencies and labels novelty only as evidence-backed candidates",
+        "provider_trace separates declared/configured/tested/captured/runtime-observed source states and never invents health/replay/actual use",
+        "flash_capital_trace separates market liquidity from evidenced lender borrow capacity, fees, repayment and route capability",
+        "operation_trace returns UNAVAILABLE/PARTIAL until W10/W2/W15 supply real producer and join evidence",
+        "All tools use the same backend as CLI/generic MCP/export; bounded pagination and continuation are deterministic",
+        "Web3 golden set has zero critical omissions and zero fabricated runtime/provider/qualification claims",
+        "Token reduction is reported with recall, citation precision, critical omissions and latency using real tokenizer or labelled fallback"
+      ],
+      "guardrails": [
+        "Read-only only; no signing, sending, borrowing, spending, deployment, provider enablement, production mutation or LIVE authority",
+        "No duplicate strategy/provider/raw-market canonical stores",
+        "LLM may draft analysis but cannot create canonical verified strategy labels or facts",
+        "Do not hide unregistered/source-only strategy candidates or rejected/negative experiments",
+        "Do not install every candidate application; adopt functions and tools only after licensing/security and measured benchmark"
+      ]
     }
   ],
   "global_invariants": [
@@ -1942,7 +1993,31 @@
     ],
     "repo_ref_resolution_required": true,
     "actual_client_connection_required": true,
-    "model_tokenizer_or_labelled_fallback": true
+    "model_tokenizer_or_labelled_fallback": true,
+    "web3_domain_tools": [
+      "strategy_catalog",
+      "strategy_context",
+      "strategy_compare",
+      "provider_trace",
+      "flash_capital_trace",
+      "operation_trace"
+    ],
+    "strategy_catalog_complete_pagination_required": true,
+    "strategy_evidence_states": [
+      "CANONICAL_REGISTERED",
+      "IMPLEMENTED",
+      "CONFIGURED",
+      "TESTED",
+      "QUALIFICATION_PENDING",
+      "PAPER_SHADOW_OBSERVED",
+      "FIXTURE_ONLY",
+      "DOC_ONLY",
+      "REJECTED",
+      "DEPRECATED",
+      "SUPERSEDED",
+      "UNCLASSIFIED",
+      "UNKNOWN"
+    ]
   },
   "full_repository_graph_and_mcp_expansion": {
     "document": "docs/roadmap/intelligence-operating-plane-2026-11-21/FULL_REPOSITORY_GRAPH_AND_MCP_EXPANSION_RU.md",
@@ -2008,5 +2083,56 @@
       "OCA-W12"
     ],
     "merge_policy": "Human approval only; dependent PRs must be correctly stacked or rebased after parent merge"
+  },
+  "web3_strategy_intelligence": {
+    "document": "docs/roadmap/intelligence-operating-plane-2026-11-21/WEB3_STRATEGY_INTELLIGENCE_QUERY_TOOLS_RU.md",
+    "package": "OCA-W4C",
+    "objective": "Complete evidence-linked discovery and token-efficient research over every existing Web3 strategy candidate",
+    "tools": [
+      "strategy_catalog",
+      "strategy_context",
+      "strategy_compare",
+      "provider_trace",
+      "flash_capital_trace",
+      "operation_trace"
+    ],
+    "shared_backend": "same QueryBackend used by generic CLI/MCP/context export",
+    "source_union": [
+      "canonical strategy registries and manifests",
+      "first-party implementation symbols/call paths",
+      "configs, capability matrices and feature flags",
+      "tests, fixtures, benchmarks and qualification evidence",
+      "docs, ADRs and research notes",
+      "permission-available GitHub history as a separate evidence feed"
+    ],
+    "tiers": [
+      "T0 repo/coverage card",
+      "T1 complete paginated strategy catalogue",
+      "T2 strategy-family subgraph",
+      "T3 exact FULL source/config/contracts/tests",
+      "T4 history/negative evidence/runtime replay"
+    ],
+    "no_lossy_fields": [
+      "financial formulas",
+      "integer/decimal arithmetic",
+      "units/decimals",
+      "fees/interest/repayment",
+      "slippage",
+      "route ordering",
+      "chain/program identity",
+      "block/time semantics",
+      "risk gates",
+      "test assertions",
+      "negative evidence",
+      "provenance"
+    ],
+    "execution_order": [
+      "OCA-W0B2",
+      "OCA-W4B",
+      "OCA-W11B",
+      "OCA-W4C"
+    ],
+    "runtime_gate": "operation_trace remains UNAVAILABLE/PARTIAL until OCA-W10/OCA-W2/OCA-W15 producer and temporal join evidence is verified",
+    "merge_policy": "human approval only; do not duplicate canonical owners or merge automatically"
   }
 }

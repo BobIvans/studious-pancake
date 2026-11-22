@@ -330,3 +330,24 @@ Read **FULL_REPOSITORY_GRAPH_AND_MCP_EXPANSION_RU.md** as a mandatory scope exte
 **Execution order:** first reconcile #680–#690 (actual PR bases, cumulative diffs, heads and CI), then W0B2 → W4B → W11B as bounded implementation PRs. Keep PR stacks truthful: each dependent PR should target its actual parent branch or be rebased to main after the parent is merged. Do not create multiple PRs all targeting main while each silently contains its parent's whole diff. Do not merge automatically.
 
 **Definition of done:** inventory coverage, structural code coverage, domain graph coverage and runtime lineage coverage are reported separately. Never call the graph “complete” merely because every path has an inventory row. Full requirements and acceptance are in FULL_REPOSITORY_GRAPH_AND_MCP_EXPANSION_RU.md.
+
+---
+
+## 14. Web3 Strategy Intelligence — dedicated token-efficient research tools
+
+Read `WEB3_STRATEGY_INTELLIGENCE_QUERY_TOOLS_RU.md`. The generic repo graph is not enough by itself for high-quality strategy R&D: implement a derived evidence-linked Strategy Card/catalogue and six bounded domain query tools over the **same** read-only query backend:
+
+- `strategy_catalog` — enumerate every discovered registered/unregistered/incomplete/rejected/fixture/doc-only candidate with cursor pagination.
+- `strategy_context` — retrieve full strategy implementation/economics/config/provider/test/qualification context by stable refs.
+- `strategy_compare` — compare variants, shared/unique code, economic assumptions and evidence-backed novelty class.
+- `provider_trace` — trace provider → adapter/method/schema → raw/cursor → normalization → observation → strategy consumer; separate declared/configured/tested/captured/runtime-observed.
+- `flash_capital_trace` — trace lender/program/SDK/IDL/method, supported assets, fees/repayment/capacity evidence and strategy integration; never confuse market liquidity with borrow capacity.
+- `operation_trace` — query real paper/shadow lifecycle and replay; return UNAVAILABLE/PARTIAL until W10/W2/W15 evidence exists.
+
+**Package OCA-W4C** depends on W0B2/W4B/W11B/W13/W14/W15 and the W0C inventory. It must reuse existing strategy/provider/capital/observation owners. Do not create separate canonical strategy, provider or raw-market stores. operation_trace remains capability-gated on W10/W2.
+
+**Strategy token workflow:** T0 repo/coverage card → T1 complete paginated strategy catalogue → T2 family/strategy evidence subgraph → T3 exact FULL target functions/configs/contracts/tests → T4 selected history/negative experiments/runtime replay. Deduplicate shared source refs once across variants, use AST scope extraction, task-conditioned ranking and real tokenizer profiles where supported. Do not truncate target functions or compress financial semantics.
+
+**Acceptance:** complete candidate discovery coverage across registries/source/configs/tests/docs/history; explicit lifecycle/evidence states; Web3 golden corpus; zero critical omissions and zero fabricated runtime/provider/qualification facts; measured token reduction + recall/citation/latency; exact refs and same-SHA continuation.
+
+Do not proceed by installing every SOTA tool. Adopt useful functions (Tree-sitter/SCIP, Aider-style ranking, grep-ast scope extraction, tokenizer-aware pack fitting and loss-aware log trimming) in the existing architecture; external products remain benchmark-only unless a measured gap justifies them.

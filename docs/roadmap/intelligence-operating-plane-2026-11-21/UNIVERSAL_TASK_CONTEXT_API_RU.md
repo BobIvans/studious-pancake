@@ -182,3 +182,21 @@ These are composite operations, not separate databases. All return exact SHA, ge
 Every tool accepts repo_ref or an explicit repo_sha. Resolve refs once; never mix data from different SHAs. Missing/stale graph results must be explicit and must not trigger hidden writes. Keep the server allowlisted/read-only and do not mutate user-global client configuration.
 
 A client setup/health-check guide and tools/list smoke test are required. Local stdio server installed ≠ connected to an active ChatGPT client.
+
+
+---
+
+## 10. Web3 Strategy Intelligence domain tools
+
+The generic API remains the entrypoint for any task. For deep strategy research the same backend additionally exposes bounded read-only domain tools specified normatively in `WEB3_STRATEGY_INTELLIGENCE_QUERY_TOOLS_RU.md`:
+
+- `strategy_catalog`: complete, cursor-paginated strategy/family/version/candidate inventory;
+- `strategy_context`: exact implementation, economics, configs, providers, capital, tests, qualification and negative evidence;
+- `strategy_compare`: evidence-backed version/variant/novelty comparison;
+- `provider_trace`: provider-to-observation-to-strategy path and declared/tested/captured/observed state;
+- `flash_capital_trace`: lender/program/SDK/IDL/fees/repayment/capacity evidence and strategy integration;
+- `operation_trace`: real operation lifecycle/replay, unavailable until proven runtime producer and joins exist.
+
+These operations are purpose-built composite tools, not six independent databases. They call the same query backend and canonical owner APIs as task_context/expand_context. Results are bounded by budget and paginated. Each response is SHA-bound, includes evidence/provenance/verification, explicit omissions/UNKNOWN and deterministic cursors.
+
+The catalogue must include candidates discovered outside the canonical strategy registry (source, config, test, fixture, docs and permission-available GitHub history) while preserving their different evidence states. Never present DOC_ONLY, FIXTURE_ONLY, IMPLEMENTED, CONFIGURED, TESTED, QUALIFIED and RUNTIME_OBSERVED as interchangeable states.

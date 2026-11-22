@@ -11,7 +11,7 @@ GitHub API: `mergeStateStatus=CLEAN`, `mergeable=MERGEABLE` для всех 10 P
 | #691 CAM-01+02 | `154e783f` | main @ `0a0c8ad9` | src/qualification_campaign/{campaign_start_gate.py*, approval_replay_ledger.py*, cli.py}, config/format_targets.txt, tests/test_cam01* (2) | PASS 27/27 | Draft/OPEN | MERGEABLE, CLEAN |
 | #692 WIN-01 | `9c81f706` | main @ `0a0c8ad9` | scripts/lock_requirements.py, requirements.lock, requirements-dev.lock, config/requirements-lock.json, tests/test_win01*, receipt, format_targets | PASS 7/7 | Draft/OPEN | MERGEABLE, CLEAN |
 | #693 WIN-02 | `63482e34` | main @ `0a0c8ad9` | tests/conftest.py, tests/test_win02*, receipt, format_targets | PASS 26/26 | Draft/OPEN | MERGEABLE, CLEAN |
-| #694 CAM-04 | `49f74a26` | **#691-branch @ `154e783f`** | src/qualification_campaign/{evidence.py, cli.py}, tests/test_cam04*, format_targets | PASS 19/19 | Ready/OPEN + SECURITY CLOSURE v2 | MERGEABLE, CLEAN |
+| #694 CAM-04 | `42ecf4a7` | **#691-branch @ `154e783f`** | src/qualification_campaign/{evidence.py, cli.py}, tests/test_cam04*, format_targets | PASS 19/19 | Ready/OPEN + SECURITY CLOSURE v3 | MERGEABLE, CLEAN |
 | #695 WIN-03 | `dba369d7` | main @ `0a0c8ad9` | src/occ_durable_library.py, tests/test_win03*, receipt, format_targets | PASS 26/26 | Draft/OPEN | MERGEABLE, CLEAN |
 | #696 CAM-05 | `b1c00e74` | main @ `0a0c8ad9` | src/resources/schema_registry.json, tests/test_cam05*, format_targets | PASS 29/29 | Draft/OPEN | MERGEABLE, CLEAN |
 | #697 CAM-03 | `6e4492cc` | main @ `0a0c8ad9` | config/qualification/representative-sources.json, CAM_SOURCE_CROSSWALK_V1.md, tests/{test_cam03*, test_qpr03_source_intake.py}, format_targets | PASS 26/26 | Draft/OPEN | MERGEABLE, CLEAN |
@@ -87,6 +87,12 @@ GitHub `baseRefOid` #694 = `154e783f` = exact head #691 → rebase после и
 - **#694 → `49f74a26`** (CI PASS 19/19): reservation использует ТОЧНУЮ сериализованную длину строки журнала (репликация json.dumps(asdict(event), sort_keys=True) через shared prepare_event) — nested-JSON escaping (×2 на quote-heavy payload) учтён; WAL margin 8 кадров; adversarial тесты на quote/backslash/nested/750KB-порог.
 - Ledger: preflight manifest ДО записи (blocked start не создаёт manifest/ledger), предрезервирование создания ledger + reserve/finalize, reconcile backstop; authority.sqlite в едином scope (extra_artifacts + pre-reserve).
 - Fresh review v2 на head `49f74a26` (supersedes все предыдущие); declared risks R-A′..R-E′ в комментарии #694.
+
+## Addendum 4 (2026-11-22, CAM-04 security closure v3 — round 3)
+
+- **#694 → `42ecf4a7`** (CI PASS 19/19): manifest проверяется ДО записи (blocked preflight не оставляет manifest.json/ledger); ledger creation + reserve/finalize предрезервированы ДО создания ledger (envelope не потребляется до доказательства бюджета); authority.sqlite+sidecars в едином scope через extra_artifacts + pre-reserve.
+- Adversarial-набор расширен: nested-JSON escaping (quote/backslash ~750 KB), WAL checkpoint, ledger/authority DB+WAL+SHM, preflight rejection, exact/one-byte-under; после каждого accepted append footprint ≤ cap.
+- Fresh review v3 на head `42ecf4a7`; полная таблица residual SQLite/WAL assumptions с failure behavior — в комментарии #694.
 
 ## 9. Блокеры реального CAPTURE_ONLY
 

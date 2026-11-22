@@ -15,6 +15,7 @@ import json
 import sys
 from typing import Any, Callable
 
+from ..repo_graph import query_ops
 from . import SCHEMA_ID
 from .facade import UniversalDataPlane
 
@@ -59,6 +60,91 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "graph_query",
+        "description": "Paginated typed edge query over the pinned-SHA graph.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "repo_sha": {"type": "string"},
+                "relation": {"type": "string"},
+                "path_prefix": {"type": "string"},
+                "limit": {"type": "integer"},
+                "cursor": {"type": "integer"},
+            },
+            "required": ["repo_sha"],
+        },
+    },
+    {
+        "name": "symbol_search",
+        "description": "Exact/prefix/substring/fuzzy symbol search with scoping; exact ranks first.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "repo_sha": {"type": "string"},
+                "query": {"type": "string"},
+                "mode": {"type": "string"},
+                "scope_prefix": {"type": "string"},
+                "kind": {"type": "string"},
+                "limit": {"type": "integer"},
+            },
+            "required": ["repo_sha", "query"],
+        },
+    },
+    {
+        "name": "trace_path",
+        "description": "Bounded evidence-backed path trace; unresolved hops returned as-is.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "repo_sha": {"type": "string"},
+                "start_ref": {"type": "string"},
+                "direction": {"type": "string"},
+                "max_hops": {"type": "integer"},
+            },
+            "required": ["repo_sha", "start_ref"],
+        },
+    },
+    {
+        "name": "impact_query",
+        "description": "Static change impact: reverse callers + tests (STATIC_ONLY labelling).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "repo_sha": {"type": "string"},
+                "target_ref": {"type": "string"},
+            },
+            "required": ["repo_sha", "target_ref"],
+        },
+    },
+    {
+        "name": "history_query",
+        "description": "Local git history for a path with cursor; PR/issue feed is permission-gated.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "repo_sha": {"type": "string"},
+                "path": {"type": "string"},
+                "limit": {"type": "integer"},
+                "cursor": {"type": "integer"},
+            },
+            "required": ["repo_sha", "path"],
+        },
+    },
+    {
+        "name": "domain_catalog",
+        "description": "Bounded provider/lender/schema/strategy catalogue rows with explicit unavailability.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "repo_sha": {"type": "string"},
+                "kind": {"type": "string"},
+                "limit": {"type": "integer"},
+                "cursor": {"type": "integer"},
+            },
+            "required": ["repo_sha", "kind"],
+        },
+    },
+    {
         "name": "repo_overview",
         "description": "T0 SHA-bound repo card plus data-plane store inventory.",
         "inputSchema": {
@@ -77,6 +163,12 @@ class McpServer:
             "task_context": self._tool_task_context,
             "expand_context": self._tool_expand_context,
             "repo_overview": self._tool_repo_overview,
+            "graph_query": self._tool_graph_query,
+            "symbol_search": self._tool_symbol_search,
+            "trace_path": self._tool_trace_path,
+            "impact_query": self._tool_impact_query,
+            "history_query": self._tool_history_query,
+            "domain_catalog": self._tool_domain_catalog,
         }
 
     # -- tool implementations (thin, read-only) --------------------------
@@ -96,6 +188,59 @@ class McpServer:
             list(args["refs"]),
             repo_sha=args["repo_sha"],
             depth=args.get("depth", "full"),
+        )
+
+    def _tool_graph_query(self, args: dict[str, Any]) -> dict[str, Any]:
+        return query_ops.graph_query(
+            self._plane._backend._state_root,
+            args["repo_sha"],
+            relation=args.get("relation"),
+            path_prefix=args.get("path_prefix"),
+            limit=args.get("limit", 20),
+            cursor=args.get("cursor", 0),
+        )
+
+    def _tool_symbol_search(self, args: dict[str, Any]) -> dict[str, Any]:
+        return query_ops.symbol_search(
+            self._plane._backend._state_root,
+            args["repo_sha"],
+            args["query"],
+            mode=args.get("mode", "substring"),
+            scope_prefix=args.get("scope_prefix"),
+            kind=args.get("kind"),
+            limit=args.get("limit", 20),
+        )
+
+    def _tool_trace_path(self, args: dict[str, Any]) -> dict[str, Any]:
+        return query_ops.trace_path(
+            self._plane._backend._state_root,
+            args["repo_sha"],
+            args["start_ref"],
+            direction=args.get("direction", "callees"),
+            max_hops=args.get("max_hops", 2),
+        )
+
+    def _tool_impact_query(self, args: dict[str, Any]) -> dict[str, Any]:
+        return query_ops.impact_query(
+            self._plane._backend._state_root, args["repo_sha"], args["target_ref"]
+        )
+
+    def _tool_history_query(self, args: dict[str, Any]) -> dict[str, Any]:
+        return query_ops.history_query(
+            self._plane.repo_root or ".",
+            args["repo_sha"],
+            args["path"],
+            limit=args.get("limit", 10),
+            cursor=args.get("cursor", 0),
+        )
+
+    def _tool_domain_catalog(self, args: dict[str, Any]) -> dict[str, Any]:
+        return query_ops.domain_catalog(
+            self._plane._backend._state_root,
+            args["repo_sha"],
+            args["kind"],
+            limit=args.get("limit", 20),
+            cursor=args.get("cursor", 0),
         )
 
     def _tool_repo_overview(self, args: dict[str, Any]) -> dict[str, Any]:

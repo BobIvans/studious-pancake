@@ -1,0 +1,42 @@
+{
+  "schema": "studious-pancake.lane-receipt.v1",
+  "lane": "OCA-W11B",
+  "date": "2026-11-22",
+  "branch": "codex/oca-w11b-mcp-expansion-2026-11-22",
+  "stacked_on": "codex/oca-w4b-tokenizer-retrieval-2026-11-22 (PR #702, tip f42601e1, unmerged)",
+  "design_head": "f7c09b81436e9a16c89a680ce314937fc6a52fa4",
+  "base_main_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+  "deliverables": [
+    "src/intelligence/repo_graph/query_ops.py",
+    "src/intelligence/universal_data_plane/facade.py (repo_ref resolution, auto-refresh, publish_index)",
+    "src/intelligence/universal_data_plane/mcp_server.py (9 allowlisted tools)",
+    "src/intelligence/universal_data_plane/client_setup.py",
+    "tests/intelligence/test_universal_data_plane_w11b.py",
+    "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/W11B_MCP_EXPANSION_2026-11-22.md"
+  ],
+  "checks": {
+    "mcp_tools_allowlisted": ["repo_overview", "task_context", "expand_context", "graph_query", "symbol_search", "trace_path", "impact_query", "history_query", "domain_catalog"],
+    "single_backend": true,
+    "w11b_tests": {"passed": 8, "failed": 0},
+    "w11_surface_tests": {"passed": 12, "failed": 0},
+    "chain_total_tests": {"passed": 36, "failed": 0},
+    "unresolved_hops_reported_as_is": true,
+    "impact_static_only_labelling": true,
+    "history_pr_feed_permission_gated": true,
+    "repo_ref_resolution_auto_refresh_lock": true,
+    "immutable_publication": true,
+    "client_smoke_subprocess_9_tools_real_query": true,
+    "no_global_config_writes": true,
+    "quality_gates": {"black": "PASS", "flake8": "PASS", "mypy": "PASS", "quality_gate_script": "PASS"},
+    "format_targets_registered": 3
+  },
+  "four_levels": {
+    "INVENTORY_COMPLETE": "unchanged (W0B2)",
+    "STRUCTURAL_GRAPH_COMPLETE": "unchanged per-language (W0B2)",
+    "DOMAIN_GRAPH_COMPLETE": "catalogue scaffolding live; strategy dimension pending W4C",
+    "RUNTIME_LINEAGE_COMPLETE": "NOT CLAIMED (W10/W2/W15 pending; runtime dims explicit UNAVAILABLE)"
+  },
+  "safety": {"live": "HARD_DENIED", "sign_enabled": false, "send_enabled": false, "execution_authority": "NONE", "merge_authority": "HUMAN_ONLY"},
+  "blockers": ["PRE_EXISTING_WINDOWS_ASYNCIO (unchanged)", "PR/ISSUE_FEED permission-gated (explicit UNAVAILABLE)"],
+  "related": {"design_pr": 666, "chain": ["684", "685", "686", "700", "702"]}
+}

@@ -40,8 +40,18 @@ def test_mcp_initialize_tools_list_and_call(fixture_repo: Path, tmp_path: Path) 
     tools = server.handle_message({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
     assert tools is not None
     names = {tool["name"] for tool in tools["result"]["tools"]}
-    assert names == {"task_context", "expand_context", "repo_overview"}
-    assert len(TOOL_DEFINITIONS) == 3
+    assert names == {
+        "task_context",
+        "expand_context",
+        "repo_overview",
+        "graph_query",
+        "symbol_search",
+        "trace_path",
+        "impact_query",
+        "history_query",
+        "domain_catalog",
+    }
+    assert len(TOOL_DEFINITIONS) == 9
 
     call = server.handle_message(
         {

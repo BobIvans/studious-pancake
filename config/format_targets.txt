@@ -460,3 +460,6 @@ src/intelligence/repo_graph/tokenizers.py
 src/intelligence/repo_graph/ranking.py
 benchmarks/intelligence/w4b_token_benchmark.py
 tests/intelligence/test_repo_graph_w4b.py
+src/intelligence/repo_graph/query_ops.py
+src/intelligence/universal_data_plane/client_setup.py
+tests/intelligence/test_universal_data_plane_w11b.py

@@ -366,7 +366,7 @@ def test_authorized_capture_end_to_end(tmp_path, monkeypatch):
     assert gate_event and gate_event[0]["decision"]["phase"] == "CAPTURE_AUTHORIZED"
     # v3 ordering: authority store on disk before any evidence append.
     assert init_spy["authority_exists_at_evidence_init"] is True
-    reconcile_materialized_artifacts(
+    authority_actual = reconcile_materialized_artifacts(
         (
             authority_path,
             Path(str(authority_path) + "-wal"),
@@ -374,6 +374,7 @@ def test_authorized_capture_end_to_end(tmp_path, monkeypatch):
         ),
         None,
     )
+    assert authority_actual > 0
     # Durable receipt: measured page sizes + campaign_report evidence.
     kinds = [json.loads(e.payload_json).get("kind") for e in _events(journal)]
     assert "campaign_report" in kinds, kinds

@@ -15,8 +15,23 @@ from src.config.runtime import (
 from src.config.secret_resolver import SecretResolutionError
 
 
+def _symlink_privilege_available(tmp_path: Path) -> bool:
+    """Probe whether creating symlinks works (Windows needs a privilege)."""
+    probe_target = tmp_path / "symlink-probe-target"
+    probe_target.write_bytes(b"")
+    probe = tmp_path / "symlink-probe-link"
+    try:
+        probe.symlink_to(probe_target)
+        probe.unlink()
+        return True
+    except OSError:
+        return False
+
+
 def _write(path: Path, text: str, *, mode: int | None = None) -> Path:
-    path.write_text(text, encoding="utf-8")
+    # Byte-exact LF payload: text-mode writes would emit CRLF on Windows,
+    # changing the secret bytes this resolver contract pins down.
+    path.write_bytes(text.encode("utf-8"))
     if mode is not None:
         os.chmod(path, mode)
     return path
@@ -57,10 +72,16 @@ def test_file_secret_reference_rejects_symlink_multiline_and_loose_permissions(
     tmp_path: Path,
 ) -> None:
     loose = _write(tmp_path / "loose.secret", "secret\n", mode=0o644)
-    with pytest.raises(SecretResolutionError, match="group/other"):
+    if os.name == "posix":
+        with pytest.raises(SecretResolutionError, match="group/other"):
+            reference = SecretReference.parse(f"file:{loose}")
+            assert reference is not None
+            reference.resolve(environ={})
+    else:
+        # Windows cannot represent POSIX group/other mode bits (chmod is a
+        # no-op); the resolver must still accept the LF-only file content.
         reference = SecretReference.parse(f"file:{loose}")
-        assert reference is not None
-        reference.resolve(environ={})
+        assert reference.resolve(environ={}).reveal() == "secret"
 
     multiline = _write(tmp_path / "multiline.secret", "secret\nextra\n", mode=0o600)
     with pytest.raises(SecretResolutionError, match="exactly one line"):
@@ -68,13 +89,14 @@ def test_file_secret_reference_rejects_symlink_multiline_and_loose_permissions(
         assert reference is not None
         reference.resolve(environ={})
 
-    target = _write(tmp_path / "target.secret", "secret\n", mode=0o600)
-    symlink = tmp_path / "linked.secret"
-    symlink.symlink_to(target)
-    with pytest.raises(SecretResolutionError, match="symlink"):
-        reference = SecretReference.parse(f"file:{symlink}")
-        assert reference is not None
-        reference.resolve(environ={})
+    if os.name == "posix" or _symlink_privilege_available(tmp_path):
+        target = _write(tmp_path / "target.secret", "secret\n", mode=0o600)
+        symlink = tmp_path / "linked.secret"
+        symlink.symlink_to(target)
+        with pytest.raises(SecretResolutionError, match="symlink"):
+            reference = SecretReference.parse(f"file:{symlink}")
+            assert reference is not None
+            reference.resolve(environ={})
 
 
 def test_keychain_reference_fails_explicitly_until_supported_adapter_exists() -> None:

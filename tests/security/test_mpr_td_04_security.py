@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
+import tempfile
 import sys
 import zipfile
 
@@ -35,6 +37,24 @@ def test_bounded_json_rejects_duplicates_non_finite_and_large_integer() -> None:
         decode_bounded_json_object(b'{"x":12345}', limits=limits)
 
 
+def _symlink_privilege_available(tmp_path: Path) -> bool:
+    """Probe whether creating symlinks works (Windows needs a privilege)."""
+    probe_target = tmp_path / "symlink-probe-target"
+    probe_target.write_bytes(b"")
+    probe = tmp_path / "symlink-probe-link"
+    try:
+        probe.symlink_to(probe_target)
+        probe.unlink()
+        return True
+    except OSError:
+        return False
+
+
+@pytest.mark.skipif(
+    os.name != "posix"
+    and not _symlink_privilege_available(Path(tempfile.gettempdir())),
+    reason="symlink creation requires a privilege this environment lacks",
+)
 def test_owned_path_and_atomic_write_reject_traversal_and_symlink(
     tmp_path: Path,
 ) -> None:
@@ -67,9 +87,9 @@ def test_zip_validation_rejects_traversal(tmp_path: Path) -> None:
 
 def test_url_policy_rejects_credentials_local_and_private_destinations() -> None:
     policy = UrlPolicy(frozenset({"api.example.com"}))
-    assert validate_url(
-        "https://api.example.com/v1", policy=policy
-    ).startswith("https://")
+    assert validate_url("https://api.example.com/v1", policy=policy).startswith(
+        "https://"
+    )
     with pytest.raises(NetworkSecurityError):
         validate_url("https://user:pass@api.example.com/v1", policy=policy)
     with pytest.raises(NetworkSecurityError):

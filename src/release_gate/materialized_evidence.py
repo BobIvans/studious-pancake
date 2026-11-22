@@ -12,6 +12,7 @@ from dataclasses import asdict, dataclass
 import hashlib
 import json
 import os
+import sys
 from pathlib import Path
 import re
 import tempfile
@@ -162,7 +163,8 @@ def _release_digest(
 def _load_attestation_keypair(path: Path) -> Any:
     if path.is_symlink() or not path.is_file():
         raise ValueError("attestation key must be a regular file")
-    if path.stat().st_mode & 0o077:
+    # Windows cannot represent POSIX owner-only mode bits (chmod no-op).
+    if os.name == "posix" and path.stat().st_mode & 0o077:
         raise ValueError("attestation key file must be owner-only")
     values = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(values, list) or any(
@@ -348,11 +350,18 @@ def write_manifest_atomic(
             os.fsync(handle.fileno())
         os.replace(temporary, target)
         os.chmod(target, 0o600)
-        directory = os.open(target.parent, os.O_RDONLY)
-        try:
-            os.fsync(directory)
-        finally:
-            os.close(directory)
+        if os.name == "posix":
+            directory = os.open(target.parent, os.O_RDONLY)
+            try:
+                os.fsync(directory)
+            finally:
+                os.close(directory)
+        # win32: os.open cannot open a directory handle (PermissionError), so
+        # the directory-entry fsync is conservatively skipped rather than
+        # emulated. The file bytes are fsynced above before os.replace and
+        # NTFS journals rename metadata; POSIX keeps the exact directory-fsync
+        # durability step. Same conservative pattern as intelligence/common.py.
+
     except Exception:
         try:
             os.unlink(temporary)

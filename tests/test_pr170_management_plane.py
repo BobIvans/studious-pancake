@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import os
 import stat
 
 import pytest
@@ -43,8 +44,7 @@ def test_pr170_external_bind_requires_authenticated_proxy_and_token() -> None:
 
     assert decision.decision is ManagementDecision.DENY
     assert (
-        decision.reason
-        is ManagementReason.EXTERNAL_BIND_REQUIRES_AUTHENTICATED_PROXY
+        decision.reason is ManagementReason.EXTERNAL_BIND_REQUIRES_AUTHENTICATED_PROXY
     )
     assert is_external_bind("::") is True
 
@@ -101,7 +101,11 @@ def test_pr170_signed_state_snapshot_is_owner_only_and_verified(tmp_path: Path) 
     assert result.ok is True
     assert result.payload is not None
     assert result.payload["runtime_generation"] == 7
-    assert stat.S_IMODE(path.stat().st_mode) == 0o600
+    if os.name == "posix":
+        assert stat.S_IMODE(path.stat().st_mode) == 0o600
+    else:
+        # Windows cannot represent POSIX owner-only bits (chmod no-op).
+        assert path.is_file()
 
 
 def test_pr170_state_tamper_fails_closed(tmp_path: Path) -> None:
@@ -146,6 +150,10 @@ def test_pr170_stale_generation_and_policy_mismatch_are_rejected(
     assert mismatch.reason is SnapshotErrorCode.STATE_POLICY_MISMATCH
 
 
+@pytest.mark.skipif(
+    os.name != "posix",
+    reason="open-file mode-too-open premise requires POSIX mode bits",
+)
 def test_pr170_open_file_mode_is_not_authoritative(tmp_path: Path) -> None:
     path = tmp_path / "runtime.json"
     write_signed_state_snapshot(path, _truth(), KEY)

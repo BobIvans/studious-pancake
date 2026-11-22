@@ -440,3 +440,6 @@ src/execution/unsigned_plan_simulation_seam.py
 src/intelligence/provider_contracts/__init__.py
 src/intelligence/provider_contracts/registry.py
 tests/intelligence/test_provider_contracts.py
+src/intelligence/strategy_requirements/__init__.py
+src/intelligence/strategy_requirements/requirements.py
+tests/intelligence/test_strategy_requirements.py

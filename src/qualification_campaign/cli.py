@@ -33,6 +33,7 @@ from .campaign_start_gate import (
 )
 from .evidence import (
     AUTHORITY_CREATION_RESERVE_BYTES,
+    sqlite_page_size,
     JOURNAL_CREATION_RESERVE_BYTES,
     LEDGER_CREATION_RESERVE_BYTES,
     LEDGER_TRANSACTION_RESERVE_BYTES,
@@ -339,6 +340,38 @@ async def capture(
         )
         return blocked_start_report(decision)
     async with AsyncExitStack() as stack:
+        # SECURITY CLOSURE v3 (reservation invariant): the authority store is
+        # materialized BEFORE the evidence journal, so the preflight's
+        # AUTHORITY_CREATION_RESERVE_BYTES is spent on disk before any
+        # journal append runs.  Journal appends project from
+        # campaign_storage_bytes() (filesystem truth); with the authority
+        # store absent they would see zero bytes for it and could consume
+        # the reserve, silently violating storage_bytes_max at authority
+        # creation with no typed blocker.  Materializing first removes the
+        # window structurally: every append's projection includes the real
+        # authority footprint.
+        store = stack.enter_context(
+            UnifiedLifecycleAuthority(
+                authority_path,
+                release_digest=manifest.runtime_authority_sha256,
+                policy_bundle_hash=manifest.campaign_id,
+            )
+        )
+        # Reconciliation backstop for the authority store itself: the
+        # preflight reserves assumed SQLite page sizes; if a store
+        # materialized larger than reserved, fail closed immediately
+        # instead of silently over-spending the approved budget.
+        if (
+            artifact_footprint_bytes(
+                (
+                    authority_path,
+                    Path(str(authority_path) + "-wal"),
+                    Path(str(authority_path) + "-shm"),
+                )
+            )
+            > budgets.storage_bytes_max
+        ):
+            raise ValueError("CAMPAIGN_STORAGE_BUDGET_EXCEEDED")
         journal = RecoverableStreamJournal(
             output / "campaign-evidence.sqlite", max_events=10_000
         )
@@ -355,17 +388,24 @@ async def capture(
                 Path(str(authority_path) + "-shm"),
             ),
         )
+        # SECURITY CLOSURE v3: record the ACTUAL SQLite page sizes of all
+        # three stores plus the real footprint split — the preflight
+        # reserve assumed 4096; the durable receipt carries the measured
+        # values so reconciliation evidence is filesystem truth, and the
+        # post-write reconciliations (every append + backstops above)
+        # remain the enforcement.
         evidence.append(
-            "campaign-start-gate",
-            {"kind": "campaign_start_decision", "decision": decision.to_dict()},
+            "campaign",
+            {
+                "kind": "storage_reconciliation",
+                "page_sizes": {
+                    "journal": evidence.page_size,
+                    "ledger": sqlite_page_size(ledger_path),
+                    "authority": sqlite_page_size(authority_path),
+                },
+                "storage_bytes": evidence.campaign_storage_bytes(),
+            },
             observed_at_ns=time.time_ns(),
-        )
-        store = stack.enter_context(
-            UnifiedLifecycleAuthority(
-                output / "authority.sqlite",
-                release_digest=manifest.runtime_authority_sha256,
-                policy_bundle_hash=manifest.campaign_id,
-            )
         )
         expires = (int(time.time()) // 86400 + 1) * 86400
         gov = ProviderGovernance(

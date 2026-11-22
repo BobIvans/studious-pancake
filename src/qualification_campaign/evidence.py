@@ -6,6 +6,7 @@ attempt reservations survive restart. Replay uses retained bytes only.
 
 import errno
 import json
+import sqlite3
 import time
 import os
 import tempfile
@@ -88,6 +89,28 @@ def artifact_footprint_bytes(paths) -> int:
         except FileNotFoundError:
             pass
     return total
+
+
+def sqlite_page_size(db_path: Path) -> int | None:
+    """Actual SQLite page size of a persisted store (read-only; None if absent).
+
+    SECURITY CLOSURE v3: page sizes are measured, never assumed — the
+    preflight reserves use the 4096 default, and this helper produces the
+    durable measured receipt for journal/ledger/authority.
+    """
+
+    if not db_path.exists():
+        return None
+    try:
+        connection = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, timeout=5)
+    except sqlite3.Error:
+        return None
+    try:
+        return int(connection.execute("PRAGMA page_size").fetchone()[0])
+    except sqlite3.Error:
+        return None
+    finally:
+        connection.close()
 
 
 @dataclass(frozen=True)
@@ -192,16 +215,43 @@ class CampaignEvidenceStore:
         # the storage ceiling scope is the WHOLE campaign footprint and no
         # campaign file is excluded from accounting.
         self.extra_artifacts = tuple(Path(p) for p in extra_artifacts)
+        # Outstanding creation reservations (owner closure round 4): named
+        # byte reserves for campaign stores that are NOT yet materialized
+        # (e.g. authority.sqlite).  They are durable journal events, so a
+        # restart cannot let journal appends consume a store's reserved
+        # budget, and they are released only when the store is materialized
+        # and reconciled against its actual DB/WAL/SHM footprint.
+        self.outstanding_reservations: dict[str, int] = {}
         db_path = journal.db.execute("PRAGMA database_list").fetchone()[2]
         self.db_path = Path(db_path)
         self.lock_path = Path(db_path + ".campaign-lock")
         self.blob_dir = Path(db_path + ".blobs")
         self.page_size = int(journal.db.execute("PRAGMA page_size").fetchone()[0])
+        if self.campaign_budgets is not None and self.page_size != 4096:
+            # The CLI preflight reservation is derived from the documented
+            # default page size; unsupported configurations are rejected
+            # before any persistent write instead of silently under-reserving.
+            raise ValueError("CAMPAIGN_STORAGE_PAGE_SIZE_UNSUPPORTED")
         retained = journal.events(available_at_ns=2**63 - 1)
         for e in retained:
             if e.partition != manifest.campaign_id:
                 raise ValueError("CAMPAIGN_GENERATION_MISMATCH")
+        for e in retained:
+            body = json.loads(e.payload_json)
+            if body.get("kind") == "storage_reservation":
+                self.outstanding_reservations = dict(body["reservations"])
+            elif body.get("kind") == "storage_reservation_materialized":
+                self.outstanding_reservations.pop(body["name"], None)
         if not retained:
+            if self.outstanding_reservations:
+                self.append(
+                    "campaign",
+                    {
+                        "kind": "storage_reservation",
+                        "reservations": dict(self.outstanding_reservations),
+                    },
+                    observed_at_ns=self.wall_ns(),
+                )
             self.append(
                 "campaign",
                 {"kind": "manifest", "manifest": manifest.to_dict()},

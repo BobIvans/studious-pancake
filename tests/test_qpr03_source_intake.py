@@ -272,6 +272,7 @@ def test_templates_use_original_blank_slots_and_builtin_dossiers_are_current():
         "dexscreener",
         "geckoterminal",
         "raydium",
+        "meteora-dlmm",
     }
     for d, a in sources:
         assert d.schema_fingerprint == digest(a.schema_contract())

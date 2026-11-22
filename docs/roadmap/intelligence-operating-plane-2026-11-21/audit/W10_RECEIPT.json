@@ -1,0 +1,51 @@
+{
+ "base_main_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+ "blockers": [
+  "PRE_EXISTING_WINDOWS_ASYNCIO (unchanged)"
+ ],
+ "branch": "codex/oca-w10-runtime-capture-2026-11-22",
+ "checks": {
+  "canonical_store_reused": "AuthoritativeObservabilityStore (no second event store)",
+  "coverage_matrix": {
+   "BLOCKED": 2,
+   "NO_RUNTIME_PATH": 1,
+   "PARTIAL": 1,
+   "UNKNOWN": 0,
+   "WIRED": 1
+  },
+  "critical_events_never_sampled_or_dropped": true,
+  "degraded_receipt_on_store_failure": true,
+  "first_production_producer_callsites": true,
+  "format_targets_registered": 5,
+  "quality_gates": {
+   "black": "PASS",
+   "flake8": "PASS",
+   "mypy": "PASS",
+   "quality_gate_script": "PASS"
+  },
+  "real_provenance_non_default": true,
+  "restart_replay_from_durable_store": true,
+  "w10_tests": {
+   "failed": 0,
+   "passed": 4
+  }
+ },
+ "date": "2026-11-22",
+ "deliverables": [
+  "src/observability/runtime_capture/ (4 modules)",
+  "tests/intelligence/test_runtime_capture.py (4 tests)"
+ ],
+ "lane": "OCA-W10",
+ "related": {
+  "design_head": "f7c09b81436e9a16c89a680ce314937fc6a52fa4",
+  "design_pr": 666
+ },
+ "safety": {
+  "execution_authority": "NONE",
+  "live": "HARD_DENIED",
+  "merge_authority": "HUMAN_ONLY",
+  "send_enabled": false,
+  "sign_enabled": false
+ },
+ "schema": "studious-pancake.lane-receipt.v1"
+}

@@ -456,3 +456,7 @@ tests/intelligence/test_universal_data_plane.py
 src/intelligence/repo_graph/extractors.py
 src/intelligence/repo_graph/parsers.py
 tests/intelligence/test_repo_graph_polyglot.py
+src/intelligence/repo_graph/tokenizers.py
+src/intelligence/repo_graph/ranking.py
+benchmarks/intelligence/w4b_token_benchmark.py
+tests/intelligence/test_repo_graph_w4b.py

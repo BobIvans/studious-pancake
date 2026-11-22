@@ -227,7 +227,8 @@ def test_task_context_envelope_and_expansion(
     assert envelope["freshness"]["status"] == "FRESH"
     included_paths = {ref["path"] for ref in envelope["included_refs"]}
     assert "src/pkg/core.py" in included_paths
-    assert envelope["tokenizer"].startswith("byte-estimate")
+    assert envelope["tokenizer"] == "char-class-estimator-v1"
+    assert envelope["tokenizer_uncertainty"]
     # Exact expansion by stable symbol ID.
     core_module_id = f"py::src/pkg/core.py::src.pkg.core"
     expansion = backend.expand_context([core_module_id], repo_sha=sha)

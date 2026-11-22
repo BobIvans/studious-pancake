@@ -1,0 +1,16 @@
+{
+ "budget_tokens": 2000,
+ "critical_omissions": 0,
+ "determinism_note": "run twice and compare recall + pack sizes (receipt field)",
+ "latency_p50_s": 0.88,
+ "latency_p95_s": 1.114,
+ "misses": [],
+ "pack_tokens_median": 43032.0,
+ "questions": 42,
+ "recall": 1.0,
+ "repo_sha": "ac723b4e90dfe3ff3e29a549fd36d915034bca93",
+ "schema": "studious.w4b.token-benchmark.v1",
+ "tokenizer": "tiktoken:o200k_base",
+ "tokenizer_uncertainty": "exact for the configured tokenizer profile",
+ "whole_repo_baseline_tokens": 6164643
+}

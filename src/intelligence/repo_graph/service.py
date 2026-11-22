@@ -14,8 +14,10 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
+from .ranking import conditioned_boost
 from .schema import SCHEMA_ID
 from .store import artifact_path, load_manifest
+from .tokenizers import resolve_tokenizer
 
 TOKENIZER = "byte-estimate-v1 (utf-8 bytes / 4; no model tokenizer installed)"
 DEFAULT_BUDGET_TOKENS = 2000
@@ -151,6 +153,7 @@ class QueryBackend:
         must_include_refs: list[str] | None = None,
         exclude_refs: list[str] | None = None,
         continuation_cursor: dict[str, Any] | None = None,
+        token_profile: str | None = None,
     ) -> dict[str, Any]:
         fresh = self.freshness(repo_sha)
         if fresh["status"] in {"UNAVAILABLE", "STALE"}:
@@ -172,6 +175,7 @@ class QueryBackend:
 
         task_type = detect_task_type(task)
         ranked = self._rank(target, manifest, task, must_include, task_type)
+        adapter, tokenizer_meta = resolve_tokenizer(token_profile)
         if continuation_cursor:
             if continuation_cursor.get("task_hash") != _task_hash(task, repo_sha):
                 raise ValueError("stale task continuation cursor")
@@ -179,24 +183,43 @@ class QueryBackend:
         included: list[dict[str, Any]] = []
         omitted: list[dict[str, Any]] = []
         used = 0
+        slots = [("FULL", 2), ("SKELETON", 4), ("REFERENCE", 6)]
+        slot_index = 0
+        slot_remaining = slots[0][1]
         for ref in ranked:
             path = ref["path"]
             if path in excluded:
                 continue
             size = ref["bytes"]
             payload = {"path": path, "blob_sha256": ref["blob_sha256"], "bytes": size}
-            if size > budget:
+            if size > budget or used + size > budget:
                 payload["needs_expansion"] = True
+                payload["resolution"] = "NEEDS_EXPANSION"
                 omitted.append(payload)
                 continue
-            if used + size > budget:
+            if slot_remaining == 0 and slot_index + 1 < len(slots):
+                slot_index += 1
+                slot_remaining = slots[slot_index][1]
+            if slot_remaining == 0:
                 payload["needs_expansion"] = True
+                payload["resolution"] = "NEEDS_EXPANSION"
                 omitted.append(payload)
                 continue
-            used += size
-            payload["content_bytes"] = _load_snapshot_blob(
+            resolution = slots[slot_index][0]
+            slot_remaining -= 1
+            data = _load_snapshot_blob(
                 self._snapshot_root(repo_sha), ref["blob_sha256"]
             )
+            if resolution == "FULL":
+                content = data
+            elif resolution == "SKELETON":
+                content = self._skeleton(target, path, data).encode("utf-8")
+            else:
+                content = self._reference(target, path).encode("utf-8")
+            used += len(content)
+            payload["content_bytes"] = content
+            payload["resolution"] = resolution
+            payload["token_estimate"] = adapter.count(content)
             included.append(payload)
         neighbours = self._neighbours(target, [item["path"] for item in included])
         status = "BUDGET_LIMITED" if omitted else "FRESH"
@@ -219,7 +242,9 @@ class QueryBackend:
             "budget_tokens": budget_tokens or DEFAULT_BUDGET_TOKENS,
             "budget_used_bytes": used,
             "budget_cap_bytes": budget,
-            "tokenizer": TOKENIZER,
+            "tokenizer": tokenizer_meta["tokenizer"],
+            "tokenizer_uncertainty": tokenizer_meta["tokenizer_uncertainty"],
+            "tokenizer_degraded_reason": tokenizer_meta["degraded_reason"],
             "included_refs": [
                 {key: value for key, value in item.items() if key != "content_bytes"}
                 for item in included
@@ -229,7 +254,7 @@ class QueryBackend:
             "graph_neighbours": neighbours,
             "must_include_refs": must_include,
         }
-        envelope["token_estimate"] = _token_estimate(
+        envelope["token_estimate"] = adapter.count(
             json.dumps(envelope, sort_keys=True).encode("utf-8")
         )
         envelope["_content"] = {
@@ -375,6 +400,25 @@ class QueryBackend:
             for prefix, boost in TASK_TYPE_BOOSTS.get(task_type, {}).items():
                 if path.startswith(prefix):
                     scored[path] += boost
+        # OCA-W4B: task-conditioned personalized PageRank as a bounded boost
+        # over already-relevant candidates (never an authority by itself).
+        connection = self._connection(manifest["repo_sha"])
+        try:
+            edge_rows = connection.execute("""
+                SELECT n1.path, n2.path FROM edges e
+                JOIN nodes n1 ON n1.symbol_id = e.source
+                JOIN nodes n2 ON n2.symbol_id = e.target
+                LIMIT 20000
+                """).fetchall()
+        finally:
+            connection.close()
+        path_edges = [(a, b) for a, b in edge_rows if a != b]
+        seeds = {
+            path: min(scored[path], 100.0)
+            for path in sorted(scored, key=lambda item: -scored[item])[:20]
+        }
+        for path, boost in conditioned_boost({}, seeds, path_edges).items():
+            scored[path] = scored.get(path, 0.0) + boost
         ranked = [
             {
                 "path": path,
@@ -407,6 +451,48 @@ class QueryBackend:
             ]
         finally:
             connection.close()
+
+    def _skeleton(self, target: Path, path: str, data: bytes) -> str:
+        """Signature-only structural skeleton (never arbitrary truncation).
+
+        Lines come from exact symbol ranges recorded in the graph; files
+        without recorded symbols fall back to a REFERENCE listing instead.
+        """
+        connection = sqlite3.connect(target / "graph.sqlite")
+        try:
+            rows = connection.execute(
+                "SELECT kind, name, start_byte FROM nodes "
+                "WHERE path = ? AND kind IN ('function', 'class', 'heading', "
+                "'config_key', 'schema_field', 'workflow_job') "
+                "ORDER BY start_byte",
+                (path,),
+            ).fetchall()
+        finally:
+            connection.close()
+        if not rows:
+            return self._reference(target, path)
+        lines = ["# skeleton of " + path]
+        for _kind, _name, start_byte in rows:
+            line_end = data.find(b"\n", start_byte)
+            if line_end == -1:
+                line_end = min(start_byte + 200, len(data))
+            snippet = data[start_byte:line_end].decode("utf-8", "replace").rstrip()
+            lines.append(snippet[:200])
+        return "\n".join(lines[:80])
+
+    def _reference(self, target: Path, path: str) -> str:
+        """Minimal structural reference: path + declared symbol names only."""
+        connection = sqlite3.connect(target / "graph.sqlite")
+        try:
+            rows = connection.execute(
+                "SELECT kind, name FROM nodes WHERE path = ? "
+                "ORDER BY start_byte LIMIT 40",
+                (path,),
+            ).fetchall()
+        finally:
+            connection.close()
+        names = ", ".join(kind + ":" + name for kind, name in rows)
+        return "reference " + path + ": " + names
 
     def _symbol(self, repo_sha: str, symbol_id: str) -> dict[str, Any] | None:
         connection = self._connection(repo_sha)

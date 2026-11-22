@@ -160,6 +160,17 @@ def parse_python_module(path: str, data: bytes) -> dict[str, Any]:
     symbols = [module_symbol] + sorted(
         visitor.symbols, key=lambda item: (item["start_byte"], item["qualified_name"])
     )
+    # OCA-W4B: independent signature/body hashes per symbol (early-cutoff
+    # invalidation + skeleton construction). Deterministic for identical bytes.
+    from .tokenizers import signature_body_hashes
+
+    for symbol in symbols:
+        if symbol["kind"] == "module":
+            continue
+        hashes = signature_body_hashes(data, symbol["start_byte"], symbol["end_byte"])
+        symbol["signature_hash"] = hashes["signature_hash"]
+        symbol["body_hash"] = hashes["body_hash"]
+
     # Conditional redefinitions can repeat a qualified name inside one module;
     # disambiguate deterministically by source order (contract 2.2: stable ID).
     seen_ids: dict[str, int] = {}

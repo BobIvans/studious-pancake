@@ -93,7 +93,9 @@ def _build_sqlite_index(target: str, nodes: bytes, edges: bytes) -> None:
                 parent_qualified TEXT,
                 signature TEXT,
                 start_byte INTEGER NOT NULL,
-                end_byte INTEGER NOT NULL
+                end_byte INTEGER NOT NULL,
+                signature_hash TEXT,
+                body_hash TEXT
             );
             CREATE TABLE edges (
                 relation TEXT NOT NULL,
@@ -123,10 +125,12 @@ def _build_sqlite_index(target: str, nodes: bytes, edges: bytes) -> None:
                     record.get("signature"),
                     record["start_byte"],
                     record["end_byte"],
+                    record.get("signature_hash"),
+                    record.get("body_hash"),
                 )
             )
         connection.executemany(
-            "INSERT INTO nodes VALUES (?,?,?,?,?,?,?,?,?)", node_rows
+            "INSERT INTO nodes VALUES (?,?,?,?,?,?,?,?,?,?,?)", node_rows
         )
         connection.executemany(
             "INSERT INTO node_fts(rowid, name, qualified_name, path) "

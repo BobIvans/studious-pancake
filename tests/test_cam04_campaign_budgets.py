@@ -771,6 +771,14 @@ def test_extra_artifacts_count_into_footprint(tmp_path):
     journal.close()
 
 
+@pytest.mark.skipif(
+    subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", "origin/main^{commit}"],
+        capture_output=True,
+    ).returncode
+    != 0,
+    reason="requires a full clone with the origin/main ref",
+)
 def test_preflight_blocks_before_any_persistent_artifact(tmp_path, monkeypatch):
     """Closure round 3: a budget that cannot hold the whole pre-reserved
     campaign footprint blocks BEFORE manifest.json / approval ledger are
@@ -845,6 +853,14 @@ def test_preflight_blocks_before_any_persistent_artifact(tmp_path, monkeypatch):
     assert (output / "campaign-start-blocked.json").exists()  # terminal receipt
 
 
+@pytest.mark.skipif(
+    subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", "origin/main^{commit}"],
+        capture_output=True,
+    ).returncode
+    != 0,
+    reason="requires a full clone with the origin/main ref",
+)
 def test_preflight_exact_limit_proceeds_and_one_byte_under_writes_nothing(
     tmp_path, monkeypatch
 ):

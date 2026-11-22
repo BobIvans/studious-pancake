@@ -313,7 +313,11 @@ class RecoverableStreamJournal:
         self.max_payload_bytes = max_payload_bytes
         import sqlite3
 
-        self.db = sqlite3.connect(str(path), isolation_level=None)
+        self.db = sqlite3.connect(str(path), isolation_level=None, timeout=30)
+        # DATA-01: multi-process intake opens the same journal concurrently;
+        # without a busy timeout the first writers racing schema/PRAGMA
+        # initialization fail with SQLITE_BUSY instead of serializing.
+        self.db.execute("PRAGMA busy_timeout=30000")
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.execute("PRAGMA synchronous=FULL")
         self.db.execute(

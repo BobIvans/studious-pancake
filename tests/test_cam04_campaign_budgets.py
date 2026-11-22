@@ -1,5 +1,6 @@
 """CAM-04: durable campaign-global attempt + storage budgets (fail closed)."""
 
+import subprocess
 import threading
 from dataclasses import replace
 
@@ -578,6 +579,14 @@ def test_page_granularity_blocks_large_inline_that_flat_slack_missed(tmp_path):
         )
 
 
+@pytest.mark.skipif(
+    subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", "origin/main^{commit}"],
+        capture_output=True,
+    ).returncode
+    != 0,
+    reason="requires a full clone with the origin/main ref",
+)
 def test_pre_ledger_ceiling_blocks_before_ledger_creation(tmp_path, monkeypatch):
     """Security closure item 2 (pre-ledger): a manifest artifact that does
     not fit the approved budget blocks the start before the approval ledger

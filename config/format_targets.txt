@@ -444,3 +444,4 @@ src/qualification_campaign/approval_replay_ledger.py
 tests/test_cam04_campaign_budgets.py
 tests/test_cam04_security_closure_v3.py
 tests/test_cam04_authorized_capture_e2e.py
+tests/test_cam04_authorized_capture_e2e.py

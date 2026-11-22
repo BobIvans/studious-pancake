@@ -44,7 +44,11 @@ original_connect = socket.socket.connect
 
 
 def guarded_connect(self, address):
-    if self.family != socket.AF_UNIX:
+    # AF_UNIX does not exist on Windows; there it is replaced by a sentinel
+    # that never matches a real socket family, so every connect is still
+    # recorded and rejected (fail-closed semantics unchanged per platform).
+    unix_family = getattr(socket, "AF_UNIX", None)
+    if unix_family is None or self.family != unix_family:
         network_attempts.append("CONNECT")
         raise RuntimeError("UNEXPECTED_DEFAULT_NETWORK")
     return original_connect(self, address)

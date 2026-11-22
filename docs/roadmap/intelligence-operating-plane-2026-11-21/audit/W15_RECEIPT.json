@@ -1,0 +1,49 @@
+{
+ "base_main_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+ "blockers": [
+  "PRE_EXISTING_WINDOWS_ASYNCIO (unchanged)"
+ ],
+ "branch": "codex/oca-w15-temporal-ontology-2026-11-22",
+ "checks": {
+  "bitemporal_as_of_deterministic": true,
+  "format_targets_registered": 3,
+  "layers": 8,
+  "migration_receipts_evidence_preserving": true,
+  "quality_gates": {
+   "black": "PASS",
+   "flake8": "PASS",
+   "mypy": "PASS",
+   "quality_gate_script": "PASS"
+  },
+  "registry_joins_available": "W13/W14 provider+strategy contracts via merged chain B; W2 episodes via merge",
+  "static_runtime_separation_enforced": "RUNTIME_OBSERVED requires runtime predicates; audit helper included",
+  "w15_tests": {
+   "failed": 0,
+   "passed": 3
+  }
+ },
+ "date": "2026-11-22",
+ "deliverables": [
+  "src/intelligence/temporal_ontology/__init__.py",
+  "src/intelligence/temporal_ontology/ontology.py",
+  "tests/intelligence/test_temporal_ontology.py"
+ ],
+ "lane": "OCA-W15",
+ "related": {
+  "chain_b": [
+   "689",
+   "690"
+  ],
+  "design_pr": 666,
+  "w2_pr": 704
+ },
+ "safety": {
+  "execution_authority": "NONE",
+  "live": "HARD_DENIED",
+  "merge_authority": "HUMAN_ONLY",
+  "send_enabled": false,
+  "sign_enabled": false
+ },
+ "schema": "studious-pancake.lane-receipt.v1",
+ "stacked_merge": "chain B (#689/#690 tips 021f3a1c/5f4bf354) + W2 (24299aff) via real merge commit e9c42dd3"
+}

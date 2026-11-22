@@ -32,6 +32,7 @@ from src.qualification_campaign.evidence import (
     CampaignEvidenceStore,
     artifact_footprint_bytes,
     journal_growth_bound,
+    require_supported_page_size,
     sqlite_page_size,
 )
 from src.qualification_campaign.identity import CampaignManifest
@@ -301,6 +302,47 @@ def test_measured_page_sizes_are_recorded_not_assumed(tmp_path):
     # The helper reads the real files (not constants): deleting the file
     # makes the measurement None.
     assert sqlite_page_size(output / "missing.sqlite") is None
+
+
+def _write_db_with_page_size(path: Path, page_size: int) -> None:
+    import sqlite3
+
+    connection = sqlite3.connect(path)
+    connection.execute(f"PRAGMA page_size={page_size}")
+    connection.execute("CREATE TABLE t(x INTEGER)")
+    connection.commit()
+    connection.close()
+
+
+@pytest.mark.parametrize("store", ["JOURNAL", "LEDGER", "AUTHORITY"])
+def test_unsupported_page_size_fails_closed_per_store(tmp_path, store):
+    """SECURITY CLOSURE v3: each of the three stores is enforced separately;
+    measurement alone is not acceptance."""
+
+    db = tmp_path / f"{store.lower()}.sqlite"
+    _write_db_with_page_size(db, 8192)
+    assert sqlite_page_size(db) == 8192
+    with pytest.raises(ValueError, match=f"CAMPAIGN_{store}_PAGE_SIZE_UNSUPPORTED"):
+        require_supported_page_size(db, store=store)
+
+
+@pytest.mark.parametrize("store", ["JOURNAL", "LEDGER", "AUTHORITY"])
+def test_supported_and_absent_page_size_pass_per_store(tmp_path, store):
+    db = tmp_path / f"{store.lower()}.sqlite"
+    _write_db_with_page_size(db, 4096)
+    assert require_supported_page_size(db, store=store) is None
+    # A not-yet-created store is created with the supported default.
+    assert require_supported_page_size(tmp_path / "absent.sqlite", store=store) is None
+
+
+def test_journal_store_rejects_unsupported_page_size(tmp_path):
+    db = tmp_path / "journal.sqlite"
+    _write_db_with_page_size(db, 8192)
+    journal = RecoverableStreamJournal(db)
+    with pytest.raises(ValueError, match="CAMPAIGN_JOURNAL_PAGE_SIZE_UNSUPPORTED"):
+        CampaignEvidenceStore(
+            journal, manifest_for(), campaign_budgets=budgets_for(2**30)
+        )
 
 
 def test_restart_keeps_ceiling_enforced(tmp_path):

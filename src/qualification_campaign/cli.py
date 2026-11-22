@@ -34,6 +34,7 @@ from .campaign_start_gate import (
 from .evidence import (
     AUTHORITY_CREATION_RESERVE_BYTES,
     reconcile_materialized_artifacts,
+    require_supported_page_size,
     sqlite_page_size,
     JOURNAL_CREATION_RESERVE_BYTES,
     LEDGER_CREATION_RESERVE_BYTES,
@@ -296,6 +297,9 @@ async def capture(
                     handle.flush()
                     os.fsync(handle.fileno())
             registry = load_trust_registry(trust_registry)
+            # SECURITY CLOSURE v3: reject an unsupported ledger page size
+            # before the ledger constructor writes its schema.
+            require_supported_page_size(ledger_path, store="LEDGER")
             ledger = SQLiteApprovalReplayLedger(ledger_path)
             decision = evaluate_campaign_start_gate(
                 manifest=manifest,
@@ -351,6 +355,9 @@ async def capture(
         # creation with no typed blocker.  Materializing first removes the
         # window structurally: every append's projection includes the real
         # authority footprint.
+        # SECURITY CLOSURE v3: the authority store must also fail closed on an
+        # unsupported page size before its constructor writes.
+        require_supported_page_size(authority_path, store="AUTHORITY")
         store = stack.enter_context(
             UnifiedLifecycleAuthority(
                 authority_path,
@@ -369,6 +376,11 @@ async def capture(
                 Path(str(authority_path) + "-shm"),
             ),
             budgets,
+        )
+        # SECURITY CLOSURE v3: the evidence journal is checked before its
+        # constructor writes; the evidence-store guard remains as depth.
+        require_supported_page_size(
+            output / "campaign-evidence.sqlite", store="JOURNAL"
         )
         journal = RecoverableStreamJournal(
             output / "campaign-evidence.sqlite", max_events=10_000

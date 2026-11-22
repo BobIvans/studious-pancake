@@ -102,6 +102,25 @@ def reconcile_materialized_artifacts(actual_paths, budgets) -> int:
     return actual
 
 
+SUPPORTED_SQLITE_PAGE_SIZE = 4096
+
+
+def require_supported_page_size(db_path: Path, *, store: str) -> None:
+    """Fail closed on an unsupported SQLite page size BEFORE that store writes.
+
+    SECURITY CLOSURE v3 (page-size enforcement): the preflight reserve is
+    derived from a 4096-byte page. All three campaign stores (journal, ledger,
+    authority) must therefore be checked independently. ``sqlite_page_size``
+    returns ``None`` for a not-yet-created file, which will be created with the
+    supported default; an existing store with any other page size is rejected
+    before its constructor can perform persistent writes.
+    """
+
+    size = sqlite_page_size(db_path)
+    if size is not None and size != SUPPORTED_SQLITE_PAGE_SIZE:
+        raise ValueError(f"CAMPAIGN_{store}_PAGE_SIZE_UNSUPPORTED")
+
+
 def sqlite_page_size(db_path: Path) -> int | None:
     """Actual SQLite page size of a persisted store (read-only; None if absent).
 
@@ -237,11 +256,13 @@ class CampaignEvidenceStore:
         self.lock_path = Path(db_path + ".campaign-lock")
         self.blob_dir = Path(db_path + ".blobs")
         self.page_size = int(journal.db.execute("PRAGMA page_size").fetchone()[0])
-        if self.campaign_budgets is not None and self.page_size != 4096:
+        if self.campaign_budgets is not None and self.page_size != (
+            SUPPORTED_SQLITE_PAGE_SIZE
+        ):
             # The CLI preflight reservation is derived from the documented
             # default page size; unsupported configurations are rejected
             # before any persistent write instead of silently under-reserving.
-            raise ValueError("CAMPAIGN_STORAGE_PAGE_SIZE_UNSUPPORTED")
+            raise ValueError("CAMPAIGN_JOURNAL_PAGE_SIZE_UNSUPPORTED")
         retained = journal.events(available_at_ns=2**63 - 1)
         for e in retained:
             if e.partition != manifest.campaign_id:

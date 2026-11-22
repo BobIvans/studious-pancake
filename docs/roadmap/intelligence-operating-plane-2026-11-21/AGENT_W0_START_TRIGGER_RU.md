@@ -351,3 +351,15 @@ Read `WEB3_STRATEGY_INTELLIGENCE_QUERY_TOOLS_RU.md`. The generic repo graph is n
 **Acceptance:** complete candidate discovery coverage across registries/source/configs/tests/docs/history; explicit lifecycle/evidence states; Web3 golden corpus; zero critical omissions and zero fabricated runtime/provider/qualification facts; measured token reduction + recall/citation/latency; exact refs and same-SHA continuation.
 
 Do not proceed by installing every SOTA tool. Adopt useful functions (Tree-sitter/SCIP, Aider-style ranking, grep-ast scope extraction, tokenizer-aware pack fitting and loss-aware log trimming) in the existing architecture; external products remain benchmark-only unless a measured gap justifies them.
+
+## 15. Strategy/function performance diagnostics — required operational layer
+
+Read `STRATEGY_FUNCTION_PERFORMANCE_DIAGNOSTICS_RU.md` and implement OCA-W20 only after its matrix dependencies are satisfied.
+
+The target is not merely a graph of all functions. Prove the runtime chain from strategy/version to operation/episode, lifecycle stage, stable callsite/symbol, provider/observation/capital inputs, function/stage metrics and authoritative simulation/reconciliation outcome. Use W10 actual producers, W2 deterministic episodes, W15 temporal joins and W18 coverage/fault-injection verification. Keep technical health metrics distinct from financial outcomes.
+
+Required output: invocation counts with denominators; success/error/retry/timeout rates; latency quantiles; queue/backpressure and capture-loss metrics; data freshness/gaps/contract failures; stage conversion/rejection reasons; cohort-aware baseline comparisons; exact evidence refs; sample size and confidence; explicit UNKNOWN/uncovered paths.
+
+Never infer runtime calls from static CALLS edges, treat missing telemetry as zero errors, compare incompatible market/config cohorts, or claim causality from correlation. Use controlled replay/fault injection for causal evidence. Expose `performance_diagnostics` as the seventh operation inside existing `web3_data_trace`; retain the two-schema MCP budget. No automated remediation, strategy/config mutation or LIVE authority.
+
+Execution order after dependencies: W10 + W2 → W15 + W18 → W20 → W4C completion (W4C now depends on W20). Reconcile exact PR ancestry/base and canonical ownership before dispatch. Attach runtime coverage, replay, fault-injection, false-attribution and performance receipts. No automatic merge.

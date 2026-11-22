@@ -1,0 +1,44 @@
+{
+  "schema": "studious-pancake.lane-receipt.v1",
+  "lane": "OCA-W4B",
+  "date": "2026-11-22",
+  "branch": "codex/oca-w4b-tokenizer-retrieval-2026-11-22",
+  "stacked_on": "codex/oca-w0b2-polyglot-graph-2026-11-22 (PR #700, tip ac723b4e, unmerged)",
+  "design_head": "f7c09b81436e9a16c89a680ce314937fc6a52fa4",
+  "base_main_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+  "deliverables": [
+    "src/intelligence/repo_graph/tokenizers.py",
+    "src/intelligence/repo_graph/ranking.py",
+    "src/intelligence/repo_graph/symbols.py (signature/body hashes)",
+    "src/intelligence/repo_graph/store.py (schema additive)",
+    "src/intelligence/repo_graph/service.py (loss-aware packs, per-ref token cost, PageRank boost)",
+    "benchmarks/intelligence/w4b_token_benchmark.py",
+    "tests/intelligence/test_repo_graph_w4b.py",
+    "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/W4B_TOKEN_BENCHMARK_RECEIPT.json",
+    "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/W4B_TOKENIZER_RETRIEVAL_2026-11-22.md"
+  ],
+  "checks": {
+    "w4b_tests": {"passed": 7, "failed": 0},
+    "chain_total_tests": {"passed": 28, "failed": 0},
+    "real_tokenizer": "tiktoken:o200k_base (locally cached; not added to any lock)",
+    "golden_recall": 1.0,
+    "golden_questions": 42,
+    "critical_omissions": 0,
+    "whole_repo_baseline_tokens": 6164643,
+    "latency_p50_s": 0.88,
+    "latency_p95_s": 1.114,
+    "determinism_two_runs_equal": true,
+    "skeleton_never_mid_body": "fixture invariant: every skeleton line is a recorded-range signature (ends with ':')",
+    "quality_gates": {"black": "PASS", "flake8": "PASS", "mypy": "PASS", "quality_gate_script": "PASS"},
+    "format_targets_registered": 4
+  },
+  "four_levels": {
+    "INVENTORY_COMPLETE": "unchanged claim from W0B2",
+    "STRUCTURAL_GRAPH_COMPLETE": "unchanged per-language claims from W0B2",
+    "DOMAIN_GRAPH_COMPLETE": "NOT CLAIMED",
+    "RUNTIME_LINEAGE_COMPLETE": "NOT CLAIMED"
+  },
+  "safety": {"live": "HARD_DENIED", "sign_enabled": false, "send_enabled": false, "execution_authority": "NONE", "merge_authority": "HUMAN_ONLY"},
+  "blockers": ["PRE_EXISTING_WINDOWS_ASYNCIO (unchanged on main)"],
+  "related": {"design_pr": 666, "w0b2_pr": 700}
+}

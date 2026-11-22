@@ -1,0 +1,53 @@
+{
+  "schema": "studious-pancake.lane-receipt.v1",
+  "lane": "OCA-W0B",
+  "date": "2026-11-22",
+  "branch": "codex/oca-w0b-deterministic-repo-graph-2026-11-22",
+  "base_main_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+  "deliverables": [
+    "src/intelligence/repo_graph/ (10 modules)",
+    "tests/intelligence/test_repo_graph.py",
+    ".github/workflows/intelligence-repo-graph.yml",
+    "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/W0B_IMPLEMENTATION_2026-11-22.md",
+    "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/W0B_DETERMINISM_PROOF.json",
+    "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/W0B_GOLDEN_RECALL.json"
+  ],
+  "checks": {
+    "real_repo_determinism_two_clean_builds_equal": true,
+    "real_repo_canonical_checksum_prefix": "e7da461d644da73e",
+    "real_repo_counts": {"nodes": 26772, "edges": 71812, "files_tracked": 3421, "modules_parsed": 1851},
+    "dangling_edges_real_repo": 0,
+    "contract_tests": {"passed": 8, "failed": 0},
+    "intelligence_batch": {"passed": 54, "failed_preexisting_on_main": 3},
+    "golden_corpus_recall_2000t": 0.9286,
+    "golden_corpus_baseline_recall_2000t": 0.6667,
+    "format_targets_registered": 11,
+    "quality_gate": "PASS",
+    "llm_or_model_api_calls": 0,
+    "network_calls": 0
+  },
+  "acceptance": {
+    "zero_llm_bootstrap": true,
+    "deterministic_output": true,
+    "no_silent_omissions": true,
+    "clean_vs_incremental_parity": true,
+    "stale_sha_rejection": true,
+    "dangling_edge_check": true,
+    "secret_exclusion": true,
+    "static_runtime_separation": true,
+    "no_unknown_auto_promotion": true,
+    "single_query_backend": true
+  },
+  "safety": {
+    "live": "HARD_DENIED",
+    "sign_enabled": false,
+    "send_enabled": false,
+    "execution_authority": "NONE",
+    "merge_authority": "HUMAN_ONLY"
+  },
+  "blockers": [
+    {"id": "PRE_EXISTING_WINDOWS_ASYNCIO", "detail": "3 test failures in tests/intelligence/test_pressure_manager.py + test_rpc_campaign.py reproduced on clean main 0a0c8ad9 (Windows ProactorEventLoop teardown); unrelated to this lane; CI runs Ubuntu"}
+  ],
+  "next": {"lane": "OCA-W4", "item": "directory-aware ref recall (0.9286 -> >=0.95) + adaptive task-type routers"},
+  "related": {"design_pr": 666, "w0_pr": 680, "w0a_pr": 681, "w0c_pr": 682}
+}

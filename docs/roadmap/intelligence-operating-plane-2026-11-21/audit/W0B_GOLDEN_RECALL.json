@@ -1,0 +1,27 @@
+{
+ "backend": "repo_graph.QueryBackend (exact-ID/FTS/graph)",
+ "budget_tokens": 2000,
+ "hits": 39,
+ "misses": [
+  {
+   "id": "GQ-012",
+   "required": [
+    "tests/observability"
+   ]
+  },
+  {
+   "id": "GQ-023",
+   "required": [
+    "src/strategy/relation_generators"
+   ]
+  },
+  {
+   "id": "GQ-030",
+   "required": [
+    "src/gpr_sui_shadow"
+   ]
+  }
+ ],
+ "questions": 42,
+ "recall": 0.9285714285714286
+}

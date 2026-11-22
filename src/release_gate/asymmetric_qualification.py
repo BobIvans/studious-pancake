@@ -14,6 +14,7 @@ from datetime import datetime
 import hashlib
 import json
 import os
+import sys
 from pathlib import Path, PurePosixPath
 import stat
 from typing import Any, Mapping, Sequence
@@ -591,19 +592,44 @@ def read_json_object_under_root(
     flags = os.O_RDONLY
     if hasattr(os, "O_CLOEXEC"):
         flags |= os.O_CLOEXEC
-    nofollow = getattr(os, "O_NOFOLLOW", 0)
-    directory_flags = flags | getattr(os, "O_DIRECTORY", 0) | nofollow
-    descriptor = os.open(root, directory_flags)
-    try:
+    if sys.platform == "win32":
+        # Windows has no dir_fd / O_DIRECTORY / O_NOFOLLOW fd semantics; the
+        # fail-closed traversal contract is preserved by rejecting symlinked
+        # components via lstat before the open and re-verifying the opened
+        # file identity (regular file, nlink, size) afterwards.
+        current = root
+        if current.is_symlink() or not current.is_dir():
+            raise AsymmetricQualificationError(
+                "artifact path must stay below artifact root"
+            )
         for component in relative.parts[:-1]:
-            next_descriptor = os.open(component, directory_flags, dir_fd=descriptor)
+            current = current / component
+            if current.is_symlink() or not current.is_dir():
+                raise AsymmetricQualificationError(
+                    "artifact path must stay below artifact root"
+                )
+        target = root.joinpath(*relative.parts)
+        if target.is_symlink():
+            raise AsymmetricQualificationError(
+                "artifact path must stay below artifact root"
+            )
+        file_descriptor = os.open(target, flags | getattr(os, "O_BINARY", 0))
+    else:
+        nofollow = getattr(os, "O_NOFOLLOW", 0)
+        directory_flags = flags | getattr(os, "O_DIRECTORY", 0) | nofollow
+        descriptor = os.open(root, directory_flags)
+        try:
+            for component in relative.parts[:-1]:
+                next_descriptor = os.open(
+                    component, directory_flags, dir_fd=descriptor
+                )
+                os.close(descriptor)
+                descriptor = next_descriptor
+            file_descriptor = os.open(
+                relative.parts[-1], flags | nofollow, dir_fd=descriptor
+            )
+        finally:
             os.close(descriptor)
-            descriptor = next_descriptor
-        file_descriptor = os.open(
-            relative.parts[-1], flags | nofollow, dir_fd=descriptor
-        )
-    finally:
-        os.close(descriptor)
     try:
         before = os.fstat(file_descriptor)
         if not stat.S_ISREG(before.st_mode):

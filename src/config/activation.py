@@ -6,6 +6,7 @@ import hashlib
 import hmac
 import json
 import os
+import sys
 import tempfile
 import time
 from contextlib import contextmanager
@@ -253,6 +254,8 @@ class ConfigActivationStore:
                     "active generation cannot be replaced through symlink"
                 )
             os.replace(tmp_path, self.current_path)
+            if sys.platform == "win32":
+                return
             directory_fd = os.open(self.root, os.O_RDONLY)
             try:
                 os.fsync(directory_fd)

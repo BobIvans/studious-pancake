@@ -72,7 +72,9 @@ def _read_owner_only_secret(
     if path.is_symlink() or not path.is_file():
         raise ValueError("management secret path must be a regular file")
     stat_result = path.stat()
-    if stat_result.st_mode & 0o077:
+    # POSIX mode bits are not representable on Windows (chmod is a no-op);
+    # same platform-conditional precedent as the directory-fsync guard below.
+    if os.name == "posix" and stat_result.st_mode & 0o077:
         raise ValueError("management secret file must be owner-only")
     if stat_result.st_nlink != 1:
         raise ValueError("management secret file must not be hardlinked")
@@ -117,11 +119,12 @@ def _write_owner_only_bytes(path: Path, value: bytes) -> None:
             os.fsync(handle.fileno())
         os.replace(temporary, path)
         os.chmod(path, 0o600)
-        directory = os.open(path.parent, os.O_RDONLY)
-        try:
-            os.fsync(directory)
-        finally:
-            os.close(directory)
+        if sys.platform != "win32":
+            directory = os.open(path.parent, os.O_RDONLY)
+            try:
+                os.fsync(directory)
+            finally:
+                os.close(directory)
     except Exception:
         try:
             os.unlink(temporary)

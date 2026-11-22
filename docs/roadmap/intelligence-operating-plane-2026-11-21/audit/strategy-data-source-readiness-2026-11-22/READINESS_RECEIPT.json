@@ -1,0 +1,47 @@
+{
+ "base_main_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+ "blockers": [
+  "BLOCKED_AUTHORIZATION (governed live reads)",
+  "BLOCKED_MISSING_CAPTURE_OWNER (CLMM/DLMM)",
+  "BLOCKED_MISSING_PIN (Kamino ABI/IDL)",
+  "BLOCKED_LIVE_EVIDENCE_GATE (all capital)"
+ ],
+ "branch": "codex/oca-strategy-readiness-audit-2026-11-22",
+ "checks": {
+  "capital_rows": 3,
+  "governance_refs": {
+   "campaign_start_pr": 679,
+   "dag_pr": 683
+  },
+  "no_duplicate_owners": true,
+  "no_network_probes": 0,
+  "provider_catalog_rows": {
+   "enabled": 0,
+   "flash_capital": 27,
+   "market": 53
+  },
+  "runtime_observed_anywhere": false,
+  "strategy_rows": 3,
+  "verifier": "OK (exit 0)"
+ },
+ "date": "2026-11-22",
+ "deliverables": [
+  "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/strategy-data-source-readiness-2026-11-22/READINESS_MATRIX.json",
+  "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/strategy-data-source-readiness-2026-11-22/verify_readiness_matrix.py",
+  "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/strategy-data-source-readiness-2026-11-22/STRATEGY_AND_DATA_SOURCE_READINESS_AUDIT_2026-11-22.md"
+ ],
+ "lane": "OCA-READINESS-AUDIT",
+ "related": {
+  "campaign_pr": 679,
+  "dag_pr": 683,
+  "design_pr": 666
+ },
+ "safety": {
+  "execution_authority": "NONE",
+  "live": "HARD_DENIED",
+  "merge_authority": "HUMAN_ONLY",
+  "send_enabled": false,
+  "sign_enabled": false
+ },
+ "schema": "studious-pancake.lane-receipt.v1"
+}

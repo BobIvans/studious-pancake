@@ -43,11 +43,34 @@ def reject_dns(*args, **kwargs):
 original_connect = socket.socket.connect
 
 
+def _is_stdlib_self_pipe_connect() -> bool:
+    """True when the connect is the asyncio Proactor self-pipe emulation.
+
+    On Windows the event loop's own socketpair fallback performs an internal
+    loopback connect through socket.py::_fallback_socketpair.  Exactly that
+    stdlib primitive is exempt (same narrow allowance as the test-suite
+    conftest socketpair exemption); any other connect stays recorded and
+    rejected, so the fail-closed observation contract is unchanged.
+    """
+
+    frame = sys._getframe(2)
+    while frame is not None:
+        if (
+            frame.f_code.co_name == "_fallback_socketpair"
+            and frame.f_code.co_filename.replace("\\", "/").endswith("/socket.py")
+        ):
+            return True
+        frame = frame.f_back
+    return False
+
+
 def guarded_connect(self, address):
     # AF_UNIX does not exist on Windows; there it is replaced by a sentinel
     # that never matches a real socket family, so every connect is still
     # recorded and rejected (fail-closed semantics unchanged per platform).
     unix_family = getattr(socket, "AF_UNIX", None)
+    if _is_stdlib_self_pipe_connect():
+        return original_connect(self, address)
     if unix_family is None or self.family != unix_family:
         network_attempts.append("CONNECT")
         raise RuntimeError("UNEXPECTED_DEFAULT_NETWORK")

@@ -428,3 +428,4 @@ tests/test_super07_closure.py
 tests/test_sxr1_cpmm_cycle_binding.py
 tools/occ_automation/asr_cpu_experiment.py
 tools/occ_automation/occ_local.py
+tests/test_data01_durable_intake.py

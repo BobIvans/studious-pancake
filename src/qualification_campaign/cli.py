@@ -358,10 +358,10 @@ async def capture(
                 policy_bundle_hash=manifest.campaign_id,
             )
         )
-        # Reconciliation backstop for the authority store itself: the
-        # preflight reserves assumed SQLite page sizes; if a store
-        # materialized larger than reserved, fail closed immediately
-        # instead of silently over-spending the approved budget.
+        # Reconciliation backstop for the authority store itself: compared
+        # against the WHOLE approved budget (the strict ceiling), not only
+        # the authority reserve — over-strict, fail-closed direction; every
+        # later append re-projects the actual authority bytes anyway.
         reconcile_materialized_artifacts(
             (
                 authority_path,
@@ -501,17 +501,21 @@ async def capture(
         final["governance"] = {
             p.profile_id: await gov.snapshot(p.profile_id) for p in profiles
         }
-    # SECURITY CLOSURE v3 (review): the final report write is inside the
-    # ceiling scope — the report is appended as durable evidence first
-    # (projection + post-commit reconciliation cover its bytes), then the
-    # report.json artifact (already in extra_artifacts) is materialized.
-    evidence.append(
-        "campaign",
-        {"kind": "campaign_report", "report": final},
-        observed_at_ns=time.time_ns(),
-    )
-    (output / "report.json").write_bytes(canonical_bytes(final))
-    return final
+        # SECURITY CLOSURE v3 (review round 2, CRITICAL): the report append
+        # and the report.json write MUST stay inside the open-journal block
+        # (AsyncExitStack). Outside it, journal.close() has already run and
+        # the append would crash the authorized capture path with an
+        # uncaught sqlite3.ProgrammingError and lose the report. The append
+        # is the ceiling enforcement: projection + post-commit
+        # reconciliation cover the report bytes before the artifact is
+        # materialized (report.json is already in extra_artifacts).
+        evidence.append(
+            "campaign",
+            {"kind": "campaign_report", "report": final},
+            observed_at_ns=time.time_ns(),
+        )
+        (output / "report.json").write_bytes(canonical_bytes(final))
+        return final
 
 
 def replay(output):

@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import socket
 import subprocess
+import signal
 import sys
 import time
 
@@ -86,6 +87,13 @@ def test_safe_idle_container_supervisor_has_live_process_heartbeat(tmp_path: Pat
     finally:
         process.terminate()
         process.wait(timeout=5)
+    if os.name != "posix":
+        # Graceful state-file cleanup relies on SIGTERM delivery, which
+        # Windows never sends for Popen.terminate() (hard TerminateProcess
+        # on the venv launcher). The supervisor unlinks a stale state file
+        # at the next startup (_unlink_state), so no stale identity
+        # survives a restart on win32.
+        return
     assert not state.exists()
 
 

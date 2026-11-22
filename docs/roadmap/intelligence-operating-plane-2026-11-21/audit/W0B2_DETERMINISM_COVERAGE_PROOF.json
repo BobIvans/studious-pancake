@@ -1,0 +1,71 @@
+{
+ "builds_elapsed_s": [
+  13.2,
+  436.2
+ ],
+ "canonical_checksum_prefix": "717b4d3c2dd563dd",
+ "checksum_equal": true,
+ "counts": {
+  "edges": 72069,
+  "files_tracked": 3447,
+  "modules_parsed": 1867,
+  "nodes": 54010
+ },
+ "coverage_accounting": {
+  "artifact_classes": {
+   "build_definition": 2,
+   "config": 386,
+   "data_fixture": 30,
+   "dependency_lock": 8,
+   "doc": 869,
+   "other_tracked": 78,
+   "python_source": 1100,
+   "schema": 58,
+   "script": 141,
+   "test_code": 629,
+   "vendor_reference": 2,
+   "workflow": 144
+  },
+  "rows_without_status": 0,
+  "statuses": {
+   "METADATA_ONLY": 29,
+   "STRUCTURE_INDEXED": 3270,
+   "TEXT_INDEXED": 70,
+   "UNSUPPORTED": 78
+  },
+  "tracked_files": 3447
+ },
+ "date": "2026-11-22",
+ "design_head": "f7c09b81436e9a16c89a680ce314937fc6a52fa4",
+ "four_levels": {
+  "DOMAIN_GRAPH_COMPLETE": "not claimed this lane",
+  "INVENTORY_COMPLETE": true,
+  "RUNTIME_LINEAGE_COMPLETE": "not claimed (W10/W2 pending)",
+  "STRUCTURAL_GRAPH_COMPLETE": "python+bash+yaml+markdown STRUCTURE_INDEXED (grammars installed); json/toml/ini STRUCTURE_INDEXED (stdlib); rust vendor METADATA_ONLY decision; per-language rows in coverage"
+ },
+ "lane": "OCA-W0B2",
+ "parser_capability": {
+  "core": {
+   "installed": true,
+   "package": "tree-sitter==0.25.2"
+  },
+  "grammars": {
+   "bash": {
+    "available": true,
+    "installed_version": "0.25.1",
+    "pinned": "tree-sitter-bash==0.25.1"
+   },
+   "markdown": {
+    "available": true,
+    "installed_version": "0.5.4",
+    "pinned": "tree-sitter-markdown==0.5.4"
+   },
+   "yaml": {
+    "available": true,
+    "installed_version": "0.7.2",
+    "pinned": "tree-sitter-yaml==0.7.2"
+   }
+  }
+ },
+ "repo_sha": "2c8cd3836fe433d0ecee78e9c4b61e02633daa9c"
+}

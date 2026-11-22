@@ -441,3 +441,7 @@ tests/test_win02_proactor_socket_bootstrap.py
 tests/test_win03_occ_sqlite_close.py
 tests/test_cam05_rpc_method_alignment.py
 tests/test_cam03_source_crosswalk.py
+src/qualification_campaign/campaign_start_gate.py
+tests/test_cam01_campaign_start_gate.py
+tests/test_cam01_capture_blocked_before_transport.py
+src/qualification_campaign/approval_replay_ledger.py

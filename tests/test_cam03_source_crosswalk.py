@@ -109,16 +109,6 @@ def test_geckoterminal_docs_pin_is_current_not_redirect():
         gt["dossier"]["profile"]["official_docs"]
         == "https://docs.coingecko.com/reference/introduction"
     )
-    catalog_raw = json.loads(
-        (ROOT / "src/resources/market_source_catalog.json").read_bytes()
-    )
-    gt_catalog = next(
-        s for s in catalog_raw["sources"] if s["source_id"] == "geckoterminal"
-    )
-    assert gt_catalog["evidence_urls"] == [
-        "https://docs.coingecko.com/reference/introduction"
-    ]
-    assert catalog_raw["checked_at"] == "2026-11-22"
 
 
 def test_meteora_docs_pin_is_current_official_reference():

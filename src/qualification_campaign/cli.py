@@ -31,6 +31,7 @@ from .campaign_start_gate import (
     load_campaign_plan,
     load_trust_registry,
 )
+from .evidence import CampaignBudgets
 from .identity import CampaignManifest, canonical_bytes, digest, manifest_from_dict
 from .profiles import ProviderProfile, public_rpc_profile
 from .evidence import CampaignEvidenceStore
@@ -277,7 +278,11 @@ async def capture(
             output / "campaign-evidence.sqlite", max_events=10_000
         )
         stack.callback(journal.close)
-        evidence = CampaignEvidenceStore(journal, manifest)
+        evidence = CampaignEvidenceStore(
+            journal,
+            manifest,
+            campaign_budgets=CampaignBudgets.from_plan_budgets(plan.budgets),
+        )
         evidence.append(
             "campaign-start-gate",
             {"kind": "campaign_start_decision", "decision": decision.to_dict()},

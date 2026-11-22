@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from ..events import EventEnvelope, EventType, Outcome, make_event
+from ..reasons import ReasonCode
 from ..authoritative_store_pr195 import AuthoritativeObservabilityStore
 
 PRODUCER_CODE_VERSION = "runtime-capture@v1"
@@ -83,6 +84,10 @@ class RuntimeCaptureAdapter:
             json.dumps(intent, sort_keys=True).encode("utf-8")
         ).hexdigest()[:32]
         try:
+            # String inputs are coerced to the canonical enum types so callers
+            # can pass plain stage-config values without losing validation.
+            if isinstance(reason_code, str):
+                reason_code = ReasonCode(reason_code)
             envelope = make_event(
                 event_type=event_type,
                 logical_opportunity_id=logical_opportunity_id,
@@ -90,7 +95,7 @@ class RuntimeCaptureAdapter:
                 sequence_no=sequence_no,
                 stage=stage or event_type.value,
                 outcome=outcome,
-                reason_code=reason_code,  # type: ignore[arg-type]
+                reason_code=reason_code,
                 provider_id=provider_id,
                 venue_id=venue_id,
                 attributes={**(attributes or {}), "route": self._route},

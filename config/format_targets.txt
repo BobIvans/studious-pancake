@@ -437,3 +437,6 @@ src/observability/runtime_capture/capture.py
 src/observability/runtime_capture/coverage.py
 src/observability/runtime_capture/vertical.py
 tests/intelligence/test_runtime_capture.py
+src/intelligence/performance_diagnostics/__init__.py
+src/intelligence/performance_diagnostics/diagnostics.py
+tests/intelligence/test_performance_diagnostics.py

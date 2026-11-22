@@ -1,0 +1,748 @@
+{
+  "schema": "studious-pancake.data-to-paper-readiness-backlog.v1",
+  "created_utc": "2026-11-22",
+  "repository": "BobIvans/studious-pancake",
+  "audited_main_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+  "purpose": "Agent assignment ledger for readiness before first governed CAPTURE_ONLY, exact market qualification and installed sender-free paper qualification.",
+  "state_vocabulary": [
+    "NOT_STARTED",
+    "IN_FLIGHT_EXTERNAL",
+    "IN_FLIGHT",
+    "PASS_OFFLINE",
+    "PASS_LIVE_READ_ONLY",
+    "PASS_PAPER",
+    "BLOCKED",
+    "UNKNOWN",
+    "DEFERRED"
+  ],
+  "gate_semantics": {
+    "capture_only_requires": [
+      "GATE-01",
+      "GATE-02",
+      "DATA-01",
+      "RPC-01",
+      "ASSET-01",
+      "DISC-01",
+      "WIN-01",
+      "operator_authorization"
+    ],
+    "exact_market_requires": [
+      "CAPTURE_ONLY_REPLAY_PASS",
+      "VENUE-01",
+      "StrategyDataRequirement",
+      "identity/rooted state/quote completeness"
+    ],
+    "paper_requires": [
+      "EXACT_MARKET_PASS",
+      "one_of_CAPITAL-01_CAPITAL-02_CAPITAL-03",
+      "matching_R03_builder",
+      "ROUTE-01",
+      "SIM-01",
+      "OBS-01",
+      "PAPER-01",
+      "QPR_R06_PASS",
+      "OPS-01_if_MPR05_applicable"
+    ],
+    "live_status": "HARD_DENIED; outside this backlog"
+  },
+  "tasks": [
+    {
+      "id": "GATE-01",
+      "phase": "PRE_CAPTURE",
+      "priority": "P0",
+      "status": "IN_FLIGHT_EXTERNAL",
+      "owner": "PR #679 CAM-01..CAM-05",
+      "paths": [
+        "src/qualification_campaign/cli.py",
+        "src/qualification_campaign/identity.py",
+        "src/qualification_campaign/evidence.py",
+        "src/qualification_campaign/rpc.py",
+        "docs/roadmap/campaign-start-preflight-2026-11-21/"
+      ],
+      "depends_on": [],
+      "summary": "Implement executable CAMPAIGN_START_V1 CS-01..CS-10 before any transport or read; bind approval to exact manifest/profile/config/code/budget digests using canonical authorization owner.",
+      "actions": [
+        "Finish the current #679 scope; reconcile against #671 templates.",
+        "Fail closed for absent/invalid operator proof, stale generations, unbound hashes, policy/source mismatch, budget overflow and non-sender-free RPC methods.",
+        "Add negative tests proving no transport/network open before gate PASS."
+      ],
+      "acceptance": [
+        "Executable CLI/API gate called before transport construction/open.",
+        "Verified authorization and immutable digest binding; no invented boolean approval.",
+        "CS-01..CS-10 exact PASS receipt with blockers and zero network in negative tests."
+      ],
+      "must_not": [
+        "Do not start CAPTURE_ONLY.",
+        "Do not enable paid sources or signer/sender/borrow/live."
+      ]
+    },
+    {
+      "id": "GATE-02",
+      "phase": "PRE_CAPTURE",
+      "priority": "P0",
+      "status": "IN_FLIGHT_EXTERNAL",
+      "owner": "PR #679 CAM-03 + PR #671 source recheck artifacts",
+      "paths": [
+        "src/market/source_catalog.py",
+        "src/resources/market_source_catalog.json",
+        "src/qualification_campaign/sources.py",
+        "docs/roadmap/campaign-start-preflight-2026-11-21/SOURCE_RECHECK_MATRIX_V1.json"
+      ],
+      "depends_on": [
+        "GATE-01"
+      ],
+      "summary": "Reconcile source IDs and aliases across discovery adapters, canonical catalog, provider profiles and campaign dossiers; refresh docs/terms/schema/quota with dated evidence.",
+      "actions": [
+        "Read checked-in dossiers, then official docs for every source selected for capture.",
+        "Map discovery IDs dexscreener/geckoterminal/raydium/meteora to canonical provider/source IDs exactly; document aliases instead of renaming heuristically.",
+        "Record schema/auth/rate-limit/ToS/license/TTL and fail closed on stale/unknown terms."
+      ],
+      "acceptance": [
+        "Every capture source has one canonical ID, owner, endpoint, current schema, auth mode, quota, terms/license and generation.",
+        "Source registry/dossier/profile crosswalk validates without ambiguous alias.",
+        "All unknowns remain disabled/BLOCKED."
+      ],
+      "must_not": [
+        "Do not put secrets in code or PR.",
+        "Do not claim HTTP 200 or documentation alone as live verification."
+      ]
+    },
+    {
+      "id": "DATA-01",
+      "phase": "PRE_CAPTURE",
+      "priority": "P0",
+      "status": "ASSIGN_AFTER_BASELINE",
+      "owner": "SourceIntakePlane + CampaignEvidenceStore / AGG-02 owners",
+      "paths": [
+        "src/qualification_campaign/sources.py",
+        "src/qualification_campaign/evidence.py",
+        "src/market/discovery.py",
+        "existing AGG-02 raw journal/cursor owner"
+      ],
+      "depends_on": [
+        "GATE-01",
+        "GATE-02"
+      ],
+      "summary": "Prove and complete the bounded intake→durable raw evidence path for all selected data sources using existing canonical storage.",
+      "actions": [
+        "Trace SourceIntakePlane.collect, adapters, CampaignEvidenceStore and AGG-02 to determine exact ownership; don't create another journal.",
+        "Preserve raw body or immutable content reference, request fingerprint, response hash, source ID/generation, endpoint, UTC, cursor/gap, attempt count, status, latency and typed rejects.",
+        "Make retries/idempotence/save failures observable; ensure quotas account for physical attempts and process restart.",
+        "Add zero-network deterministic replay and corruption/partial-write tests."
+      ],
+      "acceptance": [
+        "Every accepted/rejected attempt has durable trace and raw evidence reference/hash.",
+        "Replay recomputes from retained bytes with zero outbound network and deterministic digest.",
+        "No silently discarded save errors, unbounded retries or in-memory-only global limits."
+      ],
+      "must_not": [
+        "No outbound live source request before campaign authorization.",
+        "No second raw store or transport."
+      ]
+    },
+    {
+      "id": "RPC-01",
+      "phase": "PRE_CAPTURE",
+      "priority": "P0",
+      "status": "ASSIGN_AFTER_BASELINE",
+      "owner": "RootedSnapshotProvider + provider governance / PR #679 CAM-05",
+      "paths": [
+        "src/qualification_campaign/rpc.py",
+        "src/qualification_campaign/profiles.py",
+        "src/provider_governance/",
+        "src/routing/transport.py"
+      ],
+      "depends_on": [
+        "GATE-01",
+        "GATE-02"
+      ],
+      "summary": "Validate two genuinely independent rooted RPC profiles for any rooted market-state verdict.",
+      "actions": [
+        "Verify source/operator/correlation-group independence rather than endpoint or API-key count.",
+        "Bind same genesis, finalized/rooted commitment, per-response context slots, minContextSlot, bounded observed skew and account-state hashes.",
+        "Keep each batch context separate; reject mixed/stale state and single-source rooted claims.",
+        "Reconcile actual safe RPC methods with runtime and connections-registry allowlists."
+      ],
+      "acceptance": [
+        "Positive test with independent sources and coherent rooted state; negative tests for same operator, same correlation group, genesis/slot/hash disagreement, stale source and public smoke endpoint.",
+        "BLOCKED_SINGLE_SOURCE is explicit; no shared/public RPC can satisfy rooted quorum by default."
+      ],
+      "must_not": [
+        "Do not open RPC requests until operator-authorized manifest and profiles are approved.",
+        "Do not add getBlock/other methods without call-site proof."
+      ]
+    },
+    {
+      "id": "ASSET-01",
+      "phase": "PRE_CAPTURE",
+      "priority": "P0",
+      "status": "ASSIGN_AFTER_BASELINE",
+      "owner": "AssetResolver + DynamicUniverse + PR117 asset-mint registry",
+      "paths": [
+        "src/research_economic_graph/registry.py",
+        "src/asset_mint_registry_pr117.py",
+        "src/resources/asset_mint_registry_pr117.json",
+        "src/market/observations.py"
+      ],
+      "depends_on": [
+        "RPC-01"
+      ],
+      "summary": "Make canonical mint identity safe for campaign admission and exact quote eligibility.",
+      "actions": [
+        "Require live owner/program/decimals evidence before HARD_BOUND; registry/reference decimals are hints only.",
+        "Parse Token-2022 extensions and fail closed on unknown extension/transfer hook/unsupported fee semantics.",
+        "Bind chain genesis, mint, token program, decimals, extensions, pool token ordering and canonical alias relationships.",
+        "Test ticker collision, wrong mint/program/decimals, missing live proof and unsupported extension."
+      ],
+      "acceptance": [
+        "Every HARD_BOUND asset has evidence refs, current source generation, exact decimals/program/extensions.",
+        "Unknown or inconsistent identity returns typed blocker; no ticker inference."
+      ],
+      "must_not": [
+        "Do not alter broad research-universe preservation.",
+        "Do not mark missing decimals as verified."
+      ]
+    },
+    {
+      "id": "DISC-01",
+      "phase": "PRE_CAPTURE",
+      "priority": "P0",
+      "status": "ASSIGN_AFTER_BASELINE",
+      "owner": "PublicMarketDiscovery + MarketSourceCatalog + SourceIntakePlane",
+      "paths": [
+        "src/market/discovery.py",
+        "src/market/source_catalog.py",
+        "src/qualification_campaign/sources.py",
+        "docs/roadmap/paper-data-campaign-universe-2026-11-21/"
+      ],
+      "depends_on": [
+        "GATE-02",
+        "DATA-01"
+      ],
+      "summary": "Establish bounded source rotation, discovery completeness and truthful capability classes.",
+      "actions": [
+        "Implement only existing adapters/endpoints with current source dossiers, quotas, page/timeout bounds and negative-control fraction from manifest.",
+        "Classify each source STREAMING/POLL_ONLY/ONE_SHOT/UNAVAILABLE based on actual running producer, cadence, cursor/gap/reconnect proof.",
+        "Use SOL/USDC only as search hint; preserve broad candidate universe and all typed rejects.",
+        "Keep discovery/indexer, aggregator comparator, reference/oracle and rooted RPC roles distinct."
+      ],
+      "acceptance": [
+        "Per-source request/attempt/candidate counts, response size, latency, quota status, schema drift and rejects are receipted.",
+        "No unsupported claim of streaming; deterministic replay; stage denominators reported.",
+        "No duplicate catalog or discovery adapter."
+      ],
+      "must_not": [
+        "No paid provider activation or credential probing.",
+        "No aggregator route counted as independent liquidity."
+      ]
+    },
+    {
+      "id": "WIN-01",
+      "phase": "PRE_CAPTURE",
+      "priority": "P0",
+      "status": "IN_FLIGHT_EXTERNAL",
+      "owner": "PR #679 WIN-01..WIN-04 (builds on #670 receipt)",
+      "paths": [
+        "pyproject.toml",
+        "requirements.lock",
+        "scripts/lock_requirements.py",
+        "scripts/verify_occ_durable_host.py",
+        "src/occ_durable_library.py",
+        "pytest socket fixtures"
+      ],
+      "depends_on": [
+        "GATE-01"
+      ],
+      "summary": "Make native Windows 11 verification real and reproducible.",
+      "actions": [
+        "Regenerate lock via pinned uv to restore platform markers; never hand-edit generated lock.",
+        "Fix SQLite handle/journal lifecycle and explicit close/context manager for WinError 32.",
+        "Fix pytest-socket interaction with ProactorEventLoop narrowly while keeping external DNS/TCP/UDP blocked.",
+        "Capture actual Windows Caption/DisplayVersion/build/architecture and Python x64; run verify_repo/package smoke and focused/full tests."
+      ],
+      "acceptance": [
+        "Windows package wheelhouse/lock smoke PASS.",
+        "Temporary DB cleanup works without ignore_errors.",
+        "Event-loop tests pass with outbound internet still blocked.",
+        "Native Windows receipt includes exact commands/counts; Windows is primary target."
+      ],
+      "must_not": [
+        "Do not use Linux/WSL as substitute for native Windows.",
+        "Do not turn socket blocking off globally."
+      ]
+    },
+    {
+      "id": "TEST-01",
+      "phase": "PRE_CAPTURE",
+      "priority": "P1",
+      "status": "ASSIGN_AFTER_WIN_FIX",
+      "owner": "Platform/test-baseline owner; coordinate #679",
+      "paths": [
+        "tests/test_gpr03_remediation.py",
+        "src/research_economic_graph/registry.py",
+        "tests/"
+      ],
+      "depends_on": [
+        "WIN-01"
+      ],
+      "summary": "Reproduce and classify genuine full-suite failures after Windows Proactor setup is repaired.",
+      "actions": [
+        "Re-run the historical baseline clusters on clean latest main and clean native Windows checkout.",
+        "Investigate unresolved synthetic path ValueError in GPR03; preserve minimal reproducer and regression test.",
+        "Separate actual code defects from CRLF/hash checkout, missing dependencies, Unix-only tests and environment-only failures.",
+        "Create separate focused implementation PRs for distinct canonical owners."
+      ],
+      "acceptance": [
+        "Every baseline test ID has reproduced status, owner, root cause and disposition.",
+        "Genuine defect has minimal regression test and isolated fix PR.",
+        "No failure waived as pre-existing without same-SHA reproduction."
+      ],
+      "must_not": [
+        "Do not fold unrelated GPR/TON/MPR fixes into #679 unless same owner and user-approved."
+      ]
+    },
+    {
+      "id": "PMM-01",
+      "phase": "PRE_CAPTURE",
+      "priority": "P0",
+      "status": "IN_FLIGHT_EXTERNAL",
+      "owner": "PR #665 only",
+      "paths": [
+        "vendor/strategy-research/pmm-sim-cc4ae891/",
+        "research/pmm-sim-caller-profile/",
+        "docs/strategy-expansion/2026-11-21/prop-amm-competitive-toolchain/"
+      ],
+      "depends_on": [],
+      "summary": "Repair exact GitHub verifier failures already observed on #665 branch.",
+      "actions": [
+        "Fix vendor_mirror_sha256sums mismatches by proving line-ending/byte source and exact mirror regeneration; do not guess.",
+        "Fix results_digest_chain mismatch between caller_profile_results.csv and scenario manifest/receipt.",
+        "Re-run all GitHub verifier checks on exact PR head; keep all work in #665 branch.",
+        "Audit evidence volume/retention policy separately; preserve all scenario evidence and no destructive cleanup."
+      ],
+      "acceptance": [
+        "GitHub verifier reaches all required checks PASS on exact head, not only local claim.",
+        "Manifest, result CSV and evidence digests chain consistently.",
+        "Provenance, licenses and source pins remain intact."
+      ],
+      "must_not": [
+        "Do not edit #665 files from this assignment PR branch.",
+        "Do not delete/collapse evidence to make tests pass."
+      ]
+    },
+    {
+      "id": "INTEL-01",
+      "phase": "PARALLEL_NON_GATING",
+      "priority": "P1",
+      "status": "IN_FLIGHT_DESIGN_AUDITS",
+      "owner": "PR #666 OCA-W0B after #680/#681/#682",
+      "paths": [
+        "src/intelligence/",
+        "benchmarks/intelligence/",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/"
+      ],
+      "depends_on": [
+        "#680",
+        "#681",
+        "#682"
+      ],
+      "summary": "Use the three audit outputs to implement the first SHA-bound deterministic code graph/catalogue/query/context-pack slice defined by #666.",
+      "actions": [
+        "Build from latest SHA; one canonical snapshot/index owner; parser/resolver pinned; all files coverage-statused.",
+        "Implement task_context and expand_context with adaptive dimensions, stale-SHA refusal, exact refs, omission continuation and hard tokenizer budgets.",
+        "Use #681 42-question golden corpus; improve required-ref recall target in #666 at ≤2000 tokens and record false edges, freshness and latency.",
+        "Require clean-vs-incremental parity, rename/delete handling, stale-SHA rejection, secret filtering and deterministic graph checksum.",
+        "Provide one stable read-only MCP facade only if its connected local service exists; CLI and MCP share one backend."
+      ],
+      "acceptance": [
+        "W0B implementation tests and benchmark receipt meet #666 contract on exact SHA.",
+        "No graph claim based solely on static inventory; no second graph/store.",
+        "Task context contains exact function/test/config/provider refs and zero hidden truncation."
+      ],
+      "must_not": [
+        "Not a blocker for CAPTURE_ONLY if its evidence owners are sound.",
+        "Do not start broad A-H infra sweep; #666 explicitly defers it."
+      ]
+    },
+    {
+      "id": "VENUE-01",
+      "phase": "EXACT_MARKET",
+      "priority": "P0",
+      "status": "ASSIGN_AFTER_CAPTURE",
+      "owner": "#659 CPMM + #660 CLMM/DLMM existing owners",
+      "paths": [
+        "src/providers/raydium_clmm_native.py",
+        "src/providers/meteora_dlmm_native.py",
+        "src/strategy/clmm_dlmm_binding.py",
+        "src/strategy/cpmm_cycle_binding.py",
+        "scripts/clmm_dlmm_market_trace_replay.py"
+      ],
+      "depends_on": [
+        "DATA-01",
+        "RPC-01",
+        "ASSET-01",
+        "DISC-01"
+      ],
+      "summary": "Turn already offline-tested venue quote engines into current-state exact market evidence without replacing existing owners.",
+      "actions": [
+        "Reconcile #660 report and #660 merge head with latest main; pin current official program/SDK state and deployed program IDs.",
+        "Complete full direct-account state closure per venue; prove batch context/slot consistency and account hashes.",
+        "Differential-check amount-specific quote output against official pinned SDK/program fixtures and, only under separate authorization, rooted live snapshots.",
+        "For every input amount, record complete fees, consumed input, tick/bin traversal, token extensions, timestamp/epoch, state hash/generation and expiry.",
+        "Preserve typed fail-closed handling for missing arrays, dynamic fee, partial fill, transfer hook, unknown extension and stale state."
+      ],
+      "acceptance": [
+        "Independent positive/negative fixtures and deterministic offline replay.",
+        "Live evidence clearly separated from fixture/replay and linked to actual rooted account hashes when authorized.",
+        "No quote admitted if any dependent account or freshness condition is missing."
+      ],
+      "must_not": [
+        "Do not make live reads by default.",
+        "Do not duplicate #659/#660 quote/route owners."
+      ]
+    },
+    {
+      "id": "STRAT-01",
+      "phase": "EXACT_MARKET",
+      "priority": "P1",
+      "status": "ASSIGN_AFTER_AUDIT",
+      "owner": "Existing strategy registry / R10 / #659 and #660 lineage",
+      "paths": [
+        "src/strategies/",
+        "src/strategy/",
+        "src/strategy_evolution/",
+        "docs/roadmap/paper-data-campaign-universe-2026-11-21/STRATEGY_SOURCE_OWNER_CROSSWALK_V1.json"
+      ],
+      "depends_on": [
+        "DISC-01",
+        "VENUE-01"
+      ],
+      "summary": "Select a narrow first-wave strategy set by proven same-chain exact data requirements; preserve the full research universe.",
+      "actions": [
+        "Refresh the crosswalk against latest main and all open PRs.",
+        "For each first-wave strategy define required mints, venue/account state, fee model, exact quote grid, source freshness, capital requirements and failure reasons.",
+        "Keep signal-only, conditional, hedged-non-atomic and research-only paths outside local atomic execution.",
+        "Separate N02 event-to-state, N03 stablecoin anchors, N04 Pump migration, LST spot identity and CLOB/liquidation work into individual PRs when justified."
+      ],
+      "acceptance": [
+        "Every enabled paper candidate is backed by explicit StrategyDataRequirement and source/venue owner; unsupported families remain typed blocked.",
+        "No false promise of full strategy-family coverage from one route."
+      ],
+      "must_not": [
+        "Do not shrink broad discovery universe to flash-borrowable tokens.",
+        "Do not combine async cross-chain routes into atomic route math."
+      ]
+    },
+    {
+      "id": "CAPITAL-01",
+      "phase": "CAPITAL_BUILD",
+      "priority": "P0",
+      "status": "IN_FLIGHT_EXTERNAL",
+      "owner": "PR #677 Jupiter Lend N06; matching R03-A",
+      "paths": [
+        "src/lending/jupiter_lend.py",
+        "tests/test_r02_cap_a_reader.py",
+        "docs/integrations/offline/jupiter-lend-qualification-2026-11-21/"
+      ],
+      "depends_on": [
+        "RPC-01",
+        "ASSET-01"
+      ],
+      "summary": "Complete Jupiter Lend resource-level capacity proof and its matching unsigned builder where supported.",
+      "actions": [
+        "Complete offline exact source/IDL pin checks and tests in #677.",
+        "After separately authorized rooted reads, verify reserve/vault/debt ceiling/liabilities/utilization/availability/fee and decimals at accepted slots.",
+        "Prove builder instruction semantics and borrow/repay coverage; do not infer fee=0 from docs."
+      ],
+      "acceptance": [
+        "R02-CAP-A yields admitted resource/asset/amount evidence with source slots and fee math; matching R03-A conforms and has negative tests.",
+        "Offline-only result stays UNQUALIFIED for paper."
+      ],
+      "must_not": [
+        "No account creation/borrowing."
+      ]
+    },
+    {
+      "id": "CAPITAL-02",
+      "phase": "CAPITAL_BUILD",
+      "priority": "P0",
+      "status": "IN_FLIGHT_EXTERNAL",
+      "owner": "PR #678 Project 0 N07; matching R03-D",
+      "paths": [
+        "src/providers/marginfi/",
+        "src/lending/unsigned_builders/project0_builder.py",
+        "tests/test_r02_cap_d_reader.py",
+        "tests/test_r03_project0_builder.py"
+      ],
+      "depends_on": [
+        "RPC-01",
+        "ASSET-01"
+      ],
+      "summary": "Finish Project 0 deployed state rebind and same-resource unsigned builder proof.",
+      "actions": [
+        "Verify deployed program/bank/IDL/SDK pins and source hashes.",
+        "Rooted read only after operator authorization: asset, cap, fee, callback, account eligibility and fresh resource state.",
+        "Prove exact start/end bookends and typed block for unsupported/unknown end semantics."
+      ],
+      "acceptance": [
+        "R02-CAP-D and R03-D share exact deployment/resource identity, mint/principal and callback semantics.",
+        "No offline-only capacity promoted to live."
+      ],
+      "must_not": [
+        "No wallet/account/ATA/position creation or borrow."
+      ]
+    },
+    {
+      "id": "CAPITAL-03",
+      "phase": "CAPITAL_BUILD",
+      "priority": "P0",
+      "status": "IN_FLIGHT_EXTERNAL",
+      "owner": "PR #669 Kamino N08; R03-B owner remains separately governed",
+      "paths": [
+        "src/lending/kamino.py",
+        "src/lending/unsigned_builders/kamino_builder.py",
+        "tests/test_r02_cap_b_reader.py",
+        "docs/integrations/offline/kamino-reserve-qualification-2026-11-21/"
+      ],
+      "depends_on": [
+        "RPC-01",
+        "ASSET-01"
+      ],
+      "summary": "Finish Kamino deployed-state/SDK proof, distinguishing a flash borrow from ordinary obligation borrowing.",
+      "actions": [
+        "Complete SDK/type pins and decode verification.",
+        "Only test the supported flashloan instruction; do not mistake standard borrow for flash borrowing.",
+        "Rooted capacity evidence and eligibility only under campaign authorization.",
+        "Coordinate the matching R03-B owner and prevent shared path edits."
+      ],
+      "acceptance": [
+        "R02-CAP-B plus matching R03-B meet the same resource, mint, fee and repay semantics.",
+        "Unknown deployed state remains BLOCKED."
+      ],
+      "must_not": [
+        "No obligation creation or borrow."
+      ]
+    },
+    {
+      "id": "CAPITAL-04",
+      "phase": "CAPITAL_BUILD",
+      "priority": "P1",
+      "status": "RESEARCH_ONLY",
+      "owner": "N10 Save/Solend proof; MarginFi stays PR #655/R10-2 separate; Sui NAVI later",
+      "paths": [
+        "docs/roadmap/paper-data-campaign-universe-2026-11-21/NEXT_PR_DAG_V1.json",
+        "docs/integrations/offline/"
+      ],
+      "depends_on": [],
+      "summary": "Keep alternate capital providers as research-only until actual flash support, resource, deployed state and same-transaction repayment are proven.",
+      "actions": [
+        "One proof dossier per provider; current API/deployment/fee/cap/repay semantics and license.",
+        "Do not pool wrappers or aggregators as independent lenders.",
+        "Do not merge Sui capital into Solana first-wave qualification."
+      ],
+      "acceptance": [
+        "Provider-specific dossier establishes support or leaves RESEARCH_CANDIDATE with exact missing proof.",
+        "No implementation until proof exists."
+      ],
+      "must_not": [
+        "No speculative adapter or shared capacity inference."
+      ]
+    },
+    {
+      "id": "ROUTE-01",
+      "phase": "ROUTE_SIMULATION",
+      "priority": "P0",
+      "status": "BLOCKED_ON_UPSTREAM",
+      "owner": "Existing R04 candidate selector owner from current TASK_INDEX / owner map",
+      "paths": [
+        "existing R04 route/lender/amount selector owner",
+        "PR118 amount grid",
+        "R13-K pool/resource dedup"
+      ],
+      "depends_on": [
+        "VENUE-01",
+        "STRAT-01",
+        "CAPITAL-01_OR_02_OR_03"
+      ],
+      "summary": "Complete R04 over a proven subset using the existing selector and canonical owners.",
+      "actions": [
+        "Coordinator freezes API after current owner inspection.",
+        "Require exact route legs, verified identity, complete quote, same-state fingerprints, unique physical liquidity, one admitted resource and matching builder.",
+        "Calculate amount-specific net result including every fee/cost/repayment leg; reject partial fills/unknowns."
+      ],
+      "acceptance": [
+        "Positive/negative R04 tests; trace every input candidate and typed rejection; no manual bypass flag.",
+        "Candidate includes exact selected lender resource and builder identity."
+      ],
+      "must_not": [
+        "Do not build a second selector/solver."
+      ]
+    },
+    {
+      "id": "SIM-01",
+      "phase": "ROUTE_SIMULATION",
+      "priority": "P0",
+      "status": "BLOCKED_ON_UPSTREAM",
+      "owner": "Existing R05 exact simulation/finalizer owner",
+      "paths": [
+        "existing R05 final message/PTB simulation owner",
+        "canonical compiler/instruction firewall",
+        "economic reconciliation owner"
+      ],
+      "depends_on": [
+        "ROUTE-01"
+      ],
+      "summary": "Simulate the exact complete final transaction/message/PTB and reconcile full economics and repayment.",
+      "actions": [
+        "Use exact final serialized message and exact account metas, borrow/route/repay order, compute-budget and all fee/tip/rent data.",
+        "Bind simulation to same code/source/state generations, blockhash/slot and amount selected by R04.",
+        "Prove balance deltas and repayment; no log-text heuristic or leg-only simulations.",
+        "Negative test missing/changed instruction, stale blockhash, insufficient repayment, Token-2022 fee, partial fill, unknown cost and state drift."
+      ],
+      "acceptance": [
+        "R05 PASS is bound to exact final message/PTB digest and same state evidence; economic reconciliation has no UNKNOWN fields.",
+        "No simulation result can be substituted from another amount/route/resource."
+      ],
+      "must_not": [
+        "No signing or submission."
+      ]
+    },
+    {
+      "id": "OBS-01",
+      "phase": "PAPER_PREP",
+      "priority": "P0",
+      "status": "ASSIGN_AFTER_W0_AUDIT",
+      "owner": "OCA-W10 / EventEnvelope + ObservabilityStore + AGG-02 + MarketEpisode owners",
+      "paths": [
+        "src/observability/events.py",
+        "src/observability/store.py",
+        "src/observability/export.py",
+        "src/market/observations.py",
+        "src/market/streams.py",
+        "src/paper_shadow/"
+      ],
+      "depends_on": [
+        "#680",
+        "#682"
+      ],
+      "summary": "Wire real, idempotent production events across supported sender-free market and paper stages.",
+      "actions": [
+        "Re-run #680 make_event and ObservabilityStore callsite audit on latest main.",
+        "Add only missing producers for discovery, observation, quote, opportunity, route, capital, build, sim, terminal/reject, retries/reconnect/cancel/restart.",
+        "Set actual runtime_id, producer_code_version, environment, trace/aggregate/attempt generation; no test defaults in production.",
+        "Keep event evidence links to raw AGG-02/market/paper owners without duplicating canonical payload.",
+        "Map strategy/provider/venue routes WIRED/PARTIAL/NO_RUNTIME_PATH/BLOCKED/UNKNOWN."
+      ],
+      "acceptance": [
+        "Producer→store→export→replay test covers each supported stage; duplicate/retry idempotence and missing-event negative tests.",
+        "No silent producer loss; all events correlate to exact market/source/state and attempt identity.",
+        "No separate event bus or duplicate canonical store."
+      ],
+      "must_not": [
+        "Do not deploy NATS/Debezium/Marquez/DataHub as a shortcut."
+      ]
+    },
+    {
+      "id": "PAPER-01",
+      "phase": "PAPER_PREP",
+      "priority": "P0",
+      "status": "BLOCKED_ON_UPSTREAM",
+      "owner": "Canonical installed paper service + src/paper_shadow composition + QPR/R06",
+      "paths": [
+        "src/paper_shadow/composition.py",
+        "src/paper_shadow/cli.py",
+        "src/canonical_paper/",
+        "src/qualification_campaign/",
+        "docs/roadmap/agent-execution-master-2026-11-13/tasks/R06_PAPER_QUALIFICATION.md"
+      ],
+      "depends_on": [
+        "OBS-01",
+        "SIM-01",
+        "ROUTE-01",
+        "CAPITAL-01_OR_02_OR_03"
+      ],
+      "summary": "Qualify and run the existing installed sender-free paper vertical only after exact R06/QPR/campaign PASS.",
+      "actions": [
+        "Verify installed artifact/wheel and supported composition root; all mandatory exact dependencies supplied with valid identities/hashes.",
+        "Use canonical durable journal/lifecycle/outcomes; no custom runner, no synthetic success, no fixture counts mixed with live.",
+        "All admitted attempts reach durable terminal result with exact rejection/no-trade reasons.",
+        "Produce deterministic zero-network replay and separate live/replay populations."
+      ],
+      "acceptance": [
+        "QPR-01/02/03 + campaign authority return exact PASS on same pinned config/source generation.",
+        "R06 receipt reports 0 UNKNOWN terminal, durable events, exact simulation linkage, restart recovery and replay equality.",
+        "Paper mode remains sender-free and live/sign/send disabled."
+      ],
+      "must_not": [
+        "Do not start 24h/72h paper qualification on non-PASS gate.",
+        "Do not claim profitability from a short/noisy observation window."
+      ]
+    },
+    {
+      "id": "OPS-01",
+      "phase": "PAPER_PREP",
+      "priority": "P1",
+      "status": "BLOCKED_ON_UPSTREAM",
+      "owner": "MPR-05 installed paper qualification + existing lifecycle/observability owners",
+      "paths": [
+        "src/paper_shadow/",
+        "src/observability/",
+        "src/durable_paper_runtime_pr156.py",
+        "MPR-05 workflow and qualification owner"
+      ],
+      "depends_on": [
+        "PAPER-01"
+      ],
+      "summary": "Run installed soak and failure-injection qualification with durable operational SLOs.",
+      "actions": [
+        "Test provider outage/quota exhaustion, RPC quorum loss, stale state, schema drift, clock/slot skew, DB contention/corruption, restart, cancellation, backpressure, disk cap and shutdown drain.",
+        "Measure event loop lag, queue age, heartbeat, terminal SLO, recovery and replay divergence.",
+        "Run MPR-05 72h installed soak if required by the release path; use installed wheel/container and exact dependency hashes."
+      ],
+      "acceptance": [
+        "Every fault has deterministic expected terminal state and recovery receipt.",
+        "No stuck UNKNOWN terminal, data loss or hidden outbound replay request.",
+        "72-hour soak reported separately from data-capture observation."
+      ],
+      "must_not": [
+        "No live transaction delivery."
+      ]
+    },
+    {
+      "id": "DOC-01",
+      "phase": "CLOSEOUT",
+      "priority": "P1",
+      "status": "ASSIGN_AFTER_WAVES",
+      "owner": "Coordinator / single readiness ledger",
+      "paths": [
+        "docs/roadmap/data-to-paper-readiness-2026-11-22/",
+        "campaign readiness receipt"
+      ],
+      "depends_on": [
+        "GATE-01",
+        "DATA-01",
+        "RPC-01",
+        "ASSET-01",
+        "DISC-01",
+        "VENUE-01",
+        "ROUTE-01",
+        "SIM-01",
+        "PAPER-01"
+      ],
+      "summary": "Maintain one evidence-backed status ledger and produce an explicit go/no-go decision per stage.",
+      "actions": [
+        "Update each row only from PR/test/CI/campaign receipts, not agent claims.",
+        "Report numerator/denominator, source class, exact SHA, PR, blocker and owner.",
+        "Publish separate verdicts: CAPTURE_ONLY_READY, EXACT_MARKET_READY, PAPER_QUALIFIED, LIVE_HARD_DENIED.",
+        "Keep live authorization as separate future process."
+      ],
+      "acceptance": [
+        "Machine-readable status + concise runbook/report are replayable and reflect actual evidence.",
+        "Every P0 task is PASS or has an explicit typed blocker; no implicit ready state."
+      ],
+      "must_not": [
+        "Do not promote stage by merging docs."
+      ]
+    }
+  ]
+}

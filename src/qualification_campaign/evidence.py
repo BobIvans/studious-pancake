@@ -28,11 +28,13 @@ from .identity import CampaignManifest, canonical_bytes, digest
 #   journal_growth_bound(row_len, page) =
 #       row_len                                  # row content
 #       + page                                   # partial tail page in the DB file
-#       + (ceil(row_len / page) + 3) * (page + 24)
+#       + (ceil(row_len / page) + 8) * (page + 24)
 #                                                # one WAL frame (page + 24 B
 #                                                # frame header) per modified
 #                                                # page: row pages + db-size
-#                                                # page + <= 2 index pages
+#                                                # page + B-tree index pages
+#                                                # (O(log n) depth, capped
+#                                                # by the +8 frame margin)
 #
 # Auto-checkpoint only moves WAL frames back into the database file, so the
 # DB+WAL sum is conserved and the bound holds across checkpoints.  page_size
@@ -41,7 +43,7 @@ from .identity import CampaignManifest, canonical_bytes, digest
 # is ever violated, the over-commitment fails closed and blocks every
 # subsequent write — the budget can never be silently exceeded.
 _JOURNAL_WAL_FRAME_HEADER_BYTES = 24
-_JOURNAL_WAL_MARGIN_FRAMES = 3
+_JOURNAL_WAL_MARGIN_FRAMES = 8
 
 
 def journal_growth_bound(row_len: int, page_size: int) -> int:
@@ -99,6 +101,49 @@ class CampaignBudgets:
             storage_bytes_max=budgets["storage_bytes_max"],
             external_data_spend_usd_max=budgets["external_data_spend_usd_max"],
         )
+
+
+def prepare_event(source, campaign_id, payload, *, available_at_ns, observed_at_ns, previous_events):
+    """Build the exact event and its EXACT serialized row length.
+
+    The row length replicates the journal INSERT serialization byte-for-byte
+    (``json.dumps(asdict(event), sort_keys=True)``): the payload is carried as
+    a nested JSON string, so quotes/backslashes are escaped a second time and
+    the reservation must account for the serialized row, not the canonical
+    payload (owner security-closure item 1).
+    """
+
+    from dataclasses import asdict
+
+    body = {**payload, "campaign_manifest_hash": campaign_id}
+    encoded = canonical_bytes(body)
+    is_blob = len(encoded) > 750_000
+    name = digest(body) if is_blob else None
+    if is_blob:
+        stored = {
+            "kind": "blob_reference",
+            "raw_payload_ref": name,
+            "raw_payload_hash": name,
+            "campaign_manifest_hash": campaign_id,
+        }
+    else:
+        stored = body
+    previous = [e for e in previous_events if e.source == source]
+    event = RawStreamEvent(
+        source,
+        campaign_id,
+        1,
+        previous[-1].cursor + 1 if previous else 1,
+        available_at_ns,
+        observed_at_ns,
+        source,
+        "prequal.observation.v1",
+        canonical_bytes(stored).decode(),
+        digest(stored),
+        previous[-1].block_hash if previous else "GENESIS",
+    )
+    serialized_row = json.dumps(asdict(event), sort_keys=True)
+    return encoded, is_blob, name, event, len(serialized_row)
 
 
 class CampaignEvidenceStore:
@@ -215,39 +260,30 @@ class CampaignEvidenceStore:
             if available_at_ns is None
             else available_at_ns
         )
-        body = {**payload, "campaign_manifest_hash": self.manifest.campaign_id}
-        stored = body
-        encoded = canonical_bytes(body)
-        is_blob = len(encoded) > 750_000
-        if is_blob and len(encoded) > 16 * 1024 * 1024:
-            raise ValueError("EVIDENCE_BLOB_TOO_LARGE")
+        previous_events = self.journal.events(available_at_ns=2**63 - 1)
+        encoded, is_blob, name, event, row_len = prepare_event(
+            source,
+            self.manifest.campaign_id,
+            payload,
+            available_at_ns=available,
+            observed_at_ns=observed_at_ns,
+            previous_events=previous_events,
+        )
+        blob_bytes = len(encoded) if is_blob else 0
         if self.campaign_budgets is not None:
-            # STRICT PHYSICAL CEILING (owner security-closure R-A): reserve
-            # the worst-case growth of this append transaction, derived from
-            # the runtime page size, BEFORE any write.  For a blob append the
-            # blob file contributes exactly len(encoded) bytes and only a
-            # small reference event enters the journal.
-            reference_len = len(
-                canonical_bytes(
-                    {
-                        "kind": "blob_reference",
-                        "raw_payload_ref": digest(body),
-                        "raw_payload_hash": digest(body),
-                        "campaign_manifest_hash": self.manifest.campaign_id,
-                    }
-                )
-            )
-            row_len = reference_len if is_blob else len(encoded)
+            # STRICT PHYSICAL CEILING: reserve the exact serialized journal
+            # row (nested-JSON escaping included) plus the exact blob bytes,
+            # bounded by journal_growth_bound for DB/WAL/index page growth,
+            # BEFORE any write.
             projected = (
                 self.campaign_storage_bytes()
-                + (len(encoded) if is_blob else 0)
+                + blob_bytes
                 + journal_growth_bound(row_len, self.page_size)
             )
             if projected > self.campaign_budgets.storage_bytes_max:
                 raise ValueError("CAMPAIGN_STORAGE_BUDGET_EXHAUSTED")
         if is_blob:
             self.blob_dir.mkdir(exist_ok=True)
-            name = digest(body)
             target = self.blob_dir / (name + ".json")
             if target.exists():
                 if target.is_symlink() or target.read_bytes() != encoded:
@@ -288,30 +324,6 @@ class CampaignEvidenceStore:
                 # corrupt retained evidence: replay fails closed on a
                 # missing or mismatched blob reference.  POSIX keeps the
                 # exact directory-fsync durability step.
-            stored = {
-                "kind": "blob_reference",
-                "raw_payload_ref": name,
-                "raw_payload_hash": name,
-                "campaign_manifest_hash": self.manifest.campaign_id,
-            }
-        previous = [
-            e
-            for e in self.journal.events(available_at_ns=2**63 - 1)
-            if e.source == source
-        ]
-        event = RawStreamEvent(
-            source,
-            self.manifest.campaign_id,
-            1,
-            previous[-1].cursor + 1 if previous else 1,
-            available,
-            observed_at_ns,
-            source,
-            "prequal.observation.v1",
-            canonical_bytes(stored).decode(),
-            digest(stored),
-            previous[-1].block_hash if previous else "GENESIS",
-        )
         self.journal.append(event)
         if self.campaign_budgets is not None:
             # Reconcile actual filesystem sizes after commit; over-commitment

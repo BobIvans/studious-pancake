@@ -23,8 +23,8 @@
           "allowed_query_parameters": [],
           "schema_version": "prequal.provider-profile.v1"
         },
-        "checked_at": "2026-10-06T00:28:28.196323+00:00",
-        "docs_sha256": "f62e383bcfaf5df07b82215d255bfb6291582522e3590549da9f92ad127796a8",
+        "checked_at": "2026-11-22T10:37:27+00:00",
+        "docs_sha256": "31ffb19b28eabdf39f68801b622f23a83f220a09cda78db610bdb09515ab0180",
         "request_schema_version": "DiscoveryRequest.v1",
         "response_schema_version": "DiscoveredMarket.v1",
         "schema_fingerprint": "f34d70dd492acca3fd77b3a545169af2d8f547e3653f3d6226fd2ae80e667404",
@@ -63,7 +63,7 @@
           "operator": "geckoterminal",
           "correlation_group": "geckoterminal-indexed",
           "endpoint": "https://api.geckoterminal.com/api/v2/networks/solana/pools",
-          "official_docs": "https://api.geckoterminal.com/docs/index.html",
+          "official_docs": "https://docs.coingecko.com/reference/introduction",
           "credential_ref": "anonymous-public-read",
           "credential_generation": "anonymous-v1",
           "auth_header": null,
@@ -77,8 +77,8 @@
           ],
           "schema_version": "prequal.provider-profile.v1"
         },
-        "checked_at": "2026-10-06T00:28:28.196596+00:00",
-        "docs_sha256": "e4f9f9de00ef771d17c055d6a8cd46f05978141419f2aa41cbd2bee6722ec82b",
+        "checked_at": "2026-11-22T10:37:27+00:00",
+        "docs_sha256": "ef32801458b105de5ca8b960d67d0d3bd448fcbf5cb7e004e9cbdaa38e3b9302",
         "request_schema_version": "DiscoveryRequest.v1",
         "response_schema_version": "DiscoveredMarket.v1",
         "schema_fingerprint": "75df9c9beedc58ad0aecf9cfbc6b4b6751f63958876957744a44f7970e9e74a0",
@@ -134,8 +134,8 @@
           ],
           "schema_version": "prequal.provider-profile.v1"
         },
-        "checked_at": "2026-10-06T00:28:28.196746+00:00",
-        "docs_sha256": "3d1f21ff983b7b71c5cf152d3134374ba8a0050ddbd97a9cb1b4b8cfb9d308b2",
+        "checked_at": "2026-11-22T10:37:27+00:00",
+        "docs_sha256": "16c4e2adaa51fca04d52f34ad1782bfafc75e7d37892b499ad288b815b6ebdb1",
         "request_schema_version": "DiscoveryRequest.v1",
         "response_schema_version": "DiscoveredMarket.v1",
         "schema_fingerprint": "a957e03c65d5f9e2214469e38009ae3b7b44af7e14fa8e9d4cea791e8c6aab96",
@@ -161,6 +161,59 @@
         "request": {
           "source_id": "raydium",
           "required_program_id": "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C"
+        }
+      }
+    },
+    {
+      "dossier": {
+        "source_id": "meteora-dlmm",
+        "label": "meteora dlmm indexed discovery",
+        "profile": {
+          "profile_id": "discovery-meteora-dlmm",
+          "provider": "meteora-dlmm",
+          "operator": "meteora-dlmm",
+          "correlation_group": "meteora-dlmm-indexed",
+          "endpoint": "https://dlmm.datapi.meteora.ag/pools",
+          "official_docs": "https://docs.meteora.ag/developer-guides/dlmm/api-reference/overview.md",
+          "credential_ref": "anonymous-public-read",
+          "credential_generation": "anonymous-v1",
+          "auth_header": null,
+          "request_limit": 8,
+          "window_seconds": 60,
+          "campaign_attempt_cap": 20,
+          "smoke_only": false,
+          "role": "discovery",
+          "allowed_query_parameters": [
+            "page"
+          ],
+          "schema_version": "prequal.provider-profile.v1"
+        },
+        "checked_at": "2026-11-22T10:37:27+00:00",
+        "docs_sha256": "974fe594580a62e58b7995ebf7ee893cf0412ce6e39325eee03b00071a2850fd",
+        "request_schema_version": "DiscoveryRequest.v1",
+        "response_schema_version": "DiscoveredMarket.v1",
+        "schema_fingerprint": "67a1c5aa7b93b0068563dce643c9de01979c586bc3f1e57d46a844ae48112ce3",
+        "terms_url": "https://meteora.ag/terms",
+        "license_class": "UNREVIEWED_PUBLIC_RESEARCH",
+        "capabilities": [
+          "candidate-discovery"
+        ],
+        "classification": "DISCOVERY_ONLY",
+        "renewal_ttl_seconds": 86400,
+        "slot_id": null,
+        "daily_quota": null,
+        "monthly_quota": null,
+        "commercial_use": "UNKNOWN",
+        "redistribution_allowed": "UNKNOWN",
+        "attribution": "UNREVIEWED",
+        "token_semantics": "UNKNOWN",
+        "oracle_semantics": "UNKNOWN",
+        "schema_version": "prequal.source-dossier.v1"
+      },
+      "adapter": {
+        "kind": "catalog",
+        "request": {
+          "source_id": "meteora-dlmm"
         }
       }
     }

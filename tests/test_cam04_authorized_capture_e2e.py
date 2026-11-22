@@ -356,6 +356,7 @@ def test_authorized_capture_end_to_end(tmp_path, monkeypatch):
     # report (blocked starts return the blocked receipt instead).
     assert "governance" in result
     assert result.get("production_promotion") is False
+    journal = output / "campaign-evidence.sqlite"
     gate_event = [
         json.loads(e.payload_json)
         for e in _events(journal)
@@ -373,7 +374,6 @@ def test_authorized_capture_end_to_end(tmp_path, monkeypatch):
         None,
     )
     # Durable receipt: measured page sizes + campaign_report evidence.
-    journal = output / "campaign-evidence.sqlite"
     kinds = [json.loads(e.payload_json).get("kind") for e in _events(journal)]
     assert "campaign_report" in kinds, kinds
     assert "storage_reconciliation" in kinds, kinds

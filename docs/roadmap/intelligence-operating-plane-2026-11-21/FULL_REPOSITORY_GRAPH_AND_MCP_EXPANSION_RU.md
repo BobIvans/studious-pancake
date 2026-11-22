@@ -219,3 +219,15 @@ Execution rule: reconcile current PRs #680–#690, their actual bases/heads/diff
 A successful build may say **INVENTORY_COMPLETE** only when every tracked path has a coverage record. It may say **STRUCTURAL_GRAPH_COMPLETE** only when every first-party source language is structurally indexed or an explicitly approved gap is recorded. It may say **DOMAIN_GRAPH_COMPLETE** only for the strategy/provider/domain dimensions actually represented with evidence. It may say **RUNTIME_LINEAGE_COMPLETE** only for supported execution paths whose real producers, recovery and replay have been tested.
 
 Never use one unqualified “100% repository graph complete” badge to conceal a missing language parser, missing provider join or absent runtime producer.
+
+## Operational visibility extension — strategy/function performance diagnostics (2026-11-22)
+
+A complete source/symbol inventory is not an operational performance model. The graph may catalogue every discovered function, but only runtime producers and trace evidence can establish which functions actually ran. Keep STATIC_EXTRACTED/COMPILER_RESOLVED call edges separate from RUNTIME_OBSERVED invocations.
+
+OCA-W20 and `STRATEGY_FUNCTION_PERFORMANCE_DIAGNOSTICS_RU.md` add a derived read-only diagnostic plane over the canonical W10/W2/W15 evidence. It connects strategy/version → operation/episode → lifecycle stage → stable callsite/symbol → inputs/outputs/contracts → provider/observation/capital → measured function/stage health → simulation/reconciliation outcome.
+
+The diagnostic view must show actual call counts/denominators, latency quantiles, errors/retries/timeouts, queue/backpressure, data-quality/freshness/gaps and durable-capture loss, alongside separately typed financial outcomes. It compares only compatible strategy/config/provider/chain/venue/regime cohorts, exposes sample size and missing coverage, and links each anomaly to exact events and source refs.
+
+Do not claim every function is runtime-observed just because every path is inventoried. Do not rank a function as poor from a low sample or missing telemetry. Do not label a function as the cause of negative PnL based on correlation; distinguish OBSERVED_ANOMALY, ASSOCIATED_STAGE, ROOT_CAUSE_HYPOTHESIS and controlled causal evidence.
+
+Expose `performance_diagnostics` as the seventh typed operation inside the existing `web3_data_trace` MCP schema. No third MCP schema, duplicate event store, raw market DB, automated remediation or LIVE authority is introduced. The capability remains UNAVAILABLE/PARTIAL until W10, W2, W15 and W20 have real producer, join, replay and end-to-end test receipts.

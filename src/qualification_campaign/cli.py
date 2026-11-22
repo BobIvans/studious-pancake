@@ -33,6 +33,7 @@ from .campaign_start_gate import (
 )
 from .evidence import (
     AUTHORITY_CREATION_RESERVE_BYTES,
+    reconcile_materialized_artifacts,
     sqlite_page_size,
     JOURNAL_CREATION_RESERVE_BYTES,
     LEDGER_CREATION_RESERVE_BYTES,
@@ -361,17 +362,14 @@ async def capture(
         # preflight reserves assumed SQLite page sizes; if a store
         # materialized larger than reserved, fail closed immediately
         # instead of silently over-spending the approved budget.
-        if (
-            artifact_footprint_bytes(
-                (
-                    authority_path,
-                    Path(str(authority_path) + "-wal"),
-                    Path(str(authority_path) + "-shm"),
-                )
-            )
-            > budgets.storage_bytes_max
-        ):
-            raise ValueError("CAMPAIGN_STORAGE_BUDGET_EXCEEDED")
+        reconcile_materialized_artifacts(
+            (
+                authority_path,
+                Path(str(authority_path) + "-wal"),
+                Path(str(authority_path) + "-shm"),
+            ),
+            budgets,
+        )
         journal = RecoverableStreamJournal(
             output / "campaign-evidence.sqlite", max_events=10_000
         )
@@ -383,10 +381,16 @@ async def capture(
             ledger_path=ledger_path,
             extra_artifacts=(
                 manifest_path,
+                output / "report.json",
                 authority_path,
                 Path(str(authority_path) + "-wal"),
                 Path(str(authority_path) + "-shm"),
             ),
+        )
+        evidence.append(
+            "campaign-start-gate",
+            {"kind": "campaign_start_decision", "decision": decision.to_dict()},
+            observed_at_ns=time.time_ns(),
         )
         # SECURITY CLOSURE v3: record the ACTUAL SQLite page sizes of all
         # three stores plus the real footprint split — the preflight
@@ -497,6 +501,15 @@ async def capture(
         final["governance"] = {
             p.profile_id: await gov.snapshot(p.profile_id) for p in profiles
         }
+    # SECURITY CLOSURE v3 (review): the final report write is inside the
+    # ceiling scope — the report is appended as durable evidence first
+    # (projection + post-commit reconciliation cover its bytes), then the
+    # report.json artifact (already in extra_artifacts) is materialized.
+    evidence.append(
+        "campaign",
+        {"kind": "campaign_report", "report": final},
+        observed_at_ns=time.time_ns(),
+    )
     (output / "report.json").write_bytes(canonical_bytes(final))
     return final
 

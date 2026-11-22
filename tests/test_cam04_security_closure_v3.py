@@ -27,6 +27,7 @@ from src.qualification_campaign.approval_replay_ledger import (
 )
 from src.qualification_campaign.evidence import (
     AUTHORITY_CREATION_RESERVE_BYTES,
+    reconcile_materialized_artifacts,
     CampaignBudgets,
     CampaignEvidenceStore,
     artifact_footprint_bytes,
@@ -231,9 +232,10 @@ def test_max_load_before_authority_materialization_fail_closed(tmp_path):
     )
     try:
         evidence.extra_artifacts = evidence.extra_artifacts + authority_paths
+        # Drive the REAL reconciliation path used by cli.capture() after the
+        # authority store materializes (not a hand-raised exception).
         with pytest.raises(ValueError, match="CAMPAIGN_STORAGE_BUDGET_EXCEEDED"):
-            if evidence.campaign_storage_bytes() > budget:
-                raise ValueError("CAMPAIGN_STORAGE_BUDGET_EXCEEDED")
+            reconcile_materialized_artifacts(authority_paths, evidence.campaign_budgets)
     finally:
         authority.close()
 

@@ -6,6 +6,7 @@ attempt reservations survive restart. Replay uses retained bytes only.
 
 import errno
 import json
+import sqlite3
 import time
 import os
 import tempfile
@@ -18,6 +19,22 @@ from pathlib import Path
 from src.platform_compat.flock import fcntl
 from src.market.streams import RawStreamEvent, RecoverableStreamJournal
 from .identity import CampaignManifest, canonical_bytes, digest
+
+
+class EvidenceCommitError(RuntimeError):
+    """Typed blocker: a durable evidence save/commit failed (DATA-01).
+
+    Persistence failures are never converted into a soft quality state and
+    never discarded: the caller receives this typed blocker instead of a
+    success receipt, so no attempt can be counted without its retained
+    trace. The original exception is always chained.
+    """
+
+    def __init__(self, code: str, detail: str) -> None:
+        super().__init__(f"{code}:{detail}")
+        self.code = code
+        self.detail = detail
+
 
 # Reservation overhead: projected bytes reserved per new retained event on
 # top of the encoded payload, covering the journal row, its WAL framing and
@@ -228,11 +245,21 @@ class CampaignEvidenceStore:
             for e in self.journal.events(available_at_ns=2**63 - 1)
             if e.source == source
         ]
+        previous_cursor = previous[-1].cursor if previous else 0
+        next_cursor = previous_cursor + 1
+        # The cursor chain itself is part of the retained trace (DATA-01):
+        # every payload records the previous cursor it was built on, so a
+        # lost, reused or silently skipped cursor is detectable at replay.
+        stored = {
+            **stored,
+            "previous_cursor": previous_cursor,
+            "evidence_cursor": next_cursor,
+        }
         event = RawStreamEvent(
             source,
             self.manifest.campaign_id,
             1,
-            previous[-1].cursor + 1 if previous else 1,
+            next_cursor,
             available,
             observed_at_ns,
             source,
@@ -241,7 +268,14 @@ class CampaignEvidenceStore:
             digest(stored),
             previous[-1].block_hash if previous else "GENESIS",
         )
-        self.journal.append(event)
+        try:
+            self.journal.append(event)
+        except (sqlite3.Error, OSError) as exc:
+            # Fail closed with a typed blocker: the attempt must not be
+            # reported as captured when its trace was not durably retained.
+            raise EvidenceCommitError(
+                "EVIDENCE_COMMIT_BLOCKED", f"{type(exc).__name__}:{exc}"
+            ) from exc
         return event.identity
 
     def claim_attempt(self, profile) -> None:
@@ -293,6 +327,46 @@ class CampaignEvidenceStore:
                 )
             finally:
                 fcntl.flock(lock, fcntl.LOCK_UN)
+
+    def cursor_report(self, source: str) -> dict:
+        """Cursor/gap accounting for one source stream (DATA-01).
+
+        Returns sequential-gap and duplicate-cursor findings; a duplicate
+        cursor with a different payload is a hard integrity failure.
+        """
+
+        cursors: dict[int, list[str]] = {}
+        for e in self.journal.events(available_at_ns=2**63 - 1):
+            if e.source != source:
+                continue
+            cursors.setdefault(e.cursor, []).append(e.payload_json)
+        for cursor, payloads in cursors.items():
+            if len(payloads) > 1 and len(set(payloads)) > 1:
+                raise ValueError("EVIDENCE_CURSOR_PAYLOAD_CONFLICT")
+        duplicates = {
+            cursor: len(payloads)
+            for cursor, payloads in cursors.items()
+            if len(payloads) > 1
+        }
+        ordered = sorted(cursors)
+        expected = list(range(1, len(ordered) + 1))
+        if ordered != expected:
+            raise ValueError("EVIDENCE_CURSOR_GAP_DETECTED")
+        return {
+            "source": source,
+            "max_cursor": ordered[-1] if ordered else 0,
+            "cursor_count": len(ordered),
+            "duplicate_cursors": sorted(duplicates),
+        }
+
+    def replay_digest(self) -> str:
+        """Deterministic digest of the full replay (DATA-01).
+
+        Recomputed purely from retained bytes/references with zero outbound
+        network; equal across processes and restarts for the same store.
+        """
+
+        return digest(list(self.replay()))
 
     def replay(self) -> tuple[dict, ...]:
         events = self.journal.events(available_at_ns=2**63 - 1)

@@ -84,7 +84,9 @@ def write_immutable_segment(
         remote_required=remote_required,
     )
     final = segment_path(out, manifest)
-    manifest["path"] = str(final)
+    # POSIX-normalized like object_key: the manifest path is a
+    # platform-independent export contract.
+    manifest["path"] = final.as_posix()
     manifest["object_key"] = final.relative_to(out).as_posix()
     publish_no_replace(final, data=data, claim_id=claim.claim_id)
     return manifest

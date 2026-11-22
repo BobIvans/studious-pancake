@@ -6,7 +6,7 @@ from copy import deepcopy
 from enum import StrEnum
 from importlib import resources
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 from types import MappingProxyType
 from typing import Any, Mapping
@@ -91,7 +91,10 @@ class SecretReference(FrozenModel):
             raise ConfigurationLoadError(
                 f"invalid environment secret reference: {value!r}"
             )
-        if scheme == "file" and not Path(locator).is_absolute():
+        # The locator is the POSIX-style container mount path inside the
+        # file: URI; validating it with WindowsPath would reject canonical
+        # absolute references such as file:/run/secrets/signer-A.
+        if scheme == "file" and not PurePosixPath(locator).is_absolute():
             raise ConfigurationLoadError(
                 "file secret references must use an absolute path"
             )

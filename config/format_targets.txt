@@ -1,15 +1,5 @@
-#
-Black
-CI.
-Every
-Incremental
-added
-baseline.
-checked
-file
-here
-in
-is
+
+# Incremental Black baseline. Every file added here is checked in CI.
 isolated_signer_service/src/flashloan_isolated_signer/__init__.py
 isolated_signer_service/src/flashloan_isolated_signer/boundary.py
 isolated_signer_service/src/flashloan_isolated_signer/models.py
@@ -188,6 +178,8 @@ src/providers/marginfi/provider.py
 src/providers/orderbook/stream_state.py
 src/providers/raydium_cpmm_native.py
 src/providers/rooted_ingestion_pr03.py
+src/qualification_campaign/approval_replay_ledger.py
+src/qualification_campaign/campaign_start_gate.py
 src/qualification_report.py
 src/release_gate/__init__.py
 src/release_gate/actual_evidence.py
@@ -303,9 +295,13 @@ tests/test_agg03_installed_profile_selection.py
 tests/test_agg05_conflict_scheduler.py
 tests/test_agg12_multichain_qualification.py
 tests/test_agg_dependency_reconciliation.py
+tests/test_cam01_campaign_start_gate.py
+tests/test_cam01_capture_blocked_before_transport.py
 tests/test_cam03_source_crosswalk.py
+tests/test_cam04_campaign_budgets.py
 tests/test_cpmm_fee_accounting.py
 tests/test_cpmm_split_replay.py
+tests/test_data01_durable_intake.py
 tests/test_exact_cpmm_capacity.py
 tests/test_fast_q1_qualification_report.py
 tests/test_fast_q_automation.py
@@ -428,4 +424,3 @@ tests/test_super07_closure.py
 tests/test_sxr1_cpmm_cycle_binding.py
 tools/occ_automation/asr_cpu_experiment.py
 tools/occ_automation/occ_local.py
-tests/test_data01_durable_intake.py

@@ -139,5 +139,7 @@ def test_world_readable_artifact_permissions_fail_closed(tmp_path):
     artifact_path = _write_artifact(root, artifact)
     os.chmod(artifact_path, 0o644)
 
+    if os.name != "posix":
+        pytest.skip("world-readable mode premise requires POSIX mode bits")
     with pytest.raises(ValueError, match="permissions"):
         load_artifact(root)

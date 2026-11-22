@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import hashlib
 import json
 from pathlib import Path
@@ -76,8 +77,7 @@ def _make_audit_database(path: Path) -> sqlite3.Connection:
     connection = sqlite3.connect(path)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA journal_mode=WAL")
-    connection.executescript(
-        """
+    connection.executescript("""
         CREATE TABLE audit_meta(key TEXT PRIMARY KEY, value TEXT NOT NULL);
         INSERT INTO audit_meta(key,value) VALUES('database_epoch','epoch-pr06');
         CREATE TABLE event_log(
@@ -117,8 +117,7 @@ def _make_audit_database(path: Path) -> sqlite3.Connection:
             release_id TEXT NOT NULL,
             policy_bundle_hash TEXT NOT NULL
         );
-        """
-    )
+        """)
     payload = _event_payload()
     payload_digest = sha256_json(payload)
     row = {
@@ -194,7 +193,11 @@ def test_signed_checkpoint_anchor_and_independent_verification(tmp_path: Path) -
     assert result.event_count == 1
     assert checkpoint.checkpoint_digest == receipt.checkpoint_digest
     assert {item.role for item in checkpoint.artifacts} >= {"snapshot", "raw-db"}
-    assert stat_mode(receipt_path) == 0o600
+    if os.name == "posix":
+        assert stat_mode(receipt_path) == 0o600
+    else:
+        # Windows cannot represent POSIX owner-only bits (chmod no-op).
+        assert receipt_path.is_file()
 
 
 def test_snapshot_mutation_invalidates_checkpoint(tmp_path: Path) -> None:
@@ -297,9 +300,7 @@ def test_management_deadline_includes_semaphore_wait() -> None:
 
         started = time.monotonic()
         try:
-            response = await server._bounded(
-                unreachable, cast(web.Request, object())
-            )
+            response = await server._bounded(unreachable, cast(web.Request, object()))
         finally:
             server._connections.release()
         return response.status, time.monotonic() - started

@@ -343,10 +343,24 @@ class McpServer:
                     "id": request_id,
                     "error": {"code": -32602, "message": f"unknown tool: {name}"},
                 }
+            arguments = (message.get("params") or {}).get("arguments") or {}
+            if not isinstance(arguments, dict):
+                return {
+                    "jsonrpc": "2.0",
+                    "id": request_id,
+                    "error": {"code": -32602, "message": "arguments must be an object"},
+                }
             try:
-                result = handler((message.get("params") or {}).get("arguments") or {})
+                result = handler(arguments)
             except FileNotFoundError as exc:
                 result = {"status": "UNAVAILABLE", "reason": str(exc)}
+            except (KeyError, ValueError, TypeError) as exc:
+                # P1-1: malformed input must yield a JSON-RPC error response,
+                # never crash the shared stdio server process.
+                result = {
+                    "status": "INVALID_ARGUMENT",
+                    "reason": f"{type(exc).__name__}: {exc}",
+                }
             return {
                 "jsonrpc": "2.0",
                 "id": request_id,

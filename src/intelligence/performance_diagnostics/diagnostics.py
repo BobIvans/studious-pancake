@@ -116,6 +116,14 @@ def build_diagnostics(
 
     health = _stage_health(events)
     # Cohort definition and compatibility (W20 §2.3).
+    first_payload: dict = {}
+    try:
+        first_payload = (
+            json.loads(events[0].get("payload_json") or "{}") if events else {}
+        )
+    except (ValueError, TypeError):
+        first_payload = {}
+    cohort_route = first_payload.get("attributes", {}).get("route") or "UNKNOWN"
     attributed: dict[str, int] = {}
     for event in events:
         key = event["strategy_ref"] or "UNATTRIBUTED"
@@ -131,8 +139,7 @@ def build_diagnostics(
     cohort = {
         "repo_sha": repo_sha,
         "config_checksum": config_checksum,
-        "route": events[0].get("payload_json")
-        and "paper-shadow:solana:atomic-vertical",
+        "route": cohort_route,
         "compatibility": "COMPATIBLE_BASELINE (same repo SHA + config generation)",
         "sample_size": len(events),
         "low_sample": len(events) < _MIN_SAMPLE,
@@ -156,6 +163,11 @@ def build_diagnostics(
                 "attribution must come from capture_stage(strategy_ref=...)"
             ],
         }
+    if strategy_ref != "unspecified" and attributed_count > 0:
+        # P2-1: the requested cohort's metrics cover only its attributed
+        # events; UNATTRIBUTED events are never silently mixed in.
+        events = [e for e in events if e["strategy_ref"] == strategy_ref]
+    cohort_route = first_payload.get("attributes", {}).get("route") or "UNKNOWN"
     total_invocations = len(events)
     total_errors = sum(entry["errors"] for entry in health.values())
     unknown_stages = sorted(

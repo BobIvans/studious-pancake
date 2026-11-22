@@ -271,10 +271,13 @@ def _extract_markdown(path: str, data: bytes) -> dict[str, Any] | None:
 
 def _extract_workflow_fallback(path: str, data: bytes) -> dict[str, Any] | None:
     """Line-based workflow job extraction (fallback when yaml grammar absent)."""
+    text = data.decode("utf-8", "replace")
+
+    def byte_offset(char_index: int) -> int:
+        return len(text[:char_index].encode("utf-8"))
+
     nodes = []
-    for match in re.finditer(
-        r"^  ([A-Za-z0-9_-]+):\s*$", data.decode("utf-8", "replace"), re.MULTILINE
-    ):
+    for match in re.finditer(r"^  ([A-Za-z0-9_-]+):\s*$", text, re.MULTILINE):
         job = match.group(1)
         nodes.append(
             {
@@ -284,8 +287,8 @@ def _extract_workflow_fallback(path: str, data: bytes) -> dict[str, Any] | None:
                 "kind": "workflow_job",
                 "name": job,
                 "qualified_name": f"job:{job}",
-                "start_byte": match.start(),
-                "end_byte": match.end(),
+                "start_byte": byte_offset(match.start()),
+                "end_byte": byte_offset(match.end()),
             }
         )
     return {"nodes": nodes, "parser": "line-based-workflow"}

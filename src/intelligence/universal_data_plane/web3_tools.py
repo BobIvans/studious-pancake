@@ -22,6 +22,11 @@ PROVIDER_RESOURCE = (
 )
 
 
+def _repo_file(repo_root: str | None, relative: str) -> Path:
+    base = Path(repo_root) if repo_root else Path.cwd()
+    return base / relative
+
+
 def strategy_research(
     state_root: str,
     repo_sha: str,
@@ -70,7 +75,7 @@ def web3_data_trace(
     manifest = load_manifest(state_root, repo_sha)
     if action == "provider_trace":
         rows = []
-        catalog_file = Path(CATALOG_RESOURCE)
+        catalog_file = _repo_file(repo_root, CATALOG_RESOURCE)
         if catalog_file.exists():
             payload = json.loads(catalog_file.read_text(encoding="utf-8"))
             for source in payload.get("sources", []):
@@ -90,12 +95,17 @@ def web3_data_trace(
         return {
             "schema": "studious.web3.provider-trace.v1",
             "rows": rows[:20],
+            "unavailable_reason": (
+                None
+                if rows
+                else "CATALOG_RESOURCE_ABSENT (explicit; unknown is not zero)"
+            ),
             "state_rules": "declared/configured/tested/captured/runtime-observed are distinct; a catalog row never implies live capability",
             "graph_generation": manifest["generation"],
         }
     if action == "flash_capital_trace":
         rows = []
-        resource = Path(PROVIDER_RESOURCE)
+        resource = _repo_file(repo_root, PROVIDER_RESOURCE)
         if resource.exists():
             payload = json.loads(resource.read_text(encoding="utf-8"))
             for entry in payload.get("entries", []):

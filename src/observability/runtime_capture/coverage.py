@@ -47,8 +47,8 @@ def coverage_matrix() -> dict[str, Any]:
             },
         ],
         "counts": {
-            "WIRED": 1,
-            "PARTIAL": 1,
+            "WIRED": 0,
+            "PARTIAL": 2,
             "NO_RUNTIME_PATH": 1,
             "BLOCKED": 2,
             "UNKNOWN": 0,

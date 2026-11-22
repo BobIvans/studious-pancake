@@ -32,6 +32,8 @@ def graph_query(
     cursor: int = 0,
 ) -> dict[str, Any]:
     """Paginated typed node/edge query. Cursor is a deterministic offset."""
+    if limit <= 0 or cursor < 0:
+        raise ValueError("limit must be positive and cursor non-negative")
     manifest = load_manifest(state_root, repo_sha)
     connection = _connect(state_root, repo_sha)
     try:
@@ -292,6 +294,8 @@ def history_query(
 ) -> dict[str, Any]:
     """Git history for one path (local read-only). PR/issue feed is
     permission-gated and reported UNAVAILABLE rather than guessed."""
+    if limit <= 0 or cursor < 0:
+        raise ValueError("limit must be positive and cursor non-negative")
     log = subprocess.check_output(
         [
             "git",
@@ -334,6 +338,7 @@ def domain_catalog(
     *,
     limit: int = 20,
     cursor: int = 0,
+    repo_root: str | None = None,
 ) -> dict[str, Any]:
     """Bounded catalogue rows for providers/lenders/schemas/strategies.
 
@@ -344,8 +349,11 @@ def domain_catalog(
     manifest = load_manifest(state_root, repo_sha)
     rows: list[dict[str, Any]] = []
     unavailable_reason: str | None = None
+    if limit <= 0 or cursor < 0:
+        raise ValueError("limit must be positive and cursor non-negative")
     if kind in {"provider", "lender"}:
-        catalog_path = Path("src/resources/market_source_catalog.json")
+        base = Path(repo_root) if repo_root else Path.cwd()
+        catalog_path = base / "src/resources/market_source_catalog.json"
         if catalog_path.exists():
             payload = json.loads(catalog_path.read_text(encoding="utf-8"))
             family = "lending-tool" if kind == "lender" else None

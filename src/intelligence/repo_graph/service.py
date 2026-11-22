@@ -167,6 +167,8 @@ class QueryBackend:
             }
         manifest = load_manifest(self._state_root, repo_sha)
         target = artifact_path(self._state_root, repo_sha)
+        if budget_tokens is not None and budget_tokens <= 0:
+            raise ValueError("budget_tokens must be positive")
         budget = (budget_tokens or DEFAULT_BUDGET_TOKENS) * 4
         must_include = list(must_include_refs or [])
         excluded = set(exclude_refs or [])
@@ -185,6 +187,8 @@ class QueryBackend:
                 repo_sha,
                 budget_tokens or DEFAULT_BUDGET_TOKENS,
                 tuple(dimensions),
+                tuple(sorted(must_include)),
+                tuple(sorted(excluded)),
             ):
                 raise ValueError("stale task continuation cursor")
             offset = int(continuation_cursor.get("offset", 0))
@@ -253,6 +257,8 @@ class QueryBackend:
                         repo_sha,
                         budget_tokens or DEFAULT_BUDGET_TOKENS,
                         tuple(dimensions),
+                        tuple(sorted(must_include)),
+                        tuple(sorted(excluded)),
                     ),
                     "offset": continuation_offset_base + len(ranked),
                 }
@@ -540,10 +546,20 @@ class QueryBackend:
         return dict(zip(keys, row))
 
 
-def _task_hash(task: str, repo_sha: str, budget_tokens: int, dimensions: tuple) -> str:
+def _task_hash(
+    task: str,
+    repo_sha: str,
+    budget_tokens: int,
+    dimensions: tuple,
+    must_include: tuple = (),
+    excluded: tuple = (),
+) -> str:
     import hashlib
 
-    payload = f"{repo_sha}|{task}|{budget_tokens}|{','.join(dimensions)}"
+    payload = (
+        f"{repo_sha}|{task}|{budget_tokens}|{','.join(dimensions)}"
+        f"|{','.join(must_include)}|{','.join(sorted(excluded))}"
+    )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:24]
 
 

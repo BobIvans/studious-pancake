@@ -1,0 +1,50 @@
+{
+ "base_main_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+ "blockers": [
+  "PRE_EXISTING_WINDOWS_ASYNCIO (unchanged)"
+ ],
+ "branch": "codex/oca-w2-operation-episodes-2026-11-22",
+ "checks": {
+  "canonical_owners_read_only": [
+   "src/observability/store.py"
+  ],
+  "deterministic_projection": true,
+  "format_targets_registered": 3,
+  "quality_gates": {
+   "black": "PASS",
+   "flake8": "PASS",
+   "mypy": "PASS",
+   "quality_gate_script": "PASS"
+  },
+  "replay_after_reopen_identical": true,
+  "runtime_lineage_join": "MISSING (no producers; OCA-W10 gate)",
+  "terminal_outcome_requires_reconciliation_evidence": true,
+  "unknown_joins_preserved": [
+   "market_episode",
+   "provider_evidence"
+  ],
+  "w2_tests": {
+   "failed": 0,
+   "passed": 3
+  }
+ },
+ "date": "2026-11-22",
+ "deliverables": [
+  "src/intelligence/operation_context/__init__.py",
+  "src/intelligence/operation_context/projection.py",
+  "tests/intelligence/test_operation_context.py"
+ ],
+ "lane": "OCA-W2",
+ "related": {
+  "design_head": "f7c09b81436e9a16c89a680ce314937fc6a52fa4",
+  "design_pr": 666
+ },
+ "safety": {
+  "execution_authority": "NONE",
+  "live": "HARD_DENIED",
+  "merge_authority": "HUMAN_ONLY",
+  "send_enabled": false,
+  "sign_enabled": false
+ },
+ "schema": "studious-pancake.lane-receipt.v1"
+}

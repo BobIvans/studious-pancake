@@ -9,8 +9,8 @@ import json
 import time
 import os
 import tempfile
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from dataclasses import asdict
 
 # Shared POSIX-exact flock binding (R11 follow-up): standard-library fcntl on
 # POSIX, msvcrt.locking-based shim on win32.  Platform-conditional sys.platform
@@ -18,6 +18,45 @@ from dataclasses import asdict
 from src.platform_compat.flock import fcntl
 from src.market.streams import RawStreamEvent, RecoverableStreamJournal
 from .identity import CampaignManifest, canonical_bytes, digest
+
+# Reservation overhead: projected bytes reserved per new retained event on
+# top of the encoded payload, covering the journal row, its WAL framing and
+# the SQLite page granularity.  Actual filesystem sizes are reconciled after
+# commit; over-commitment fails closed on the next reservation.
+_STORAGE_RESERVATION_SLACK = 1024
+
+
+@dataclass(frozen=True)
+class CampaignBudgets:
+    """Operator-approved campaign-global budgets (CAM-04 / review point 4).
+
+    Values come only from the signed approved plan; unknown or unbounded
+    values fail closed at construction.
+    """
+
+    rpc_physical_attempts_max: int
+    storage_bytes_max: int
+    external_data_spend_usd_max: int = 0
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.rpc_physical_attempts_max, int) or not (
+            0 < self.rpc_physical_attempts_max <= 100_000
+        ):
+            raise ValueError("CAMPAIGN_ATTEMPT_BUDGET_UNBOUNDED")
+        if not isinstance(self.storage_bytes_max, int) or not (
+            0 < self.storage_bytes_max <= 2**30
+        ):
+            raise ValueError("CAMPAIGN_STORAGE_BUDGET_UNBOUNDED")
+        if self.external_data_spend_usd_max != 0:
+            raise ValueError("CAMPAIGN_PAID_SPEND_FORBIDDEN")
+
+    @classmethod
+    def from_plan_budgets(cls, budgets: dict) -> "CampaignBudgets":
+        return cls(
+            rpc_physical_attempts_max=budgets["rpc_physical_attempts_max"],
+            storage_bytes_max=budgets["storage_bytes_max"],
+            external_data_spend_usd_max=budgets["external_data_spend_usd_max"],
+        )
 
 
 class CampaignEvidenceStore:
@@ -27,11 +66,14 @@ class CampaignEvidenceStore:
         manifest: CampaignManifest,
         *,
         wall_ns=time.time_ns,
+        campaign_budgets: CampaignBudgets | None = None,
     ):
         self.wall_ns = wall_ns
         self.journal = journal
         self.manifest = manifest
+        self.campaign_budgets = campaign_budgets
         db_path = journal.db.execute("PRAGMA database_list").fetchone()[2]
+        self.db_path = Path(db_path)
         self.lock_path = Path(db_path + ".campaign-lock")
         self.blob_dir = Path(db_path + ".blobs")
         retained = journal.events(available_at_ns=2**63 - 1)
@@ -45,7 +87,58 @@ class CampaignEvidenceStore:
                 observed_at_ns=self.wall_ns(),
             )
 
+    def campaign_storage_bytes(self) -> int:
+        """Aggregate campaign artifact footprint (review point 4).
+
+        Includes the journal database, its WAL/SHM sidecars, the campaign
+        lock file, and every blob/staging file.  Filesystem truth only; a
+        missing file counts as zero, never as an assumed value.
+        """
+
+        total = 0
+        for path in (
+            self.db_path,
+            Path(str(self.db_path) + "-wal"),
+            Path(str(self.db_path) + "-shm"),
+            self.lock_path,
+        ):
+            try:
+                total += path.stat().st_size
+            except FileNotFoundError:
+                pass
+        if self.blob_dir.exists():
+            total += sum(f.stat().st_size for f in self.blob_dir.glob("*"))
+        return total
+
     def append(
+        self,
+        source: str,
+        payload: dict,
+        *,
+        observed_at_ns: int,
+        available_at_ns: int | None = None,
+    ) -> str:
+        """Serialize every event append across processes/threads (CAM-04).
+
+        The previous per-attempt-only lock left plain appends' cursor
+        allocation unserialized (race hypothesis, REPRODUCTION_REQUIRED);
+        routing every append through the same cross-process flock makes
+        reservations and writes share one boundary.
+        """
+
+        with self.lock_path.open("a") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            try:
+                return self._append_unlocked(
+                    source,
+                    payload,
+                    observed_at_ns=observed_at_ns,
+                    available_at_ns=available_at_ns,
+                )
+            finally:
+                fcntl.flock(lock, fcntl.LOCK_UN)
+
+    def _append_unlocked(
         self,
         source: str,
         payload: dict,
@@ -74,6 +167,16 @@ class CampaignEvidenceStore:
                 size = sum(f.stat().st_size for f in self.blob_dir.glob("*.json"))
                 if size + len(encoded) > self.journal.max_payload_bytes:
                     raise ValueError("EVIDENCE_BLOB_STORAGE_BUDGET_EXHAUSTED")
+                if self.campaign_budgets is not None:
+                    # Reserve projected bytes under the same cross-process
+                    # serialization; reconcile actual sizes after commit.
+                    projected = (
+                        self.campaign_storage_bytes()
+                        + len(encoded)
+                        + _STORAGE_RESERVATION_SLACK
+                    )
+                    if projected > self.campaign_budgets.storage_bytes_max:
+                        raise ValueError("CAMPAIGN_STORAGE_BUDGET_EXHAUSTED")
                 temporary = None
                 try:
                     with tempfile.NamedTemporaryFile(
@@ -91,6 +194,14 @@ class CampaignEvidenceStore:
                 finally:
                     if temporary is not None:
                         temporary.unlink(missing_ok=True)
+                if self.campaign_budgets is not None:
+                    # Reconcile actual sizes after commit; over-commitment
+                    # fails closed and blocks every subsequent reservation.
+                    if (
+                        self.campaign_storage_bytes()
+                        > self.campaign_budgets.storage_bytes_max
+                    ):
+                        raise ValueError("CAMPAIGN_STORAGE_BUDGET_EXCEEDED")
                 if os.name == "posix":
                     # getattr keeps the POSIX-only open flag static-analysis
                     # clean under win32 mypy (mypy does not narrow os.name);
@@ -144,14 +255,34 @@ class CampaignEvidenceStore:
             fcntl.flock(lock, fcntl.LOCK_EX)
             try:
                 events = self.replay()
+                attempts = [e for e in events if e.get("kind") == "attempt"]
                 spent = sum(
-                    e.get("kind") == "attempt"
-                    and e.get("provider_id") == profile.profile_id
-                    for e in events
+                    e.get("provider_id") == profile.profile_id for e in attempts
                 )
                 if spent >= profile.campaign_attempt_cap:
                     raise ValueError("CAMPAIGN_ATTEMPT_BUDGET_EXHAUSTED")
-                self.append(
+                if self.campaign_budgets is not None:
+                    # Campaign-global physical attempt cap: every provider
+                    # profile and every retry consumes the same durable pool.
+                    if len(attempts) >= self.campaign_budgets.rpc_physical_attempts_max:
+                        raise ValueError("CAMPAIGN_GLOBAL_ATTEMPT_BUDGET_EXHAUSTED")
+                    projected = (
+                        self.campaign_storage_bytes()
+                        + len(
+                            canonical_bytes(
+                                {
+                                    "kind": "attempt",
+                                    "provider_id": profile.profile_id,
+                                    "source_generation": profile.generation,
+                                    "campaign_manifest_hash": self.manifest.campaign_id,
+                                }
+                            )
+                        )
+                        + _STORAGE_RESERVATION_SLACK
+                    )
+                    if projected > self.campaign_budgets.storage_bytes_max:
+                        raise ValueError("CAMPAIGN_STORAGE_BUDGET_EXHAUSTED")
+                self._append_unlocked(
                     profile.profile_id,
                     {
                         "kind": "attempt",

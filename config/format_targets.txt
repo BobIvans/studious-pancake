@@ -439,3 +439,4 @@ src/gpr_sui_shadow/providers/aftermath.py
 src/execution/unsigned_plan_simulation_seam.py
 tests/test_win02_proactor_socket_bootstrap.py
 tests/test_win03_occ_sqlite_close.py
+tests/test_cam05_rpc_method_alignment.py

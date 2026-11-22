@@ -191,9 +191,9 @@ A client setup/health-check guide and tools/list smoke test are required. Local 
 The generic API remains the entrypoint for any task. For deep strategy research the same backend additionally exposes only two compact MCP tool schemas, specified normatively in `WEB3_STRATEGY_INTELLIGENCE_QUERY_TOOLS_RU.md`:
 
 - `strategy_research(operation=catalog|context|compare)`: complete strategy inventory, exact implementation/economics/provider/test context and evidence-backed version/variant comparison;
-- `web3_data_trace(operation=provider_trace|flash_capital_trace|operation_trace)`: provider-to-observation-to-strategy paths, flash-capital evidence and actual paper/shadow lifecycle/replay.
+- `web3_data_trace(operation=provider_trace|flash_capital_trace|operation_trace|performance_diagnostics[W20-gated])`: provider-to-observation-to-strategy paths, flash-capital evidence and actual paper/shadow lifecycle/replay.
 
-The seven operations are purpose-built query modes, not seven tools/databases. They call the same query backend and canonical owner APIs as task_context/expand_context. Results are bounded by budget and paginated. Each response is SHA-bound, includes evidence/provenance/verification, explicit omissions/UNKNOWN and deterministic cursors.
+The seven domain operations (3 strategy_research + 4 web3_data_trace) are purpose-built query modes, not seven tools/databases. They call the same query backend and canonical owner APIs as task_context/expand_context. Results are bounded by budget and paginated. Each response is SHA-bound, includes evidence/provenance/verification, explicit omissions/UNKNOWN and deterministic cursors.
 
 The catalogue must include candidates discovered outside the canonical strategy registry (source, config, test, fixture, docs and permission-available GitHub history) while preserving their different evidence states. Never present DOC_ONLY, FIXTURE_ONLY, IMPLEMENTED, CONFIGURED, TESTED, QUALIFIED and RUNTIME_OBSERVED as interchangeable states.
 

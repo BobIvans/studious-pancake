@@ -2335,8 +2335,23 @@
       681,
       682,
       687,
-      688,
-      689
-    ]
+      688
+    ],
+    "notes": [
+      "chains list PR delivery order by actual merge ancestry (merge-base verified), not matrix depends_on order",
+      "matrix depends_on fields reference work-package dependencies; several are satisfied by chain merges (e.g. W4/W11 runtime deps land via chain_b merges into W20/W4C)",
+      "chain_b tail (#713/#717) includes real merge commits joining chain A, so the two chains are dependency-closed at W4C"
+    ],
+    "not_yet_opened": {
+      "OCA-W5": "no PR yet (deps W0/W0B satisfied by #680/#684)",
+      "OCA-W6": "no PR yet",
+      "OCA-W7": "no PR yet (deps W0A/W0B/W4 satisfied; formal benchmark lane)",
+      "OCA-W8": "no PR yet (blocked on W4/W5/W7/W10/W11 deliveries)",
+      "OCA-W9": "no PR yet (conditional)",
+      "OCA-W12": "no PR yet (deps satisfied; recommended next)",
+      "OCA-W16": "no PR yet (deps W0B/W15 satisfied via chain B)",
+      "OCA-W17": "no PR yet (deps W0B/W11/W12; W12 pending)",
+      "OCA-W19": "no PR yet (conditional)"
+    }
   }
 }

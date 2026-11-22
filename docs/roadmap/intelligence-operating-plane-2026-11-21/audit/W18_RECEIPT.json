@@ -1,0 +1,52 @@
+{
+ "base_main_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+ "blockers": [
+  "PRE_EXISTING_WINDOWS_ASYNCIO (unchanged)",
+  "W7 formal benchmark lane pending"
+ ],
+ "branch": "codex/oca-w18-verification-2026-11-22",
+ "checks": {
+  "always_run_overrides_quarantine": true,
+  "format_targets_registered": 3,
+  "quality_gates": {
+   "black": "PASS",
+   "flake8": "PASS",
+   "mypy": "PASS",
+   "quality_gate_script": "PASS"
+  },
+  "quarantine_auto_lifts_on_expiry": true,
+  "quarantine_owner_and_expiry_required": true,
+  "symbol_to_tests_from_graph_edges": "TESTED_BY evidence vs TEST_CANDIDATE PROPOSED separated, never conflated",
+  "w18_tests": {
+   "failed": 0,
+   "passed": 3
+  },
+  "w7_formal_benchmark_dependency": "pending (W7 lane not yet dispatched); retrieval benchmark receipts exist from W0B2/W4B"
+ },
+ "date": "2026-11-22",
+ "deliverables": [
+  "src/intelligence/verification/__init__.py",
+  "src/intelligence/verification/selection.py",
+  "tests/intelligence/test_verification.py"
+ ],
+ "four_levels": {
+  "DOMAIN_GRAPH_COMPLETE": "partial (W4C pending)",
+  "INVENTORY_COMPLETE": "unchanged",
+  "RUNTIME_LINEAGE_COMPLETE": "partial (vertical WIRED via W10; full-bot claim forbidden)",
+  "STRUCTURAL_GRAPH_COMPLETE": "unchanged per-language"
+ },
+ "lane": "OCA-W18",
+ "related": {
+  "design_pr": 666,
+  "w15_pr": 707
+ },
+ "safety": {
+  "execution_authority": "NONE",
+  "live": "HARD_DENIED",
+  "merge_authority": "HUMAN_ONLY",
+  "send_enabled": false,
+  "sign_enabled": false
+ },
+ "schema": "studious-pancake.lane-receipt.v1",
+ "stacked_on": "codex/oca-w15-temporal-ontology-2026-11-22 (PR #707, unmerged)"
+}

@@ -399,14 +399,18 @@
         "OperationEpisode projection",
         "deterministic evidence join",
         "operation trace replay tests",
-        "coverage/unknown report"
+        "coverage/unknown report",
+        "operation/stage/function metric projection over canonical EventEnvelope, observation, episode and reconciliation refs",
+        "deterministic per-operation diagnostic timeline with exact callsite/symbol, cohort and missing-join coverage"
       ],
       "acceptance": [
         "Reads EventEnvelope, AGG-02, MarketObservation and MarketEpisode canonical owners",
         "No raw market or observability store is duplicated",
         "Join is deterministic and reproducible from pinned repo/data versions",
         "Unmatched/ambiguous relations remain UNKNOWN",
-        "Terminal outcomes require authoritative reconciliation evidence"
+        "Terminal outcomes require authoritative reconciliation evidence",
+        "OperationEpisode preserves metric denominators, units, event-time/recorded-time and repo/config generations; aggregate results are reproducible from pinned source evidence",
+        "Technical stage metrics, simulated outcomes and authoritative reconciled outcomes remain separate typed dimensions"
       ]
     },
     {
@@ -669,7 +673,10 @@
         "capture coverage and latency/drop/lag report",
         "coverage matrix for every currently supported strategy/provider/venue/flash-capital route and lifecycle stage (WIRED / PARTIAL / NO_RUNTIME_PATH / BLOCKED / UNKNOWN)",
         "continuous bounded runtime capture lifecycle for configured supported paper/shadow collectors (start/stop/health/reconnect/backfill/checkpoint), reusing existing stream/journal owners",
-        "long-running capture soak report with event-to-store lag, queue/backpressure, provider/source freshness and loss/gap accounting"
+        "long-running capture soak report with event-to-store lag, queue/backpressure, provider/source freshness and loss/gap accounting",
+        "per-stage and per-stable-callsite invocation measurements: count/denominator, duration, queue wait, success/error/retry/timeout/cancel and reason codes",
+        "input/output counts, contract/normalization failures, freshness/gap/duplicate/loss and durable-capture health where measured",
+        "strategy/function diagnostic evidence fields with explicit UNKNOWN and LOW_SAMPLE rather than inferred zero values"
       ],
       "acceptance": [
         "W0 proves the existing production producer paths before changes are made",
@@ -689,7 +696,10 @@
         "Trace and source data include occurred_at, recorded_at, repo SHA and strategy/config generation so as-of reconstruction is possible",
         "When a supported paper/shadow runtime is running, operation events and configured decision-relevant market observations continue to be captured across repeated cycles/reconnects; one-shot capture is not presented as continuous streaming",
         "Run a bounded long-running soak and restart/reconnect/backfill test; measure capture lag and prove no silent loss of critical decision events",
-        "If an upstream source only supports bounded polling or one-shot reads, the source capability is explicitly marked POLL_ONLY / ONE_SHOT / STREAMING with cadence, limits, freshness and coverage; do not claim full-network or true stream capture"
+        "If an upstream source only supports bounded polling or one-shot reads, the source capability is explicitly marked POLL_ONLY / ONE_SHOT / STREAMING with cadence, limits, freshness and coverage; do not claim full-network or true stream capture",
+        "Function/stage technical health metrics are emitted only at proven supported producer boundaries and join to exact callsite/symbol, strategy/version, repo SHA and config generation where available",
+        "Observed runtime association is never represented as causal root cause without a controlled test/replay; upstream provider, queue, market and capital alternatives remain visible",
+        "Missing telemetry, absent calls and unsupported routes are NOT_OBSERVED/UNKNOWN, never zero errors or proof of healthy execution"
       ],
       "scope_note": "W0 must enumerate the exact existing producer files. Any producer file outside the new adapter directories must be added as an explicit allowlisted touch path with owner/test impact; do not widen to whole src/strategy."
     },
@@ -876,7 +886,9 @@
         "bitemporal fields valid_from/valid_to, recorded_at and source_event_time plus repo SHA/blob, config generation, schema and ontology versions",
         "edge provenance, source/evidence refs, resolver/producer version, confidence and verification states",
         "as-of repo SHA + operation-time queries and schema/ontology migration receipts",
-        "graph reconciliation for dangling, stale, duplicate, contradictory and invalid-time nodes/edges"
+        "graph reconciliation for dangling, stale, duplicate, contradictory and invalid-time nodes/edges",
+        "typed runtime invocation/stage-measurement nodes and provenance-backed edges from operation/episode to callsite/symbol, provider/observation and outcome",
+        "time- and generation-bound diagnostic metric/baseline cohort references with explicit coverage and confidence state"
       ],
       "acceptance": [
         "A static CALLS edge is never represented as runtime-observed execution",
@@ -884,7 +896,9 @@
         "Historical episode reconstruction resolves the strategy/config/schema/provider/code version actually valid at the time",
         "Schema migrations are deterministic, reversible or have a verified forward-recovery plan, and preserve evidence references",
         "Graph is a derived projection; canonical facts stay with existing owners",
-        "Full reconciliation can detect and report incremental graph drift"
+        "Full reconciliation can detect and report incremental graph drift",
+        "Runtime invocation edges require actual producer/trace evidence; static CALLS edges cannot satisfy function-execution coverage",
+        "Diagnostic graph preserves distinction between OBSERVED_ANOMALY, ASSOCIATED_STAGE, ROOT_CAUSE_HYPOTHESIS and controlled/proven causality"
       ]
     },
     {
@@ -981,7 +995,9 @@
         "flaky test registry with owner, history, pass rate and quarantine reason",
         "failure minimization/shrinking for reproducible failures and targeted mutation testing for high-risk invariants",
         "AST structural audit rules and breaking schema/API/contract diff gates",
-        "retrieval precision/recall, ambiguity, evidence completeness and omission-loss benchmark"
+        "retrieval precision/recall, ambiguity, evidence completeness and omission-loss benchmark",
+        "performance-diagnostic golden corpus and controlled fault-injection/replay benchmark for stage/function localization",
+        "false-attribution, low-sample handling, evidence precision/recall and critical-omission report"
       ],
       "acceptance": [
         "Test selection is an optimization and never permanently removes or suppresses critical tests",
@@ -990,7 +1006,70 @@
         "Failure shrinking preserves original case and hashes both original/minimized inputs",
         "Mutation testing is scoped to high-risk logic and reports surviving mutations",
         "Retrieval tests distinguish precision/recall, citation correctness, ambiguity and missing evidence",
-        "All benchmarks pin repo SHA, tool versions, corpus and result artifacts"
+        "All benchmarks pin repo SHA, tool versions, corpus and result artifacts",
+        "Injected stale data, cursor gaps, schema/decimal errors, timeouts, backpressure, persistence loss and simulation/reconciliation divergence map to the correct observed stage/callsite without false causal claims",
+        "No ranking or root-cause claim is emitted from insufficient samples, missing telemetry or static-only call edges"
+      ]
+    },
+    {
+      "id": "OCA-W20",
+      "name": "Strategy/function performance diagnostics and evidence-backed fault localization",
+      "priority": "P1",
+      "status": "BLOCKED_ON_W2_W10_W13_W14_W15_W18",
+      "depends_on": [
+        "OCA-W2",
+        "OCA-W10",
+        "OCA-W13",
+        "OCA-W14",
+        "OCA-W15",
+        "OCA-W18"
+      ],
+      "mode": "DERIVED_READ_ONLY_STRATEGY_FUNCTION_DIAGNOSTICS",
+      "exclusive_write_scope": [
+        "src/intelligence/performance_diagnostics/",
+        "tests/intelligence/test_performance_diagnostics*.py",
+        "benchmarks/performance_diagnostics/",
+        "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/performance-diagnostics/"
+      ],
+      "must_reuse": [
+        "src/observability/events.py",
+        "src/observability/store.py",
+        "src/observability/replay.py",
+        "src/agg02/storage.py",
+        "src/market/observations.py",
+        "src/intelligence/operation_context/",
+        "src/intelligence/temporal_ontology/",
+        "src/intelligence/logsites/",
+        "src/strategy",
+        "src/economics/flash_capital_graph",
+        "src/paper_shadow"
+      ],
+      "deliverables": [
+        "read-only strategy/version → operation/episode → stage → stable callsite/symbol → input/output evidence → provider/capital → simulation/reconciliation outcome diagnostic projection",
+        "cohort-aware function/stage metrics: invocation denominators, success/error/retry/timeout, latency quantiles, queue wait, data-quality and capture-loss measures",
+        "separate technical-health and financial-outcome comparisons with units, decimals and evidence refs",
+        "baseline cohort definition and sample-size/coverage/confidence reporting",
+        "anomaly and root-cause hypothesis model that distinguishes observed association from controlled causal evidence",
+        "bounded CLI/query interface and performance_diagnostics operation inside web3_data_trace; no third MCP schema",
+        "golden diagnostic corpus, controlled fault-injection/replay receipts and end-to-end supported offline/paper/shadow reconstruction"
+      ],
+      "acceptance": [
+        "Every reported function metric is bound to exact repo SHA, config generation, strategy/version, stable callsite/symbol and event/trace refs wherever those joins are proven",
+        "Only actual runtime observations establish invocation counts, latency and errors; static graph edges never imply a function ran",
+        "Every rate carries a denominator, period, cohort definition and coverage; low sample or missing telemetry returns LOW_SAMPLE/UNKNOWN rather than healthy/poor classification",
+        "Technical latency/reliability/data quality are kept distinct from strategy profitability and reconciled execution outcomes",
+        "Comparisons use compatible strategy/version/config/provider/chain/venue/capital and regime cohorts; mismatched cohorts are not ranked together",
+        "A function is not declared the cause of a bad outcome from correlation alone; causal status requires a reproducible controlled fault/replay or equivalent explicit evidence",
+        "Every anomaly links to exact operations, callsites, source/evidence refs and upstream/downstream alternatives",
+        "Durable event loss, missing joins and unsupported paths are explicit and block full-coverage claims",
+        "No critical decision/rejection/gap/correction/reconciliation/outcome event is sampled; all queues/backpressure remain bounded",
+        "End-to-end diagnostics can be reconstructed after restart from canonical owners on a real supported offline/paper/shadow vertical",
+        "No automatic parameter/code/provider/risk/financial/execution mutation, no LIVE authority, no signing/sending/borrowing/spending/deployment"
+      ],
+      "guardrails": [
+        "Derived read-only projection; no duplicate raw market, event, PnL or strategy database",
+        "No attribution claim without source/evidence refs and confidence class",
+        "Only one shared query backend for CLI/MCP/export; two existing compact Web3 MCP tool schemas remain the limit"
       ]
     },
     {
@@ -1149,7 +1228,8 @@
         "OCA-W11B",
         "OCA-W13",
         "OCA-W14",
-        "OCA-W15"
+        "OCA-W15",
+        "OCA-W20"
       ],
       "mode": "READ_ONLY_STRATEGY_AND_PROVIDER_RESEARCH_API",
       "exclusive_write_scope": [
@@ -1166,7 +1246,8 @@
         "provider_trace and flash_capital_trace operations over canonical source/provider/capital/observation owners",
         "operation_trace query operation with explicit W10/W2/W15 capability gate",
         "two compact read-only MCP tools (`strategy_research`, `web3_data_trace`) implementing six typed operations over the existing QueryBackend",
-        "Web3 strategy golden-question corpus and token/recall/citation/latency receipts"
+        "Web3 strategy golden-question corpus and token/recall/citation/latency receipts",
+        "performance_diagnostics query operation over the same read-only QueryBackend, exposing strategy/stage/function health, anomalies, baseline cohorts and exact evidence refs"
       ],
       "acceptance": [
         "All discovered candidates from canonical registries, source, configs, tests, fixtures, docs and permitted GitHub history appear in the catalogue or have explicit reason-coded exclusions/UNKNOWN state",
@@ -1178,7 +1259,8 @@
         "operation_trace returns UNAVAILABLE/PARTIAL until W10/W2/W15 supply real producer and join evidence",
         "All tools use the same backend as CLI/generic MCP/export; bounded pagination and continuation are deterministic",
         "Web3 golden set has zero critical omissions and zero fabricated runtime/provider/qualification claims",
-        "Token reduction is reported with recall, citation precision, critical omissions and latency using real tokenizer or labelled fallback"
+        "Token reduction is reported with recall, citation precision, critical omissions and latency using real tokenizer or labelled fallback",
+        "performance_diagnostics remains UNAVAILABLE/PARTIAL until W10/W2/W15/W20 provide real runtime measurements and valid joins; it never fabricates function health or causal attribution"
       ],
       "guardrails": [
         "Read-only only; no signing, sending, borrowing, spending, deployment, provider enablement, production mutation or LIVE authority",
@@ -2020,9 +2102,10 @@
       "strategy_compare",
       "provider_trace",
       "flash_capital_trace",
-      "operation_trace"
+      "operation_trace",
+      "performance_diagnostics"
     ],
-    "web3_domain_tool_schema_policy": "Two composite MCP schemas, six typed operations, one shared backend."
+    "web3_domain_tool_schema_policy": "Two composite MCP schemas, seven typed operations, one shared backend."
   },
   "full_repository_graph_and_mcp_expansion": {
     "document": "docs/roadmap/intelligence-operating-plane-2026-11-21/FULL_REPOSITORY_GRAPH_AND_MCP_EXPANSION_RU.md",
@@ -2133,7 +2216,7 @@
       "OCA-W11B",
       "OCA-W4C"
     ],
-    "runtime_gate": "operation_trace remains UNAVAILABLE/PARTIAL until OCA-W10/OCA-W2/OCA-W15 producer and temporal join evidence is verified",
+    "runtime_gate": "operation_trace and performance_diagnostics remain UNAVAILABLE/PARTIAL until OCA-W10/OCA-W2/OCA-W15/OCA-W20 producer, metric and temporal-join evidence is verified",
     "merge_policy": "human approval only; do not duplicate canonical owners or merge automatically",
     "operations": [
       "strategy_catalog",
@@ -2141,8 +2224,9 @@
       "strategy_compare",
       "provider_trace",
       "flash_capital_trace",
-      "operation_trace"
+      "operation_trace",
+      "performance_diagnostics"
     ],
-    "tool_schema_budget": "Expose 2 composite MCP tool schemas to reduce persistent tool-description token overhead; keep six typed internal operations."
+    "tool_schema_budget": "Expose 2 composite MCP tool schemas to reduce persistent tool-description token overhead; web3_data_trace supports provider_trace, flash_capital_trace, operation_trace and performance_diagnostics."
   }
 }

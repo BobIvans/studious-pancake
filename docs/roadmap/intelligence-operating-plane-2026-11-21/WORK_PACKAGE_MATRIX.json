@@ -2228,5 +2228,115 @@
       "performance_diagnostics"
     ],
     "tool_schema_budget": "Expose 2 composite MCP tool schemas to reduce persistent tool-description token overhead; web3_data_trace supports provider_trace, flash_capital_trace, operation_trace and performance_diagnostics."
+  },
+  "current_base_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+  "base_refreshed_at": "2026-11-22",
+  "implementation_delivery_crosswalk": {
+    "schema": "studious.oca.delivery-crosswalk.v1",
+    "note": "map of work packages to opened implementation PRs (all OPEN, none merged; human approval required)",
+    "deliveries": {
+      "OCA-W0": {
+        "pr": 680,
+        "state": "OPEN"
+      },
+      "OCA-W0A": {
+        "pr": 681,
+        "state": "OPEN"
+      },
+      "OCA-W0C": {
+        "pr": 682,
+        "state": "OPEN"
+      },
+      "OCA-W0B": {
+        "pr": 684,
+        "state": "OPEN"
+      },
+      "OCA-W4": {
+        "pr": 685,
+        "state": "OPEN"
+      },
+      "OCA-W11": {
+        "pr": 686,
+        "state": "OPEN"
+      },
+      "OCA-W1": {
+        "pr": 687,
+        "state": "OPEN"
+      },
+      "OCA-W3": {
+        "pr": 688,
+        "state": "OPEN"
+      },
+      "OCA-W13": {
+        "pr": 689,
+        "state": "OPEN"
+      },
+      "OCA-W14": {
+        "pr": 690,
+        "state": "OPEN"
+      },
+      "OCA-W0B2": {
+        "pr": 700,
+        "state": "OPEN"
+      },
+      "OCA-W4B": {
+        "pr": 702,
+        "state": "OPEN"
+      },
+      "OCA-W11B": {
+        "pr": 703,
+        "state": "OPEN"
+      },
+      "OCA-W2": {
+        "pr": 704,
+        "state": "OPEN"
+      },
+      "OCA-W10": {
+        "pr": 706,
+        "state": "OPEN"
+      },
+      "OCA-W15": {
+        "pr": 707,
+        "state": "OPEN"
+      },
+      "OCA-W18": {
+        "pr": 709,
+        "state": "OPEN"
+      },
+      "OCA-W20": {
+        "pr": 713,
+        "state": "OPEN"
+      },
+      "OCA-W4C": {
+        "pr": 717,
+        "state": "OPEN"
+      }
+    },
+    "chain_a": [
+      684,
+      685,
+      686,
+      700,
+      702,
+      703
+    ],
+    "chain_b": [
+      689,
+      690,
+      704,
+      707,
+      709,
+      706,
+      713,
+      717
+    ],
+    "independent": [
+      680,
+      681,
+      682,
+      687,
+      688,
+      689
+    ]
   }
 }

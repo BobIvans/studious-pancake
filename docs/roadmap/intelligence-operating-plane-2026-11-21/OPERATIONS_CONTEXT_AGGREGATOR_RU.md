@@ -2,7 +2,7 @@
 ## Спецификация runtime-корреляции, parallelism, storage и context packs
 
 **Дата исследования:** 2026-11-21  
-**Аудированный baseline:** main SHA ea204222df86a0697cc6bce0e9ec60f7db31ffd8  
+**Аудированный baseline:** main SHA ea204222df86a0697cc6bce0e9ec60f7db31ffd8 (исторический; актуальный main 0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54)  
 **Текущая продуктовая граница:** sender-free paper/shadow; LIVE hard-denied. Архитектура может подготовить доказуемую операционную картину для будущего live-approved runtime, но этот проект не добавляет live execution.
 
 ---

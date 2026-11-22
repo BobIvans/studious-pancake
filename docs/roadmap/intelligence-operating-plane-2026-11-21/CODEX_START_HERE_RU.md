@@ -3,7 +3,7 @@
 
 **Тип:** design + implementation handoff.  
 **Репозиторий:** BobIvans/studious-pancake.  
-**База аудита:** main = ea204222df86a0697cc6bce0e9ec60f7db31ffd8.  
+**База аудита:** main = ea204222df86a0697cc6bce0e9ec60f7db31ffd8 (историческая). **Актуальный main:** 0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54 (2026-11-22, ветка актуализирована merge'ом main).  
 **Режим:** read-only audit → additive integration → reviewable PRs.  
 **Не является разрешением на live trading, подпись, отправку транзакций или изменение production authority.**
 
@@ -65,7 +65,7 @@
 
 # 2. Что уже есть в Studious Pancake
 
-Аудит выполнен по GitHub main на SHA ea204222df86a0697cc6bce0e9ec60f7db31ffd8. В дереве было около 3,401 файлов: примерно 1,851 Python, 792 Markdown, 446 JSON и 145 YAML workflows. Это инвентаризация Git tree; содержимое всех файлов не было целиком прочитано.
+Аудит выполнен по GitHub main на SHA ea204222df86a0697cc6bce0e9ec60f7db31ffd8 (историческая база дизайна; актуальный main — 0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54, 3,447+ файлов после implementation PR). В исходном дереве было около 3,401 файлов: примерно 1,851 Python, 792 Markdown, 446 JSON и 145 YAML workflows. Это инвентаризация Git tree; содержимое всех файлов не было целиком прочитано.
 
 ## 2.1 Local Intelligence V2 уже реализован как кодовый контур
 

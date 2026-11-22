@@ -21,15 +21,16 @@
   },
   "platforms": [
     "linux",
-    "macos"
+    "macos",
+    "windows"
   ],
   "python": "3.13",
   "resolved_locks": {
     "requirements-dev.lock": {
-      "sha256": "b7249504334304da166483bbec3b4c20255814b1f7d1e06ca21880e0c2c29023"
+      "sha256": "94c5579e6428d55a565ae38975695a3c7d7ce6eeb2d660a532e1b6241fda8e2a"
     },
     "requirements.lock": {
-      "sha256": "6e77c8b1d8fd8e2a8e0018d4b0595c5ead9ad926f17579f974c633d57603339d"
+      "sha256": "ae5683b79eff8e87edb4d78224c1d461d0efadc841e566ad5b4337b9cbf78f4b"
     }
   },
   "resolver": {

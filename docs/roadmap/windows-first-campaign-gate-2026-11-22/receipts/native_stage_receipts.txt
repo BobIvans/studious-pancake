@@ -1,0 +1,6 @@
+powershell_inventory|0
+toolchain_inventory|0
+pip_check|0
+compileall|0
+verify_repo_skip_dependency_audit|1
+pytest_full_offline|1

@@ -6,6 +6,7 @@ commands, access the network, sign transactions, or grant live authority.
 
 from __future__ import annotations
 
+import contextlib
 from dataclasses import asdict, dataclass
 import hashlib
 import json
@@ -79,41 +80,42 @@ class OCCDurableLibrary:
         return connection
 
     def _initialize(self) -> None:
-        with self._connect() as connection:
-            connection.executescript("""
-                CREATE TABLE IF NOT EXISTS source_versions (
-                    namespace TEXT NOT NULL,
-                    source_id TEXT NOT NULL,
-                    version_sha256 TEXT NOT NULL,
-                    content_sha256 TEXT NOT NULL,
-                    content_text TEXT NOT NULL,
-                    byte_length INTEGER NOT NULL CHECK(byte_length >= 0),
-                    first_seen_event_seq INTEGER NOT NULL CHECK(first_seen_event_seq >= 1),
-                    PRIMARY KEY(namespace, source_id, version_sha256)
-                );
-                CREATE TABLE IF NOT EXISTS source_sync_events (
-                    namespace TEXT NOT NULL,
-                    source_id TEXT NOT NULL,
-                    event_seq INTEGER NOT NULL CHECK(event_seq >= 1),
-                    version_sha256 TEXT NOT NULL,
-                    previous_version_sha256 TEXT,
-                    outcome TEXT NOT NULL CHECK(outcome IN ('CREATED', 'UPDATED')),
-                    PRIMARY KEY(namespace, source_id, event_seq),
-                    FOREIGN KEY(namespace, source_id, version_sha256)
-                        REFERENCES source_versions(namespace, source_id, version_sha256)
-                        ON DELETE RESTRICT
-                );
-                CREATE TABLE IF NOT EXISTS source_heads (
-                    namespace TEXT NOT NULL,
-                    source_id TEXT NOT NULL,
-                    version_sha256 TEXT NOT NULL,
-                    event_seq INTEGER NOT NULL CHECK(event_seq >= 1),
-                    PRIMARY KEY(namespace, source_id),
-                    FOREIGN KEY(namespace, source_id, version_sha256)
-                        REFERENCES source_versions(namespace, source_id, version_sha256)
-                        ON DELETE RESTRICT
-                );
-                """)
+        with contextlib.closing(self._connect()) as connection:
+            with connection:
+                connection.executescript("""
+                    CREATE TABLE IF NOT EXISTS source_versions (
+                        namespace TEXT NOT NULL,
+                        source_id TEXT NOT NULL,
+                        version_sha256 TEXT NOT NULL,
+                        content_sha256 TEXT NOT NULL,
+                        content_text TEXT NOT NULL,
+                        byte_length INTEGER NOT NULL CHECK(byte_length >= 0),
+                        first_seen_event_seq INTEGER NOT NULL CHECK(first_seen_event_seq >= 1),
+                        PRIMARY KEY(namespace, source_id, version_sha256)
+                    );
+                    CREATE TABLE IF NOT EXISTS source_sync_events (
+                        namespace TEXT NOT NULL,
+                        source_id TEXT NOT NULL,
+                        event_seq INTEGER NOT NULL CHECK(event_seq >= 1),
+                        version_sha256 TEXT NOT NULL,
+                        previous_version_sha256 TEXT,
+                        outcome TEXT NOT NULL CHECK(outcome IN ('CREATED', 'UPDATED')),
+                        PRIMARY KEY(namespace, source_id, event_seq),
+                        FOREIGN KEY(namespace, source_id, version_sha256)
+                            REFERENCES source_versions(namespace, source_id, version_sha256)
+                            ON DELETE RESTRICT
+                    );
+                    CREATE TABLE IF NOT EXISTS source_heads (
+                        namespace TEXT NOT NULL,
+                        source_id TEXT NOT NULL,
+                        version_sha256 TEXT NOT NULL,
+                        event_seq INTEGER NOT NULL CHECK(event_seq >= 1),
+                        PRIMARY KEY(namespace, source_id),
+                        FOREIGN KEY(namespace, source_id, version_sha256)
+                            REFERENCES source_versions(namespace, source_id, version_sha256)
+                            ON DELETE RESTRICT
+                    );
+                    """)
 
     @staticmethod
     def _authorize(namespace: object, allowed_namespaces: Collection[str]) -> str:
@@ -244,7 +246,7 @@ class OCCDurableLibrary:
         namespace = self._authorize(namespace, allowed_namespaces)
         source_id = _identifier("source_id", source_id)
         version_sha256 = _sha256("version_sha256", version_sha256)
-        with self._connect() as connection:
+        with contextlib.closing(self._connect()) as connection, connection:
             row = connection.execute(
                 """
                 SELECT v.namespace, v.source_id, v.version_sha256,
@@ -281,7 +283,7 @@ class OCCDurableLibrary:
     ) -> SourceVersion:
         namespace = self._authorize(namespace, allowed_namespaces)
         source_id = _identifier("source_id", source_id)
-        with self._connect() as connection:
+        with contextlib.closing(self._connect()) as connection, connection:
             row = connection.execute(
                 """
                 SELECT version_sha256
@@ -326,7 +328,7 @@ class OCCDurableLibrary:
     ) -> tuple[Mapping[str, Any], ...]:
         namespace = self._authorize(namespace, allowed_namespaces)
         source_id = _identifier("source_id", source_id)
-        with self._connect() as connection:
+        with contextlib.closing(self._connect()) as connection, connection:
             rows = connection.execute(
                 """
                 SELECT event_seq, version_sha256, previous_version_sha256, outcome

@@ -426,3 +426,6 @@ tests/intelligence/test_strategy_requirements.py
 src/intelligence/operation_context/__init__.py
 src/intelligence/operation_context/projection.py
 tests/intelligence/test_operation_context.py
+src/intelligence/temporal_ontology/__init__.py
+src/intelligence/temporal_ontology/ontology.py
+tests/intelligence/test_temporal_ontology.py

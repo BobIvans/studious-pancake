@@ -189,17 +189,10 @@ def _plan_for(tmp_path: Path, source_config: Path, rpc) -> Path:
         "discovery_only": True,
         "source_semantics": {"dexscreener": "PUBLIC_DISCOVERY"},
         "source_method_allowlists": {"rpc-e2e": sorted(READ_RPC_METHODS)},
-        "offline_evidence": {
-            "journal_durability": {
-                "test_id": "tests/test_recoverable_stream_journal.py",
-                "receipt_sha256": "b" * 64,
-            },
-            "replay_zero_network": {
-                "test_id": "tests/test_mpr042_market_truth.py",
-                "receipt_sha256": "d" * 64,
-            },
-        },
     }
+    # NOTE: offline_evidence stays a top-level plan field; on this stack
+    (#694 base) it is not yet part of the signed payload binding (that is
+    PR #691 finding 4, stacked).
     envelope = SignedEnvelope(
         domain=APPROVAL_DOMAIN,
         schema_version="prequal.campaign-start-envelope.v1",

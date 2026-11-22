@@ -32,6 +32,10 @@ def _ref(scheme: str, locator: str):
     return SimpleNamespace(scheme=scheme, locator=locator)
 
 
+@pytest.mark.skipif(
+    os.name != "posix",
+    reason="TOCTOU premise is rename-while-open, which POSIX allows and Windows forbids",
+)
 def test_file_secret_path_swap_reads_original_descriptor(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

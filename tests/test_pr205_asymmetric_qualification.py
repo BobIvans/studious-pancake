@@ -259,6 +259,19 @@ def test_revoked_or_wrong_purpose_anchor_cannot_authorize_release() -> None:
     assert "TRUST_ANCHOR_USAGE_NOT_ALLOWED" in purpose_result.blockers
 
 
+def _symlink_privilege_available(tmp_path: Path) -> bool:
+    """Probe whether creating symlinks works (Windows needs a privilege)."""
+    probe_target = tmp_path / "symlink-probe-target"
+    probe_target.write_bytes(b"")
+    probe = tmp_path / "symlink-probe-link"
+    try:
+        probe.symlink_to(probe_target)
+        probe.unlink()
+        return True
+    except OSError:
+        return False
+
+
 def test_secure_artifact_reader_rejects_traversal_symlink_and_hardlink(
     tmp_path: Path,
 ) -> None:
@@ -273,9 +286,10 @@ def test_secure_artifact_reader_rejects_traversal_symlink_and_hardlink(
 
     target = tmp_path / "outside.json"
     target.write_text('{"outside": true}\n', encoding="utf-8")
-    (root / "link.json").symlink_to(target)
-    with pytest.raises(OSError):
-        read_json_object_under_root(root, "link.json")
+    if os.name == "posix" or _symlink_privilege_available(tmp_path):
+        (root / "link.json").symlink_to(target)
+        with pytest.raises(OSError):
+            read_json_object_under_root(root, "link.json")
 
     if hasattr(os, "link"):
         hardlink = root / "hardlink.json"

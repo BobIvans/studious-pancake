@@ -15,6 +15,7 @@ import hashlib
 import json
 from pathlib import Path
 import shutil
+import contextlib
 import sqlite3
 import time
 from typing import Protocol
@@ -549,8 +550,12 @@ class PR196RuntimeKernelStore:
         destination = Path(backup_path)
         destination.parent.mkdir(parents=True, exist_ok=True)
         tmp = destination.with_suffix(destination.suffix + ".tmp")
-        with sqlite3.connect(tmp) as target:
-            self.connection.backup(target)
+        # contextlib.closing is required: sqlite3.Connection.__exit__ commits
+        # but does NOT close, and Windows cannot replace a file that is still
+        # open (WinError 32). Same defect class as the WIN-03 OCC fix.
+        with contextlib.closing(sqlite3.connect(tmp)) as target:
+            with target:
+                self.connection.backup(target)
         tmp.replace(destination)
         manifest = PR196BackupManifest(
             PR196_SCHEMA_VERSION,
@@ -668,7 +673,10 @@ class PR196RuntimeKernelStore:
 
     def _require_fence(self, lease: PR196Lease, *, now_ns: int) -> None:
         record = self._attempt_required(lease.attempt_id)
-        if record.owner_id != lease.owner_id or record.fencing_token != lease.fencing_token:
+        if (
+            record.owner_id != lease.owner_id
+            or record.fencing_token != lease.fencing_token
+        ):
             raise PR196FenceLost("PR196_FENCE_TOKEN_LOST")
         if record.is_terminal:
             raise PR196FenceLost("PR196_ATTEMPT_ALREADY_TERMINAL")
@@ -860,9 +868,7 @@ def _attempt(row: sqlite3.Row) -> PR196AttemptRecord:
         PR196State(str(row["state"])),
         None if row["owner_id"] is None else str(row["owner_id"]),
         int(row["fencing_token"]),
-        None
-        if row["lease_expires_at_ns"] is None
-        else int(row["lease_expires_at_ns"]),
+        None if row["lease_expires_at_ns"] is None else int(row["lease_expires_at_ns"]),
         None if row["terminal_reason"] is None else str(row["terminal_reason"]),
         None if row["terminal_hash"] is None else str(row["terminal_hash"]),
     )

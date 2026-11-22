@@ -493,8 +493,9 @@ def _validate_trusted_file(path: Path, *, root: Path) -> None:
         raise ValueError("artifact path must not be hard-linked")
     if hasattr(os, "getuid") and st.st_uid != os.getuid():
         raise ValueError("artifact file owner mismatch")
-    mode = stat.S_IMODE(st.st_mode)
-    if mode & 0o077:
+    # Windows cannot express POSIX owner-only mode bits (chmod is a
+    # no-op); mode enforcement stays POSIX-only like the uid check above.
+    if os.name == "posix" and stat.S_IMODE(st.st_mode) & 0o077:
         raise ValueError("artifact file permissions must be 0600")
 
 
@@ -519,7 +520,7 @@ def _write_text_atomic(path: Path, text: str) -> None:
 def _fsync_directory(path: Path) -> None:
     if os.name == "nt":
         return
-    fd = os.open(path, os.O_RDONLY)
+    fd = os.open(path, os.O_RDONLY | getattr(os, "O_BINARY", 0))
     try:
         os.fsync(fd)
     finally:

@@ -51,7 +51,53 @@ Every claimed exact/rooted verdict: ≥2 separately operated providers/correlati
 - `external_data_spend_usd_max: 0`; first capture is **no-subscription / operator-approved free-tier only**; `rpc_physical_attempts_max: 0` until an operator-approved bounded profile exists; `storage_bytes_max: 0` until retention is approved.
 - Reference budgets recorded in `docs/roadmap/live-data-qualification-2026-11-21/LIVE_DATA_QUALIFICATION_BASELINE.json` on branch `agent/live-data-preflight-2026-11-21` — **`BASELINE_NOT_ON_BRANCH` (typed blocker; that file is not merged to main)**: `quote_input_raw_units=1000000`, `max_radar_reads=4`, `max_quote_reads=4`, `max_native_pools=1` (re-verify before any future capture run; they were a preflight baseline, not this campaign's grant).
 
-## S7 — Deterministic offline replay contract
+## S6.5 — Capture command (CAMPAIGN_START_V1 executable gate, post-#691)
+
+`S7` below is the **offline replay contract, not the capture command**. Capture is a
+separate, operator-authorized operation gated by the executable CAMPAIGN_START_V1
+implementation (`src/qualification_campaign/campaign_start_gate.py`, PR #691).
+
+Prerequisites (all fail closed before any transport/DNS/HTTP exists):
+1. Clean checkout: `git status --porcelain --untracked-files=normal` must be empty
+   (`CAMPAIGN_REQUIRES_CLEAN_CHECKOUT` otherwise).
+2. An approved campaign plan document (`prequal.campaign-plan.v2`) whose approval
+   payload binds the exact runtime manifest digest, repository/main SHA, source/profile
+   generations, budgets, retention and capture window, signed with Ed25519
+   (`SignedEnvelope`, verified via `TrustAnchorRegistry`, consumed once through the
+   campaign approval replay ledger).
+3. An operator trust-registry file with an ACTIVE anchor allowed for
+   `operator-approval` usage. With no active production anchor the gate returns
+   typed BLOCKED — capture stays impossible by design.
+4. Fresh docs pins: every source dossier `checked_at` within its TTL
+   (`SOURCE_DOCS_STALE_OR_FUTURE` otherwise).
+
+Command (PowerShell syntax; output directory MUST live outside the repository):
+
+```powershell
+..\.venv\Scripts\python.exe -m src.qualification_campaign.cli capture `
+  --source-config config/qualification/representative-sources.json `
+  --output D:\campaign-output-20261122 `
+  --rpc-profiles <approved-rpc-profiles.json> `
+  --verify-native 1 `
+  --campaign-plan <approved-campaign-plan.json> `
+  --trust-registry <operator-trust-registry.json>
+```
+
+Typed outcomes:
+- gate verdict `CAPTURE_AUTHORIZED` → the bounded read-only capture runs; results in
+  `<output>/report.json`; gate decision recorded as the first evidence event.
+- any other verdict (`PREFLIGHT_PASS` without a verifiable approval, or `BLOCKED`) →
+  `<output>/campaign-start-blocked.json` with `physical_network_attempts: 0`,
+  per-gate verdicts and typed blockers; CLI exit code 3. **Zero network attempts**
+  is asserted by the transport-boundary test suite.
+- CS-06 stays `CS06_PENDING_CAPTURE` after the gate; campaign qualification requires
+  real non-synthetic capture evidence with the required quorum — a passing start gate
+  is never a qualification PASS.
+
+Durable artifacts: `campaign-manifest.json`, `campaign-evidence.sqlite` (+blobs),
+`campaign-approval-ledger.sqlite`, `report.json`/`campaign-start-blocked.json`.
+
+## S7 — Deterministic offline replay contract (offline only; replay is NOT a capture operation)
 
 - Campaign replay: `python -m src.qualification_campaign.cli replay <output>` reads `campaign-manifest.json` + the durable sqlite journal and re-derives results **with zero outbound network calls** (`evidence.replay_network_calls_allowed: false`).
 - Radar/DIN replay: `python -m src.solana_parallel_radar.din_discovery --replay <dir> --output <new>` asserts `network_reads == 0` on completion.

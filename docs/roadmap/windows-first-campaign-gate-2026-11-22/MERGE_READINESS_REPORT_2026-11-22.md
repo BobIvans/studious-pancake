@@ -11,7 +11,7 @@ GitHub API: `mergeStateStatus=CLEAN`, `mergeable=MERGEABLE` для всех 10 P
 | #691 CAM-01+02 | `154e783f` | main @ `0a0c8ad9` | src/qualification_campaign/{campaign_start_gate.py*, approval_replay_ledger.py*, cli.py}, config/format_targets.txt, tests/test_cam01* (2) | PASS 27/27 | Draft/OPEN | MERGEABLE, CLEAN |
 | #692 WIN-01 | `9c81f706` | main @ `0a0c8ad9` | scripts/lock_requirements.py, requirements.lock, requirements-dev.lock, config/requirements-lock.json, tests/test_win01*, receipt, format_targets | PASS 7/7 | Draft/OPEN | MERGEABLE, CLEAN |
 | #693 WIN-02 | `63482e34` | main @ `0a0c8ad9` | tests/conftest.py, tests/test_win02*, receipt, format_targets | PASS 26/26 | Draft/OPEN | MERGEABLE, CLEAN |
-| #694 CAM-04 | `3d29f5b4` | **#691-branch @ `154e783f`** | src/qualification_campaign/{evidence.py, cli.py}, tests/test_cam04*, format_targets | PASS 19/19 | Draft/OPEN | MERGEABLE, CLEAN |
+| #694 CAM-04 | `6e11d25b` | **#691-branch @ `154e783f`** | src/qualification_campaign/{evidence.py, cli.py}, tests/test_cam04*, format_targets | PASS 19/19 | Ready/OPEN | MERGEABLE, CLEAN |
 | #695 WIN-03 | `dba369d7` | main @ `0a0c8ad9` | src/occ_durable_library.py, tests/test_win03*, receipt, format_targets | PASS 26/26 | Draft/OPEN | MERGEABLE, CLEAN |
 | #696 CAM-05 | `b1c00e74` | main @ `0a0c8ad9` | src/resources/schema_registry.json, tests/test_cam05*, format_targets | PASS 29/29 | Draft/OPEN | MERGEABLE, CLEAN |
 | #697 CAM-03 | `6e4492cc` | main @ `0a0c8ad9` | config/qualification/representative-sources.json, CAM_SOURCE_CROSSWALK_V1.md, tests/{test_cam03*, test_qpr03_source_intake.py}, format_targets | PASS 26/26 | Draft/OPEN | MERGEABLE, CLEAN |
@@ -69,6 +69,11 @@ GitHub `baseRefOid` #694 = `154e783f` = exact head #691 → rebase после и
 - **Native Windows receipt:** `docs/roadmap/windows-first-campaign-gate-2026-11-22/receipts/NATIVE_WINDOWS_RECEIPT_INTEGRATION_2026-11-22.md` на `integration/windows-receipt-2026-11-22` @ `80ddc7bc` (+ локальные копии стадийных логов/SHA-256/os_inventory в `.zcode/pr679/native-receipt/`).
 - **43 remaining failures:** exact test IDs — `receipts/.../failed_tests.txt` (тот же коммит); классификация по кластерам с root causes и owners в теле receipt: POSIX mode-bit/ACL → GPR-01a (platform/durability/management/config lanes); TON OpenAPI CRLF-фикстура → ton/r02 lane; 2 focused-фейла test_pr120 → WIN-04b.
 - Результаты верификации на SHA `7d3c693d`: pip check 0, compileall 0, quality_gate/validate_authority_map pass, **package_smoke PASS на Windows**, полный офлайн-suite 43 failed / 6217 passed / 9 skipped / **0 pytest-socket ошибок** (baseline 288F/327E устранён).
+
+## Addendum (2026-11-22, post owner-review)
+
+- **#694 обновлён до `6e11d25b`**: universal storage budget reservation для КАЖДОГО append (inline+blob), reconciliation после commit, manifest append под budget, approval ledger (+WAL/SHM) включён в единый `storage_bytes_max` scope. CI PASS 19/19. Security review addendum опубликован на #694 (risks R-A..R-D задекларированы).
+- Все 10 PR переведены в Ready for Review (#698 остаётся Draft/NOT FOR MERGE).
 
 ## 9. Блокеры реального CAPTURE_ONLY
 

@@ -103,7 +103,9 @@ class CampaignBudgets:
         )
 
 
-def prepare_event(source, campaign_id, payload, *, available_at_ns, observed_at_ns, previous_events):
+def prepare_event(
+    source, campaign_id, payload, *, available_at_ns, observed_at_ns, previous_events
+):
     """Build the exact event and its EXACT serialized row length.
 
     The row length replicates the journal INSERT serialization byte-for-byte

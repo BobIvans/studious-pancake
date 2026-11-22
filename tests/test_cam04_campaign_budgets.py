@@ -119,7 +119,6 @@ def test_storage_budget_exactly_at_limit_passes_one_byte_over_blocks(tmp_path):
         canonical_bytes({**blob_payload, "campaign_manifest_hash": cid})
     )
 
-
     def make_store(name, cap, *, journal=None):
         return CampaignEvidenceStore(
             journal or RecoverableStreamJournal(tmp_path / name),
@@ -325,26 +324,25 @@ def test_inline_payload_exact_limit_passes_one_byte_over_blocks(tmp_path):
             }
         )
     )
+    inline_payload = {"kind": "observation", "data": "z" * 4096}
     at_limit = CampaignEvidenceStore(
         store.journal,
         store.manifest,
         campaign_budgets=CampaignBudgets(
             rpc_physical_attempts_max=10,
             storage_bytes_max=store.campaign_storage_bytes()
-            + journal_growth_bound(inline_encoded, store.page_size),
+            + journal_growth_bound(_row_len(store, inline_payload), store.page_size),
             external_data_spend_usd_max=0,
         ),
     )
-    at_limit.append(
-        "probe", {"kind": "observation", "data": "z" * 4096}, observed_at_ns=2
-    )
+    at_limit.append("probe", inline_payload, observed_at_ns=2)
     tight = CampaignEvidenceStore(
         store.journal,
         store.manifest,
         campaign_budgets=CampaignBudgets(
             rpc_physical_attempts_max=10,
             storage_bytes_max=store.campaign_storage_bytes()
-            + journal_growth_bound(inline_encoded, store.page_size)
+            + journal_growth_bound(_row_len(store, inline_payload), store.page_size)
             - 1,
             external_data_spend_usd_max=0,
         ),

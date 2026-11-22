@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import socket
 
@@ -51,6 +52,10 @@ def test_blue_green_namespaces_and_ports_do_not_collide(tmp_path: Path) -> None:
     assert blue.management_port != green.management_port
 
 
+@pytest.mark.skipif(
+    os.name != "posix",
+    reason="premise is unlink-while-open, which POSIX allows and Windows forbids",
+)
 def test_cleanup_refuses_to_delete_replaced_generation_lock(tmp_path: Path) -> None:
     manifest = LocalResourceManifest.derive(_identity(), base_root=tmp_path)
     lease = LocalResourceLease(manifest).acquire()

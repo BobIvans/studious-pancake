@@ -71,9 +71,9 @@ Each discovered StrategyIdea/Family/Version gets a deterministic, evidence-linke
 
 Numerical thresholds and economic values must come from exact code/config/contracts/tests or authoritative qualification evidence. Never fill missing fees, decimals, slippage, capacity, freshness or profitability with plausible values.
 
-## 3. Six domain operations exposed through two bounded read-only Web3 MCP tools
+## 3. Seven domain operations exposed through two bounded read-only Web3 MCP tools
 
-Keep the existing generic MCP interface and add only **two** domain-specialized MCP tool schemas to limit permanent tool-description/token overhead. Each schema selects a typed operation. The six operations below all call the **same** query backend and canonical owner APIs; they do not create six engines or six databases.
+Keep the existing generic MCP interface and add only **two** domain-specialized MCP tool schemas to limit permanent tool-description/token overhead. Each schema selects a typed operation. The seven operations below all call the **same** query backend and canonical owner APIs; they do not create seven engines or seven databases.
 
 ### 3.1 strategy_research — operation `catalog`
 

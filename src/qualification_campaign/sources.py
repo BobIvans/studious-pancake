@@ -20,7 +20,7 @@ from src.provider_governance import (
 from src.routing.transport import SanitizedTransportError
 from .identity import digest
 from .profiles import ProviderProfile
-from .evidence import redact_payload
+from .evidence import EvidenceCommitError, redact_payload
 
 
 def _https(value):
@@ -364,6 +364,9 @@ class SourceIntakePlane:
             "classification": "DISCOVERY_ONLY",
             "quality_state": "pending",
             "raw_payload": None,
+            # Typed terminal/error result (DATA-01): exactly one value from
+            # the bounded result vocabulary, written before persistence.
+            "terminal_result": "PENDING",
         }
         candidates = ()
         rejections = {}
@@ -373,6 +376,7 @@ class SourceIntakePlane:
             )
             if admission_status["status"] == "BLOCKED":
                 envelope["failure_reason"] = ";".join(admission_status["reasons"])
+                envelope["terminal_result"] = "ADMISSION_BLOCKED"
                 raise ValueError("SOURCE_ADMISSION_BLOCKED")
             self.evidence.claim_attempt(profile)
             entitlement = self.governance.entitlement(profile.profile_id)
@@ -436,14 +440,25 @@ class SourceIntakePlane:
                         "accepted-with-rejections" if candidates else "schema-drift"
                     )
                 envelope["rejections"] = rejections
+                envelope["terminal_result"] = (
+                    "SCHEMA_DRIFT"
+                    if envelope["quality_state"] == "schema-drift"
+                    else ("ACCEPTED" if candidates else "EMPTY_RESPONSE")
+                )
             else:
                 envelope["quality_state"] = (
                     "rate-limited"
                     if status == 429
                     else "unauthorized" if status in (401, 403) else "http-error"
                 )
+                envelope["terminal_result"] = (
+                    "RATE_LIMITED"
+                    if status == 429
+                    else "UNAUTHORIZED" if status in (401, 403) else "HTTP_ERROR"
+                )
         except asyncio.CancelledError:
             envelope["quality_state"] = "cancelled"
+            envelope["terminal_result"] = "CANCELLED"
             raise
         except (
             ValueError,
@@ -457,9 +472,17 @@ class SourceIntakePlane:
             envelope.update(
                 error=type(exc).__name__, quality_state="schema-or-admission-error"
             )
+            if envelope.get("terminal_result") in (None, "PENDING"):
+                envelope["terminal_result"] = "SCHEMA_OR_ADMISSION_ERROR"
             if isinstance(exc, ProviderAdmissionError):
                 envelope["quality_state"] = "quota-or-admission-denied"
                 envelope["error_code"] = exc.code.value
+                envelope["terminal_result"] = "ADMISSION_DENIED"
+            if isinstance(exc, EvidenceCommitError):
+                # DATA-01: a failed evidence save is a typed blocker, never a
+                # soft quality state; it propagates instead of being recorded
+                # as a captured attempt.
+                raise
             if isinstance(exc, SanitizedTransportError):
                 envelope["failure_reason"] = str(exc)
                 if exc.status_code is not None:
@@ -478,6 +501,15 @@ class SourceIntakePlane:
                         else "timeout" if "timed out" in str(exc) else "transport-error"
                     )
                 )
+                envelope["terminal_result"] = (
+                    "RATE_LIMITED"
+                    if exc.status_code == 429
+                    else (
+                        "UNAUTHORIZED"
+                        if exc.status_code in (401, 403)
+                        else "TIMEOUT" if "timed out" in str(exc) else "TRANSPORT_ERROR"
+                    )
+                )
         finally:
             if envelope.get("http_status") is not None:
                 envelope["raw_payload_hash"] = digest(envelope["raw_payload"])
@@ -485,12 +517,22 @@ class SourceIntakePlane:
                     envelope["raw_payload_hash"] != envelope["response_hash"]
                 )
             envelope["available_at_ns"] = self.wall_ns()
-            observation_id = self.evidence.append(
-                dossier.source_id,
-                envelope,
-                observed_at_ns=started,
-                available_at_ns=envelope["available_at_ns"],
-            )
+            try:
+                observation_id = self.evidence.append(
+                    dossier.source_id,
+                    envelope,
+                    observed_at_ns=started,
+                    available_at_ns=envelope["available_at_ns"],
+                )
+            except EvidenceCommitError:
+                # DATA-01: never convert a failed durable save into a success
+                # receipt; the typed blocker propagates (no discarded save
+                # errors, no untraceable attempt).
+                raise
+            except (OSError, ValueError, KeyError, TypeError) as exc:
+                raise EvidenceCommitError(
+                    "EVIDENCE_COMMIT_BLOCKED", f"{type(exc).__name__}:{exc}"
+                ) from exc
         records = []
         for candidate in candidates:
             provenance = {

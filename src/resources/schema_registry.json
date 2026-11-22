@@ -952,7 +952,9 @@
                       "getFeeForMessage",
                       "getGenesisHash",
                       "getSlot",
-                      "getTransaction"
+                      "getTransaction",
+                      "getBlock",
+                      "getVersion"
                     ],
                     "type": "string"
                   },

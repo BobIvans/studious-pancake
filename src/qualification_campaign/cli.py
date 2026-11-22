@@ -36,6 +36,7 @@ from .evidence import (
     JOURNAL_CREATION_RESERVE_BYTES,
     LEDGER_CREATION_RESERVE_BYTES,
     LEDGER_TRANSACTION_RESERVE_BYTES,
+    journal_growth_bound,
     CampaignBudgets,
     artifact_footprint_bytes,
 )

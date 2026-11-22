@@ -19,14 +19,53 @@ from src.platform_compat.flock import fcntl
 from src.market.streams import RawStreamEvent, RecoverableStreamJournal
 from .identity import CampaignManifest, canonical_bytes, digest
 
-# Reservation overhead: projected bytes reserved per new retained event on
-# top of the encoded payload.  SQLite grows the database and its WAL in page
-# increments, so one append transaction can add a few pages of journal/WAL
-# bytes beyond the encoded payload; the slack bounds that single-transaction
-# growth.  Actual filesystem sizes are reconciled after commit: any
-# over-commitment fails closed (CAMPAIGN_STORAGE_BUDGET_EXCEEDED) and blocks
-# every subsequent reservation — the budget can never be silently exceeded.
-_STORAGE_RESERVATION_SLACK = 16384
+# STRICT STORAGE CEILING (owner security-closure item R-A): storage_bytes_max
+# is a strict physical ceiling.  Before ANY write, the reservation charges the
+# campaign footprint with an analytically derived worst-case bound of the
+# growth a single SQLite append transaction can produce, so the post-commit
+# actual footprint provably cannot exceed the approved cap:
+#
+#   journal_growth_bound(row_len, page) =
+#       row_len                                  # row content
+#       + page                                   # partial tail page in the DB file
+#       + (ceil(row_len / page) + 3) * (page + 24)
+#                                                # one WAL frame (page + 24 B
+#                                                # frame header) per modified
+#                                                # page: row pages + db-size
+#                                                # page + <= 2 index pages
+#
+# Auto-checkpoint only moves WAL frames back into the database file, so the
+# DB+WAL sum is conserved and the bound holds across checkpoints.  page_size
+# is read from the journal connection at runtime (PRAGMA page_size), never
+# assumed.  Post-commit reconciliation remains as a backstop: if an assumption
+# is ever violated, the over-commitment fails closed and blocks every
+# subsequent write — the budget can never be silently exceeded.
+_JOURNAL_WAL_FRAME_HEADER_BYTES = 24
+_JOURNAL_WAL_MARGIN_FRAMES = 3
+
+
+def journal_growth_bound(row_len: int, page_size: int) -> int:
+    """Conservative worst-case DB+WAL byte growth of one append transaction."""
+
+    if row_len <= 0 or page_size <= 0:
+        raise ValueError("journal growth bound requires positive sizes")
+    row_pages = -(-row_len // page_size)
+    wal_frames = row_pages + _JOURNAL_WAL_MARGIN_FRAMES
+    return (
+        row_len + page_size + wal_frames * (page_size + _JOURNAL_WAL_FRAME_HEADER_BYTES)
+    )
+
+
+def artifact_footprint_bytes(paths) -> int:
+    """Filesystem byte sum over an explicit path list (missing = 0, never assumed)."""
+
+    total = 0
+    for path in paths:
+        try:
+            total += path.stat().st_size
+        except FileNotFoundError:
+            pass
+    return total
 
 
 @dataclass(frozen=True)
@@ -71,6 +110,7 @@ class CampaignEvidenceStore:
         wall_ns=time.time_ns,
         campaign_budgets: CampaignBudgets | None = None,
         ledger_path: Path | None = None,
+        extra_artifacts: tuple[Path, ...] = (),
     ):
         self.wall_ns = wall_ns
         self.journal = journal
@@ -80,10 +120,16 @@ class CampaignEvidenceStore:
         # directory, so it is part of the SAME storage_bytes_max scope (no
         # separate limit/retention — the unified campaign budget covers it).
         self.ledger_path = Path(ledger_path) if ledger_path is not None else None
+        # Explicitly enumerated remaining campaign artifacts (e.g.
+        # campaign-manifest.json, campaign-start-blocked.json, report.json):
+        # the storage ceiling scope is the WHOLE campaign footprint and no
+        # campaign file is excluded from accounting.
+        self.extra_artifacts = tuple(Path(p) for p in extra_artifacts)
         db_path = journal.db.execute("PRAGMA database_list").fetchone()[2]
         self.db_path = Path(db_path)
         self.lock_path = Path(db_path + ".campaign-lock")
         self.blob_dir = Path(db_path + ".blobs")
+        self.page_size = int(journal.db.execute("PRAGMA page_size").fetchone()[0])
         retained = journal.events(available_at_ns=2**63 - 1)
         for e in retained:
             if e.partition != manifest.campaign_id:
@@ -99,13 +145,13 @@ class CampaignEvidenceStore:
         """Aggregate campaign artifact footprint (review point 4).
 
         Includes the journal database, its WAL/SHM sidecars, the campaign
-        lock file, every blob/staging file, and — when wired by the CLI —
-        the approval replay ledger database with its WAL/SHM sidecars.
+        lock file, every blob/staging file, the approval replay ledger
+        database with its WAL/SHM sidecars, and every explicitly enumerated
+        extra campaign artifact (manifest JSON, blocked receipt, report).
         Filesystem truth only; a missing file counts as zero, never as an
         assumed value.
         """
 
-        total = 0
         ledger_paths: tuple[Path, ...] = ()
         if self.ledger_path is not None:
             ledger_paths = (
@@ -113,20 +159,20 @@ class CampaignEvidenceStore:
                 Path(str(self.ledger_path) + "-wal"),
                 Path(str(self.ledger_path) + "-shm"),
             )
-        for path in (
-            self.db_path,
-            Path(str(self.db_path) + "-wal"),
-            Path(str(self.db_path) + "-shm"),
-            self.lock_path,
-            *ledger_paths,
-        ):
-            try:
-                total += path.stat().st_size
-            except FileNotFoundError:
-                pass
-        if self.blob_dir.exists():
-            total += sum(f.stat().st_size for f in self.blob_dir.glob("*"))
-        return total
+        return artifact_footprint_bytes(
+            (
+                self.db_path,
+                Path(str(self.db_path) + "-wal"),
+                Path(str(self.db_path) + "-shm"),
+                self.lock_path,
+                *ledger_paths,
+                *self.extra_artifacts,
+            )
+        ) + (
+            sum(f.stat().st_size for f in self.blob_dir.glob("*"))
+            if self.blob_dir.exists()
+            else 0
+        )
 
     def append(
         self,
@@ -172,23 +218,34 @@ class CampaignEvidenceStore:
         body = {**payload, "campaign_manifest_hash": self.manifest.campaign_id}
         stored = body
         encoded = canonical_bytes(body)
+        is_blob = len(encoded) > 750_000
+        if is_blob and len(encoded) > 16 * 1024 * 1024:
+            raise ValueError("EVIDENCE_BLOB_TOO_LARGE")
         if self.campaign_budgets is not None:
-            # Universal reservation for EVERY append, inline and blob alike
-            # (owner review CAM-04 fix): projected campaign footprint growth
-            # is reserved before any write under the same cross-process
-            # serialization.  storage_bytes_max is the single limit of the
-            # WHOLE campaign artifact footprint, including the approval
-            # replay ledger and its sidecars.
+            # STRICT PHYSICAL CEILING (owner security-closure R-A): reserve
+            # the worst-case growth of this append transaction, derived from
+            # the runtime page size, BEFORE any write.  For a blob append the
+            # blob file contributes exactly len(encoded) bytes and only a
+            # small reference event enters the journal.
+            reference_len = len(
+                canonical_bytes(
+                    {
+                        "kind": "blob_reference",
+                        "raw_payload_ref": digest(body),
+                        "raw_payload_hash": digest(body),
+                        "campaign_manifest_hash": self.manifest.campaign_id,
+                    }
+                )
+            )
+            row_len = reference_len if is_blob else len(encoded)
             projected = (
                 self.campaign_storage_bytes()
-                + len(encoded)
-                + _STORAGE_RESERVATION_SLACK
+                + (len(encoded) if is_blob else 0)
+                + journal_growth_bound(row_len, self.page_size)
             )
             if projected > self.campaign_budgets.storage_bytes_max:
                 raise ValueError("CAMPAIGN_STORAGE_BUDGET_EXHAUSTED")
-        if len(encoded) > 750_000:
-            if len(encoded) > 16 * 1024 * 1024:
-                raise ValueError("EVIDENCE_BLOB_TOO_LARGE")
+        if is_blob:
             self.blob_dir.mkdir(exist_ok=True)
             name = digest(body)
             target = self.blob_dir / (name + ".json")

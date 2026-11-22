@@ -31,7 +31,7 @@ from .campaign_start_gate import (
     load_campaign_plan,
     load_trust_registry,
 )
-from .evidence import CampaignBudgets
+from .evidence import CampaignBudgets, artifact_footprint_bytes
 from .identity import CampaignManifest, canonical_bytes, digest, manifest_from_dict
 from .profiles import ProviderProfile, public_rpc_profile
 from .evidence import CampaignEvidenceStore
@@ -245,10 +245,20 @@ async def capture(
     # CAMPAIGN_START_V1: executable fail-closed gate BEFORE any transport,
     # DNS or physical request exists.  A rejected start returns a typed
     # blocked receipt with instrumented zero physical network attempts.
+    # The strict storage ceiling is enforced around the approval ledger as
+    # well: the manifest artifact must fit the budget before the ledger is
+    # created, and the ledger's own growth (reserve + finalize) must still
+    # fit it before any evidence store or transport exists.
+    budgets = CampaignBudgets.from_plan_budgets(
+        load_campaign_plan(campaign_plan).budgets
+    )
+    ledger_path = output / "campaign-approval-ledger.sqlite"
+    if artifact_footprint_bytes([manifest_path]) > budgets.storage_bytes_max:
+        raise ValueError("CAMPAIGN_STORAGE_BUDGET_EXHAUSTED")
     try:
         plan = load_campaign_plan(campaign_plan)
         registry = load_trust_registry(trust_registry)
-        ledger = SQLiteApprovalReplayLedger(output / "campaign-approval-ledger.sqlite")
+        ledger = SQLiteApprovalReplayLedger(ledger_path)
         decision = evaluate_campaign_start_gate(
             manifest=manifest,
             plan=plan,
@@ -259,6 +269,24 @@ async def capture(
             ledger=ledger,
             now_ns=time.time_ns(),
         )
+        if decision.authorized:
+            ledger_sidecars = (
+                ledger_path,
+                Path(str(ledger_path) + "-wal"),
+                Path(str(ledger_path) + "-shm"),
+            )
+            if (
+                artifact_footprint_bytes([manifest_path, *ledger_sidecars])
+                > budgets.storage_bytes_max
+            ):
+                decision = GateDecision(
+                    phase=GatePhase.BLOCKED,
+                    verdicts=(),
+                    blockers=("CAMPAIGN_STORAGE_BUDGET_EXHAUSTED",),
+                    approval_receipt=None,
+                    manifest_digest=manifest.campaign_id,
+                    campaign_label=plan.campaign_label,
+                )
     except ValueError as exc:
         decision = GateDecision(
             phase=GatePhase.BLOCKED,
@@ -282,7 +310,8 @@ async def capture(
             journal,
             manifest,
             campaign_budgets=CampaignBudgets.from_plan_budgets(plan.budgets),
-            ledger_path=output / "campaign-approval-ledger.sqlite",
+            ledger_path=ledger_path,
+            extra_artifacts=(manifest_path,),
         )
         evidence.append(
             "campaign-start-gate",

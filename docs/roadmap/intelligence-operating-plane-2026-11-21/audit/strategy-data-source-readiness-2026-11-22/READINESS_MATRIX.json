@@ -2,16 +2,49 @@
   "schema": "studious.readiness.audit.v1",
   "date": "2026-11-22",
   "base_main_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
-  "design_source": {"pr": 666, "head": "bb38a1fe"},
-  "master_dependency_dag": {"pr": 683, "state": "OPEN_DRAFT", "role": "master dependency DAG"},
-  "campaign_start_owner": {"pr": 679, "state": "OPEN", "role": "CAMPAIGN_START/WIN owner"},
+  "design_source": {
+    "pr": 666,
+    "head": "68474f43",
+    "note": "final actualized #666 head (main 0a0c8ad9 merged + delivery crosswalk + review fixes); bb38a1fe retained as historical snapshot",
+    "historical_snapshot_sha": "bb38a1fe"
+  },
+  "master_dependency_dag": {
+    "pr": 683,
+    "state": "OPEN_DRAFT",
+    "role": "master dependency DAG"
+  },
+  "campaign_start_owner": {
+    "pr": 679,
+    "state": "OPEN",
+    "role": "CAMPAIGN_START/WIN owner"
+  },
   "scope": {
-    "strategy_verticals": ["solana-cpmm", "solana-clmm", "solana-dlmm"],
-    "capital_providers_separate": ["project0-marginfi", "jupiter-lend", "kamino"],
+    "strategy_verticals": [
+      "solana-cpmm",
+      "solana-clmm",
+      "solana-dlmm"
+    ],
+    "capital_providers_separate": [
+      "project0-marginfi",
+      "jupiter-lend",
+      "kamino"
+    ],
     "rule": "capital providers are evaluated as financing legs, never as market-liquidity evidence"
   },
-  "state_ladder": ["DECLARED", "DOCUMENTED", "IMPLEMENTED", "TESTED", "CAPTURED", "RUNTIME_OBSERVED"],
-  "source_modes": ["STREAMING", "POLL_ONLY", "ONE_SHOT", "UNAVAILABLE"],
+  "state_ladder": [
+    "DECLARED",
+    "DOCUMENTED",
+    "IMPLEMENTED",
+    "TESTED",
+    "CAPTURED",
+    "RUNTIME_OBSERVED"
+  ],
+  "source_modes": [
+    "STREAMING",
+    "POLL_ONLY",
+    "ONE_SHOT",
+    "UNAVAILABLE"
+  ],
   "rules": [
     "graph/catalogue/SDK presence/HTTP 200 are never live data capability",
     "no second graph/raw journal/quote engine/deduplicator created",
@@ -22,10 +55,29 @@
     {
       "strategy_id": "solana-cpmm-atomic",
       "path": "src/providers/raydium_cpmm_native.py",
-      "key_symbols": ["raydium_cpmm_native (exact-state owner)"],
-      "support_paths": ["src/direct_venue/cpmm_math.py", "src/strategy/exact_cpmm_capacity.py"],
-      "tests": ["tests/test_cpmm_fee_accounting.py", "tests/test_cpmm_split_replay.py", "tests/test_exact_cpmm_capacity.py", "tests/test_native_cpmm_qualification.py", "tests/meteora_dlmm_fixtures.py", "tests/native_cpmm_fixtures.py"],
-      "states": {"DECLARED": true, "DOCUMENTED": true, "IMPLEMENTED": true, "TESTED": true, "CAPTURED": false, "RUNTIME_OBSERVED": false},
+      "key_symbols": [
+        "raydium_cpmm_native (exact-state owner)"
+      ],
+      "support_paths": [
+        "src/direct_venue/cpmm_math.py",
+        "src/strategy/exact_cpmm_capacity.py"
+      ],
+      "tests": [
+        "tests/test_cpmm_fee_accounting.py",
+        "tests/test_cpmm_split_replay.py",
+        "tests/test_exact_cpmm_capacity.py",
+        "tests/test_native_cpmm_qualification.py",
+        "tests/meteora_dlmm_fixtures.py",
+        "tests/native_cpmm_fixtures.py"
+      ],
+      "states": {
+        "DECLARED": true,
+        "DOCUMENTED": true,
+        "IMPLEMENTED": true,
+        "TESTED": true,
+        "CAPTURED": false,
+        "RUNTIME_OBSERVED": false
+      },
       "source_mode": "ONE_SHOT",
       "capture_evidence": "src/market/native_cpmm_capture.py documented ONE_SHOT without subscriptions; historical live attempt = transport error + zero native snapshots (KB map §10)",
       "chain": {
@@ -41,16 +93,37 @@
         "durable capture cursor/gap journal for CPMM state",
         "reconciliation evidence for paper outcomes"
       ],
-      "blockers": ["BLOCKED_AUTHORIZATION (governed live reads)", "ONE_SHOT misreport risk (never report as STREAMING)"],
+      "blockers": [
+        "BLOCKED_AUTHORIZATION (governed live reads)",
+        "ONE_SHOT misreport risk (never report as STREAMING)"
+      ],
       "owner_lane": "P0-3-R / R-02 shared gate"
     },
     {
       "strategy_id": "solana-clmm-atomic",
       "path": "src/providers/raydium_clmm_native.py",
-      "key_symbols": ["raydium_clmm_native (CLMM exact-state owner)"],
-      "support_paths": ["tests/raydium_clmm_fixtures.py", "tests/test_raydium_clmm_meteora_dlmm_native.py", "tests/test_clmm_dlmm_quote_completion.py", "tests/test_clmm_dlmm_mixed_route_binding.py"],
-      "tests": ["tests/test_raydium_clmm_meteora_dlmm_native.py", "tests/test_clmm_dlmm_quote_completion.py", "tests/test_clmm_dlmm_mixed_route_binding.py"],
-      "states": {"DECLARED": true, "DOCUMENTED": true, "IMPLEMENTED": true, "TESTED": true, "CAPTURED": false, "RUNTIME_OBSERVED": false},
+      "key_symbols": [
+        "raydium_clmm_native (CLMM exact-state owner)"
+      ],
+      "support_paths": [
+        "tests/raydium_clmm_fixtures.py",
+        "tests/test_raydium_clmm_meteora_dlmm_native.py",
+        "tests/test_clmm_dlmm_quote_completion.py",
+        "tests/test_clmm_dlmm_mixed_route_binding.py"
+      ],
+      "tests": [
+        "tests/test_raydium_clmm_meteora_dlmm_native.py",
+        "tests/test_clmm_dlmm_quote_completion.py",
+        "tests/test_clmm_dlmm_mixed_route_binding.py"
+      ],
+      "states": {
+        "DECLARED": true,
+        "DOCUMENTED": true,
+        "IMPLEMENTED": true,
+        "TESTED": true,
+        "CAPTURED": false,
+        "RUNTIME_OBSERVED": false
+      },
       "source_mode": "UNAVAILABLE",
       "capture_evidence": "no CLMM capture owner on this main; tick/bin live state remains authorization-gated",
       "chain": {
@@ -61,17 +134,40 @@
         "decision": "IMPLEMENTED (shadow)",
         "paper_outcome": "UNKNOWN"
       },
-      "missing_joins": ["CLMM tick/bin state capture owner", "live quote gate", "observation promotion"],
-      "blockers": ["BLOCKED_AUTHORIZATION", "BLOCKED_MISSING_CAPTURE_OWNER"],
+      "missing_joins": [
+        "CLMM tick/bin state capture owner",
+        "live quote gate",
+        "observation promotion"
+      ],
+      "blockers": [
+        "BLOCKED_AUTHORIZATION",
+        "BLOCKED_MISSING_CAPTURE_OWNER"
+      ],
       "owner_lane": "P0-3-R"
     },
     {
       "strategy_id": "solana-dlmm-atomic",
       "path": "src/providers/meteora_dlmm_native.py",
-      "key_symbols": ["meteora_dlmm_native (DLMM bin-state owner)"],
-      "support_paths": ["tests/meteora_dlmm_fixtures.py", "tests/test_raydium_clmm_meteora_dlmm_native.py"],
-      "tests": ["tests/test_raydium_clmm_meteora_dlmm_native.py", "tests/test_clmm_dlmm_quote_completion.py", "tests/test_clmm_dlmm_mixed_route_binding.py"],
-      "states": {"DECLARED": true, "DOCUMENTED": true, "IMPLEMENTED": true, "TESTED": true, "CAPTURED": false, "RUNTIME_OBSERVED": false},
+      "key_symbols": [
+        "meteora_dlmm_native (DLMM bin-state owner)"
+      ],
+      "support_paths": [
+        "tests/meteora_dlmm_fixtures.py",
+        "tests/test_raydium_clmm_meteora_dlmm_native.py"
+      ],
+      "tests": [
+        "tests/test_raydium_clmm_meteora_dlmm_native.py",
+        "tests/test_clmm_dlmm_quote_completion.py",
+        "tests/test_clmm_dlmm_mixed_route_binding.py"
+      ],
+      "states": {
+        "DECLARED": true,
+        "DOCUMENTED": true,
+        "IMPLEMENTED": true,
+        "TESTED": true,
+        "CAPTURED": false,
+        "RUNTIME_OBSERVED": false
+      },
       "source_mode": "UNAVAILABLE",
       "capture_evidence": "no DLMM capture owner on this main; bin/live state remains authorization-gated",
       "chain": {
@@ -82,8 +178,15 @@
         "decision": "IMPLEMENTED (shadow)",
         "paper_outcome": "UNKNOWN"
       },
-      "missing_joins": ["DLMM bin capture owner", "live quote gate", "observation promotion"],
-      "blockers": ["BLOCKED_AUTHORIZATION", "BLOCKED_MISSING_CAPTURE_OWNER"],
+      "missing_joins": [
+        "DLMM bin capture owner",
+        "live quote gate",
+        "observation promotion"
+      ],
+      "blockers": [
+        "BLOCKED_AUTHORIZATION",
+        "BLOCKED_MISSING_CAPTURE_OWNER"
+      ],
       "owner_lane": "P0-3-R"
     }
   ],
@@ -91,41 +194,106 @@
     {
       "capital_id": "project0-marginfi",
       "path": "src/providers/marginfi/",
-      "support_paths": ["tests/test_mpr2602_full_flashloan_vertical.py", "tests/test_mpr2602_durable_provider.py", "tests/test_pr034_atomic_marginfi_jupiter.py", "tests/test_pr072_marginfi_verified_build_evidence.py", "tests/test_pr101_marginfi_complete_protocol_evidence.py", "tests/test_pr116_coherent_marginfi_snapshot_oracle.py"],
-      "states": {"DECLARED": true, "DOCUMENTED": true, "IMPLEMENTED": true, "TESTED": true, "CAPTURED": false, "RUNTIME_OBSERVED": false},
+      "support_paths": [
+        "tests/test_mpr2602_full_flashloan_vertical.py",
+        "tests/test_mpr2602_durable_provider.py",
+        "tests/test_pr034_atomic_marginfi_jupiter.py",
+        "tests/test_pr072_marginfi_verified_build_evidence.py",
+        "tests/test_pr101_marginfi_complete_protocol_evidence.py",
+        "tests/test_pr116_coherent_marginfi_snapshot_oracle.py"
+      ],
+      "states": {
+        "DECLARED": true,
+        "DOCUMENTED": true,
+        "IMPLEMENTED": true,
+        "TESTED": true,
+        "CAPTURED": false,
+        "RUNTIME_OBSERVED": false
+      },
       "source_mode": "UNAVAILABLE",
       "capacity_evidence": "effective flash capacity UNKNOWN (R-02 shared gate; never inferred from API max/TVL/vault balance)",
-      "missing_joins": ["governed rooted RPC read with independent quorum", "flash-fee/precision pinned capture"],
-      "blockers": ["BLOCKED_LIVE_EVIDENCE_GATE"],
+      "missing_joins": [
+        "governed rooted RPC read with independent quorum",
+        "flash-fee/precision pinned capture"
+      ],
+      "blockers": [
+        "BLOCKED_LIVE_EVIDENCE_GATE"
+      ],
       "owner_lane": "R-02 CAP-D"
     },
     {
       "capital_id": "jupiter-lend",
       "path": "src/lending/jupiter_lend.py",
-      "support_paths": ["tests/test_r03_jupiter_builder.py", "tests/test_mpr_next_08_jupiter_v2_contract.py", "tests/test_r03_kamino_builder.py"],
-      "states": {"DECLARED": true, "DOCUMENTED": true, "IMPLEMENTED": true, "TESTED": true, "CAPTURED": false, "RUNTIME_OBSERVED": false},
+      "support_paths": [
+        "tests/test_r03_jupiter_builder.py",
+        "tests/test_mpr_next_08_jupiter_v2_contract.py",
+        "tests/test_r03_kamino_builder.py"
+      ],
+      "states": {
+        "DECLARED": true,
+        "DOCUMENTED": true,
+        "IMPLEMENTED": true,
+        "TESTED": true,
+        "CAPTURED": false,
+        "RUNTIME_OBSERVED": false
+      },
       "source_mode": "UNAVAILABLE",
       "capacity_evidence": "PARTIAL_DECODED; effective capacity UNKNOWN (TASK_INDEX R-02 CAP-A)",
-      "missing_joins": ["admin/borrow/payback rooted evidence", "quota-governed live reads"],
-      "blockers": ["BLOCKED_LIVE_EVIDENCE_GATE"],
+      "missing_joins": [
+        "admin/borrow/payback rooted evidence",
+        "quota-governed live reads"
+      ],
+      "blockers": [
+        "BLOCKED_LIVE_EVIDENCE_GATE"
+      ],
       "owner_lane": "R-02 CAP-A"
     },
     {
       "capital_id": "kamino",
       "path": "src/lending/kamino.py",
-      "support_paths": ["src/lending/kamino_real_conformance.py", "src/lending/unsigned_builders/", "tests/test_r03_kamino_builder.py", "tests/test_r14_kamino_planner_wiring.py"],
-      "states": {"DECLARED": true, "DOCUMENTED": true, "IMPLEMENTED": true, "TESTED": true, "CAPTURED": false, "RUNTIME_OBSERVED": false},
+      "support_paths": [
+        "src/lending/kamino_real_conformance.py",
+        "src/lending/unsigned_builders/",
+        "tests/test_r03_kamino_builder.py",
+        "tests/test_r14_kamino_planner_wiring.py"
+      ],
+      "states": {
+        "DECLARED": true,
+        "DOCUMENTED": true,
+        "IMPLEMENTED": true,
+        "TESTED": true,
+        "CAPTURED": false,
+        "RUNTIME_OBSERVED": false
+      },
       "source_mode": "UNAVAILABLE",
       "capacity_evidence": "PARTIAL_DECODED; Kamino flash ABI unpinned (TASK_INDEX Track C)",
-      "missing_joins": ["generated flash borrow/repay module + IDL pin", "instruction-index remapping evidence", "reserve fee/rounding pin"],
-      "blockers": ["BLOCKED_MISSING_PIN (Kamino ABI/IDL)"],
+      "missing_joins": [
+        "generated flash borrow/repay module + IDL pin",
+        "instruction-index remapping evidence",
+        "reserve fee/rounding pin"
+      ],
+      "blockers": [
+        "BLOCKED_MISSING_PIN (Kamino ABI/IDL)"
+      ],
       "owner_lane": "R03-Kamino / R-02 CAP-B"
     }
   ],
   "provider_catalog_refs": {
-    "market_sources": {"path": "src/resources/market_source_catalog.json", "rows": 53, "enabled": 0},
-    "flash_capital_candidates": {"path": "docs/roadmap/r01-r02-live-capital-readers-2026-10-08/PROVIDER_CATALOG.json", "rows": 27, "enabled": 0, "status": "RND_ONLY_27_OPTIONS_ALL_DISABLED_NO_LIVE_CAPITAL"},
-    "offline_dossiers": ["docs/integrations/offline/solana-p0/", "docs/integrations/offline/providers-wave1-2026-11-13/"],
+    "market_sources": {
+      "path": "src/resources/market_source_catalog.json",
+      "rows": 53,
+      "enabled": 0
+    },
+    "flash_capital_candidates": {
+      "path": "docs/roadmap/r01-r02-live-capital-readers-2026-10-08/PROVIDER_CATALOG.json",
+      "rows": 27,
+      "enabled": 0,
+      "status": "RND_ONLY_27_OPTIONS_ALL_DISABLED_NO_LIVE_CAPITAL"
+    },
+    "offline_dossiers": [
+      "docs/integrations/offline/solana-p0/",
+      "docs/integrations/offline/providers-wave1-2026-11-13/"
+    ],
     "mode_note": "STREAMING: none wired; POLL_ONLY: public RPC/reference rows; ONE_SHOT: native CPMM capture; UNAVAILABLE: all flash-capital candidates"
   },
   "reconciliation_notes": {

@@ -258,6 +258,25 @@ class SQLiteAuthorizationReplayLedger:
                     );
                     CREATE INDEX IF NOT EXISTS idx_pr201_state_expiry
                     ON authorization_nonce_ledger(state, expires_at_ns);
+                    CREATE TABLE IF NOT EXISTS authorization_external_envelope_ledger(
+                      consumption_key TEXT PRIMARY KEY,
+                      envelope_domain TEXT NOT NULL,
+                      key_id TEXT NOT NULL,
+                      payload_sha256 TEXT NOT NULL,
+                      signature_base58 TEXT NOT NULL,
+                      state TEXT NOT NULL,
+                      reserved_operation_id TEXT,
+                      request_hash TEXT,
+                      result_kind TEXT,
+                      result_payload_json TEXT,
+                      result_sha256 TEXT,
+                      envelope_expires_at_ns INTEGER NOT NULL,
+                      updated_at_ns INTEGER NOT NULL,
+                      consumed_at_ns INTEGER,
+                      conflict_reason TEXT
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_pr201_ext_state_expiry
+                    ON authorization_external_envelope_ledger(state, envelope_expires_at_ns);
                     """)
                 connection.execute(
                     """INSERT INTO authorization_replay_meta VALUES(1, ?, ?)
@@ -533,6 +552,174 @@ class SQLiteAuthorizationReplayLedger:
             )
         except sqlite3.Error as exc:
             raise self._store_error("failed to read challenge", exc)
+
+    def reserve_external_envelope(
+        self,
+        *,
+        consumption_key: str,
+        envelope_domain: str,
+        key_id: str,
+        payload_sha256: str,
+        signature_base58: str,
+        envelope_expires_at_ns: int,
+        operation_id: str,
+        request_hash: str,
+        now_ns: int,
+    ) -> _Reservation:
+        """Durably reserve one external signed envelope as single-use.
+
+        Externally supplied envelopes (operator Ed25519) are not PR-201
+        challenges: without this binding, replaying the same envelope with a
+        freshly issued internal nonce would authorize a second operation.
+        """
+        _identifier("operation_id", operation_id)
+        _identifier("consumption_key", consumption_key)
+        try:
+            with self._connect() as connection:
+                connection.execute("BEGIN IMMEDIATE")
+                row = connection.execute(
+                    "SELECT * FROM authorization_external_envelope_ledger "
+                    "WHERE consumption_key=?",
+                    (consumption_key,),
+                ).fetchone()
+                if row is None:
+                    connection.execute(
+                        """INSERT INTO authorization_external_envelope_ledger(
+                          consumption_key, envelope_domain, key_id, payload_sha256,
+                          signature_base58, state, reserved_operation_id, request_hash,
+                          envelope_expires_at_ns, updated_at_ns
+                        ) VALUES(?,?,?,?,?,?,?,?,?,?)""",
+                        (
+                            consumption_key,
+                            envelope_domain,
+                            key_id,
+                            payload_sha256,
+                            signature_base58,
+                            ChallengeState.RESERVED.value,
+                            operation_id,
+                            request_hash,
+                            envelope_expires_at_ns,
+                            now_ns,
+                        ),
+                    )
+                    connection.execute("COMMIT")
+                    return _Reservation(True, operation_id)
+                state = ChallengeState(row["state"])
+                if state is ChallengeState.CONSUMED:
+                    if self._same_request(row, operation_id, request_hash):
+                        result = self._result(row)
+                        connection.execute("COMMIT")
+                        return _Reservation(False, operation_id, result)
+                    connection.execute("ROLLBACK")
+                    raise ReplayProtectionError(
+                        ReplayFailure.REPLAYED,
+                        "external envelope already authorized a different operation",
+                    )
+                if state is ChallengeState.RESERVED:
+                    connection.execute("ROLLBACK")
+                    failure = (
+                        ReplayFailure.IN_PROGRESS
+                        if self._same_request(row, operation_id, request_hash)
+                        else ReplayFailure.CONFLICTED
+                    )
+                    raise ReplayProtectionError(
+                        failure, "external envelope reservation is in progress"
+                    )
+                connection.execute("ROLLBACK")
+                raise ReplayProtectionError(
+                    (
+                        ReplayFailure.EXPIRED
+                        if state is ChallengeState.EXPIRED
+                        else ReplayFailure.CONFLICTED
+                    ),
+                    f"external envelope state is {state.value}",
+                )
+        except ReplayProtectionError:
+            raise
+        except sqlite3.Error as exc:
+            raise self._store_error("failed to reserve external envelope", exc)
+
+    def finalize_external_envelope(
+        self,
+        *,
+        consumption_key: str,
+        operation_id: str,
+        request_hash: str,
+        result: AuthorizationResult,
+        now_ns: int,
+    ) -> AuthorizationExecution:
+        result.validate()
+        try:
+            with self._connect() as connection:
+                connection.execute("BEGIN IMMEDIATE")
+                row = connection.execute(
+                    "SELECT * FROM authorization_external_envelope_ledger "
+                    "WHERE consumption_key=?",
+                    (consumption_key,),
+                ).fetchone()
+                if row is None:
+                    connection.execute("ROLLBACK")
+                    raise ReplayProtectionError(
+                        ReplayFailure.BAD_CHALLENGE,
+                        "external envelope reservation is absent",
+                    )
+                state = ChallengeState(row["state"])
+                if state is ChallengeState.CONSUMED:
+                    stored = self._result(row)
+                    if (
+                        self._same_request(row, operation_id, request_hash)
+                        and stored.result_sha256 == result.result_sha256
+                    ):
+                        connection.execute("COMMIT")
+                        return AuthorizationExecution(
+                            row["consumption_key"], operation_id, stored, True
+                        )
+                    connection.execute("ROLLBACK")
+                    raise ReplayProtectionError(
+                        ReplayFailure.REPLAYED,
+                        "external envelope result conflicts with consumed record",
+                    )
+                if state is not ChallengeState.RESERVED or not self._same_request(
+                    row, operation_id, request_hash
+                ):
+                    connection.execute("ROLLBACK")
+                    raise ReplayProtectionError(
+                        ReplayFailure.CONFLICTED,
+                        "external envelope finalization does not match reservation",
+                    )
+                updated = connection.execute(
+                    """UPDATE authorization_external_envelope_ledger
+                    SET state=?, result_kind=?, result_payload_json=?, result_sha256=?,
+                        consumed_at_ns=?, updated_at_ns=?
+                    WHERE consumption_key=? AND state=? AND reserved_operation_id=?
+                      AND request_hash=?""",
+                    (
+                        ChallengeState.CONSUMED.value,
+                        result.result_kind,
+                        result.payload_json,
+                        result.result_sha256,
+                        now_ns,
+                        now_ns,
+                        consumption_key,
+                        ChallengeState.RESERVED.value,
+                        operation_id,
+                        request_hash,
+                    ),
+                ).rowcount
+                if updated != 1:
+                    connection.execute("ROLLBACK")
+                    raise ReplayProtectionError(
+                        ReplayFailure.CONFLICTED,
+                        "external envelope compare-and-swap failed",
+                    )
+                connection.execute("COMMIT")
+                return AuthorizationExecution(
+                    consumption_key, operation_id, result, False
+                )
+        except ReplayProtectionError:
+            raise
+        except sqlite3.Error as exc:
+            raise self._store_error("failed to finalize external envelope", exc)
 
     @staticmethod
     def _row(connection: sqlite3.Connection, challenge_id: str) -> sqlite3.Row:

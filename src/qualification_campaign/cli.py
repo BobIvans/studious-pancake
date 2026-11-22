@@ -23,6 +23,14 @@ from src.provider_governance import ProviderGovernance
 from src.providers.raydium_cpmm_native import NativeCaptureError
 from src.routing.transport import TransportPolicy
 from src.strategy.exact_cpmm_capacity import RAYDIUM_CPMM_PROGRAM_ID
+from src.authorization_replay_pr201 import SQLiteAuthorizationReplayLedger
+from .campaign_start_gate import (
+    GateDecision,
+    GatePhase,
+    evaluate_campaign_start_gate,
+    load_campaign_plan,
+    load_trust_registry,
+)
 from .identity import CampaignManifest, canonical_bytes, digest, manifest_from_dict
 from .profiles import ProviderProfile, public_rpc_profile
 from .evidence import CampaignEvidenceStore
@@ -148,7 +156,38 @@ def report(evidence):
     }
 
 
-async def capture(source_config, output, rpc_profiles=None, verify_native=1):
+def blocked_start_report(decision: GateDecision) -> dict:
+    """Typed fail-closed outcome for a rejected campaign start: zero network."""
+
+    return {
+        "schema_version": "prequal.campaign-handoff.v1",
+        "campaign_id": decision.manifest_digest,
+        "campaign_label": decision.campaign_label,
+        "campaign_start_gate": decision.to_dict(),
+        "campaign_readiness": {
+            "target": "READ_ONLY_REAL_DATA_CAMPAIGN_V1",
+            "status": "BLOCKED",
+            "reasons": list(decision.blockers) or ["CAMPAIGN_START_NOT_AUTHORIZED"],
+        },
+        "qualification_verdict": "BLOCKED",
+        "production_promotion": False,
+        "physical_network_attempts": 0,
+        "candidate_count": 0,
+        "journal_head": 0,
+        "source_outcomes": {},
+        "negative_evidence": [],
+        "rpc_verdicts": [],
+    }
+
+
+async def capture(
+    source_config,
+    output,
+    rpc_profiles=None,
+    verify_native=1,
+    campaign_plan=None,
+    trust_registry=None,
+):
     sources = load_sources(source_config)
     rpcs = (
         tuple(ProviderProfile(**r) for r in json.loads(rpc_profiles.read_text()))
@@ -202,12 +241,50 @@ async def capture(source_config, output, rpc_profiles=None, verify_native=1):
             handle.write(canonical_bytes(manifest.to_dict()))
             handle.flush()
             os.fsync(handle.fileno())
+    # CAMPAIGN_START_V1: executable fail-closed gate BEFORE any transport,
+    # DNS or physical request exists.  A rejected start returns a typed
+    # blocked receipt with instrumented zero physical network attempts.
+    try:
+        plan = load_campaign_plan(campaign_plan)
+        registry = load_trust_registry(trust_registry)
+        ledger = SQLiteAuthorizationReplayLedger(
+            output / "campaign-approval-ledger.sqlite"
+        )
+        decision = evaluate_campaign_start_gate(
+            manifest=manifest,
+            plan=plan,
+            dossiers=[d for d, _ in sources],
+            adapters=[a for _, a in sources],
+            profiles=list(profiles),
+            registry=registry,
+            ledger=ledger,
+            now_ns=time.time_ns(),
+        )
+    except ValueError as exc:
+        decision = GateDecision(
+            phase=GatePhase.BLOCKED,
+            verdicts=(),
+            blockers=(str(exc),),
+            approval_receipt=None,
+            manifest_digest=manifest.campaign_id,
+            campaign_label="",
+        )
+    if not decision.authorized:
+        (output / "campaign-start-blocked.json").write_bytes(
+            canonical_bytes(blocked_start_report(decision))
+        )
+        return blocked_start_report(decision)
     async with AsyncExitStack() as stack:
         journal = RecoverableStreamJournal(
             output / "campaign-evidence.sqlite", max_events=10_000
         )
         stack.callback(journal.close)
         evidence = CampaignEvidenceStore(journal, manifest)
+        evidence.append(
+            "campaign-start-gate",
+            {"kind": "campaign_start_decision", "decision": decision.to_dict()},
+            observed_at_ns=time.time_ns(),
+        )
         store = stack.enter_context(
             UnifiedLifecycleAuthority(
                 output / "authority.sqlite",
@@ -374,6 +451,8 @@ def main(argv=None):
     c.add_argument("--output", type=Path, required=True)
     c.add_argument("--rpc-profiles", type=Path)
     c.add_argument("--verify-native", type=int, default=1)
+    c.add_argument("--campaign-plan", type=Path, required=True)
+    c.add_argument("--trust-registry", type=Path)
     r = sub.add_parser("replay")
     r.add_argument("--output", type=Path, required=True)
     t = sub.add_parser("intake-template")
@@ -393,6 +472,8 @@ def main(argv=None):
                     args.output,
                     args.rpc_profiles,
                     args.verify_native,
+                    args.campaign_plan,
+                    args.trust_registry,
                 )
             )
             if args.command == "capture"

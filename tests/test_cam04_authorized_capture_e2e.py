@@ -43,7 +43,9 @@ from src.security.trust_anchors import (
 pytestmark = pytest.mark.unit
 
 NOW = datetime.now(timezone.utc)
-APPROVAL_DOMAIN = "prequal.campaign-start-approval.v1"
+from src.qualification_campaign.campaign_start_gate import (  # noqa: E402
+    APPROVAL_DOMAIN,
+)
 
 
 def _origin_main_available() -> bool:

@@ -125,5 +125,5 @@ def test_capture_blocked_before_transport_constructed(tmp_path, monkeypatch):
     assert receipt.exists()
     parsed = json.loads(receipt.read_text())
     assert parsed["campaign_start_gate"]["phase"] == "BLOCKED"
-    assert parsed["physical_network_attempts"] == 0
-    assert parsed["blockers"]
+    assert parsed["campaign_start_gate"]["physical_network_attempts"] == 0
+    assert parsed["campaign_start_gate"]["blockers"]

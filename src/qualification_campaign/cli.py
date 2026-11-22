@@ -23,7 +23,7 @@ from src.provider_governance import ProviderGovernance
 from src.providers.raydium_cpmm_native import NativeCaptureError
 from src.routing.transport import TransportPolicy
 from src.strategy.exact_cpmm_capacity import RAYDIUM_CPMM_PROGRAM_ID
-from src.authorization_replay_pr201 import SQLiteAuthorizationReplayLedger
+from .approval_replay_ledger import SQLiteApprovalReplayLedger
 from .campaign_start_gate import (
     GateDecision,
     GatePhase,
@@ -247,9 +247,7 @@ async def capture(
     try:
         plan = load_campaign_plan(campaign_plan)
         registry = load_trust_registry(trust_registry)
-        ledger = SQLiteAuthorizationReplayLedger(
-            output / "campaign-approval-ledger.sqlite"
-        )
+        ledger = SQLiteApprovalReplayLedger(output / "campaign-approval-ledger.sqlite")
         decision = evaluate_campaign_start_gate(
             manifest=manifest,
             plan=plan,

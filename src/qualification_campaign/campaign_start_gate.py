@@ -21,7 +21,7 @@ The operator signature is an EXTERNAL Ed25519 envelope verified through the
 canonical trust-anchor owner (:mod:`src.security.trust_anchors`).  Single-use
 consumption of the external envelope is enforced durably through the
 PR-201 replay ledger owner (see
-``SQLiteAuthorizationReplayLedger.reserve_external_envelope``), keyed by the
+``SQLiteApprovalReplayLedger.reserve_external_envelope``), keyed by the
 canonical envelope fingerprint, so a replayed envelope cannot authorize a
 second operation with a fresh internal nonce.
 """
@@ -37,11 +37,6 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Mapping, Sequence, cast
 
-from src.authorization_replay_pr201 import (
-    AuthorizationResult,
-    ReplayProtectionError,
-    SQLiteAuthorizationReplayLedger,
-)
 from src.release_gate.asymmetric_qualification import (
     AsymmetricQualificationError,
     signed_envelope_from_dict,
@@ -52,6 +47,12 @@ from src.security.trust_anchors import (
     TrustAnchorRegistry,
     TrustUsage,
     signable_payload_bytes,
+)
+from .approval_replay_ledger import (
+    ApprovalReceipt,
+    ApprovalReplayError,
+    SQLiteApprovalReplayLedger,
+    external_envelope_consumption_key,
 )
 from .identity import CampaignManifest, digest
 
@@ -141,22 +142,18 @@ class GateDecision:
         }
 
 
-def external_envelope_consumption_key(
-    envelope: SignedEnvelope, payload_sha256: str
-) -> str:
+def consumption_key_for_envelope(envelope: SignedEnvelope, payload_sha256: str) -> str:
     """Canonical durable consumption key for one external signed envelope."""
 
-    fingerprint = {
-        "domain": "flashloan-bot/pr201/external-envelope-fingerprint",
-        "envelope_domain": envelope.domain,
-        "schema_version": envelope.schema_version,
-        "key_id": envelope.key_id,
-        "issued_at": envelope.issued_at.astimezone(timezone.utc).isoformat(),
-        "expires_at": envelope.expires_at.astimezone(timezone.utc).isoformat(),
-        "payload_sha256": payload_sha256,
-        "signature_base58": envelope.signature_base58,
-    }
-    return digest(fingerprint)
+    return external_envelope_consumption_key(
+        envelope_domain=envelope.domain,
+        schema_version=envelope.schema_version,
+        key_id=envelope.key_id,
+        issued_at_utc=envelope.issued_at.astimezone(timezone.utc).isoformat(),
+        expires_at_utc=envelope.expires_at.astimezone(timezone.utc).isoformat(),
+        payload_sha256=payload_sha256,
+        signature_base58=envelope.signature_base58,
+    )
 
 
 @dataclass(frozen=True)
@@ -383,7 +380,7 @@ def evaluate_campaign_start_gate(
     adapters: Sequence["CatalogDiscoveryAdapter"],
     profiles: Sequence["ProviderProfile"],
     registry: TrustAnchorRegistry | None,
-    ledger: SQLiteAuthorizationReplayLedger,
+    ledger: SQLiteApprovalReplayLedger,
     now_ns: int,
 ) -> GateDecision:
     """Fail-closed pre-network CAMPAIGN_START_V1 evaluation.
@@ -614,7 +611,7 @@ def evaluate_campaign_start_gate(
                 if not result.verified:
                     blockers.extend(result.blockers)
                 else:
-                    consumption_key = external_envelope_consumption_key(
+                    consumption_key = consumption_key_for_envelope(
                         envelope, result.payload_sha256
                     )
                     request_hash = digest(
@@ -650,7 +647,7 @@ def evaluate_campaign_start_gate(
                             consumption_key=consumption_key,
                             operation_id=manifest.campaign_id,
                             request_hash=request_hash,
-                            result=AuthorizationResult.from_payload(
+                            receipt=ApprovalReceipt.from_payload(
                                 "operator_campaign_start_approval", receipt_payload
                             ),
                             now_ns=now_ns,
@@ -658,10 +655,10 @@ def evaluate_campaign_start_gate(
                         approval_receipt = {
                             "consumption_key": consumption_key,
                             "key_id": envelope.key_id,
-                            "result_sha256": authorization.result.result_sha256,
+                            "result_sha256": authorization.receipt.result_sha256,
                             "replayed": authorization.replayed,
                         }
-                    except ReplayProtectionError as exc:
+                    except ApprovalReplayError as exc:
                         blockers.append(
                             "APPROVAL_ENVELOPE_REPLAY_PROTECTION:" + exc.failure.value
                         )
@@ -720,7 +717,7 @@ __all__ = [
     "GateVerdict",
     "CampaignPlan",
     "evaluate_campaign_start_gate",
-    "external_envelope_consumption_key",
+    "consumption_key_for_envelope",
     "load_campaign_plan",
     "load_trust_registry",
 ]

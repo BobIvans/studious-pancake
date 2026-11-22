@@ -7,12 +7,12 @@ from pathlib import Path
 
 import pytest
 
-from src.authorization_replay_pr201 import SQLiteAuthorizationReplayLedger
+from src.qualification_campaign.approval_replay_ledger import SQLiteApprovalReplayLedger
 from src.qualification_campaign.campaign_start_gate import (
     APPROVAL_DOMAIN,
     GatePhase,
+    consumption_key_for_envelope,
     evaluate_campaign_start_gate,
-    external_envelope_consumption_key,
     load_campaign_plan,
     load_trust_registry,
 )
@@ -270,7 +270,7 @@ def _registry(keypair) -> TrustAnchorRegistry:
 
 
 def _evaluate(tmp_path, manifest, dossier, plan, keypair, *, with_registry=True):
-    ledger = SQLiteAuthorizationReplayLedger(tmp_path / "approval-ledger.sqlite")
+    ledger = SQLiteApprovalReplayLedger(tmp_path / "approval-ledger.sqlite")
     loaded = load_plan_from_raw(plan)
     return evaluate_campaign_start_gate(
         manifest=manifest,
@@ -534,8 +534,12 @@ def test_consumption_key_is_stable_and_covers_signature(tmp_path):
         payload_sha256=envelope_fields["payload_sha256"],
         signature_base58=envelope_fields["signature_base58"],
     )
-    key1 = external_envelope_consumption_key(envelope, envelope.payload_sha256)
-    key2 = external_envelope_consumption_key(envelope, envelope.payload_sha256)
+    from src.qualification_campaign.campaign_start_gate import (
+        consumption_key_for_envelope,
+    )
+
+    key1 = consumption_key_for_envelope(envelope, envelope.payload_sha256)
+    key2 = consumption_key_for_envelope(envelope, envelope.payload_sha256)
     assert key1 == key2
     altered = SignedEnvelope(
         **{
@@ -545,7 +549,7 @@ def test_consumption_key_is_stable_and_covers_signature(tmp_path):
             "expires_at": datetime.fromisoformat(envelope_fields["expires_at"]),
         }
     )
-    assert external_envelope_consumption_key(altered, altered.payload_sha256) != key1
+    assert consumption_key_for_envelope(altered, altered.payload_sha256) != key1
 
 
 def test_load_trust_registry_rejects_garbage(tmp_path):

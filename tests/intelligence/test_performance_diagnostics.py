@@ -80,7 +80,7 @@ def test_low_sample_never_ranks(tmp_path: Path) -> None:
     result = build_diagnostics(
         store=adapter._store,
         repo_sha="0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
-        config_checksum="cfg",
+        config_checksum="vertical-config-v1",
         strategy_ref="fixture-small",
     )
     statuses = {
@@ -110,7 +110,7 @@ def test_fault_injection_localizes_with_causality_gate(tmp_path: Path) -> None:
     result = build_diagnostics(
         store=adapter._store,
         repo_sha="0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
-        config_checksum="cfg",
+        config_checksum="vertical-config-v1",
         strategy_ref="fixture-fault",
         baseline_cohort={"sample_size": 20, "error_rate": 0.0},
     )
@@ -131,7 +131,7 @@ def test_fault_injection_localizes_with_causality_gate(tmp_path: Path) -> None:
     result2 = build_diagnostics(
         store=adapter._store,
         repo_sha="0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
-        config_checksum="cfg",
+        config_checksum="vertical-config-v1",
         strategy_ref="fixture-fault",
         controlled_replay={"reproduced": True, "located_stage": "simulation"},
     )
@@ -141,7 +141,7 @@ def test_fault_injection_localizes_with_causality_gate(tmp_path: Path) -> None:
     result3 = build_diagnostics(
         store=adapter._store,
         repo_sha="0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
-        config_checksum="cfg",
+        config_checksum="vertical-config-v1",
         strategy_ref="fixture-fault",
         controlled_replay={
             "reproduced": True,
@@ -172,3 +172,81 @@ def test_replay_after_restart_reproduces_diagnostics(tmp_path: Path) -> None:
         strategy_ref="fixture-replay",
     )
     assert before == after
+
+
+def test_no_cross_cohort_contamination(tmp_path: Path) -> None:
+    """Adversarial: two strategies, two config generations, two routes and
+    UNATTRIBUTED events in one store. Each requested cohort must use only its
+    own attributed, generation-matching events."""
+    adapter = default_vertical_adapter(tmp_path / "events.sqlite")
+    # Cohort A: strategy-alpha @ generation alpha, route r-alpha, clean stages.
+    adapter._route = "r-alpha"
+    for index in range(2):
+        run_vertical(
+            adapter,
+            logical_opportunity_id=f"alpha-{index}",
+            strategy_ref="strategy-alpha",
+        )
+    # Cohort B: strategy-beta @ generation beta, route r-beta; simulation
+    # fails in 5 of 5 verticals (>= 5-sample threshold so the anomaly tier
+    # is reachable without violating LOW_SAMPLE honesty).
+    adapter._config_checksum = "gen-beta"
+    adapter._route = "r-beta"
+    for index in range(5):
+        for offset, stage in enumerate(
+            [
+                (EventType.opportunity_detected, Outcome.accepted, "candidate"),
+                (EventType.quote_received, Outcome.observed, "quote"),
+                (EventType.simulation_rejected, Outcome.rejected, "simulation"),
+            ]
+        ):
+            adapter.capture_stage(
+                logical_opportunity_id=f"beta-{index}",
+                sequence_no=offset + 1,
+                event_type=stage[0],
+                outcome=stage[1],
+                stage=stage[2],
+                critical=True,
+                strategy_ref="strategy-beta",
+            )
+    # UNATTRIBUTED noise events.
+    adapter.capture_stage(
+        logical_opportunity_id="noise-1",
+        sequence_no=1,
+        event_type=EventType.simulation_rejected,
+        outcome=Outcome.rejected,
+        stage="simulation",
+        critical=True,
+    )
+    result_alpha = build_diagnostics(
+        store=adapter._store,
+        repo_sha="0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+        config_checksum="vertical-config-v1",
+        strategy_ref="strategy-alpha",
+    )
+    result_beta = build_diagnostics(
+        store=adapter._store,
+        repo_sha="0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+        config_checksum="gen-beta",
+        strategy_ref="strategy-beta",
+    )
+    # Alpha: only its own 10 events; beta's failures and noise excluded.
+    alpha_health = result_alpha["sections"]["function_callsite_health"]
+    assert alpha_health["simulation"]["invocations_denominator"] == 2
+    assert alpha_health["simulation"]["errors"] == 0
+    assert result_alpha["cohort"]["excluded_other_strategy"] == 16
+    assert result_alpha["cohort"]["unattributed_kept_separate"] == 1
+    assert result_alpha["cohort"]["route"] == "r-alpha"
+    assert result_beta["cohort"]["route"] == "r-beta"
+    # Beta: only its own 9 events on generation beta.
+    beta_health = result_beta["sections"]["function_callsite_health"]
+    assert beta_health["simulation"]["invocations_denominator"] == 5
+    assert beta_health["simulation"]["errors"] == 5
+    assert result_beta["cohort"]["attribution_status"] == "ATTRIBUTED"
+    # No cross-contamination: alpha shows no anomaly, beta does.
+    alpha_statuses = {
+        f["status"] for f in result_alpha["sections"]["anomaly_candidates"]
+    }
+    assert STATUS_OBSERVED_ANOMALY not in alpha_statuses
+    beta_statuses = {f["status"] for f in result_beta["sections"]["anomaly_candidates"]}
+    assert STATUS_OBSERVED_ANOMALY in beta_statuses

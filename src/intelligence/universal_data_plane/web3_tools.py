@@ -71,6 +71,7 @@ def web3_data_trace(
     target_ref: str | None = None,
     static_callers: list[str] | None = None,
     repo_root: str | None = None,
+    config_checksum: str | None = None,
 ) -> dict[str, Any]:
     manifest = load_manifest(state_root, repo_sha)
     if action == "provider_trace":
@@ -169,7 +170,7 @@ def web3_data_trace(
         result = build_diagnostics(
             store=store,
             repo_sha=repo_sha,
-            config_checksum="unknown",
+            config_checksum=config_checksum or "unspecified",
             strategy_ref=strategy_ref or "unspecified",
             static_callers=static_callers,
         )

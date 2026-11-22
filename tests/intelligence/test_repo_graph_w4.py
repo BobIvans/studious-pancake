@@ -99,3 +99,52 @@ def test_task_type_boost_is_deterministic(fixture_repo: Path, tmp_path: Path) ->
     assert bug_view["task_type"] == "bug"
     assert generic_view["task_type"] == "generic"
     assert bug_view["included_refs"] == bug_view["included_refs"]
+
+
+def test_continuation_multi_page_no_repeats_no_skips(
+    fixture_repo: Path, tmp_path: Path
+) -> None:
+    """P2-B: a ranked candidate set larger than one page must paginate with
+    every expected ref returned exactly once and no empty page while
+    unprocessed candidates remain."""
+    from src.intelligence.repo_graph.graph_build import build_graph
+    from src.intelligence.repo_graph.service import QueryBackend, resolve_repo_sha
+
+    for index in range(30):
+        module = (
+            "def paginate_candidate_%d(value: str) -> str:\n"
+            "    return value + str(%d)\n" % (index, index)
+        )
+        (fixture_repo / "src" / "pkg" / f"pagetest_{index:02d}.py").write_text(
+            module, encoding="utf-8"
+        )
+    from tests.intelligence.test_repo_graph import _commit_all
+
+    _commit_all(fixture_repo, "pagination fixture")
+    root = tmp_path / "state"
+    receipt = build_graph(fixture_repo, root)
+    sha = receipt["repo_sha"]
+    backend = QueryBackend(str(root), str(fixture_repo))
+    task = "paginate candidate"
+    seen: list[str] = []
+    cursor = None
+    pages = 0
+    for _ in range(10):
+        envelope = backend.task_context(
+            task,
+            repo_sha=sha,
+            budget_tokens=8000,
+            continuation_cursor=cursor,
+        )
+        pages += 1
+        page_paths = [ref["path"] for ref in envelope["included_refs"]]
+        assert page_paths, "no empty page while unprocessed candidates remain"
+        seen.extend(page_paths)
+        cursor = envelope["continuation_cursor"]
+        if cursor is None:
+            break
+    assert pages >= 3, f"expected >=3 pages, got {pages}"
+    assert len(seen) == len(set(seen)), "repeated candidate across pages"
+    assert len(seen) == 30
+    delivered = {Path(path).name for path in seen}
+    assert len(delivered) == 30

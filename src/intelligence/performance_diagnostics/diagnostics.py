@@ -95,13 +95,16 @@ def build_diagnostics(
     for row in rows:
         record = {key: row[key] for key in row.keys()}
         record["outcome"] = str(record.get("outcome"))
-        # P2-1: strategy attribution comes from captured payload attributes
-        # (written by capture_stage), never guessed from names.
+        record["config_checksum"] = record.get("config_checksum")
+        # Strategy attribution, route and config generation come from the
+        # captured payload attributes / columns — never guessed from names.
         try:
             payload = json.loads(record.get("payload_json") or "{}")
-            record["strategy_ref"] = payload.get("attributes", {}).get("strategy_ref")
+            attributes = payload.get("attributes", {}) or {}
         except (ValueError, TypeError):
-            record["strategy_ref"] = None
+            attributes = {}
+        record["strategy_ref"] = attributes.get("strategy_ref")
+        record["route"] = attributes.get("route")
         events.append(record)
     if not events:
         return {
@@ -114,61 +117,114 @@ def build_diagnostics(
             "repo_sha": repo_sha,
         }
 
-    health = _stage_health(events)
-    # Cohort definition and compatibility (W20 §2.3).
-    first_payload: dict = {}
-    try:
-        first_payload = (
-            json.loads(events[0].get("payload_json") or "{}") if events else {}
-        )
-    except (ValueError, TypeError):
-        first_payload = {}
-    cohort_route = first_payload.get("attributes", {}).get("route") or "UNKNOWN"
+    # Cohort definition from captured evidence (W20 §2.3): the requested
+    # cohort binds strategy_ref AND config generation; UNATTRIBUTED events
+    # stay separate; route is used only when evidenced by the cohort itself.
     attributed: dict[str, int] = {}
     for event in events:
         key = event["strategy_ref"] or "UNATTRIBUTED"
         attributed[key] = attributed.get(key, 0) + 1
+    filtered = list(events)
+    excluded_other_strategy = 0
+    excluded_config_mismatch = 0
     if strategy_ref != "unspecified":
         attributed_count = attributed.get(strategy_ref, 0)
-        attribution_status = (
-            "ATTRIBUTED" if attributed_count else "INSUFFICIENT_EVIDENCE"
-        )
+        if attributed_count == 0:
+            cohort = {
+                "repo_sha": repo_sha,
+                "config_checksum": config_checksum,
+                "route": "UNKNOWN (no attributed events to evidence a route)",
+                "sample_size": 0,
+                "attribution_by_strategy_ref": dict(sorted(attributed.items())),
+                "requested_strategy_ref": strategy_ref,
+                "attribution_status": "INSUFFICIENT_EVIDENCE",
+            }
+            return {
+                "schema": SCHEMA,
+                "status": STATUS_INSUFFICIENT_EVIDENCE,
+                "strategy_ref": strategy_ref,
+                "repo_sha": repo_sha,
+                "cohort": cohort,
+                "unknowns": [
+                    "no events attributed to the requested strategy_ref; "
+                    "attribution must come from capture_stage(strategy_ref=...)"
+                ],
+            }
+        filtered = [e for e in filtered if e["strategy_ref"] == strategy_ref]
+        excluded_other_strategy = len(events) - attributed_count
+        # Config-generation binding: events whose recorded config_checksum
+        # differs from the requested generation leave the cohort (explicit
+        # count, never silently blended).
+        mismatched = [
+            e
+            for e in filtered
+            if e.get("config_checksum")
+            and config_checksum != "unspecified"
+            and e["config_checksum"] != config_checksum
+        ]
+        if mismatched:
+            excluded_config_mismatch = len(mismatched)
+            filtered = [e for e in filtered if e not in mismatched]
+        if not filtered:
+            cohort = {
+                "repo_sha": repo_sha,
+                "config_checksum": config_checksum,
+                "route": "UNKNOWN (all attributed events use a different config generation)",
+                "sample_size": 0,
+                "attribution_by_strategy_ref": dict(sorted(attributed.items())),
+                "requested_strategy_ref": strategy_ref,
+                "attribution_status": "ATTRIBUTED",
+                "excluded_config_mismatch": excluded_config_mismatch,
+            }
+            return {
+                "schema": SCHEMA,
+                "status": STATUS_INSUFFICIENT_EVIDENCE,
+                "strategy_ref": strategy_ref,
+                "repo_sha": repo_sha,
+                "cohort": cohort,
+                "unknowns": [
+                    "all attributed events use a different config generation; "
+                    "compatibility is UNKNOWN, never asserted across generations"
+                ],
+            }
+    routes: set[str] = {
+        str(route) for route in (e.get("route") for e in filtered) if route
+    }
+    if len(routes) == 1:
+        cohort_route = routes.pop()
+    elif len(routes) > 1:
+        cohort_route = "MIXED (" + ", ".join(sorted(routes)) + ")"
     else:
-        attribution_status = "UNFILTERED"
-        attributed_count = len(events)
+        cohort_route = "UNKNOWN (route not evidenced by cohort events)"
     cohort = {
         "repo_sha": repo_sha,
         "config_checksum": config_checksum,
         "route": cohort_route,
-        "compatibility": "COMPATIBLE_BASELINE (same repo SHA + config generation)",
-        "sample_size": len(events),
-        "low_sample": len(events) < _MIN_SAMPLE,
+        "compatibility": (
+            "COMPATIBLE_BASELINE (same repo SHA; config generation matches "
+            "every cohort event)"
+            if strategy_ref != "unspecified"
+            else "UNFILTERED view (all routes/strategies; no cohort assertion)"
+        ),
+        "sample_size": len(filtered),
+        "low_sample": len(filtered) < _MIN_SAMPLE,
         "attribution_by_strategy_ref": dict(sorted(attributed.items())),
         "requested_strategy_ref": strategy_ref,
-        "attribution_status": attribution_status,
+        "unattributed_kept_separate": attributed.get("UNATTRIBUTED", 0),
+        "excluded_other_strategy": excluded_other_strategy,
+        "excluded_config_mismatch": excluded_config_mismatch,
+        "attribution_status": (
+            "ATTRIBUTED" if strategy_ref != "unspecified" else "UNFILTERED"
+        ),
         "attribution_note": (
             "events without a captured strategy_ref stay UNATTRIBUTED and are "
             "never silently assigned to the requested cohort"
         ),
     }
-    if strategy_ref != "unspecified" and attributed_count == 0:
-        return {
-            "schema": SCHEMA,
-            "status": STATUS_INSUFFICIENT_EVIDENCE,
-            "strategy_ref": strategy_ref,
-            "repo_sha": repo_sha,
-            "cohort": cohort,
-            "unknowns": [
-                "no events attributed to the requested strategy_ref; "
-                "attribution must come from capture_stage(strategy_ref=...)"
-            ],
-        }
-    if strategy_ref != "unspecified" and attributed_count > 0:
-        # P2-1: the requested cohort's metrics cover only its attributed
-        # events; UNATTRIBUTED events are never silently mixed in.
-        events = [e for e in events if e["strategy_ref"] == strategy_ref]
-    cohort_route = first_payload.get("attributes", {}).get("route") or "UNKNOWN"
-    total_invocations = len(events)
+
+    # All metrics recomputed from the FILTERED cohort only.
+    health = _stage_health(filtered)
+    total_invocations = len(filtered)
     total_errors = sum(entry["errors"] for entry in health.values())
     unknown_stages = sorted(
         stage

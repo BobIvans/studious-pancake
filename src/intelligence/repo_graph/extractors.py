@@ -19,7 +19,7 @@ _HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.MULTILINE)
 _MD_LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
 _ADR_RE = re.compile(r"(ADR[-_ ]?\d+)", re.IGNORECASE)
 _ENV_NAME_RE = re.compile(r"^([A-Z][A-Z0-9_]+)=", re.MULTILINE)
-_DEP_PIN_RE = re.compile(r"^([A-Za-z0-9_.\[\]-]+)==([^\s\\]+)")
+_DEP_PIN_RE = re.compile(r"^([A-Za-z0-9_.\[\]-]+)==([^\s\\]+)", re.MULTILINE)
 
 
 def classify_artifact(path: str, snapshot_status: str) -> dict[str, str]:
@@ -202,8 +202,19 @@ def _extract_ini(path: str, data: bytes) -> dict[str, Any] | None:
 
 
 def _extract_dependency_pins(path: str, data: bytes) -> dict[str, Any] | None:
+    """Dependency pins with UTF-8 BYTE offsets (P2-6 class fix).
+
+    Character indices from the decoded-text regex are mapped back to byte
+    space so expand_context byte-range slicing returns the exact original
+    source bytes even when non-ASCII content precedes a pin.
+    """
+    text = data.decode("utf-8", "replace")
+
+    def byte_offset(char_index: int) -> int:
+        return len(text[:char_index].encode("utf-8"))
+
     nodes = []
-    for match in _DEP_PIN_RE.finditer(data.decode("utf-8", "replace")):
+    for match in _DEP_PIN_RE.finditer(text):
         package, pin = match.group(1), match.group(2)
         qualified = f"{package}=={pin}"
         nodes.append(
@@ -214,12 +225,12 @@ def _extract_dependency_pins(path: str, data: bytes) -> dict[str, Any] | None:
                 "kind": "dependency_pin",
                 "name": package,
                 "qualified_name": qualified,
-                "start_byte": match.start(),
-                "end_byte": match.end(),
+                "start_byte": byte_offset(match.start()),
+                "end_byte": byte_offset(match.end()),
             }
         )
     nodes.sort(key=lambda item: item["start_byte"])
-    return {"nodes": nodes, "parser": "regex-dependency-pins"}
+    return {"nodes": nodes, "parser": "regex-dependency-pins-utf8-bytes"}
 
 
 def _extract_markdown(path: str, data: bytes) -> dict[str, Any] | None:

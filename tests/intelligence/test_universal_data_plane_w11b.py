@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 from src.intelligence.repo_graph.graph_build import build_graph
 from src.intelligence.universal_data_plane.client_setup import (
@@ -204,3 +205,68 @@ def test_client_setup_and_connection_smoke(fixture_repo: Path, tmp_path: Path) -
     assert len(smoke["tools_listed"]) == 11
     # No global config writes: everything lives under the repo-local dir.
     assert ".repo-intel" in str(config)
+
+
+def test_json_rpc_boundary_survives_malformed_frames(
+    fixture_repo: Path, tmp_path: Path
+) -> None:
+    """P1: malformed frames return JSON-RPC errors (-32600/-32602) and the
+    server keeps serving valid requests afterwards."""
+    root = tmp_path / "state"
+    receipt = build_graph(fixture_repo, root)
+    sha = receipt["repo_sha"]
+    server = McpServer(UniversalDataPlane(str(root), str(fixture_repo)))
+    malformed: list[tuple[Any, int | None]] = [
+        ([1, 2, 3], -32600),
+        (None, -32600),
+        ("hello", -32600),
+        ({"jsonrpc": "2.0", "id": 1}, -32600),
+        ({"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": [1]}, -32602),
+        (
+            {
+                "jsonrpc": "2.0",
+                "id": 3,
+                "method": "tools/call",
+                "params": {"name": "task_context", "arguments": [1]},
+            },
+            -32602,
+        ),
+        (
+            {
+                "jsonrpc": "2.0",
+                "id": 4,
+                "method": "tools/call",
+                "params": {"name": "task_context", "arguments": {}},
+            },
+            -32602,
+        ),
+    ]
+    for frame, expected_code in malformed:
+        response = server.handle_message(frame)
+        assert response is not None, frame
+        assert response["error"]["code"] == expected_code, (frame, response)
+    # Unknown tool stays -32602.
+    unknown = server.handle_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 5,
+            "method": "tools/call",
+            "params": {"name": "shell_exec", "arguments": {}},
+        }
+    )
+    assert unknown is not None and unknown["error"]["code"] == -32602
+    # A valid request after every invalid one still succeeds.
+    valid = server.handle_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 6,
+            "method": "tools/call",
+            "params": {
+                "name": "task_context",
+                "arguments": {"task": "engine run normalise", "repo_sha": sha},
+            },
+        }
+    )
+    assert valid is not None and "error" not in valid
+    payload = json.loads(valid["result"]["content"][0]["text"])
+    assert payload["status"] in {"FRESH", "BUDGET_LIMITED"}

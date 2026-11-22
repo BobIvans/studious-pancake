@@ -181,3 +181,37 @@ def test_golden_multi_language_retrieval(polyglot_repo: Path, tmp_path: Path) ->
             ref["path"] for ref in envelope["omitted_refs"]
         }
         assert expected <= got, (task, expected, got)
+
+
+def test_dependency_pin_byte_offsets_with_non_ascii(tmp_path: Path) -> None:
+    """P2-C: non-ASCII content before a pin must not shift byte ranges —
+    expand_context byte slicing returns the exact original source bytes."""
+    from src.intelligence.repo_graph.extractors import extract_structured
+
+    # 7 multibyte characters (2 bytes each) precede the pin line.
+    content = "# комментарий — émojis ✅ before\norjson==3.11.0\n".encode("utf-8")
+    extracted = extract_structured("requirements.lock", content)
+    assert extracted is not None
+    assert extracted["parser"] == "regex-dependency-pins-utf8-bytes"
+    node = extracted["nodes"][0]
+    start, end = node["start_byte"], node["end_byte"]
+    assert content[start:end].decode("utf-8") == "orjson==3.11.0", (
+        start,
+        end,
+        content[start : end + 4],
+    )
+
+
+def test_markdown_byte_offsets_with_non_ascii(tmp_path: Path) -> None:
+    """P2-6: multibyte headings keep exact byte ranges too."""
+    from src.intelligence.repo_graph.extractors import extract_structured
+
+    content = "— é — ✅\n\n# Заголовок секции\n".encode("utf-8")
+    extracted = extract_structured("docs/notes.md", content)
+    heading = next(n for n in extracted["nodes"] if n["kind"] == "doc_heading")
+    text = content.decode("utf-8")
+    assert (
+        text.encode("utf-8")[heading["start_byte"] : heading["end_byte"]]
+        .decode("utf-8")
+        .startswith("#")
+    )

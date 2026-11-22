@@ -179,6 +179,7 @@ class QueryBackend:
         continuation_offset_base = 0
         ranked = self._rank(target, manifest, task, must_include, task_type)
         adapter, tokenizer_meta = resolve_tokenizer(token_profile)
+        ranked_total = len(ranked)
         if continuation_cursor:
             # P2-5: cursor binds task + SHA + budget + dimensions; offsets
             # beyond the ranked set are rejected instead of yielding empty.
@@ -202,7 +203,9 @@ class QueryBackend:
         slots = [("FULL", 2), ("SKELETON", 4), ("REFERENCE", 6)]
         slot_index = 0
         slot_remaining = slots[0][1]
+        processed = 0
         for ref in ranked:
+            processed += 1
             path = ref["path"]
             if path in excluded:
                 continue
@@ -217,10 +220,12 @@ class QueryBackend:
                 slot_index += 1
                 slot_remaining = slots[slot_index][1]
             if slot_remaining == 0:
-                payload["needs_expansion"] = True
-                payload["resolution"] = "NEEDS_EXPANSION"
-                omitted.append(payload)
-                continue
+                # P2-B: resolution slots exhausted — remaining ranked
+                # candidates stay UNPROCESSED for the next continuation page
+                # (cursor offset points at this exact position). They are
+                # neither dropped nor duplicated into expansion refs.
+                processed -= 1
+                break
             resolution = slots[slot_index][0]
             slot_remaining -= 1
             data = _load_snapshot_blob(
@@ -260,9 +265,9 @@ class QueryBackend:
                         tuple(sorted(must_include)),
                         tuple(sorted(excluded)),
                     ),
-                    "offset": continuation_offset_base + len(ranked),
+                    "offset": continuation_offset_base + processed,
                 }
-                if omitted and ranked
+                if omitted or continuation_offset_base + processed < ranked_total
                 else None
             ),
             "budget_tokens": budget_tokens or DEFAULT_BUDGET_TOKENS,

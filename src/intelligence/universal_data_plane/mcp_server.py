@@ -1,6 +1,7 @@
 """Allowlisted read-only MCP server (stdlib JSON-RPC over stdio).
 
-Tool surface is exactly: ``task_context``, ``expand_context``, ``repo_overview``.
+Tool surface is exactly the 11 allowlisted read-only tools defined in
+``TOOL_DEFINITIONS`` (3 generic + 6 graph-query + 2 Web3).
 No shell, edit, delete, admin, signer, sender, provider-enablement, or LIVE
 capability is exposed (LLM-free contract 1.10 / universal API contract §7).
 
@@ -315,9 +316,37 @@ class McpServer:
         }
 
     # -- JSON-RPC dispatch -----------------------------------------------
-    def handle_message(self, message: dict[str, Any]) -> dict[str, Any] | None:
-        method = message.get("method")
+    def handle_message(self, message: Any) -> dict[str, Any] | None:
+        # P1: JSON-RPC boundary validation happens before any .get() on
+        # message/params, so a malformed frame can never raise out of this
+        # method (the stdio server must survive every input).
+        if not isinstance(message, dict):
+            return {
+                "jsonrpc": "2.0",
+                "id": None,
+                "error": {
+                    "code": -32600,
+                    "message": "invalid request: body must be an object",
+                },
+            }
         request_id = message.get("id")
+        method = message.get("method")
+        if not isinstance(method, str):
+            return {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "error": {"code": -32600, "message": "invalid request: missing method"},
+            }
+        params = message.get("params")
+        if params is not None and not isinstance(params, dict):
+            return {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "error": {
+                    "code": -32602,
+                    "message": "invalid params: must be an object",
+                },
+            }
         if method == "initialize":
             return {
                 "jsonrpc": "2.0",
@@ -335,7 +364,8 @@ class McpServer:
                 "result": {"tools": TOOL_DEFINITIONS},
             }
         if method == "tools/call":
-            name = (message.get("params") or {}).get("name")
+            params = message.get("params") or {}
+            name = params.get("name")
             handler = self._tools.get(name) if isinstance(name, str) else None
             if handler is None:
                 return {
@@ -343,12 +373,34 @@ class McpServer:
                     "id": request_id,
                     "error": {"code": -32602, "message": f"unknown tool: {name}"},
                 }
-            arguments = (message.get("params") or {}).get("arguments") or {}
+            arguments = params.get("arguments") or {}
             if not isinstance(arguments, dict):
                 return {
                     "jsonrpc": "2.0",
                     "id": request_id,
-                    "error": {"code": -32602, "message": "arguments must be an object"},
+                    "error": {
+                        "code": -32602,
+                        "message": "invalid params: arguments must be an object",
+                    },
+                }
+            required = next(
+                (
+                    list(definition["inputSchema"].get("required", []))
+                    for definition in TOOL_DEFINITIONS
+                    if definition["name"] == name
+                ),
+                [],
+            )
+            missing = [key for key in required if key not in arguments]
+            if missing:
+                return {
+                    "jsonrpc": "2.0",
+                    "id": request_id,
+                    "error": {
+                        "code": -32602,
+                        "message": "invalid params: missing required keys: "
+                        + ", ".join(sorted(missing)),
+                    },
                 }
             try:
                 result = handler(arguments)

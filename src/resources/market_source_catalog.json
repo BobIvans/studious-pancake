@@ -1,6 +1,6 @@
 {
   "schema_version": "shadow.market-source-catalog.v1",
-  "checked_at": "2026-10-06",
+  "checked_at": "2026-11-22",
   "sources": [
     {
       "source_id": "0x",
@@ -219,8 +219,7 @@
       ],
       "access": "public-rate-limited",
       "evidence_urls": [
-        "https://www.geckoterminal.com/dex-api",
-        "https://api.geckoterminal.com/docs/index.html"
+        "https://docs.coingecko.com/reference/introduction"
       ],
       "limitation": "Free public API has rate limits, pagination and indexed lag. Pool and OHLCV data cannot establish executable depth or slot-consistent state."
     },

@@ -104,7 +104,7 @@ def source_configuration(registry, contracts, *, checked_at=None):
                 "https://github.com/CKS-Systems/manifest"
                 if source == "manifest"
                 else (
-                    "https://docs.meteora.ag/api-reference/dlmm/overview"
+                    "https://docs.meteora.ag/developer-guides/dlmm/api-reference/overview.md"
                     if source == "meteora-dlmm"
                     else old_dossiers[source]["profile"]["official_docs"]
                 )

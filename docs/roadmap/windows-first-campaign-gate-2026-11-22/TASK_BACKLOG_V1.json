@@ -14,7 +14,7 @@
     {
       "id": "CAM-01",
       "priority": "P0",
-      "status": "OPEN",
+      "status": "IMPLEMENTED_DRAFT_PR",
       "lane": "campaign-runtime",
       "delivery": "implementation PR based on current main",
       "title": "Enforce CAMPAIGN_START_V1 before the first external request",
@@ -41,12 +41,13 @@
       "source_urls": [
         "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information"
       ],
-      "depends_on": []
+      "depends_on": [],
+      "executed_pr": "PR-1 #691 (codex/679-cam-gate-2026-11-22)"
     },
     {
       "id": "CAM-02",
       "priority": "P0",
-      "status": "OPEN",
+      "status": "IMPLEMENTED_DRAFT_PR",
       "lane": "campaign-runtime",
       "delivery": "same or linked implementation PR",
       "title": "Separate campaign label, cryptographic identity and authorization envelope",
@@ -73,12 +74,13 @@
       ],
       "depends_on": [
         "CAM-01"
-      ]
+      ],
+      "executed_pr": "PR-1 #691"
     },
     {
       "id": "CAM-03",
       "priority": "P0",
-      "status": "OPEN",
+      "status": "IMPLEMENTED_DRAFT_PR",
       "lane": "campaign-data-sources",
       "delivery": "linked implementation PR",
       "title": "Reconcile V2, source catalog, actual adapters and current docs pins",
@@ -111,12 +113,13 @@
       "depends_on": [
         "CAM-01",
         "CAM-02"
-      ]
+      ],
+      "executed_pr": "PR-4 #697 (codex/679-cam-sources-2026-11-22)"
     },
     {
       "id": "CAM-04",
       "priority": "P0",
-      "status": "OPEN",
+      "status": "IMPLEMENTED_DRAFT_PR",
       "lane": "campaign-runtime",
       "delivery": "linked implementation PR",
       "title": "Enforce durable campaign-global physical-attempt and storage budgets",
@@ -147,12 +150,13 @@
       "depends_on": [
         "CAM-01",
         "CAM-02"
-      ]
+      ],
+      "executed_pr": "PR-2 #694 (codex/679-cam-budget-2026-11-22, stacked on #691)"
     },
     {
       "id": "CAM-05",
       "priority": "P1",
-      "status": "OPEN",
+      "status": "IMPLEMENTED_DRAFT_PR",
       "lane": "rpc-contracts",
       "delivery": "linked implementation PR",
       "title": "Align sender-free RPC methods between actual runtime and connections registry",
@@ -183,12 +187,13 @@
       ],
       "depends_on": [
         "CAM-01"
-      ]
+      ],
+      "executed_pr": "PR-3 #696 (codex/679-cam-rpc-2026-11-22)"
     },
     {
       "id": "DOC-01",
       "priority": "P1",
-      "status": "OPEN",
+      "status": "IMPLEMENTED_DRAFT_PR",
       "lane": "campaign-docs",
       "delivery": "docs update",
       "title": "Fix runbook capture/replay cross-reference and add the actual CLI capture section",
@@ -211,12 +216,13 @@
       ],
       "depends_on": [
         "CAM-01"
-      ]
+      ],
+      "executed_pr": "PR #699 (codex/679-doc01-runbook-capture-2026-11-22)"
     },
     {
       "id": "WIN-01",
       "priority": "P0",
-      "status": "OPEN",
+      "status": "IMPLEMENTED_CI_PASS",
       "lane": "windows-runtime",
       "delivery": "separate focused implementation PR",
       "title": "Regenerate requirements.lock with Windows uvloop marker",
@@ -239,12 +245,13 @@
       "source_urls": [
         "https://docs.astral.sh/uv/pip/compile/"
       ],
-      "depends_on": []
+      "depends_on": [],
+      "executed_pr": "PR-5 #692 (codex/679-win-lock-2026-11-22, CI PASS)"
     },
     {
       "id": "WIN-02",
       "priority": "P0",
-      "status": "OPEN",
+      "status": "IMPLEMENTED_DRAFT_PR",
       "lane": "windows-test-runtime",
       "delivery": "separate focused implementation PR",
       "title": "Fix ProactorEventLoop + pytest-socket without opening network access",
@@ -271,12 +278,13 @@
         "https://docs.python.org/3.13/library/asyncio-eventloop.html",
         "https://pypi.org/project/pytest-socket/"
       ],
-      "depends_on": []
+      "depends_on": [],
+      "executed_pr": "PR-6 #693 (codex/679-win-socket-2026-11-22)"
     },
     {
       "id": "WIN-03",
       "priority": "P0",
-      "status": "OPEN",
+      "status": "IMPLEMENTED_CI_PASS",
       "lane": "windows-storage",
       "delivery": "separate focused implementation PR",
       "title": "Close SQLite and journal handles before TemporaryDirectory cleanup",
@@ -300,12 +308,13 @@
       "source_urls": [
         "https://docs.python.org/3/library/sqlite3.html"
       ],
-      "depends_on": []
+      "depends_on": [],
+      "executed_pr": "PR-7 #695 (codex/679-win-occ-2026-11-22, CI PASS)"
     },
     {
       "id": "WIN-04",
       "priority": "P0",
-      "status": "OPEN",
+      "status": "IN_PROGRESS_INTEGRATION",
       "lane": "windows-validation",
       "delivery": "separate CI + native receipt",
       "title": "Add native Windows verification and rerun post-fix pytest baseline",
@@ -333,12 +342,13 @@
         "WIN-01",
         "WIN-02",
         "WIN-03"
-      ]
+      ],
+      "executed_pr": "PR-8 #698 (integration/windows-receipt-2026-11-22, NOT FOR MERGE)"
     },
     {
       "id": "PMM-01",
       "priority": "P0",
-      "status": "OPEN",
+      "status": "IN_PROGRESS_AWAITING_CI",
       "lane": "prop-amm",
       "delivery": "fix existing PR #665 only",
       "title": "Repair the two GitHub CI failures in #665",
@@ -364,7 +374,8 @@
       "source_urls": [
         "https://github.com/BobIvans/studious-pancake/pull/665"
       ],
-      "depends_on": []
+      "depends_on": [],
+      "executed_pr": "commits on codex/prop-amm-competitive-toolchain-2026-11-21 (fb22734b, 5fb44158, ad297128)"
     },
     {
       "id": "PMM-02",
@@ -429,6 +440,246 @@
         "WIN-02",
         "WIN-04"
       ]
+    },
+    {
+      "id": "CAM-06",
+      "priority": "P0",
+      "status": "BLOCKED_NEEDS_OWNER_DECISION",
+      "lane": "campaign-runtime",
+      "title": "Production operator trust anchor for CAMPAIGN_START approval",
+      "finding": "The executable gate (PR-1 #691) verifies operator Ed25519 envelopes via TrustAnchorRegistry; no ACTIVE production operator anchor exists, so every real capture remains typed BLOCKED (OPERATOR_TRUST_ANCHOR_MISSING). Runtime-generated test keys cover the positive verifier path only.",
+      "files": [
+        "src/security/trust_anchors.py",
+        "src/qualification_campaign/campaign_start_gate.py"
+      ],
+      "actions": [
+        "Operator provisions an ACTIVE anchor for usage operator-approval",
+        "Pin the registry generation into the approved campaign plan",
+        "Compatibility test against the real registry"
+      ],
+      "acceptance": [
+        "A real signed envelope authorizes CAPTURE_AUTHORIZED offline in tests",
+        "No capture runs until separately authorized"
+      ],
+      "owner": "operator/human + campaign-runtime lane",
+      "depends_on": [
+        "CAM-01"
+      ]
+    },
+    {
+      "id": "CAM-07",
+      "priority": "P1",
+      "status": "REPRODUCTION_REQUIRED",
+      "lane": "campaign-runtime",
+      "title": "Evidence append/cursor multi-process race hypothesis",
+      "finding": "Before PR-2 #694, cursor allocation in CampaignEvidenceStore.append ran outside the campaign flock; concurrent appends could collide ('same cursor has different payload'). PR-2 routes every append through the same cross-process flock, so the race is now structurally closed, but a deterministic pre-fix multi-process reproduction was not produced.",
+      "files": [
+        "src/qualification_campaign/evidence.py"
+      ],
+      "actions": [
+        "Keep the serialization (PR-2)",
+        "Optionally add a harness reproducing the pre-fix collision for the record"
+      ],
+      "acceptance": [
+        "Serialized concurrent writers produce sequential cursors (covered by tests/test_cam04_campaign_budgets.py)"
+      ],
+      "owner": "campaign-runtime lane",
+      "depends_on": [
+        "CAM-04"
+      ]
+    },
+    {
+      "id": "AUTH-01",
+      "priority": "P1",
+      "status": "OPEN",
+      "lane": "authorization",
+      "title": "Decouple pr201 replay ledger from the signer graph to enable shared reuse",
+      "finding": "src/authorization_replay_pr201.py imports src.signer_authorization_pr141; the qualification-campaign import boundary forbids that chain, so the campaign gate uses a sibling ledger (src/qualification_campaign/approval_replay_ledger.py) with the same durable state machine instead of the shared owner.",
+      "files": [
+        "src/authorization_replay_pr201.py",
+        "src/signer_authorization_pr141.py",
+        "src/qualification_campaign/approval_replay_ledger.py"
+      ],
+      "actions": [
+        "Split challenge issuance (signer-coupled) from the durable ledger core",
+        "Point the campaign ledger at the shared core",
+        "Keep the import guard green"
+      ],
+      "acceptance": [
+        "One durable replay-ledger owner used by both flows; no signer import from the campaign graph"
+      ],
+      "owner": "authorization lane"
+    },
+    {
+      "id": "AUTH-02",
+      "priority": "P1",
+      "status": "OPEN",
+      "lane": "authority",
+      "title": "Coordinated runtime-authority rebind for market_source_catalog.json refresh",
+      "finding": "src/resources/market_source_catalog.json is digest-bound in runtime_authority.json generation_bindings; CAM-03's catalog refresh (checked_at/evidence_urls) breaks RUNTIME_AUTHORITY_GENERATION_MISMATCH bindings (reproduced on integration CI, then reverted).",
+      "files": [
+        "src/resources/runtime_authority.json",
+        "config/runtime_authority.json",
+        "src/resources/market_source_catalog.json",
+        "scripts/validate_authority_map.py"
+      ],
+      "actions": [
+        "Document the coordinated rebind procedure (catalog edit + both authority mirrors + validate_authority_map)",
+        "Apply the CAM-03 catalog refresh through that procedure"
+      ],
+      "acceptance": [
+        "Catalog refreshed with validate_authority_map PASS and qpr01 identity tests green"
+      ],
+      "owner": "authority lane"
+    },
+    {
+      "id": "PIN-01",
+      "priority": "P1",
+      "status": "OPEN",
+      "lane": "radar-pins",
+      "title": "Review-hash coordinated refresh for src/solana_parallel_radar/cli.py (stale Meteora docs URL)",
+      "finding": "The file is a byte-hash-pinned research reference; its hardcoded Meteora docs URL (docs.meteora.ag/api-reference/dlmm/overview) now returns 404. CAM-03's one-line edit breaks RESEARCH_REFERENCE_REVIEW_HASH_MISMATCH (reproduced on integration CI, then reverted).",
+      "files": [
+        "src/solana_parallel_radar/cli.py",
+        "<review-hash registry owner for the file>"
+      ],
+      "actions": [
+        "Update URL and its review hash in one reviewed change"
+      ],
+      "acceptance": [
+        "Current official Meteora DLMM reference URL pinned; review-hash checks green"
+      ],
+      "owner": "radar/pin lane"
+    },
+    {
+      "id": "PMM-01a",
+      "priority": "P0",
+      "status": "ROOT_CAUSE_FIXED_AWAITING_CI",
+      "lane": "prop-amm",
+      "title": "PMM-01 root cause record: autocrlf smudge + gitignored pinned files",
+      "finding": "Byte-level root cause on #665: core.autocrlf=true normalized committed blobs to LF while SHA256SUMS/scenario_manifest pin produced bytes (local Windows smudge masked it), AND 49 of 170 pinned mirror files (Cargo.lock + 48 dataset parquets, ~1.3 MB) were gitignored and absent from clean checkouts; remote verifier detail truncated at 3 mismatches (bad[:3]).",
+      "files": [
+        ".gitattributes",
+        "vendor/strategy-research/pmm-sim-cc4ae891/SHA256SUMS",
+        "tests/test_pmm01_pinned_bytes_are_committed.py",
+        "tests/test_pmm_sim_caller_profile.py"
+      ],
+      "actions": [
+        "-text attrs + git add --renormalize (blobs == pins)",
+        "force-add the 49 pinned files",
+        "checkout-independent blob-pin regression tests",
+        "stub the BlackHoleListener socket in the offline test (real bind violated pytest-socket once earlier stages stopped failing)"
+      ],
+      "acceptance": [
+        "verify_pmm_sim_caller_profile.py 17/17 on clean Linux and Windows checkouts",
+        "all required #665 workflows PASS"
+      ],
+      "owner": "PR-665 branch only (commits fb22734b, 5fb44158, ad297128)"
+    },
+    {
+      "id": "PMM-02a",
+      "priority": "P2",
+      "status": "MEASURED",
+      "lane": "prop-amm",
+      "title": "#665 evidence sizing measurement",
+      "finding": "Measured on the #665 head 2026-11-22: research/pmm-sim-caller-profile = 84 480 KB on disk, 4 926 files; vendor mirror = 9 872 KB, 172 files; branch diff vs main = 742 files, +30 146/-5. PMM-01 force-adds add ~1.3 MB (Cargo.lock 240 KB + 48 dataset parquets 1.1 MB).",
+      "files": [
+        "research/pmm-sim-caller-profile/",
+        "vendor/strategy-research/pmm-sim-cc4ae891/"
+      ],
+      "actions": [
+        "No evidence deleted",
+        "If a compact tracked manifest + immutable bundle is adopted later, it must go through an approved artifact registry/retention mechanism"
+      ],
+      "acceptance": [
+        "Numbers recorded; no silent drops"
+      ],
+      "owner": "prop-amm lane"
+    },
+    {
+      "id": "DOC-02",
+      "priority": "P1",
+      "status": "OPEN",
+      "lane": "campaign-docs",
+      "title": "#671 V2 artifact corrections (label, stale release SHA, MPR2602 template enum)",
+      "finding": "V2 manifest uses a human campaign_id where the runtime identity is a digest (PR-1 binds them explicitly); release.git_commit records ea204222 (stale vs current main); the MPR2602 template note (enum excludes getBlock/getVersion) is resolved by PR-3 #696 on main - the #671 template file itself needs the same alignment.",
+      "files": [
+        "docs/roadmap/campaign-start-preflight-2026-11-21/* (on PR #671 branch)"
+      ],
+      "actions": [
+        "Owner applies: campaign_id->campaign_label rename (or explicit dual-field), git_commit refresh at approval time, MPR2602 enum note update"
+      ],
+      "acceptance": [
+        "PR-1's versioned loader compatibility test against the actual #671 schema passes after merge"
+      ],
+      "owner": "campaign-docs / PR #671 owner"
+    },
+    {
+      "id": "DEP-01",
+      "priority": "P2",
+      "status": "OPEN",
+      "lane": "dependency-security",
+      "title": "pip-audit version drift 2.10.1 installed vs 2.9.0 pinned",
+      "finding": "Recorded in #670 receipts; source not yet determined (runner bootstrap vs local tool vs declared dependency).",
+      "files": [
+        "pyproject.toml",
+        "requirements-dev.lock",
+        "scripts/quality_gate.py"
+      ],
+      "actions": [
+        "Determine which layer drifts; align or document the bootstrap override; do not weaken the audit"
+      ],
+      "acceptance": [
+        "Deterministic audit toolchain on CI and local receipts"
+      ],
+      "owner": "dependency-security lane (R12)"
+    },
+    {
+      "id": "GPR-01a",
+      "priority": "P1",
+      "status": "PENDING_FRESH_RUN",
+      "lane": "windows-test-triage",
+      "title": "Genuine Windows failure triage after WIN-01/02/03",
+      "finding": "The #670 baseline (288 failed / 327 errors) is historical. WIN-02's representative rerun already cleared 24 previously-failing tests; WIN-03 fixed the OCC stage. A fresh full-suite classification on the integration SHA is being produced by the WIN-04 native receipt; entries will be filled from its exact test IDs/tracebacks.",
+      "files": [
+        "tests/",
+        "docs/roadmap/windows-first-campaign-gate-2026-11-22/"
+      ],
+      "actions": [
+        "Classify remaining failures from the fresh run; one focused PR per root cause"
+      ],
+      "acceptance": [
+        "No aggregate counts without current commit/test IDs"
+      ],
+      "owner": "windows-test-triage lane",
+      "depends_on": [
+        "WIN-02",
+        "WIN-04"
+      ]
+    },
+    {
+      "id": "WIN-04a",
+      "priority": "P0",
+      "status": "IN_PROGRESS",
+      "lane": "windows-validation",
+      "title": "Authoritative native receipt on post-merge main",
+      "finding": "PR-8 #698 carries the pre-merge integration receipt only (NOT FOR MERGE). The authoritative receipt must be re-produced on the exact post-merge main SHA after the focused PRs merge.",
+      "files": [
+        "scripts/windows_receipt.py (to land with WIN-04)",
+        ".github/workflows/linter.yml windows job"
+      ],
+      "actions": [
+        "After merges: rebuild WIN-04 on new main, run Get-CimInstance inventory + all stages + full suite, attach receipt"
+      ],
+      "acceptance": [
+        "Receipt with exact SHA, OS inventory, stage exit codes, SHA256"
+      ],
+      "owner": "windows-validation lane",
+      "depends_on": [
+        "WIN-01",
+        "WIN-02",
+        "WIN-03"
+      ]
     }
   ],
   "safety_invariants": [
@@ -437,5 +688,25 @@
     "No paid provider activation or credential probing.",
     "No live gate weakening or synthetic data promoted to real evidence.",
     "Missing approvals/unknown quotas/source semantics fail closed."
-  ]
+  ],
+  "updated_at": "2026-11-22",
+  "execution_receipt": {
+    "executed_on": "2026-11-22",
+    "base_main_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+    "pr_map": {
+      "CAM-01": "PR-1 #691 (codex/679-cam-gate-2026-11-22)",
+      "CAM-02": "PR-1 #691",
+      "CAM-04": "PR-2 #694 (codex/679-cam-budget-2026-11-22, stacked on #691)",
+      "CAM-05": "PR-3 #696 (codex/679-cam-rpc-2026-11-22)",
+      "CAM-03": "PR-4 #697 (codex/679-cam-sources-2026-11-22)",
+      "WIN-01": "PR-5 #692 (codex/679-win-lock-2026-11-22, CI PASS)",
+      "WIN-02": "PR-6 #693 (codex/679-win-socket-2026-11-22)",
+      "WIN-03": "PR-7 #695 (codex/679-win-occ-2026-11-22, CI PASS)",
+      "WIN-04": "PR-8 #698 (integration/windows-receipt-2026-11-22, NOT FOR MERGE)",
+      "PMM-01": "commits on codex/prop-amm-competitive-toolchain-2026-11-21 (fb22734b, 5fb44158, ad297128)",
+      "DOC-01": "PR #699 (codex/679-doc01-runbook-capture-2026-11-22)"
+    },
+    "note": "All PRs Draft/OPEN; merge only on explicit human approval. No capture executed."
+  },
+  "safety_invariants_note": "Executed 2026-11-22 with all safety invariants held: no capture, no provider activation, no credentials, no sign/send/borrow/live; unknown stayed non-zero; fixtures stayed non-evidence."
 }

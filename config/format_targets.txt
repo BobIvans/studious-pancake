@@ -441,3 +441,4 @@ src/qualification_campaign/campaign_start_gate.py
 tests/test_cam01_campaign_start_gate.py
 tests/test_cam01_capture_blocked_before_transport.py
 src/qualification_campaign/approval_replay_ledger.py
+tests/test_cam01_security_closure_findings.py

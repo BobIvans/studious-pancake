@@ -72,6 +72,16 @@ _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 _MAX_PLAN_BYTES = 1_000_000
 
 # Words that must never appear in an approved source/method allowlist.
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+
+# The signed allowlist can only narrow this reviewed sender-free read set.
+try:
+    from src.qualification_campaign.profiles import (
+        READ_RPC_METHODS as _ALLOWED_RUNTIME_RPC_METHODS,
+    )
+except ImportError:  # pragma: no cover - direct-module import shape
+    _ALLOWED_RUNTIME_RPC_METHODS = frozenset()
+
 _FORBIDDEN_METHOD_TOKENS = (
     "send",
     "submit",
@@ -210,6 +220,10 @@ class CampaignPlan:
             "discovery_only": True,
             "source_semantics": self.source_semantics,
             "source_method_allowlists": self.source_method_allowlists,
+            # SECURITY CLOSURE (Codex finding 4): the offline evidence
+            # references are part of the signed binding — editing them after
+            # signing is a binding mismatch, not an accepted hex check.
+            "offline_evidence": dict(self.offline_evidence),
         }
 
 
@@ -365,9 +379,17 @@ def _verdict(gate_id: str, status: GateStatus, **evidence: object) -> GateVerdic
 
 def _semantics_allowlist_clean(plan: CampaignPlan) -> bool:
     for methods in plan.source_method_allowlists.values():
+        if not methods:
+            # SECURITY CLOSURE (Codex finding 5): an empty signed allowlist
+            # would silently disable the runtime restriction; refuse it.
+            return False
         for method in methods:
             lowered = str(method).lower()
             if any(token in lowered for token in _FORBIDDEN_METHOD_TOKENS):
+                return False
+            if method not in _ALLOWED_RUNTIME_RPC_METHODS:
+                # The signed list may only narrow the reviewed read set; an
+                # unknown method name cannot be honored at the transport.
                 return False
     return True
 
@@ -503,6 +525,34 @@ def evaluate_campaign_start_gate(
         blockers.append("OFFLINE_JOURNAL_EVIDENCE_MISSING")
     if not replay_ok:
         blockers.append("OFFLINE_REPLAY_EVIDENCE_MISSING")
+    # SECURITY CLOSURE (Codex finding 4): a hash-shaped string proves nothing.
+    # The referenced artifact must exist inside the authorized repository scope
+    # and its ACTUAL bytes must match the signed receipt digest. Missing,
+    # fabricated, modified and out-of-scope references all fail closed.
+    for kind, entry in (
+        ("JOURNAL", journal_entry),
+        ("REPLAY", replay_entry),
+    ):
+        test_id = entry.get("test_id")
+        receipt = entry.get("receipt_sha256")
+        if not isinstance(test_id, str) or not test_id:
+            continue
+        relative = Path(test_id)
+        if relative.is_absolute() or ".." in relative.parts:
+            blockers.append(f"OFFLINE_EVIDENCE_UNVERIFIABLE:{kind}:{test_id}")
+            continue
+        repo_test = (_REPO_ROOT / relative).resolve()
+        if _REPO_ROOT not in repo_test.parents and repo_test != _REPO_ROOT:
+            # Symlink/relative traversal cannot escape the authorized scope.
+            blockers.append(f"OFFLINE_EVIDENCE_UNVERIFIABLE:{kind}:{test_id}")
+            continue
+        if not repo_test.is_file():
+            blockers.append(f"OFFLINE_EVIDENCE_UNVERIFIABLE:{kind}:{test_id}")
+            continue
+        if isinstance(receipt, str) and _HEX64.fullmatch(receipt):
+            actual = hashlib.sha256(repo_test.read_bytes()).hexdigest()
+            if actual != receipt:
+                blockers.append(f"OFFLINE_EVIDENCE_DIGEST_MISMATCH:{kind}:{test_id}")
     verdicts.append(
         _verdict(
             "CS-05",
@@ -569,14 +619,31 @@ def evaluate_campaign_start_gate(
         blockers.append("PAID_SPEND_NOT_ZERO")
         verdicts.append(_verdict("CS-10", GateStatus.BLOCKED, spend="NONZERO"))
     else:
+        # SECURITY CLOSURE (Codex finding 1): cost semantics are executable
+        # policy. A source whose signed semantics are missing or explicitly
+        # UNKNOWN_COST_BLOCKED can carry unverified spend; under a zero-spend
+        # budget the capture must be BLOCKED, never reported as PASS.
         unknown = [
             d.source_id
             for d in dossiers
-            if plan.source_semantics.get(d.source_id) == "UNKNOWN_COST_BLOCKED"
+            if plan.source_semantics.get(d.source_id) != "PUBLIC_DISCOVERY"
         ]
-        verdicts.append(
-            _verdict("CS-10", GateStatus.PASS, spend=0, unknown_cost_blocked=unknown)
-        )
+        if unknown:
+            reasons = [f"SOURCE_COST_SEMANTICS_UNKNOWN:{sid}" for sid in unknown]
+            blockers.extend(reasons)
+            verdicts.append(
+                _verdict(
+                    "CS-10",
+                    GateStatus.BLOCKED,
+                    spend=0,
+                    unknown_cost_blocked=unknown,
+                    reasons=reasons,
+                )
+            )
+        else:
+            verdicts.append(
+                _verdict("CS-10", GateStatus.PASS, spend=0, unknown_cost_blocked=())
+            )
 
     # ---- Operator approval: Ed25519 envelope + durable single-use ----------
     approval_receipt: dict[str, object] | None = None

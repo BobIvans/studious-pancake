@@ -113,6 +113,13 @@ def _rpc_profile() -> ProviderProfile:
     )
 
 
+def _evidence_receipt(relative_test_path: str) -> str:
+    """Actual SHA-256 of a referenced offline-evidence artifact (finding 4)."""
+
+    artifact = Path(__file__).resolve().parents[1] / relative_test_path
+    return hashlib.sha256(artifact.read_bytes()).hexdigest()
+
+
 def _plan_for(manifest: CampaignManifest, dossier: SourceDossier, rpc, keypair):
     from dataclasses import asdict
 
@@ -167,6 +174,20 @@ def _plan_for(manifest: CampaignManifest, dossier: SourceDossier, rpc, keypair):
         "discovery_only": True,
         "source_semantics": {"dexscreener": "PUBLIC_DISCOVERY"},
         "source_method_allowlists": {"rpc-primary": sorted(READ_RPC_METHODS)},
+        # SECURITY CLOSURE (finding 4): offline evidence is bound into the
+        # signed approval payload; editing it after signing is a mismatch.
+        "offline_evidence": {
+            "journal_durability": {
+                "test_id": "tests/test_qpr02_data_plane.py",
+                "receipt_sha256": _evidence_receipt("tests/test_qpr02_data_plane.py"),
+            },
+            "replay_zero_network": {
+                "test_id": "tests/test_qpr03_source_intake.py",
+                "receipt_sha256": _evidence_receipt(
+                    "tests/test_qpr03_source_intake.py"
+                ),
+            },
+        },
     }
     from datetime import datetime, timezone as tz
 
@@ -221,16 +242,7 @@ def _plan_for(manifest: CampaignManifest, dossier: SourceDossier, rpc, keypair):
         "capture_window_seconds": 86400,
         "source_semantics": payload["source_semantics"],
         "source_method_allowlists": payload["source_method_allowlists"],
-        "offline_evidence": {
-            "journal_durability": {
-                "test_id": "tests/test_qpr02_data_plane.py",
-                "receipt_sha256": "b" * 64,
-            },
-            "replay_zero_network": {
-                "test_id": "tests/test_qpr03_source_intake.py",
-                "receipt_sha256": "d" * 64,
-            },
-        },
+        "offline_evidence": payload["offline_evidence"],
         "approval_payload": payload,
         "envelope": envelope_dict,
     }

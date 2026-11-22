@@ -16,7 +16,10 @@ import time
 
 from src.durability import UnifiedLifecycleAuthority
 from src.market.discovery import DiscoveryRequest
-from src.market.native_cpmm_capture import GovernedNativeCpmmCollector
+from src.market.native_cpmm_capture import (
+    GovernedNativeCpmmCollector,
+    install_signed_method_allowlists,
+)
 from src.market.source_catalog import load_market_source_catalog
 from src.market.streams import RecoverableStreamJournal
 from src.provider_governance import ProviderGovernance
@@ -180,6 +183,29 @@ def blocked_start_report(decision: GateDecision) -> dict:
     }
 
 
+def campaign_state_root() -> Path:
+    """SECURITY CLOSURE (Codex finding 3): the campaign state root is a
+    stable application-state directory keyed by campaign identity; the
+    CAMPAIGN_STATE_ROOT environment variable overrides it for tests."""
+
+    override = os.environ.get("CAMPAIGN_STATE_ROOT")
+    if override:
+        return Path(override)
+    return Path.home() / ".studious-pancake-campaign-state"
+
+
+def campaign_ledger_path(campaign_id: str) -> Path:
+    """Durable approval ledger path keyed ONLY by campaign identity.
+
+    SECURITY CLOSURE (Codex finding 3): the caller-selected ``--output``
+    directory never influences this path, so replaying the same signed
+    envelope under a different output cannot obtain a fresh ledger and a
+    fresh authorization.
+    """
+
+    return campaign_state_root() / f"approval-ledger-{campaign_id}.sqlite"
+
+
 async def capture(
     source_config,
     output,
@@ -247,7 +273,17 @@ async def capture(
     try:
         plan = load_campaign_plan(campaign_plan)
         registry = load_trust_registry(trust_registry)
-        ledger = SQLiteApprovalReplayLedger(output / "campaign-approval-ledger.sqlite")
+        # SECURITY CLOSURE (Codex finding 3): approval consumption and the
+        # campaign attempt pool are keyed by the cryptographic campaign
+        # identity, NOT by the caller-selected output directory — running
+        # the same signed plan with a different --output cannot obtain a
+        # fresh ledger or reset counters.  The root is a stable
+        # application-state directory (CAMPAIGN_STATE_ROOT overrides it for
+        # tests); the ledger file name is the canonical campaign_id.
+        state_root = campaign_state_root()
+        state_root.mkdir(parents=True, exist_ok=True)
+        ledger_path = campaign_ledger_path(manifest.campaign_id)
+        ledger = SQLiteApprovalReplayLedger(ledger_path)
         decision = evaluate_campaign_start_gate(
             manifest=manifest,
             plan=plan,
@@ -272,6 +308,10 @@ async def capture(
             canonical_bytes(blocked_start_report(decision))
         )
         return blocked_start_report(decision)
+    # SECURITY CLOSURE (Codex finding 5): bind the SIGNED per-profile RPC
+    # method allowlists at the transport boundary BEFORE any collector is
+    # constructed, so a method outside the signed plan is rejected pre-wire.
+    install_signed_method_allowlists(plan.source_method_allowlists)
     async with AsyncExitStack() as stack:
         journal = RecoverableStreamJournal(
             output / "campaign-evidence.sqlite", max_events=10_000

@@ -1,0 +1,37 @@
+{
+  "schema": "studious-pancake.lane-receipt.v1",
+  "lane": "OCA-W4",
+  "date": "2026-11-22",
+  "branch": "codex/oca-w4-adaptive-retrieval-2026-11-22",
+  "stacked_on": "codex/oca-w0b-deterministic-repo-graph-2026-11-22 (PR #684, unmerged)",
+  "base_main_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+  "deliverables": [
+    "src/intelligence/repo_graph/service.py (task-type router, directory-ref resolution, continuation cursor)",
+    "tests/intelligence/test_repo_graph_w4.py",
+    "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/W4_ADAPTIVE_RETRIEVAL_2026-11-22.md",
+    "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/W4_GOLDEN_RECALL.json"
+  ],
+  "checks": {
+    "golden_recall_before": 0.9286,
+    "golden_recall_after": 1.0,
+    "golden_questions": 42,
+    "budget_tokens": 2000,
+    "w4_tests": {"passed": 4, "failed": 0},
+    "intelligence_batch": {"passed": 58, "failed_preexisting_on_main": 3},
+    "quality_gates": {"black": "PASS", "flake8": "PASS", "mypy": "PASS"},
+    "llm_or_model_api_calls": 0,
+    "network_calls": 0
+  },
+  "safety": {
+    "live": "HARD_DENIED",
+    "sign_enabled": false,
+    "send_enabled": false,
+    "execution_authority": "NONE",
+    "merge_authority": "HUMAN_ONLY"
+  },
+  "blockers": [
+    {"id": "PRE_EXISTING_WINDOWS_ASYNCIO", "detail": "unchanged pre-existing failures on clean main 0a0c8ad9"},
+    {"id": "W4_OPERATION_CONTEXT_DEPENDENCY", "detail": "operation-context pack parts depend on OCA-W2; dependency-blocked, not skipped"}
+  ],
+  "related": {"design_pr": 666, "w0b_pr": 684}
+}

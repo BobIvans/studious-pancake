@@ -251,12 +251,13 @@ def _registry() -> TrustAnchorRegistry:
     anchor = TrustAnchor(
         key_id="cam04-e2e-key-1",
         algorithm="ed25519",
-        public_key=str(keypair.pubkey()),
-        state=TrustAnchorState.ACTIVE,
-        usage=(TrustUsage.OPERATOR_APPROVAL,),
+        public_key_base58=str(keypair.pubkey()),
+        usages=(TrustUsage.OPERATOR_APPROVAL,),
+        issuer="cam04-e2e",
         environment="research",
-        valid_from=datetime(2026, 1, 1, tzinfo=timezone.utc),
-        valid_until=datetime(2027, 1, 1, tzinfo=timezone.utc),
+        valid_from=datetime(2026, 10, 1, tzinfo=timezone.utc),
+        valid_until=datetime(2027, 6, 1, tzinfo=timezone.utc),
+        state=TrustAnchorState.ACTIVE,
     )
     return TrustAnchorRegistry((anchor,), generation="e2e-gen-1")
 

@@ -282,6 +282,7 @@ async def capture(
             journal,
             manifest,
             campaign_budgets=CampaignBudgets.from_plan_budgets(plan.budgets),
+            ledger_path=output / "campaign-approval-ledger.sqlite",
         )
         evidence.append(
             "campaign-start-gate",

@@ -20,10 +20,13 @@ from src.market.streams import RawStreamEvent, RecoverableStreamJournal
 from .identity import CampaignManifest, canonical_bytes, digest
 
 # Reservation overhead: projected bytes reserved per new retained event on
-# top of the encoded payload, covering the journal row, its WAL framing and
-# the SQLite page granularity.  Actual filesystem sizes are reconciled after
-# commit; over-commitment fails closed on the next reservation.
-_STORAGE_RESERVATION_SLACK = 1024
+# top of the encoded payload.  SQLite grows the database and its WAL in page
+# increments, so one append transaction can add a few pages of journal/WAL
+# bytes beyond the encoded payload; the slack bounds that single-transaction
+# growth.  Actual filesystem sizes are reconciled after commit: any
+# over-commitment fails closed (CAMPAIGN_STORAGE_BUDGET_EXCEEDED) and blocks
+# every subsequent reservation — the budget can never be silently exceeded.
+_STORAGE_RESERVATION_SLACK = 16384
 
 
 @dataclass(frozen=True)
@@ -67,11 +70,16 @@ class CampaignEvidenceStore:
         *,
         wall_ns=time.time_ns,
         campaign_budgets: CampaignBudgets | None = None,
+        ledger_path: Path | None = None,
     ):
         self.wall_ns = wall_ns
         self.journal = journal
         self.manifest = manifest
         self.campaign_budgets = campaign_budgets
+        # The approval replay ledger lives in the same campaign output
+        # directory, so it is part of the SAME storage_bytes_max scope (no
+        # separate limit/retention — the unified campaign budget covers it).
+        self.ledger_path = Path(ledger_path) if ledger_path is not None else None
         db_path = journal.db.execute("PRAGMA database_list").fetchone()[2]
         self.db_path = Path(db_path)
         self.lock_path = Path(db_path + ".campaign-lock")
@@ -91,16 +99,26 @@ class CampaignEvidenceStore:
         """Aggregate campaign artifact footprint (review point 4).
 
         Includes the journal database, its WAL/SHM sidecars, the campaign
-        lock file, and every blob/staging file.  Filesystem truth only; a
-        missing file counts as zero, never as an assumed value.
+        lock file, every blob/staging file, and — when wired by the CLI —
+        the approval replay ledger database with its WAL/SHM sidecars.
+        Filesystem truth only; a missing file counts as zero, never as an
+        assumed value.
         """
 
         total = 0
+        ledger_paths: tuple[Path, ...] = ()
+        if self.ledger_path is not None:
+            ledger_paths = (
+                self.ledger_path,
+                Path(str(self.ledger_path) + "-wal"),
+                Path(str(self.ledger_path) + "-shm"),
+            )
         for path in (
             self.db_path,
             Path(str(self.db_path) + "-wal"),
             Path(str(self.db_path) + "-shm"),
             self.lock_path,
+            *ledger_paths,
         ):
             try:
                 total += path.stat().st_size
@@ -154,6 +172,20 @@ class CampaignEvidenceStore:
         body = {**payload, "campaign_manifest_hash": self.manifest.campaign_id}
         stored = body
         encoded = canonical_bytes(body)
+        if self.campaign_budgets is not None:
+            # Universal reservation for EVERY append, inline and blob alike
+            # (owner review CAM-04 fix): projected campaign footprint growth
+            # is reserved before any write under the same cross-process
+            # serialization.  storage_bytes_max is the single limit of the
+            # WHOLE campaign artifact footprint, including the approval
+            # replay ledger and its sidecars.
+            projected = (
+                self.campaign_storage_bytes()
+                + len(encoded)
+                + _STORAGE_RESERVATION_SLACK
+            )
+            if projected > self.campaign_budgets.storage_bytes_max:
+                raise ValueError("CAMPAIGN_STORAGE_BUDGET_EXHAUSTED")
         if len(encoded) > 750_000:
             if len(encoded) > 16 * 1024 * 1024:
                 raise ValueError("EVIDENCE_BLOB_TOO_LARGE")
@@ -167,16 +199,6 @@ class CampaignEvidenceStore:
                 size = sum(f.stat().st_size for f in self.blob_dir.glob("*.json"))
                 if size + len(encoded) > self.journal.max_payload_bytes:
                     raise ValueError("EVIDENCE_BLOB_STORAGE_BUDGET_EXHAUSTED")
-                if self.campaign_budgets is not None:
-                    # Reserve projected bytes under the same cross-process
-                    # serialization; reconcile actual sizes after commit.
-                    projected = (
-                        self.campaign_storage_bytes()
-                        + len(encoded)
-                        + _STORAGE_RESERVATION_SLACK
-                    )
-                    if projected > self.campaign_budgets.storage_bytes_max:
-                        raise ValueError("CAMPAIGN_STORAGE_BUDGET_EXHAUSTED")
                 temporary = None
                 try:
                     with tempfile.NamedTemporaryFile(
@@ -194,14 +216,6 @@ class CampaignEvidenceStore:
                 finally:
                     if temporary is not None:
                         temporary.unlink(missing_ok=True)
-                if self.campaign_budgets is not None:
-                    # Reconcile actual sizes after commit; over-commitment
-                    # fails closed and blocks every subsequent reservation.
-                    if (
-                        self.campaign_storage_bytes()
-                        > self.campaign_budgets.storage_bytes_max
-                    ):
-                        raise ValueError("CAMPAIGN_STORAGE_BUDGET_EXCEEDED")
                 if os.name == "posix":
                     # getattr keeps the POSIX-only open flag static-analysis
                     # clean under win32 mypy (mypy does not narrow os.name);
@@ -242,6 +256,12 @@ class CampaignEvidenceStore:
             previous[-1].block_hash if previous else "GENESIS",
         )
         self.journal.append(event)
+        if self.campaign_budgets is not None:
+            # Reconcile actual filesystem sizes after commit; over-commitment
+            # fails closed and blocks every subsequent reservation (the
+            # reconciled event itself stays persisted — documented semantics).
+            if self.campaign_storage_bytes() > self.campaign_budgets.storage_bytes_max:
+                raise ValueError("CAMPAIGN_STORAGE_BUDGET_EXCEEDED")
         return event.identity
 
     def claim_attempt(self, profile) -> None:
@@ -266,22 +286,8 @@ class CampaignEvidenceStore:
                     # profile and every retry consumes the same durable pool.
                     if len(attempts) >= self.campaign_budgets.rpc_physical_attempts_max:
                         raise ValueError("CAMPAIGN_GLOBAL_ATTEMPT_BUDGET_EXHAUSTED")
-                    projected = (
-                        self.campaign_storage_bytes()
-                        + len(
-                            canonical_bytes(
-                                {
-                                    "kind": "attempt",
-                                    "provider_id": profile.profile_id,
-                                    "source_generation": profile.generation,
-                                    "campaign_manifest_hash": self.manifest.campaign_id,
-                                }
-                            )
-                        )
-                        + _STORAGE_RESERVATION_SLACK
-                    )
-                    if projected > self.campaign_budgets.storage_bytes_max:
-                        raise ValueError("CAMPAIGN_STORAGE_BUDGET_EXHAUSTED")
+                    # Storage reservation for the attempt event happens in
+                    # _append_unlocked (universal for every append).
                 self._append_unlocked(
                     profile.profile_id,
                     {

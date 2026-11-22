@@ -7,6 +7,7 @@ import pytest
 
 from src.market.streams import RecoverableStreamJournal
 from src.qualification_campaign.evidence import (
+    _STORAGE_RESERVATION_SLACK,
     CampaignBudgets,
     CampaignEvidenceStore,
 )
@@ -114,7 +115,7 @@ def test_storage_budget_exactly_at_limit_passes_one_byte_over_blocks(tmp_path):
     blob_encoded_len = len(
         canonical_bytes({**blob_payload, "campaign_manifest_hash": cid})
     )
-    slack = 1024  # must match evidence._STORAGE_RESERVATION_SLACK
+    slack = _STORAGE_RESERVATION_SLACK
 
     def make_store(name, cap):
         return CampaignEvidenceStore(
@@ -244,3 +245,250 @@ def test_campaign_storage_bytes_counts_db_wal_shm_lock_and_blobs(tmp_path):
     after = store.campaign_storage_bytes()
     assert after > before + 750_000  # blob bytes counted
     journal.close()
+
+
+def _store(tmp_path, name, cap, *, ledger_path=None):
+    return CampaignEvidenceStore(
+        RecoverableStreamJournal(tmp_path / name),
+        manifest_for((profile("rpc-a"),)),
+        campaign_budgets=CampaignBudgets(
+            rpc_physical_attempts_max=10,
+            storage_bytes_max=cap,
+            external_data_spend_usd_max=0,
+        ),
+        ledger_path=ledger_path,
+    )
+
+
+def test_inline_payload_under_budget_passes(tmp_path):
+    store = _store(tmp_path, "events.sqlite", 2**30)
+    store.append("probe", {"kind": "observation", "data": "x" * 4096}, observed_at_ns=1)
+    store.append("probe", {"kind": "observation", "data": "y" * 4096}, observed_at_ns=2)
+    assert len(store.replay()) >= 3  # manifest + two inline events
+
+
+def test_inline_payload_exact_limit_passes_one_byte_over_blocks(tmp_path):
+    from src.qualification_campaign.identity import canonical_bytes
+
+    store = _store(tmp_path, "events.sqlite", 2**30)
+    store.append("probe", {"kind": "observation", "data": "x" * 64}, observed_at_ns=1)
+    cid = store.manifest.campaign_id
+    inline_encoded = len(
+        canonical_bytes(
+            {
+                "kind": "observation",
+                "data": "z" * 4096,
+                "campaign_manifest_hash": cid,
+            }
+        )
+    )
+    at_limit = CampaignEvidenceStore(
+        store.journal,
+        store.manifest,
+        campaign_budgets=CampaignBudgets(
+            rpc_physical_attempts_max=10,
+            storage_bytes_max=store.campaign_storage_bytes()
+            + inline_encoded
+            + _STORAGE_RESERVATION_SLACK,
+            external_data_spend_usd_max=0,
+        ),
+    )
+    at_limit.append(
+        "probe", {"kind": "observation", "data": "z" * 4096}, observed_at_ns=2
+    )
+    tight = CampaignEvidenceStore(
+        store.journal,
+        store.manifest,
+        campaign_budgets=CampaignBudgets(
+            rpc_physical_attempts_max=10,
+            storage_bytes_max=store.campaign_storage_bytes()
+            + inline_encoded
+            + _STORAGE_RESERVATION_SLACK
+            - 1,
+            external_data_spend_usd_max=0,
+        ),
+    )
+    before = len(store.replay())
+    with pytest.raises(ValueError, match="CAMPAIGN_STORAGE_BUDGET_EXHAUSTED"):
+        tight.append(
+            "probe", {"kind": "observation", "data": "w" * 4096}, observed_at_ns=3
+        )
+    assert len(store.replay()) == before  # reservation failure = no write
+
+
+def test_many_small_appends_cannot_exceed_total_limit(tmp_path):
+    from src.qualification_campaign.identity import canonical_bytes
+
+    store = _store(tmp_path, "events.sqlite", 2**30)
+    small = {"kind": "observation", "data": "s" * 512}
+    cid = store.manifest.campaign_id
+    per_event = len(canonical_bytes({**small, "campaign_manifest_hash": cid}))
+    tight = CampaignEvidenceStore(
+        store.journal,
+        store.manifest,
+        campaign_budgets=CampaignBudgets(
+            rpc_physical_attempts_max=10,
+            storage_bytes_max=store.campaign_storage_bytes()
+            + per_event * 3
+            + _STORAGE_RESERVATION_SLACK * 3,
+            external_data_spend_usd_max=0,
+        ),
+    )
+    blocked = 0
+    for i in range(10):
+        try:
+            tight.append("probe", small, observed_at_ns=i + 1)
+        except ValueError as exc:
+            assert "CAMPAIGN_STORAGE_BUDGET_EXHAUSTED" in str(exc)
+            blocked += 1
+    assert blocked >= 1
+
+
+def test_manifest_append_is_subject_to_storage_budget(tmp_path):
+    # A budget smaller than the initial manifest footprint must fail closed
+    # at construction time - the first (manifest) append is enforced too.
+    with pytest.raises(ValueError, match="CAMPAIGN_STORAGE_BUDGET_EXHAUSTED"):
+        _store(tmp_path, "events.sqlite", 128)
+
+
+def test_approval_ledger_db_and_sidecars_count_into_budget(tmp_path):
+    ledger = tmp_path / "campaign-approval-ledger.sqlite"
+    ledger.write_bytes(b"L" * 64_000)
+    (tmp_path / "campaign-approval-ledger.sqlite-wal").write_bytes(b"W" * 8_000)
+    store = _store(
+        tmp_path,
+        "events.sqlite",
+        2**30,
+        ledger_path=tmp_path / "campaign-approval-ledger.sqlite",
+    )
+    plain = _store(tmp_path, "events-plain.sqlite", 2**30)
+    delta = store.campaign_storage_bytes() - plain.campaign_storage_bytes()
+    assert delta >= 64_000 + 8_000  # ledger db + wal counted
+
+
+def test_large_ledger_reduces_inline_headroom(tmp_path):
+    ledger = tmp_path / "campaign-approval-ledger.sqlite"
+    ledger.write_bytes(b"L" * 100_000)
+    journal = RecoverableStreamJournal(tmp_path / "events.sqlite")
+    store = CampaignEvidenceStore(
+        journal,
+        manifest_for((profile("rpc-a"),)),
+        campaign_budgets=CampaignBudgets(
+            rpc_physical_attempts_max=10,
+            storage_bytes_max=2**30,
+            external_data_spend_usd_max=0,
+        ),
+        ledger_path=ledger,
+    )
+    footprint_with_ledger = store.campaign_storage_bytes()
+    assert footprint_with_ledger >= 100_000
+    # One byte less than the footprint + slack needed for the next inline
+    # append: the ledger bytes consumed the headroom.
+    tight = CampaignEvidenceStore(
+        journal,
+        store.manifest,
+        campaign_budgets=CampaignBudgets(
+            rpc_physical_attempts_max=10,
+            storage_bytes_max=footprint_with_ledger + _STORAGE_RESERVATION_SLACK - 1,
+            external_data_spend_usd_max=0,
+        ),
+        ledger_path=ledger,
+    )
+    before = len(store.replay())
+    with pytest.raises(ValueError, match="CAMPAIGN_STORAGE_BUDGET_EXHAUSTED"):
+        tight.append(
+            "probe", {"kind": "observation", "data": "q" * 1024}, observed_at_ns=1
+        )
+    assert len(store.replay()) == before
+    journal.close()
+
+
+def test_storage_budget_survives_restart(tmp_path):
+    journal = RecoverableStreamJournal(tmp_path / "events.sqlite")
+    store = _store(tmp_path, "events.sqlite", 2**30)
+    store.append("probe", {"kind": "observation", "data": "x" * 4096}, observed_at_ns=1)
+    used = store.campaign_storage_bytes()
+    journal.close()
+    journal = RecoverableStreamJournal(tmp_path / "events.sqlite")
+    try:
+        reopened = CampaignEvidenceStore(
+            journal,
+            store.manifest,
+            campaign_budgets=CampaignBudgets(
+                rpc_physical_attempts_max=10,
+                storage_bytes_max=used,  # no headroom for another event
+                external_data_spend_usd_max=0,
+            ),
+        )
+        with pytest.raises(ValueError, match="CAMPAIGN_STORAGE_BUDGET_EXHAUSTED"):
+            reopened.append(
+                "probe", {"kind": "observation", "data": "n" * 4096}, observed_at_ns=2
+            )
+    finally:
+        journal.close()
+
+
+def test_concurrent_writers_respect_shared_storage_budget(tmp_path):
+    import threading
+
+    from src.qualification_campaign.identity import canonical_bytes
+
+    small = {"kind": "observation", "data": "s" * 256}
+    cid = manifest_for((profile("rpc-a"),))
+    per_event = len(
+        canonical_bytes({**small, "campaign_manifest_hash": cid.campaign_id})
+    )
+    budget = CampaignBudgets(
+        rpc_physical_attempts_max=10_000,
+        # room for a bounded number of events across ALL writers
+        storage_bytes_max=per_event * 8 + _STORAGE_RESERVATION_SLACK * 8,
+        external_data_spend_usd_max=0,
+    )
+    errors = []
+    writes = []
+    lock = threading.Lock()
+    init_lock = threading.Lock()
+
+    def writer(worker):
+        try:
+            with init_lock:
+                journal = RecoverableStreamJournal(tmp_path / "events.sqlite")
+                store = CampaignEvidenceStore(journal, cid, campaign_budgets=budget)
+            accepted = 0
+            for i in range(6):
+                try:
+                    store.append(
+                        "shared",
+                        {**small, "w": worker, "i": i},
+                        observed_at_ns=i + 1,
+                    )
+                    accepted += 1
+                except ValueError as exc:
+                    assert "CAMPAIGN_STORAGE_BUDGET_EXHAUSTED" in str(exc)
+                    break
+            with lock:
+                writes.append(accepted)
+            journal.close()
+        except Exception as exc:
+            with lock:
+                errors.append(exc)
+
+    threads = [threading.Thread(target=writer, args=(w,)) for w in range(4)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert errors == []
+    assert sum(writes) <= 8
+    assert sum(writes) >= 1  # at least the earliest writer got its events in
+    reopened = RecoverableStreamJournal(tmp_path / "events.sqlite")
+    try:
+        events = [
+            e
+            for e in reopened.events(available_at_ns=2**63 - 1)
+            if e.source == "shared"
+        ]
+        assert len(events) == sum(writes)
+        assert CampaignEvidenceStore(reopened, cid).replay()  # hash chain intact
+    finally:
+        reopened.close()

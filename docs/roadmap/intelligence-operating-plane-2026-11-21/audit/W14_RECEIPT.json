@@ -1,0 +1,34 @@
+{
+  "schema": "studious-pancake.lane-receipt.v1",
+  "lane": "OCA-W14",
+  "date": "2026-11-22",
+  "branch": "codex/oca-w14-strategy-requirements-2026-11-22",
+  "stacked_on": "codex/oca-w13-provider-contracts-2026-11-22 (PR #689, unmerged)",
+  "base_main_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+  "deliverables": [
+    "src/intelligence/strategy_requirements/__init__.py",
+    "src/intelligence/strategy_requirements/requirements.py",
+    "tests/intelligence/test_strategy_requirements.py"
+  ],
+  "checks": {
+    "unknown_never_reaches_data_ready": true,
+    "qualification_states_separate": ["NOT_QUALIFIED", "DATA_READY (declared-evidence only)"],
+    "data_states": ["DATA_UNKNOWN", "DATA_COMPATIBLE", "DATA_PARTIAL", "DATA_INCOMPATIBLE"],
+    "eligibility_capital_authority_not_collapsed": "note field binds DATA_READY to declared evidence; live authority stays with QPR/R-02 gates + OCA-W10 observed evidence",
+    "deterministic_registry": true,
+    "w14_tests": {"passed": 3, "failed": 0},
+    "quality_gates": {"black": "PASS", "flake8": "PASS", "mypy": "PASS", "quality_gate_script": "PASS"},
+    "format_targets_registered": 3
+  },
+  "safety": {
+    "live": "HARD_DENIED",
+    "sign_enabled": false,
+    "send_enabled": false,
+    "execution_authority": "NONE",
+    "merge_authority": "HUMAN_ONLY"
+  },
+  "blockers": [
+    {"id": "W14_QUALIFICATION_HISTORY_DEPENDENCY", "detail": "qualification-history join over W5 resource side is dependency-scoped; core schema/evaluator delivered"}
+  ],
+  "related": {"design_pr": 666, "w13_pr": 689, "w1_pr": 687}
+}

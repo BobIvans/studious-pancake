@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import tempfile
 
 import pytest
 
@@ -20,10 +21,32 @@ def test_database_permissions_pragmas_and_fingerprint(tmp_path: Path) -> None:
         assert store.db.execute("PRAGMA foreign_keys").fetchone()[0] == 1
         assert store.db.execute("PRAGMA trusted_schema").fetchone()[0] == 0
 
-    assert state.stat().st_mode & 0o777 == 0o700
-    assert (state / "authority.sqlite3").stat().st_mode & 0o777 == 0o600
+    if os.name == "posix":
+        assert state.stat().st_mode & 0o777 == 0o700
+        assert (state / "authority.sqlite3").stat().st_mode & 0o777 == 0o600
+    else:
+        # Windows reports 0666/0777 regardless of chmod (no-op).
+        assert state.is_dir() and (state / "authority.sqlite3").is_file()
 
 
+def _symlink_privilege_available(tmp_path: Path) -> bool:
+    """Probe whether creating symlinks works (Windows needs a privilege)."""
+    probe_target = tmp_path / "symlink-probe-target"
+    probe_target.write_bytes(b"")
+    probe = tmp_path / "symlink-probe-link"
+    try:
+        probe.symlink_to(probe_target)
+        probe.unlink()
+        return True
+    except OSError:
+        return False
+
+
+@pytest.mark.skipif(
+    os.name != "posix"
+    and not _symlink_privilege_available(Path(tempfile.gettempdir())),
+    reason="symlink creation requires a privilege this environment lacks",
+)
 def test_symlink_database_path_is_rejected(tmp_path: Path) -> None:
     target = tmp_path / "target.sqlite3"
     target.touch(mode=0o600)
@@ -33,6 +56,11 @@ def test_symlink_database_path_is_rejected(tmp_path: Path) -> None:
         DurableLifecycleStore(alias)
 
 
+@pytest.mark.skipif(
+    os.name != "posix"
+    and not _symlink_privilege_available(Path(tempfile.gettempdir())),
+    reason="symlink creation requires a privilege this environment lacks",
+)
 def test_symlink_parent_component_is_rejected(tmp_path: Path) -> None:
     target = tmp_path / "real-state"
     target.mkdir(mode=0o700)
@@ -52,6 +80,10 @@ def test_hardlink_database_path_is_rejected(tmp_path: Path) -> None:
         DurableLifecycleStore(alias)
 
 
+@pytest.mark.skipif(
+    os.name != "posix",
+    reason="group/world-writable parent premise requires POSIX mode bits",
+)
 def test_existing_database_in_writable_parent_is_rejected(tmp_path: Path) -> None:
     state = tmp_path / "unsafe-state"
     state.mkdir(mode=0o700)
@@ -67,7 +99,12 @@ def test_sqlite_sidecars_are_owner_only(tmp_path: Path) -> None:
     database = tmp_path / "private-state" / "authority.sqlite3"
     with DurableLifecycleStore(database):
         sidecars = [Path(f"{database}{suffix}") for suffix in ("-wal", "-shm")]
-        assert all(path.stat().st_mode & 0o777 == 0o600 for path in sidecars)
+        if os.name == "posix":
+            assert all(path.stat().st_mode & 0o777 == 0o600 for path in sidecars)
+        else:
+            # Windows cannot represent POSIX owner-only bits (chmod no-op);
+            # assert the sidecars exist and are regular files instead.
+            assert all(path.is_file() for path in sidecars)
 
 
 def test_restore_validates_staged_copy_without_destroying_destination(
@@ -90,4 +127,8 @@ def test_restore_validates_staged_copy_without_destroying_destination(
         backup, destination, expected_sha256=manifest.sha256
     )
     restored.close()
-    assert destination.stat().st_mode & 0o777 == 0o600
+    if os.name == "posix":
+        assert destination.stat().st_mode & 0o777 == 0o600
+    else:
+        # Windows cannot represent POSIX owner-only bits (chmod no-op).
+        assert destination.is_file()

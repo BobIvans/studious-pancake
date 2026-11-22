@@ -1355,11 +1355,12 @@ class DurableLifecycleStore:
             candidate.integrity_check()
             candidate.close()
             os.replace(staged, destination)
-            directory_fd = os.open(destination.parent, os.O_RDONLY)
-            try:
-                os.fsync(directory_fd)
-            finally:
-                os.close(directory_fd)
+            if sys.platform != "win32":
+                directory_fd = os.open(destination.parent, os.O_RDONLY)
+                try:
+                    os.fsync(directory_fd)
+                finally:
+                    os.close(directory_fd)
             return cls(destination)
         except Exception:
             staged.unlink(missing_ok=True)

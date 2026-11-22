@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import json
 from pathlib import Path
 import sqlite3
@@ -53,7 +54,11 @@ def test_store_creates_restrictive_database_and_valid_chain(tmp_path: Path) -> N
     assert report["divergences"] == []
     assert rows[0]["previous_chain_digest"] == "0" * 64
     assert rows[1]["previous_chain_digest"] == rows[0]["chain_digest"]
-    assert stat.S_IMODE(db_path.stat().st_mode) == 0o600
+    if os.name == "posix":
+        assert stat.S_IMODE(db_path.stat().st_mode) == 0o600
+    else:
+        # Windows cannot represent POSIX owner-only bits.
+        assert db_path.is_file()
 
 
 def test_store_preserves_pr132_and_adds_pr184_migrations(tmp_path: Path) -> None:

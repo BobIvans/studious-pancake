@@ -1,0 +1,36 @@
+{
+  "schema": "studious-pancake.lane-receipt.v1",
+  "lane": "OCA-W1",
+  "date": "2026-11-22",
+  "branch": "codex/oca-w1-correlation-contract-2026-11-22",
+  "base_main_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+  "deliverables": [
+    "docs/roadmap/intelligence-operating-plane-2026-11-21/contracts/CORRELATION_CONTRACT_V1.md",
+    "docs/roadmap/intelligence-operating-plane-2026-11-21/contracts/SCHEMA_GAP_MATRIX.json",
+    "docs/roadmap/intelligence-operating-plane-2026-11-21/contracts/correlation_examples.v1.json"
+  ],
+  "checks": {
+    "canonical_keys_reused_not_reinvented": true,
+    "join_rows": 8,
+    "missing_joins_with_closing_lanes": ["decision_to_outcome_operation_events -> OCA-W10", "code_symbol_to_runtime_callsite -> OCA-W3", "chain_identity_and_reorg -> OCA-W13/W15"],
+    "replay_rules_documented": 4,
+    "fixtures_labeled_fixture_only": true,
+    "no_code_changes": true,
+    "network_probes": 0
+  },
+  "acceptance": {
+    "no_duplicate_dbs": true,
+    "identifiers_reused": true,
+    "schema_and_replay_rules_documented": true,
+    "unknown_never_zero": true
+  },
+  "safety": {
+    "live": "HARD_DENIED",
+    "sign_enabled": false,
+    "send_enabled": false,
+    "execution_authority": "NONE",
+    "merge_authority": "HUMAN_ONLY"
+  },
+  "blockers": [],
+  "related": {"design_pr": 666, "w0_pr": 680, "w0c_pr": 682, "w0b_pr": 684, "w11_pr": 686}
+}

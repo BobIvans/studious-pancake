@@ -1,0 +1,39 @@
+{
+  "schema": "studious.oca-w1.correlation-fixtures.v1",
+  "fixture": true,
+  "note": "SYNTHETIC FIXTURE_ONLY examples of sanctioned correlation joins; shapes for tests, never live evidence",
+  "examples": [
+    {
+      "join": "decision_to_outcome_operation_events",
+      "trace_id": "trace-fixture-0001",
+      "events": [
+        {"event_id": "evt-0001", "trace_id": "trace-fixture-0001", "logical_opportunity_id": "opp-77", "sequence_no": 1, "attempt_id": null, "attempt_generation": 0, "stage": "candidate", "outcome": "SELECTED", "correlation_id": null, "provider_id": null, "venue_id": "raydium", "idempotency_key": "idem-0001", "fixture": true},
+        {"event_id": "evt-0002", "trace_id": "trace-fixture-0001", "logical_opportunity_id": "opp-77", "sequence_no": 2, "attempt_id": "att-1", "attempt_generation": 1, "stage": "quote", "outcome": "OK", "correlation_id": "corr-quote-1", "provider_id": "jupiter", "venue_id": null, "idempotency_key": "idem-0002", "fixture": true},
+        {"event_id": "evt-0003", "trace_id": "trace-fixture-0001", "logical_opportunity_id": "opp-77", "sequence_no": 3, "attempt_id": "att-1", "attempt_generation": 1, "stage": "simulation", "outcome": "FAIL", "reason_code": "SIM_SLIPPAGE_BREACH", "correlation_id": "corr-sim-1", "idempotency_key": "idem-0003", "fixture": true}
+      ],
+      "expected_correlation": "all three events share trace_id; stages advance monotonically; producer fields (producer_code_version, config_checksum) must be non-default at real callsites"
+    },
+    {
+      "join": "agg02_to_market_observation",
+      "source_cursor": {"journal": "fixture-journal", "offset": 1234},
+      "payload_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "watermark": {"source": "fixture-source", "observation_generation": 42},
+      "gap_record_example": {"from_offset": 1230, "to_offset": 1233, "reason": "TRANSPORT_ERROR", "fixture": true},
+      "expected_correlation": "watermark advances only over contiguous, hash-verified cursors; gaps persist as GapRecord and are never interpolated"
+    },
+    {
+      "join": "strategy_to_provider_data_requirement",
+      "strategy_id": "fixture-strategy-01",
+      "data_requirement": {"capability": "exact_venue_quotes", "venues": ["raydium"], "min_freshness_s": 2, "fixture": true},
+      "compatibility_evaluation": {"status": "PARTIAL", "reason_codes": ["OBSERVED_MODE_ONE_SHOT_ONLY"], "fixture": true},
+      "expected_correlation": "UNKNOWN compatibility never promotes the strategy to QUALIFIED"
+    },
+    {
+      "join": "code_symbol_to_runtime_callsite",
+      "symbol_id": "py::src/observability/events.py::make_event",
+      "callsite_id_example": "cs:src/observability/events.py::make_event:def:46",
+      "runtime_binding": null,
+      "expected_correlation": "runtime_binding stays null until OCA-W10 wires a proven producer; static existence never implies execution"
+    }
+  ]
+}

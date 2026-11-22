@@ -335,7 +335,7 @@ Read **FULL_REPOSITORY_GRAPH_AND_MCP_EXPANSION_RU.md** as a mandatory scope exte
 
 ## 14. Web3 Strategy Intelligence — dedicated token-efficient research tools
 
-Read `WEB3_STRATEGY_INTELLIGENCE_QUERY_TOOLS_RU.md`. The generic repo graph is not enough by itself for high-quality strategy R&D: implement a derived evidence-linked Strategy Card/catalogue and six bounded domain query operations exposed through only two compact MCP tools over the **same** read-only query backend:
+Read `WEB3_STRATEGY_INTELLIGENCE_QUERY_TOOLS_RU.md`. The generic repo graph is not enough by itself for high-quality strategy R&D: implement a derived evidence-linked Strategy Card/catalogue and seven bounded domain query operations exposed through only two compact MCP tools over the **same** read-only query backend:
 
 - `strategy_catalog` — enumerate every discovered registered/unregistered/incomplete/rejected/fixture/doc-only candidate with cursor pagination.
 - `strategy_context` — retrieve full strategy implementation/economics/config/provider/test/qualification context by stable refs.
@@ -344,7 +344,7 @@ Read `WEB3_STRATEGY_INTELLIGENCE_QUERY_TOOLS_RU.md`. The generic repo graph is n
 - `flash_capital_trace` — trace lender/program/SDK/IDL/method, supported assets, fees/repayment/capacity evidence and strategy integration; never confuse market liquidity with borrow capacity.
 - `operation_trace` — query real paper/shadow lifecycle and replay; return UNAVAILABLE/PARTIAL until W10/W2/W15 evidence exists.
 
-**Package OCA-W4C** depends on W0B2/W4B/W11B/W13/W14/W15 and the W0C inventory. It must reuse existing strategy/provider/capital/observation owners. Do not create separate canonical strategy, provider or raw-market stores. operation_trace remains capability-gated on W10/W2.
+**Package OCA-W4C** depends on W0B2/W4B/W11B/W13/W14/W15/W20 and the W0C inventory. It must reuse existing strategy/provider/capital/observation owners. Do not create separate canonical strategy, provider or raw-market stores. operation_trace remains capability-gated on W10/W2/W15; performance_diagnostics additionally requires W20.
 
 **Strategy token workflow:** T0 repo/coverage card → T1 complete paginated strategy catalogue → T2 family/strategy evidence subgraph → T3 exact FULL target functions/configs/contracts/tests → T4 selected history/negative experiments/runtime replay. Deduplicate shared source refs once across variants, use AST scope extraction, task-conditioned ranking and real tokenizer profiles where supported. Do not truncate target functions or compress financial semantics.
 

@@ -60,6 +60,20 @@ def _origin_main_available() -> bool:
 
 def _source_config(tmp_path: Path) -> Path:
     checked = NOW.isoformat()
+    from src.market.discovery import DiscoveryRequest
+    from src.qualification_campaign.sources import CatalogDiscoveryAdapter
+
+    adapter = CatalogDiscoveryAdapter(
+        DiscoveryRequest(
+            source_id="dexscreener",
+            token_mint="So11111111111111111111111111111111111111112",
+        )
+    )
+    fingerprint = hashlib.sha256(
+        json.dumps(
+            adapter.schema_contract(), sort_keys=True, separators=(",", ":")
+        ).encode()
+    ).hexdigest()
     config = {
         "schema_version": "prequal.source-intake-config.v1",
         "sources": [
@@ -83,7 +97,7 @@ def _source_config(tmp_path: Path) -> Path:
                     "docs_sha256": "a" * 64,
                     "request_schema_version": "DiscoveryRequest.v1",
                     "response_schema_version": "DiscoveredMarket.v1",
-                    "schema_fingerprint": "b" * 64,
+                    "schema_fingerprint": fingerprint,
                     "terms_url": "https://docs.dexscreener.invalid/terms",
                     "classification": "DISCOVERY_ONLY",
                 },
@@ -145,7 +159,6 @@ def _plan_for(tmp_path: Path, source_config: Path, rpc) -> Path:
         },
         sources=generations,
     )
-    adapter = sources[0][1]
     payload = {
         "schema_version": "prequal.campaign-start-approval-payload.v1",
         "gate_set": "CAMPAIGN_START_V1",

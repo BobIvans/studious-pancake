@@ -20,7 +20,6 @@
       "GATE-01",
       "GATE-02",
       "DATA-01",
-      "RPC-01",
       "ASSET-01",
       "DISC-01",
       "WIN-01",
@@ -43,7 +42,17 @@
       "QPR_R06_PASS",
       "OPS-01_if_MPR05_applicable"
     ],
-    "live_status": "HARD_DENIED; outside this backlog"
+    "live_status": "HARD_DENIED; outside this backlog",
+    "rooted_state_capture_requires": [
+      "operator_authorization",
+      "RPC-01",
+      "GATE-01",
+      "GATE-02",
+      "DATA-01",
+      "ASSET-01",
+      "DISC-01"
+    ],
+    "notes": "Discovery-only CAPTURE_ONLY may run without a rooted RPC quorum if its manifest excludes rooted-state reads; any single-source observation must be labeled exploratory/BLOCKED_SINGLE_SOURCE. RPC-01 is mandatory before any rooted-state verdict or rooted multi-source capture."
   },
   "tasks": [
     {

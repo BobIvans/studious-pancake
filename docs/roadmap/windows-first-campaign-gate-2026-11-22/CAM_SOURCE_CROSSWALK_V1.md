@@ -79,5 +79,8 @@ is typed BLOCKED, never silently CURRENT.
   (three existing fingerprints unchanged, meteora-dlmm added with its own).
 - `src/resources/market_source_catalog.json`: `checked_at` 2026-11-22;
   GeckoTerminal `evidence_urls` repinned to the current CoinGecko docs.
-- `src/solana_parallel_radar/cli.py`: stale hardcoded Meteora docs URL →
-  current official reference (docs pin only; no behavior change).
+- `src/solana_parallel_radar/cli.py`: **NOT edited** — the file is a
+  byte-hash-pinned research reference
+  (`RESEARCH_REFERENCE_REVIEW_HASH_MISMATCH` on integration CI); the stale
+  Meteora docs URL refresh requires a coordinated review-hash update.
+  Recorded as a backlog task (owner: radar/pin lane).

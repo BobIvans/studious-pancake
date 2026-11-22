@@ -96,7 +96,7 @@
         "docs/roadmap/campaign-start-preflight-2026-11-21/"
       ],
       "depends_on": [],
-      "summary": "Implement executable CAMPAIGN_START_V1 CS-01..CS-10 before any transport or read; bind approval to exact manifest/profile/config/code/budget digests and enforce staged preflight → capture authorization → evidence qualification.",
+      "summary": "Implement executable CAMPAIGN_START_V1 CS-01..CS-10 before any transport or read; bind approval to exact manifest/profile/config/code/budget digests and enforce staged preflight \u0432\u2020\u2019 capture authorization \u0432\u2020\u2019 evidence qualification.",
       "actions": [
         "Finish the current #679 scope; reconcile against #671 templates without editing or importing the #671 branch.",
         "Fail closed for absent/invalid operator proof, stale generations, unbound hashes, policy/source mismatch, budget overflow and non-sender-free RPC methods.",
@@ -114,7 +114,44 @@
         "Do not start CAPTURE_ONLY automatically; separate explicit operator authorization of the exact immutable manifest/profiles/budget is required.",
         "Do not treat CAPTURE_AUTHORIZED as campaign qualification PASS or as authorization for paper/live.",
         "Do not enable paid sources or signer/sender/borrow/live."
-      ]
+      ],
+      "evidence_update": {
+        "readiness": "IN_FLIGHT_EXTERNAL",
+        "current_sha": "9ecfb315be2900303ea41787151b1be36b6460c9",
+        "branch": "codex/679-cam-gate-2026-11-22 (PR #691)",
+        "changed_paths": [
+          "src/market/native_cpmm_capture.py",
+          "src/qualification_campaign/campaign_start_gate.py",
+          "src/qualification_campaign/cli.py",
+          "tests/test_cam01_security_closure_findings.py",
+          "tests/test_cam01_campaign_start_gate.py",
+          "config/format_targets.txt"
+        ],
+        "test_counts": {
+          "tests/test_cam01_security_closure_findings.py": "17 passed",
+          "tests/test_cam01_campaign_start_gate.py": "14 passed",
+          "tests/test_cam01_capture_blocked_before_transport.py": "1 passed",
+          "combined": "32 passed"
+        },
+        "findings_closed": [
+          "F1 cost semantics",
+          "F3 cross-output replay",
+          "F4 evidence digest+scope",
+          "F5 signed allowlist at transport"
+        ],
+        "dependency": {
+          "F2 campaign-global attempt cap": "bound/CS-08 in #691; global pool completed in #694 f017828c (stacked child)"
+        },
+        "blockers": [
+          "independent review not obtained",
+          "CI pending on 9ecfb315",
+          "F2 global-cap enforcement lives in unmerged #694"
+        ],
+        "next_promotion_condition": "independent read-only review ACCEPT on exact SHA + CI green + merged ancestry containing #694",
+        "session": "2026-11-22 takeover",
+        "independent_review": "NOT_OBTAINED (fresh reviewer agent required)",
+        "native_runtime_evidence": "NOT_RUN_THIS_SESSION"
+      }
     },
     {
       "id": "GATE-02",
@@ -145,7 +182,16 @@
       "must_not": [
         "Do not put secrets in code or PR.",
         "Do not claim HTTP 200 or documentation alone as live verification."
-      ]
+      ],
+      "evidence_update": {
+        "readiness": "IN_FLIGHT_EXTERNAL",
+        "blockers": [
+          "not verified this session"
+        ],
+        "session": "2026-11-22 takeover",
+        "independent_review": "NOT_OBTAINED (fresh reviewer agent required)",
+        "native_runtime_evidence": "NOT_RUN_THIS_SESSION"
+      }
     },
     {
       "id": "DATA-01",
@@ -163,7 +209,7 @@
         "GATE-01",
         "GATE-02"
       ],
-      "summary": "Prove and complete the bounded intake→durable raw evidence path for all selected data sources using existing canonical storage.",
+      "summary": "Prove and complete the bounded intake\u0432\u2020\u2019durable raw evidence path for all selected data sources using existing canonical storage.",
       "actions": [
         "Trace SourceIntakePlane.collect, adapters, CampaignEvidenceStore and AGG-02 to determine exact ownership; don't create another journal.",
         "Preserve raw body or immutable content reference, request fingerprint, response hash, source ID/generation, endpoint, UTC, cursor/gap, attempt count, status, latency and typed rejects.",
@@ -182,7 +228,26 @@
       "must_not": [
         "No outbound live source request before campaign authorization.",
         "No second raw store or transport."
-      ]
+      ],
+      "evidence_update": {
+        "readiness": "PASS_OFFLINE",
+        "current_sha": "ea21f35f394e151370a057077d9b330e0052c6b6",
+        "branch": "codex/683-data01-durable-intake-2026-11-22 (PR #714)",
+        "test_counts": {
+          "tests/test_data01_durable_intake.py": "8 passed"
+        },
+        "dependencies": [
+          "#697 6e4492cc (ancestor)",
+          "#694 f017828c NOT an ancestor (CAM-04 rebase pending)"
+        ],
+        "blockers": [
+          "not rebased onto CAM-04 (#694) because #694 is unmerged and merges are user-gated"
+        ],
+        "next_promotion_condition": "rebase onto finalized CAM-04 ancestry + independent review + CI",
+        "session": "2026-11-22 takeover",
+        "independent_review": "NOT_OBTAINED (fresh reviewer agent required)",
+        "native_runtime_evidence": "NOT_RUN_THIS_SESSION"
+      }
     },
     {
       "id": "RPC-01",
@@ -250,7 +315,22 @@
       "must_not": [
         "Do not alter broad research-universe preservation.",
         "Do not mark missing decimals as verified."
-      ]
+      ],
+      "evidence_update": {
+        "readiness": "PASS_OFFLINE",
+        "current_sha": "8e8e7c29f7414e32810d93e6caa2c5acb7d6e44b",
+        "branch": "codex/683-asset01-identity-hardbound-2026-11-22 (PR #715)",
+        "test_counts": {
+          "tests/test_asset01_hardbound_identity.py": "18 passed"
+        },
+        "dependencies": [
+          "#697 6e4492cc (ancestor)"
+        ],
+        "next_promotion_condition": "independent review + CI",
+        "session": "2026-11-22 takeover",
+        "independent_review": "NOT_OBTAINED (fresh reviewer agent required)",
+        "native_runtime_evidence": "NOT_RUN_THIS_SESSION"
+      }
     },
     {
       "id": "DISC-01",
@@ -283,7 +363,22 @@
       "must_not": [
         "No paid provider activation or credential probing.",
         "No aggregator route counted as independent liquidity."
-      ]
+      ],
+      "evidence_update": {
+        "readiness": "PASS_OFFLINE",
+        "current_sha": "2be2c4ddf0a84b9befbd503391b9e99523e98c9a",
+        "branch": "codex/683-disc01-stage-receipts-2026-11-22 (PR #716)",
+        "test_counts": {
+          "tests/test_disc01_stage_receipts.py": "6 passed"
+        },
+        "dependencies": [
+          "#714 ea21f35f (ancestor)"
+        ],
+        "next_promotion_condition": "independent review + CI",
+        "session": "2026-11-22 takeover",
+        "independent_review": "NOT_OBTAINED (fresh reviewer agent required)",
+        "native_runtime_evidence": "NOT_RUN_THIS_SESSION"
+      }
     },
     {
       "id": "WIN-01",
@@ -318,7 +413,35 @@
       "must_not": [
         "Do not use Linux/WSL as substitute for native Windows.",
         "Do not turn socket blocking off globally."
-      ]
+      ],
+      "evidence_update": {
+        "readiness": "IN_FLIGHT_EXTERNAL",
+        "current_sha": "chain 4e22bce0 -> 295c8960 -> b9ddd2fb -> a2250787 -> 9093d8d5",
+        "branches": [
+          "#705 codex/win-gpr01a-mode-guards-2026-11-22",
+          "#708 codex/win-gpr01a-dirfsync-guards-2026-11-22",
+          "#710 codex/win-gpr01a-symlink-privilege-2026-11-22",
+          "#711 codex/win-gpr01a-posix-paths-2026-11-22",
+          "#712 codex/win-gpr01a-winerror32-handles-2026-11-22"
+        ],
+        "ancestry_verified": true,
+        "rebased": [
+          "#711 4251998f->a2250787",
+          "#712 28ab4e32->9093d8d5"
+        ],
+        "test_counts": {
+          "GPR-01a E": "5 passed",
+          "GPR-01a D": "17 passed, 2 skipped"
+        },
+        "blockers": [
+          "full native Windows integration suite not run this session",
+          "receipts/NATIVE_WINDOWS_GPR01A_RECEIPT_2026-11-22.md not produced"
+        ],
+        "next_promotion_condition": "compose integration tree and run full native suite under explicit authorization",
+        "session": "2026-11-22 takeover",
+        "independent_review": "NOT_OBTAINED (fresh reviewer agent required)",
+        "native_runtime_evidence": "NOT_RUN_THIS_SESSION"
+      }
     },
     {
       "id": "TEST-01",
@@ -348,7 +471,30 @@
       ],
       "must_not": [
         "Do not fold unrelated GPR/TON/MPR fixes into #679 unless same owner and user-approved."
-      ]
+      ],
+      "evidence_update": {
+        "readiness": "BLOCKED",
+        "blockers": [
+          "Cluster F reproduced: 5 verifier failures are CRLF checkout artifacts (pinned hashes match LF-normalized bytes; core.autocrlf=true and missing -text attributes)",
+          "full native suite receipt not produced"
+        ],
+        "cluster_f": {
+          "expected_equals_lf_normalized": true,
+          "reproduced": [
+            "PR008 locks",
+            "PR025 locks/profiles",
+            "R02-CAP-C NAVI facts git-blob",
+            "Super06 source blobs (2 tests)"
+          ],
+          "not_reproduced": [
+            "test_ton_radar_wave2.py passed"
+          ]
+        },
+        "next_promotion_condition": "decide hash/EOL contract (LF normalization or -text attrs) with independent review, then rerun",
+        "session": "2026-11-22 takeover",
+        "independent_review": "NOT_OBTAINED (fresh reviewer agent required)",
+        "native_runtime_evidence": "NOT_RUN_THIS_SESSION"
+      }
     },
     {
       "id": "PMM-01",
@@ -377,7 +523,16 @@
       "must_not": [
         "Do not edit #665 files from this assignment PR branch.",
         "Do not delete/collapse evidence to make tests pass."
-      ]
+      ],
+      "evidence_update": {
+        "readiness": "IN_FLIGHT_EXTERNAL",
+        "blockers": [
+          "not verified this session"
+        ],
+        "session": "2026-11-22 takeover",
+        "independent_review": "NOT_OBTAINED (fresh reviewer agent required)",
+        "native_runtime_evidence": "NOT_RUN_THIS_SESSION"
+      }
     },
     {
       "id": "INTEL-01",
@@ -399,7 +554,7 @@
       "actions": [
         "Build from latest SHA; one canonical snapshot/index owner; parser/resolver pinned; all files coverage-statused.",
         "Implement task_context and expand_context with adaptive dimensions, stale-SHA refusal, exact refs, omission continuation and hard tokenizer budgets.",
-        "Use #681 42-question golden corpus; improve required-ref recall target in #666 at ≤2000 tokens and record false edges, freshness and latency.",
+        "Use #681 42-question golden corpus; improve required-ref recall target in #666 at \u0432\u2030\u00a42000 tokens and record false edges, freshness and latency.",
         "Require clean-vs-incremental parity, rename/delete handling, stale-SHA rejection, secret filtering and deterministic graph checksum.",
         "Provide one stable read-only MCP facade only if its connected local service exists; CLI and MCP share one backend."
       ],
@@ -445,7 +600,7 @@
       "acceptance": [
         "Independent positive/negative fixtures and deterministic offline replay exist for each supported CPMM/CLMM/DLMM state/quote path.",
         "Each admitted venue has complete dependency-account closure for the exact pool and direction; missing tick arrays/BinArrays, bitmap, observations, dynamic-fee, clock/epoch, vault, mint or Token-2022 state is a typed rejection.",
-        "Each admitted direction × raw input amount has its own exact direct quote and evidence; no interpolation/scaling/extrapolation. Quote output reconciles consumed amounts, fee components and traversal details.",
+        "Each admitted direction \u0413\u2014 raw input amount has its own exact direct quote and evidence; no interpolation/scaling/extrapolation. Quote output reconciles consumed amounts, fee components and traversal details.",
         "Physical-pool/resource dedup is proven through R13-K canonical identity; aliased addresses/routes and aggregator comparisons cannot inflate independent pool count or liquidity.",
         "Every admitted quote/route binds coherent genesis, per-response slots, account/state hashes, source generation, observation time, freshness threshold and expiry; stale, mixed-slot or mismatched state is rejected.",
         "All-in net economics are complete per route and amount; any UNKNOWN fee/cost/residual or unmodeled transfer behavior blocks positive-net admission.",
@@ -690,7 +845,7 @@
         "Map strategy/provider/venue routes WIRED/PARTIAL/NO_RUNTIME_PATH/BLOCKED/UNKNOWN."
       ],
       "acceptance": [
-        "Producer→store→export→replay test covers each supported stage; duplicate/retry idempotence and missing-event negative tests.",
+        "Producer\u0432\u2020\u2019store\u0432\u2020\u2019export\u0432\u2020\u2019replay test covers each supported stage; duplicate/retry idempotence and missing-event negative tests.",
         "No silent producer loss; all events correlate to exact market/source/state and attempt identity.",
         "No separate event bus or duplicate canonical store."
       ],

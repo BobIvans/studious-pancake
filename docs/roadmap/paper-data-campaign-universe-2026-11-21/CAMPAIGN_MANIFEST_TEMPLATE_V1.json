@@ -1,0 +1,97 @@
+{
+  "schema_version": "prequal.campaign-manifest.v1",
+  "campaign_id": "YYYYMMDD-market-capture-001",
+  "mode": "CAPTURE_ONLY",
+  "status": "NOT_AUTHORIZED_NOT_STARTED",
+  "release": {
+    "git_commit": "3030fc720c707c994f9d7a21d50e1d181a60b8c9",
+    "runtime_authority_sha256": null,
+    "policy_bundle_sha256": null,
+    "source_registry_sha256": null,
+    "campaign_manifest_sha256": null
+  },
+  "time": {
+    "created_at_utc": null,
+    "trusted_clock_generation": null,
+    "capture_window_seconds": null,
+    "holdout_start_utc": null,
+    "holdout_end_utc": null
+  },
+  "sources": {
+    "discovery_source_ids": [
+      "dexscreener",
+      "geckoterminal",
+      "raydium_api_v3",
+      "meteora_dlmm_data"
+    ],
+    "rpc_quorum_profile_id": null,
+    "oracle_source_ids": [],
+    "protocol_source_ids": [],
+    "venue_source_ids": [],
+    "stream_source_ids": []
+  },
+  "universe": {
+    "target_pair_count": null,
+    "seed_pairs": [
+      "SOL/USDC",
+      "USDC/USDT",
+      "SOL/JitoSOL",
+      "SOL/mSOL",
+      "SOL/JupSOL"
+    ],
+    "pair_seed_semantics": "DISCOVERY_HINT_ONLY_EXACT_MINT_RESOLUTION_REQUIRED",
+    "strategy_tiers": [
+      "local_cpmm_clmm_dlmm",
+      "prop_amm_research",
+      "stablecoin_residual",
+      "lst_spot_residual",
+      "post_state_dislocation",
+      "pump_migration",
+      "clob_amm_later",
+      "liquidation_monitoring",
+      "sui_later"
+    ],
+    "rotation_policy": "score_plus_venue_diversity_plus_source_diversity_plus_negative_controls",
+    "negative_control_fraction": 0.2
+  },
+  "budgets": {
+    "external_data_spend_usd_max": 0,
+    "rpc_physical_attempts_max": 0,
+    "per_source_quotas": {},
+    "storage_bytes_max": 0,
+    "max_route_expansions": 0,
+    "future_canary_total_execution_cost_usd_max": 10,
+    "future_canary_enabled": false,
+    "note": "$10 is a future aggregate canary ceiling suggestion, not permission or spend for CAPTURE_ONLY; flashloan fee is only one cost component."
+  },
+  "safety": {
+    "signer_reachable": false,
+    "sender_reachable": false,
+    "transaction_submission_allowed": false,
+    "live_authorization": false,
+    "live_enabled": false,
+    "sign_enabled": false,
+    "send_enabled": false,
+    "borrowing_enabled": false,
+    "relay_submission_enabled": false,
+    "account_creation_allowed": false,
+    "provider_activation_allowed": false
+  },
+  "evidence": {
+    "journal_path": null,
+    "immutable_head_sha256": null,
+    "negative_evidence_required": true,
+    "rooted_quorum_required_for_exact_verdict": true,
+    "single_source_capture_verdict": "BLOCKED_SINGLE_SOURCE",
+    "replay_network_calls_allowed": false,
+    "fixture_and_live_counts_separate": true
+  },
+  "gates": {
+    "campaign_start_gate_set": "CAMPAIGN_START_V1",
+    "paper_gate_owner": "R06_QPR_INSTALLED_CANONICAL_PAPER_SERVICE",
+    "r02_capital_required_for_paper": true,
+    "r03_unsigned_builder_required_for_paper": true,
+    "r05_full_simulation_required_for_paper": true,
+    "mpr05_installed_72_hour_soak_required_where_applicable": true
+  }
+}

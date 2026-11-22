@@ -88,7 +88,7 @@ def _source_config(tmp_path: Path) -> Path:
                         "provider": "dexscreener",
                         "operator": "dexscreener",
                         "correlation_group": "dexscreener",
-                        "endpoint": "https://api.dexscreener.invalid/token-pairs/v1/solana/x",
+                        "endpoint": "https://api.dexscreener.com/token-pairs/v1/solana/So11111111111111111111111111111111111111112",
                         "official_docs": "https://docs.dexscreener.invalid/api/reference",
                         "role": "discovery",
                         "request_limit": 1,
@@ -308,8 +308,7 @@ def _mocked_transport_factory(monkeypatch):
         def __init__(self, hosts, policy):
             self.transport = HttpxJsonTransport(
                 policy=TransportPolicy(max_attempts=1),
-                allowed_hosts=frozenset({h for h in hosts if h.endswith(".invalid")})
-                or frozenset({"api.dexscreener.invalid"}),
+                allowed_hosts=frozenset(h for h in hosts if h) or frozenset({"api.dexscreener.com"}),
                 client=client,
             )
 

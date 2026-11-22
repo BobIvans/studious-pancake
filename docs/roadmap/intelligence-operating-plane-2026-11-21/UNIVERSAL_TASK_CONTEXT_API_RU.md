@@ -196,3 +196,11 @@ The generic API remains the entrypoint for any task. For deep strategy research 
 The six operations are purpose-built query modes, not six tools/databases. They call the same query backend and canonical owner APIs as task_context/expand_context. Results are bounded by budget and paginated. Each response is SHA-bound, includes evidence/provenance/verification, explicit omissions/UNKNOWN and deterministic cursors.
 
 The catalogue must include candidates discovered outside the canonical strategy registry (source, config, test, fixture, docs and permission-available GitHub history) while preserving their different evidence states. Never present DOC_ONLY, FIXTURE_ONLY, IMPLEMENTED, CONFIGURED, TESTED, QUALIFIED and RUNTIME_OBSERVED as interchangeable states.
+
+## 11. Strategy/function diagnostics handoff
+
+For operational-performance questions, use `web3_data_trace(operation=performance_diagnostics)` when the capability is available. It is a read-only view over the same query backend and canonical evidence owners, specified by `STRATEGY_FUNCTION_PERFORMANCE_DIAGNOSTICS_RU.md`.
+
+It must link observed paper/shadow operations to strategy/version, exact repo SHA/config generation, lifecycle stage, stable runtime callsite/symbol, provider/observation/capital evidence and simulation/reconciliation outcomes. Report invocation denominators, latency/error/retry/data-quality/capture-loss metrics, cohort definitions, sample sizes, confidence and exact evidence refs.
+
+Until W10/W2/W15/W20 are implemented and their runtime evidence is available, return UNAVAILABLE/PARTIAL/UNKNOWN. Never infer invocation from a static call graph, zero failures from missing telemetry, or causality from correlation. Technical health and financial outcome remain separate. The two existing Web3 MCP schemas remain unchanged; this adds one typed operation, not a third tool.

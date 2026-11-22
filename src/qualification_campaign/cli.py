@@ -253,9 +253,11 @@ async def capture(
         load_campaign_plan(campaign_plan).budgets
     )
     ledger_path = output / "campaign-approval-ledger.sqlite"
-    if artifact_footprint_bytes([manifest_path]) > budgets.storage_bytes_max:
-        raise ValueError("CAMPAIGN_STORAGE_BUDGET_EXHAUSTED")
     try:
+        if artifact_footprint_bytes([manifest_path]) > budgets.storage_bytes_max:
+            # Strict ceiling before the approval ledger is even created; the
+            # typed blocker flows into the same fail-closed blocked receipt.
+            raise ValueError("CAMPAIGN_STORAGE_BUDGET_EXHAUSTED")
         plan = load_campaign_plan(campaign_plan)
         registry = load_trust_registry(trust_registry)
         ledger = SQLiteApprovalReplayLedger(ledger_path)

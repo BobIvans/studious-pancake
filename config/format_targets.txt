@@ -432,3 +432,8 @@ tests/intelligence/test_temporal_ontology.py
 src/intelligence/verification/__init__.py
 src/intelligence/verification/selection.py
 tests/intelligence/test_verification.py
+src/observability/runtime_capture/__init__.py
+src/observability/runtime_capture/capture.py
+src/observability/runtime_capture/coverage.py
+src/observability/runtime_capture/vertical.py
+tests/intelligence/test_runtime_capture.py

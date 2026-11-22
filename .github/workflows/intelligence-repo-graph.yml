@@ -1,0 +1,117 @@
+name: Intelligence repo graph (OCA-W0B)
+on:
+  pull_request:
+    paths:
+      - 'src/intelligence/repo_graph/**'
+      - 'tests/intelligence/test_repo_graph.py'
+      - 'benchmarks/intelligence/**'
+      - '.github/workflows/intelligence-repo-graph.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/intelligence/repo_graph/**'
+      - 'tests/intelligence/test_repo_graph.py'
+  schedule:
+    # Nightly full-rebuild reconciliation (precedent: pr139-scheduled-drift.yml)
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  contract-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -r requirements.lock -r requirements-dev.lock
+      - run: python -m pip install --no-deps .
+      - name: Format and lint (repo gates)
+        run: |
+          python -m black --check src/intelligence/repo_graph tests/intelligence/test_repo_graph.py
+          python -m flake8 src/intelligence/repo_graph
+          python -m mypy --follow-imports=silent --ignore-missing-imports src/intelligence/repo_graph
+      - name: Contract tests (offline)
+        run: python -m pytest -q tests/intelligence/test_repo_graph.py --disable-socket --allow-unix-socket
+  determinism-and-freshness:
+    # LLM-free deterministic indexing contract, section 6 acceptance gates.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -r requirements.lock -r requirements-dev.lock
+      - run: python -m pip install --no-deps .
+      - name: Two clean builds must be checksum-identical
+        run: |
+          python - <<'PY'
+          import sys
+          sys.path.insert(0, ".")
+          from src.intelligence.repo_graph.graph_build import build_graph
+          a = build_graph(".", "artifacts/det-a")
+          b = build_graph(".", "artifacts/det-b")
+          assert a["canonical_checksum"] == b["canonical_checksum"], "determinism violated"
+          assert a["generation"] == b["generation"], "generation drift"
+          print("determinism OK:", a["canonical_checksum"][:16], a["counts"])
+          PY
+      - name: Dangling edges must be zero
+        run: |
+          python -m src.intelligence.repo_graph.cli --repo . --state-root artifacts/det-a verify
+      - name: Stale-SHA must be rejected (query contract)
+        run: |
+          python - <<'PY'
+          import sys
+          sys.path.insert(0, ".")
+          from src.intelligence.repo_graph.service import QueryBackend
+          backend = QueryBackend("artifacts/det-a", ".")
+          envelope = backend.task_context("smoke query", repo_sha="0" * 40)
+          assert envelope["status"] in {"STALE", "UNAVAILABLE"}, envelope["status"]
+          assert envelope["included_refs"] == []
+          print("stale-SHA rejection OK")
+          PY
+      - name: Secret exclusion check (no secret values in graph records)
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          target = sorted(Path("artifacts/det-a/repo_graph/artifacts").glob("*/nodes.jsonl"))[0]
+          forbidden = re.compile(
+              rb"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|"
+              rb"gh[pousr]_[A-Za-z0-9]{30,}|AKIA[0-9A-Z]{16}"
+          )
+          for name in ("nodes.jsonl", "edges.jsonl", "coverage.jsonl"):
+              blob = next(Path("artifacts/det-a/repo_graph/artifacts").glob(f"*/{name}"))
+              assert not forbidden.search(blob.read_bytes()), f"secret material in {name}"
+          print("secret exclusion OK")
+          PY
+  nightly-reconciliation:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -r requirements.lock -r requirements-dev.lock
+      - run: python -m pip install --no-deps .
+      - name: Full rebuild reconciliation (checksum parity vs pinned main build)
+        run: |
+          python - <<'PY'
+          import sys
+          sys.path.insert(0, ".")
+          from src.intelligence.repo_graph.graph_build import build_graph
+          full = build_graph(".", "artifacts/nightly-full")
+          inc = build_graph(".", "artifacts/nightly-inc")
+          assert full["canonical_checksum"] == inc["canonical_checksum"], "nightly drift"
+          print("nightly reconciliation OK:", full["canonical_checksum"][:16])
+          PY

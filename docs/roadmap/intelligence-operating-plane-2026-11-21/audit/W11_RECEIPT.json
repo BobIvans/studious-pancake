@@ -1,0 +1,37 @@
+{
+  "schema": "studious-pancake.lane-receipt.v1",
+  "lane": "OCA-W11",
+  "date": "2026-11-22",
+  "branch": "codex/oca-w11-readonly-mcp-2026-11-22",
+  "stacked_on": ["codex/oca-w4-adaptive-retrieval-2026-11-22 (PR #685, unmerged)", "codex/oca-w0b-deterministic-repo-graph-2026-11-22 (PR #684, unmerged)"],
+  "base_main_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",
+  "deliverables": [
+    "src/intelligence/universal_data_plane/__init__.py",
+    "src/intelligence/universal_data_plane/facade.py",
+    "src/intelligence/universal_data_plane/mcp_server.py",
+    "tests/intelligence/test_universal_data_plane.py",
+    "docs/roadmap/intelligence-operating-plane-2026-11-21/audit/W11_UNIVERSAL_DATA_PLANE_2026-11-22.md"
+  ],
+  "checks": {
+    "mcp_tools_allowlisted": ["task_context", "expand_context", "repo_overview"],
+    "single_backend_reuse": true,
+    "w11_tests": {"passed": 4, "failed": 0},
+    "combined_w0b_w4_w11_tests": {"passed": 16, "failed": 0},
+    "quality_gates": {"black": "PASS", "flake8": "PASS", "mypy": "PASS", "quality_gate_script": "PASS"},
+    "portable_export_hashed": true,
+    "runtime_dimensions_reported_unavailable": true,
+    "llm_or_model_api_calls": 0,
+    "network_calls": 0
+  },
+  "safety": {
+    "live": "HARD_DENIED",
+    "sign_enabled": false,
+    "send_enabled": false,
+    "execution_authority": "NONE",
+    "merge_authority": "HUMAN_ONLY"
+  },
+  "blockers": [
+    {"id": "W11_CROSS_STORE_JOINS_DEPENDENCY", "detail": "bitemporal cross-store joins need OCA-W2; runtime replay needs OCA-W10; facade interface ready, recorded as dependency-blocked"}
+  ],
+  "related": {"design_pr": 666, "w0b_pr": 684, "w4_pr": 685}
+}

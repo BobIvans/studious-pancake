@@ -49,7 +49,7 @@ def _open_regular(
 ) -> tuple[int, os.stat_result]:
     if max_bytes <= 0:
         raise SecureFileError("secure file size limit must be positive")
-    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0)
+    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_CLOEXEC", 0)
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
     try:
@@ -64,7 +64,10 @@ def _open_regular(
             raise SecureFileError("secure file must have exactly one link")
         if hasattr(os, "getuid") and metadata.st_uid != os.getuid():
             raise SecureFileError("secure file has the wrong owner")
-        if owner_only and stat.S_IMODE(metadata.st_mode) & 0o077:
+        # POSIX mode bits are not representable on Windows (chmod is a
+        # no-op and dirs/files always read 0666/0777); the owner-check above
+        # already follows the same platform-conditional precedent.
+        if os.name == "posix" and owner_only and stat.S_IMODE(metadata.st_mode) & 0o077:
             raise SecureFileError("secure file must be owner-only")
         if metadata.st_size < 0 or metadata.st_size > max_bytes:
             raise SecureFileError("secure file exceeds the size limit")

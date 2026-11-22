@@ -162,7 +162,8 @@ def _release_digest(
 def _load_attestation_keypair(path: Path) -> Any:
     if path.is_symlink() or not path.is_file():
         raise ValueError("attestation key must be a regular file")
-    if path.stat().st_mode & 0o077:
+    # Windows cannot represent POSIX owner-only mode bits (chmod no-op).
+    if os.name == "posix" and path.stat().st_mode & 0o077:
         raise ValueError("attestation key file must be owner-only")
     values = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(values, list) or any(

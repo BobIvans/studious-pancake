@@ -266,7 +266,7 @@ def secure_directory(path: Path) -> None:
 
 def fsync_dir(path: Path) -> None:
     try:
-        descriptor = os.open(path, os.O_RDONLY)
+        descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_BINARY", 0))
     except OSError:
         return
     try:

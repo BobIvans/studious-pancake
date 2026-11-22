@@ -1070,19 +1070,7 @@ def test_authority_capacity_exhaustion_blocks_before_write(tmp_path):
             rpc_physical_attempts_max=10,
             storage_bytes_max=used
             + _jgb(
-                len(
-                    __import__("json")
-                    .dumps(
-                        {
-                            **{"kind": "observation", "data": "x" * 4096},
-                            "campaign_manifest_hash": store.manifest.campaign_id,
-                        },
-                        sort_keys=True,
-                    )
-                    .encode()
-                )
-                + 4096
-                + 9 * 4120,
+                _row_len(store, {"kind": "observation", "data": "x" * 4096}),
                 store.page_size,
             )
             - 1,
@@ -1171,6 +1159,7 @@ def test_quote_heavy_payloads_are_reserved_at_serialized_size(tmp_path):
         campaign_budgets=CampaignBudgets(
             rpc_physical_attempts_max=10,
             storage_bytes_max=store.campaign_storage_bytes()
+            + naive_encoded
             + journal_growth_bound(_row_len(store, heavy), store.page_size),
             external_data_spend_usd_max=0,
         ),

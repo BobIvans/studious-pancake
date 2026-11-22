@@ -234,7 +234,16 @@ def _plan_for(tmp_path: Path, source_config: Path, rpc) -> Path:
         "capture_window_seconds": 86400,
         "source_semantics": payload["source_semantics"],
         "source_method_allowlists": payload["source_method_allowlists"],
-        "offline_evidence": payload["offline_evidence"],
+        "offline_evidence": {
+            "journal_durability": {
+                "test_id": "tests/test_recoverable_stream_journal.py",
+                "receipt_sha256": "b" * 64,
+            },
+            "replay_zero_network": {
+                "test_id": "tests/test_mpr042_market_truth.py",
+                "receipt_sha256": "d" * 64,
+            },
+        },
         "approval_payload": payload,
         "envelope": {
             "domain": envelope.domain,

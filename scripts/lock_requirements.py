@@ -141,6 +141,41 @@ def _direct_versions(project: dict[str, object]) -> dict[str, str]:
     return direct
 
 
+def _reapply_direct_markers(path: Path, project: dict[str, object]) -> int:
+    """Re-apply pyproject markers of direct dependencies to a compiled lock.
+
+    uv ``pip compile --python-platform linux`` evaluates markers against the
+    target environment and strips them, which drops the Windows-excluding
+    marker from e.g. uvloop and breaks hash-verified installs on Windows
+    (defect WINDOWS_LOCK_UVLOOP_NO_MARKER). ``--universal`` cannot be combined
+    with ``--python-platform`` in uv 0.13.4, so instead we re-apply the
+    environment markers of direct dependencies (parsed from pyproject.toml,
+    same as ``_direct_versions``) to the generated lock lines. uvloop is the
+    only marker-bearing direct dependency today; the regression test asserts
+    that rather than assuming it.
+    """
+    direct = _direct_versions(project)
+    lines = path.read_text(encoding="utf-8").splitlines()
+    updated: list[str] = []
+    changed = 0
+    for line in lines:
+        stripped = line.strip()
+        if stripped and not stripped.startswith(("#", "-")):
+            match = PIN_RE.match(stripped)
+            if match is not None and ";" not in stripped:
+                pin = direct.get(_canonical_name(match.group(1)))
+                if pin is not None and ";" in pin:
+                    marker = ";" + pin.split(";", 1)[1].strip()
+                    if stripped.endswith("\\"):
+                        line = stripped[:-1].rstrip() + " " + marker + " \\"
+                    else:
+                        line = stripped + " " + marker
+                    changed += 1
+        updated.append(line)
+    path.write_text("\n".join(updated) + "\n", encoding="utf-8", newline="\n")
+    return changed
+
+
 def _write_merged_dev_lock(
     output: Path,
     *,
@@ -215,9 +250,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         direct = _direct_versions(project)
         retained = []
         for name, pin in _parse_pins(ROOT / "requirements-dev.lock").items():
+            pin_version = pin.split(";")[0].strip().lower()
             if (
                 name not in direct
-                or direct[name].split(";")[0].strip().lower() == pin.lower()
+                or direct[name].split(";")[0].strip().lower() == pin_version
             ):
                 retained.append(pin)
         constraints.write_text("\n".join(retained) + "\n", encoding="utf-8")
@@ -310,12 +346,18 @@ def main(argv: Sequence[str] | None = None) -> int:
                 cwd=ROOT,
                 check=True,
             )
+            markers_applied = _reapply_direct_markers(output, project)
+            print(
+                f"re-applied direct-dependency markers to {output.name}: "
+                f"{markers_applied} line(s)",
+                flush=True,
+            )
             resolved_locks[output.name] = {"sha256": _sha256(output)}
 
     manifest = {
         "schema_version": "pr025.requirements-lock.v1",
         "python": "3.13",
-        "platforms": ["linux", "macos"],
+        "platforms": ["linux", "macos", "windows"],
         "resolver": {"name": "uv", "version": actual_version},
         "resolved_locks": resolved_locks,
         "source": "pyproject.toml",

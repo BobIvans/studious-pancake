@@ -50,8 +50,10 @@ def test_mcp_initialize_tools_list_and_call(fixture_repo: Path, tmp_path: Path) 
         "impact_query",
         "history_query",
         "domain_catalog",
+        "strategy_research",
+        "web3_data_trace",
     }
-    assert len(TOOL_DEFINITIONS) == 9
+    assert len(TOOL_DEFINITIONS) == 11
 
     call = server.handle_message(
         {

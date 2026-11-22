@@ -17,6 +17,7 @@ from typing import Any, Callable
 
 from ..repo_graph import query_ops
 from . import SCHEMA_ID
+from . import web3_tools
 from .facade import UniversalDataPlane
 
 PROTOCOL_VERSION = "2024-11-05"
@@ -145,6 +146,45 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "strategy_research",
+        "description": "Web3 strategy catalogue/context/compare over the shared backend (evidence-linked cards; two-Web3-tool limit).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "repo_sha": {"type": "string"},
+                "action": {"type": "string", "enum": ["catalog", "context", "compare"]},
+                "query": {"type": "string"},
+                "strategy_refs": {"type": "array", "items": {"type": "string"}},
+                "budget_tokens": {"type": "integer"},
+            },
+            "required": ["repo_sha", "action"],
+        },
+    },
+    {
+        "name": "web3_data_trace",
+        "description": "provider_trace/flash_capital_trace/operation_trace/performance_diagnostics over canonical owners (read-only).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "repo_sha": {"type": "string"},
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "provider_trace",
+                        "flash_capital_trace",
+                        "operation_trace",
+                        "performance_diagnostics",
+                    ],
+                },
+                "provider_ref": {"type": "string"},
+                "lender_ref": {"type": "string"},
+                "strategy_ref": {"type": "string"},
+                "target_ref": {"type": "string"},
+            },
+            "required": ["repo_sha", "action"],
+        },
+    },
+    {
         "name": "repo_overview",
         "description": "T0 SHA-bound repo card plus data-plane store inventory.",
         "inputSchema": {
@@ -169,6 +209,8 @@ class McpServer:
             "impact_query": self._tool_impact_query,
             "history_query": self._tool_history_query,
             "domain_catalog": self._tool_domain_catalog,
+            "strategy_research": self._tool_strategy_research,
+            "web3_data_trace": self._tool_web3_data_trace,
         }
 
     # -- tool implementations (thin, read-only) --------------------------
@@ -188,6 +230,28 @@ class McpServer:
             list(args["refs"]),
             repo_sha=args["repo_sha"],
             depth=args.get("depth", "full"),
+        )
+
+    def _tool_strategy_research(self, args: dict[str, Any]) -> dict[str, Any]:
+        return web3_tools.strategy_research(
+            self._plane._backend._state_root,
+            args["repo_sha"],
+            args["action"],
+            query=args.get("query"),
+            strategy_refs=args.get("strategy_refs"),
+            budget_tokens=args.get("budget_tokens", 4000),
+        )
+
+    def _tool_web3_data_trace(self, args: dict[str, Any]) -> dict[str, Any]:
+        return web3_tools.web3_data_trace(
+            self._plane._backend._state_root,
+            args["repo_sha"],
+            args["action"],
+            provider_ref=args.get("provider_ref"),
+            lender_ref=args.get("lender_ref"),
+            strategy_ref=args.get("strategy_ref"),
+            target_ref=args.get("target_ref"),
+            repo_root=self._plane.repo_root,
         )
 
     def _tool_graph_query(self, args: dict[str, Any]) -> dict[str, Any]:

@@ -308,7 +308,8 @@ def _mocked_transport_factory(monkeypatch):
         def __init__(self, hosts, policy):
             self.transport = HttpxJsonTransport(
                 policy=TransportPolicy(max_attempts=1),
-                allowed_hosts=frozenset(h for h in hosts if h) or frozenset({"api.dexscreener.com"}),
+                allowed_hosts=frozenset(h for h in hosts if h)
+                or frozenset({"api.dexscreener.com"}),
                 client=client,
             )
 

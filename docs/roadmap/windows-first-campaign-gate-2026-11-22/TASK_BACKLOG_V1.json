@@ -42,7 +42,34 @@
         "https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information"
       ],
       "depends_on": [],
-      "executed_pr": "PR-1 #691 (codex/679-cam-gate-2026-11-22)"
+      "executed_pr": "PR-1 #691 (codex/679-cam-gate-2026-11-22)",
+      "evidence_update": {
+        "readiness": "IN_FLIGHT_EXTERNAL",
+        "current_sha": "9ecfb315be2900303ea41787151b1be36b6460c9",
+        "branch": "#691 codex/679-cam-gate-2026-11-22",
+        "test_counts": {
+          "cam01_security_closure": "17 passed",
+          "cam01_campaign_start_gate": "14 passed",
+          "cam01_capture_blocked": "1 passed",
+          "combined": "32 passed"
+        },
+        "findings_closed": [
+          "F1",
+          "F3",
+          "F4",
+          "F5"
+        ],
+        "findings_dependent": [
+          "F2 global pool -> #694"
+        ],
+        "blockers": [
+          "independent review not obtained",
+          "CI pending on 9ecfb315"
+        ],
+        "session": "2026-11-22 takeover",
+        "independent_review": "NOT_OBTAINED",
+        "native_runtime_evidence": "NOT_RUN_THIS_SESSION"
+      }
     },
     {
       "id": "CAM-02",
@@ -151,7 +178,27 @@
         "CAM-01",
         "CAM-02"
       ],
-      "executed_pr": "PR-2 #694 (codex/679-cam-budget-2026-11-22, stacked on #691)"
+      "executed_pr": "PR-2 #694 (codex/679-cam-budget-2026-11-22, stacked on #691)",
+      "evidence_update": {
+        "readiness": "PASS_OFFLINE",
+        "current_sha": "f017828c2f73d787a8469202f85363464b457c66",
+        "branch": "#694 codex/679-cam-budget-2026-11-22",
+        "test_counts": {
+          "cam04_combined": "40 passed"
+        },
+        "page_size_enforcement": {
+          "journal": "CAMPAIGN_JOURNAL_PAGE_SIZE_UNSUPPORTED",
+          "ledger": "CAMPAIGN_LEDGER_PAGE_SIZE_UNSUPPORTED",
+          "authority": "CAMPAIGN_AUTHORITY_PAGE_SIZE_UNSUPPORTED"
+        },
+        "blockers": [
+          "independent review not obtained",
+          "based on 7322b3e7, not rebased onto 9ecfb315"
+        ],
+        "session": "2026-11-22 takeover",
+        "independent_review": "NOT_OBTAINED",
+        "native_runtime_evidence": "NOT_RUN_THIS_SESSION"
+      }
     },
     {
       "id": "CAM-05",
@@ -246,7 +293,16 @@
         "https://docs.astral.sh/uv/pip/compile/"
       ],
       "depends_on": [],
-      "executed_pr": "PR-5 #692 (codex/679-win-lock-2026-11-22, CI PASS)"
+      "executed_pr": "PR-5 #692 (codex/679-win-lock-2026-11-22, CI PASS)",
+      "evidence_update": {
+        "readiness": "IN_FLIGHT_EXTERNAL",
+        "blockers": [
+          "native full-suite verification not run"
+        ],
+        "session": "2026-11-22 takeover",
+        "independent_review": "NOT_OBTAINED",
+        "native_runtime_evidence": "NOT_RUN_THIS_SESSION"
+      }
     },
     {
       "id": "WIN-02",
@@ -575,7 +631,16 @@
         "all required #665 workflows PASS"
       ],
       "owner": "PR-665 branch only (commits fb22734b, 5fb44158, ad297128)",
-      "executed_pr": "PR #665 head ad297128 — CI 36 PASSED / 0 FAILED (2026-11-22 gh statusCheckRollup); verify_pmm_sim_caller_profile 17/17 on clean checkout"
+      "executed_pr": "PR #665 head ad297128 \u0432\u0402\u201d CI 36 PASSED / 0 FAILED (2026-11-22 gh statusCheckRollup); verify_pmm_sim_caller_profile 17/17 on clean checkout",
+      "evidence_update": {
+        "readiness": "IN_FLIGHT_EXTERNAL",
+        "blockers": [
+          "not verified this session"
+        ],
+        "session": "2026-11-22 takeover",
+        "independent_review": "NOT_OBTAINED",
+        "native_runtime_evidence": "NOT_RUN_THIS_SESSION"
+      }
     },
     {
       "id": "PMM-02a",
@@ -657,7 +722,32 @@
         "WIN-02",
         "WIN-04"
       ],
-      "executed_pr": "#705 (cluster A) <- #708 (B+H) <- #710 (C) <- #711 (E) <- #712 (D); stacked chain"
+      "executed_pr": "#705 (cluster A) <- #708 (B+H) <- #710 (C) <- #711 (E) <- #712 (D); stacked chain",
+      "evidence_update": {
+        "readiness": "PASS_OFFLINE",
+        "ancestry": [
+          "4e22bce0",
+          "295c8960",
+          "b9ddd2fb",
+          "a2250787",
+          "9093d8d5"
+        ],
+        "ancestry_verified": true,
+        "rebased": [
+          "#711 4251998f->a2250787",
+          "#712 28ab4e32->9093d8d5"
+        ],
+        "test_counts": {
+          "E": "5 passed",
+          "D": "17 passed, 2 skipped"
+        },
+        "blockers": [
+          "full native suite receipt not produced"
+        ],
+        "session": "2026-11-22 takeover",
+        "independent_review": "NOT_OBTAINED",
+        "native_runtime_evidence": "NOT_RUN_THIS_SESSION"
+      }
     },
     {
       "id": "WIN-04a",
@@ -691,7 +781,7 @@
     "No live gate weakening or synthetic data promoted to real evidence.",
     "Missing approvals/unknown quotas/source semantics fail closed."
   ],
-  "updated_at": "2026-11-22",
+  "updated_at": "2026-11-22 (takeover session)",
   "execution_receipt": {
     "executed_on": "2026-11-22",
     "base_main_sha": "0a0c8ad9b58d866eab3e8dbac5e7b9d6c241fb54",

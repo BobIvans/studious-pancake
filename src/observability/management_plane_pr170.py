@@ -346,7 +346,10 @@ def read_signed_state_snapshot(
         return SnapshotValidation(False, SnapshotErrorCode.STATE_FILE_MISSING)
     if not target.is_file():
         return SnapshotValidation(False, SnapshotErrorCode.STATE_PATH_NOT_REGULAR)
-    if stat_result.st_mode & 0o077:
+    # POSIX mode-bit gate is not meaningful on Windows (chmod is a
+    # no-op; every file reads 0666) -- same platform conditional as the
+    # directory-fsync guard below.
+    if os.name == "posix" and stat_result.st_mode & 0o077:
         return SnapshotValidation(False, SnapshotErrorCode.STATE_FILE_MODE_TOO_OPEN)
     if stat_result.st_size > max_bytes:
         return SnapshotValidation(False, SnapshotErrorCode.STATE_FILE_TOO_LARGE)
@@ -411,7 +414,7 @@ def _fsync_directory(path: Path) -> None:
         # conservative pattern as evidence.py blob dirs.
         return
     try:
-        descriptor = os.open(path, os.O_RDONLY)
+        descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_BINARY", 0))
     except OSError:
         return
     try:

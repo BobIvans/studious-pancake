@@ -292,7 +292,14 @@ def resolve_file_value(
         _within(path.parent.resolve(), root) for root in policy.approved_file_roots
     ):
         raise SecretLifecycleError("file secret is outside approved roots")
-    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    # O_BINARY is required on Windows: without it the CRT fd runs in text
+    # mode and silently strips CR bytes, corrupting byte-exact secret reads.
+    flags = (
+        os.O_RDONLY
+        | getattr(os, "O_BINARY", 0)
+        | getattr(os, "O_CLOEXEC", 0)
+        | getattr(os, "O_NOFOLLOW", 0)
+    )
     try:
         descriptor = os.open(path, flags)
     except OSError as exc:
@@ -333,7 +340,11 @@ def _validate_metadata(metadata: os.stat_result) -> None:
         raise SecretLifecycleError("file secret must be a regular file")
     if os.name == "posix" and hasattr(os, "getuid") and metadata.st_uid != os.getuid():
         raise SecretLifecycleError("file secret must be owned by this user")
-    if stat.S_IMODE(metadata.st_mode) & (stat.S_IRWXG | stat.S_IRWXO):
+    # Windows reports 0666 for every regular file and chmod is a no-op;
+    # the group/other-mode gate is POSIX-only (mirrors the uid check).
+    if os.name == "posix" and stat.S_IMODE(metadata.st_mode) & (
+        stat.S_IRWXG | stat.S_IRWXO
+    ):
         raise SecretLifecycleError("file secret grants group/other permissions")
     if metadata.st_nlink != 1:
         raise SecretLifecycleError("file secret must have exactly one link")

@@ -31,6 +31,17 @@ from .campaign_start_gate import (
     load_campaign_plan,
     load_trust_registry,
 )
+from .evidence import (
+    AUTHORITY_CREATION_RESERVE_BYTES,
+    reconcile_materialized_artifacts,
+    sqlite_page_size,
+    JOURNAL_CREATION_RESERVE_BYTES,
+    LEDGER_CREATION_RESERVE_BYTES,
+    LEDGER_TRANSACTION_RESERVE_BYTES,
+    journal_growth_bound,
+    CampaignBudgets,
+    artifact_footprint_bytes,
+)
 from .identity import CampaignManifest, canonical_bytes, digest, manifest_from_dict
 from .profiles import ProviderProfile, public_rpc_profile
 from .evidence import CampaignEvidenceStore
@@ -236,28 +247,85 @@ async def capture(
         manifest.to_dict()
     ):
         raise ValueError("CAMPAIGN_GENERATION_MISMATCH")
-    if not manifest_path.exists():
-        with manifest_path.open("xb") as handle:
-            handle.write(canonical_bytes(manifest.to_dict()))
-            handle.flush()
-            os.fsync(handle.fileno())
     # CAMPAIGN_START_V1: executable fail-closed gate BEFORE any transport,
     # DNS or physical request exists.  A rejected start returns a typed
     # blocked receipt with instrumented zero physical network attempts.
+    #
+    # STRICT STORAGE PREFLIGHT (owner closure round 3): the approved budget
+    # is loaded and the WHOLE campaign pre-reserved BEFORE any persistent
+    # artifact is created.  A blocked preflight leaves no campaign-manifest.json
+    # and no approval ledger behind — only the explicitly excluded terminal
+    # failure receipt (campaign-start-blocked.json) may be persisted.
+    ledger_path = output / "campaign-approval-ledger.sqlite"
+    authority_path = output / "authority.sqlite"
+    manifest_json_bytes = len(canonical_bytes(manifest.to_dict()))
+    page = (
+        4096  # SQLite default; the ledger/journal/authority stores do not override it
+    )
     try:
         plan = load_campaign_plan(campaign_plan)
-        registry = load_trust_registry(trust_registry)
-        ledger = SQLiteApprovalReplayLedger(output / "campaign-approval-ledger.sqlite")
-        decision = evaluate_campaign_start_gate(
-            manifest=manifest,
-            plan=plan,
-            dossiers=[d for d, _ in sources],
-            adapters=[a for _, a in sources],
-            profiles=list(profiles),
-            registry=registry,
-            ledger=ledger,
-            now_ns=time.time_ns(),
+        budgets = CampaignBudgets.from_plan_budgets(plan.budgets)
+        preflight_reservation = (
+            manifest_json_bytes
+            + LEDGER_CREATION_RESERVE_BYTES
+            + LEDGER_TRANSACTION_RESERVE_BYTES
+            + JOURNAL_CREATION_RESERVE_BYTES
+            + AUTHORITY_CREATION_RESERVE_BYTES
+            # first evidence event embeds the manifest JSON as a nested string:
+            # conservative x2 escaping allowance before the page/WAL bound
+            + journal_growth_bound(manifest_json_bytes * 2 + 512, page)
         )
+        if preflight_reservation > budgets.storage_bytes_max:
+            # The exact budget cannot even hold the manifest plus the
+            # reserved creation/growth of the ledger, evidence journal and
+            # authority store: block BEFORE writing any persistent artifact.
+            # The signed operator envelope has not been consumed at this
+            # point (the ledger does not exist yet).
+            decision = GateDecision(
+                phase=GatePhase.BLOCKED,
+                verdicts=(),
+                blockers=("CAMPAIGN_STORAGE_BUDGET_EXHAUSTED",),
+                approval_receipt=None,
+                manifest_digest=manifest.campaign_id,
+                campaign_label=plan.campaign_label,
+            )
+        else:
+            if manifest_path.exists() is False:
+                with manifest_path.open("xb") as handle:
+                    handle.write(canonical_bytes(manifest.to_dict()))
+                    handle.flush()
+                    os.fsync(handle.fileno())
+            registry = load_trust_registry(trust_registry)
+            ledger = SQLiteApprovalReplayLedger(ledger_path)
+            decision = evaluate_campaign_start_gate(
+                manifest=manifest,
+                plan=plan,
+                dossiers=[d for d, _ in sources],
+                adapters=[a for _, a in sources],
+                profiles=list(profiles),
+                registry=registry,
+                ledger=ledger,
+                now_ns=time.time_ns(),
+            )
+            ledger_sidecars = (
+                manifest_path,
+                ledger_path,
+                Path(str(ledger_path) + "-wal"),
+                Path(str(ledger_path) + "-shm"),
+            )
+            if decision.authorized and (
+                artifact_footprint_bytes(ledger_sidecars) > budgets.storage_bytes_max
+            ):
+                # Reconciliation backstop: the reserved ledger growth was
+                # exceeded anyway (fail-closed over-strict direction).
+                decision = GateDecision(
+                    phase=GatePhase.BLOCKED,
+                    verdicts=(),
+                    blockers=("CAMPAIGN_STORAGE_BUDGET_EXCEEDED",),
+                    approval_receipt=None,
+                    manifest_digest=manifest.campaign_id,
+                    campaign_label=plan.campaign_label,
+                )
     except ValueError as exc:
         decision = GateDecision(
             phase=GatePhase.BLOCKED,
@@ -273,22 +341,75 @@ async def capture(
         )
         return blocked_start_report(decision)
     async with AsyncExitStack() as stack:
+        # SECURITY CLOSURE v3 (reservation invariant): the authority store is
+        # materialized BEFORE the evidence journal, so the preflight's
+        # AUTHORITY_CREATION_RESERVE_BYTES is spent on disk before any
+        # journal append runs.  Journal appends project from
+        # campaign_storage_bytes() (filesystem truth); with the authority
+        # store absent they would see zero bytes for it and could consume
+        # the reserve, silently violating storage_bytes_max at authority
+        # creation with no typed blocker.  Materializing first removes the
+        # window structurally: every append's projection includes the real
+        # authority footprint.
+        store = stack.enter_context(
+            UnifiedLifecycleAuthority(
+                authority_path,
+                release_digest=manifest.runtime_authority_sha256,
+                policy_bundle_hash=manifest.campaign_id,
+            )
+        )
+        # Reconciliation backstop for the authority store itself: compared
+        # against the WHOLE approved budget (the strict ceiling), not only
+        # the authority reserve — over-strict, fail-closed direction; every
+        # later append re-projects the actual authority bytes anyway.
+        reconcile_materialized_artifacts(
+            (
+                authority_path,
+                Path(str(authority_path) + "-wal"),
+                Path(str(authority_path) + "-shm"),
+            ),
+            budgets,
+        )
         journal = RecoverableStreamJournal(
             output / "campaign-evidence.sqlite", max_events=10_000
         )
         stack.callback(journal.close)
-        evidence = CampaignEvidenceStore(journal, manifest)
+        evidence = CampaignEvidenceStore(
+            journal,
+            manifest,
+            campaign_budgets=budgets,
+            ledger_path=ledger_path,
+            extra_artifacts=(
+                manifest_path,
+                output / "report.json",
+                authority_path,
+                Path(str(authority_path) + "-wal"),
+                Path(str(authority_path) + "-shm"),
+            ),
+        )
         evidence.append(
             "campaign-start-gate",
             {"kind": "campaign_start_decision", "decision": decision.to_dict()},
             observed_at_ns=time.time_ns(),
         )
-        store = stack.enter_context(
-            UnifiedLifecycleAuthority(
-                output / "authority.sqlite",
-                release_digest=manifest.runtime_authority_sha256,
-                policy_bundle_hash=manifest.campaign_id,
-            )
+        # SECURITY CLOSURE v3: record the ACTUAL SQLite page sizes of all
+        # three stores plus the real footprint split — the preflight
+        # reserve assumed 4096; the durable receipt carries the measured
+        # values so reconciliation evidence is filesystem truth, and the
+        # post-write reconciliations (every append + backstops above)
+        # remain the enforcement.
+        evidence.append(
+            "campaign",
+            {
+                "kind": "storage_reconciliation",
+                "page_sizes": {
+                    "journal": evidence.page_size,
+                    "ledger": sqlite_page_size(ledger_path),
+                    "authority": sqlite_page_size(authority_path),
+                },
+                "storage_bytes": evidence.campaign_storage_bytes(),
+            },
+            observed_at_ns=time.time_ns(),
         )
         expires = (int(time.time()) // 86400 + 1) * 86400
         gov = ProviderGovernance(
@@ -380,8 +501,21 @@ async def capture(
         final["governance"] = {
             p.profile_id: await gov.snapshot(p.profile_id) for p in profiles
         }
-    (output / "report.json").write_bytes(canonical_bytes(final))
-    return final
+        # SECURITY CLOSURE v3 (review round 2, CRITICAL): the report append
+        # and the report.json write MUST stay inside the open-journal block
+        # (AsyncExitStack). Outside it, journal.close() has already run and
+        # the append would crash the authorized capture path with an
+        # uncaught sqlite3.ProgrammingError and lose the report. The append
+        # is the ceiling enforcement: projection + post-commit
+        # reconciliation cover the report bytes before the artifact is
+        # materialized (report.json is already in extra_artifacts).
+        evidence.append(
+            "campaign",
+            {"kind": "campaign_report", "report": final},
+            observed_at_ns=time.time_ns(),
+        )
+        (output / "report.json").write_bytes(canonical_bytes(final))
+        return final
 
 
 def replay(output):
